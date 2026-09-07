@@ -65,6 +65,10 @@ ALLOWED_ORIGINS=https://$DOMAIN
 PHENOBAC_PRICE_MAP=5000:30,48000:365
 # Fenêtre de récupération de la clé par référence de paiement (heures).
 CLAIM_WINDOW_HOURS=48
+# Connecteur du prestataire de paiement (voir lib/psp.js et MISE-EN-VENTE.md).
+WEBHOOK_AUTH=token
+WEBHOOK_AUTH_HEADER=x-webhook-token
+PHENOBAC_WEBHOOK_DEBUG=0
 SMS_API_URL=
 SMS_API_KEY=
 SMS_SENDER=PhenoBac

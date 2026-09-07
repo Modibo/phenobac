@@ -27,27 +27,81 @@ ne sont pas faits** : sans connecteur de paiement, aucune licence n'est émise.
 
 ## 2. Brancher le prestataire de paiement (obligatoire)
 
-Choisissez un agrégateur qui couvre Orange Money et Moov Money au Mali (PayDunya,
-CinetPay, Sama Money, ou l'API opérateur en direct). Deux fonctions à adapter dans
-`netlify/functions/payment-webhook.js` — elles sont isolées et commentées :
+Choisissez un agrégateur qui couvre Orange Money et Moov Money au Mali. Aucun
+format n'est codé en dur : le connecteur (`netlify/functions/lib/psp.js`) se
+règle par variables d'environnement, sans toucher au code.
 
-**`authenticate(event)`** — prouver que l'appel vient bien du prestataire.
-Par défaut, un jeton partagé dans l'en-tête `X-Webhook-Token`, comparé à
-`PHENOBAC_WEBHOOK_SECRET`. Si votre prestataire signe le corps (HMAC), vérifiez la
-signature ; s'il ne propose rien, rappelez son API pour reconfirmer la transaction —
-c'est la méthode la plus sûre, et la seule qui protège d'un faux webhook.
+### 2.1 Comment le prestataire prouve que l'appel vient de lui
 
-**`parsePayment(body)`** — extraire `status`, `amount`, `ref`, `contact` du format du
-prestataire. Faites un premier paiement réel de test, relevez le corps exact reçu, et
-calez les noms de champs dessus.
+Regardez sa documentation et choisissez `WEBHOOK_AUTH` :
 
-Puis, dans l'espace du prestataire :
+| Le prestataire… | `WEBHOOK_AUTH` | À renseigner |
+|---|---|---|
+| envoie un jeton fixe dans un en-tête | `token` | `WEBHOOK_AUTH_HEADER`, `PHENOBAC_WEBHOOK_SECRET` |
+| signe le corps de la requête (HMAC-SHA256) | `hmac` | `WEBHOOK_AUTH_HEADER`, `WEBHOOK_HMAC_ENCODING`, `WEBHOOK_HMAC_PREFIX`, `PHENOBAC_WEBHOOK_SECRET` |
+| ne signe rien, mais expose une API d'état | `confirm` | `WEBHOOK_CONFIRM_URL` (avec `{ref}`), `WEBHOOK_CONFIRM_AUTH` |
 
-- URL de webhook : `https://VOTRE-DOMAINE/.netlify/functions/payment-webhook`
-- URL de retour client : `https://VOTRE-DOMAINE/success.html`
+**Préférez `confirm` dès qu'il est possible.** Dans ce mode, le contenu du
+webhook ne fait pas foi : on rappelle le prestataire pour lui demander l'état
+réel de la transaction, et c'est le montant qu'il confirme qui décide de la
+durée. Un faux webhook, même parfaitement formé, n'émet alors rien.
+
+### 2.2 Calibrer sur un vrai paiement
+
+Ne réglez pas les champs d'après la documentation : elle est souvent en retard
+sur ce que le prestataire envoie réellement. Faites un paiement de test du plus
+petit montant possible, et lisez ce qui arrive.
+
+```bash
+# 1. Allumer la journalisation de calibrage
+sed -i 's/^PHENOBAC_WEBHOOK_DEBUG=.*/PHENOBAC_WEBHOOK_DEBUG=1/' .env
+docker compose up -d
+
+# 2. Faire le paiement de test, puis lire ce qui a été reçu
+docker compose logs --tail=50 | grep phenobac
+```
+
+Vous verrez le corps exact et les champs que le connecteur en a tirés :
+
+```
+[phenobac] webhook reçu — corps : {"event":"payment.completed","data":{…}}
+[phenobac] champs extraits : {"status":"completed","amount":5000,"ref":"TX-8891","contact":"+223…"}
+```
+
+Si les quatre champs sont bons, il n'y a rien à faire : les noms usuels ont
+suffi. Sinon, désignez-les par un chemin pointé dans `.env` — sans modifier le
+code :
+
+```
+WEBHOOK_FIELD_STATUS=data.transaction.state
+WEBHOOK_FIELD_AMOUNT=data.amount.value
+WEBHOOK_FIELD_REF=data.invoice.token
+WEBHOOK_FIELD_CONTACT=data.customer.msisdn
+```
+
+Si le statut de succès porte un nom inattendu (`OK`, `00`, `VALIDATED`…),
+ajoutez-le à `WEBHOOK_SUCCESS_VALUES`.
+
+**Éteignez `PHENOBAC_WEBHOOK_DEBUG` une fois le calibrage fini** : ces journaux
+contiennent les coordonnées de vos clients.
+
+### 2.3 Rien n'est perdu pendant le réglage
+
+Un webhook que le connecteur n'arrive pas à décoder n'est pas jeté : il est
+conservé, corps compris, et apparaît au tableau de bord dans « Paiements à
+traiter » avec le motif *webhook non décodé*. Vous voyez donc immédiatement que
+le connecteur est mal réglé, et aucun client n'a payé pour rien — vous émettez
+sa licence à la main pendant que vous ajustez.
+
+### 2.4 Déclarer les URL chez le prestataire
+
+- Webhook : `https://VOTRE-DOMAINE/.netlify/functions/payment-webhook`
+- Retour client : `https://VOTRE-DOMAINE/success.html`
   (le prestataire doit y transmettre la référence en `?ref=…`)
 
-### Vérifier sans attendre un vrai paiement
+### 2.5 Vérifier sans attendre un vrai paiement
+
+En mode `token` :
 
 ```bash
 curl -s -X POST https://VOTRE-DOMAINE/.netlify/functions/payment-webhook \
@@ -64,8 +118,6 @@ curl -s "https://VOTRE-DOMAINE/.netlify/functions/claim-license?ref=TEST-001"
 
 doit renvoyer la clé. Collez-la dans l'application : Premium doit s'activer.
 Pensez ensuite à révoquer cette licence de test (voir § 6).
-
----
 
 ## 3. Brancher la passerelle SMS (fortement recommandé)
 

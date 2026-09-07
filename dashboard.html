@@ -190,9 +190,19 @@ function renderPending(list){
   const card=$("#pendingCard"), box=$("#pending");
   if(!list.length){ card.style.display="none"; return; }
   card.style.display="";
-  const rows=list.map(v=>`<tr><td class="num">${fdatems(v.at)}</td><td>${esc(v.contact||"—")}</td><td class="num">${v.amount?fcfa(v.amount):"—"}</td><td><code>${esc(v.ref||"")}</code></td><td><span class="tag exp">montant inconnu</span></td></tr>`).join("");
+  const motif={
+    unknown_amount:["montant hors barème","Le montant reçu ne figure pas dans PHENOBAC_PRICE_MAP."],
+    unparsed:["webhook non décodé","Référence ou montant introuvables : le connecteur est à calibrer (MISE-EN-VENTE.md § 2)."]
+  };
+  const rows=list.map(v=>{
+    const m=motif[v.reason]||[esc(v.reason||"à vérifier"),""];
+    return `<tr><td class="num">${fdatems(v.at)}</td><td>${esc(v.contact||"—")}</td><td class="num">${v.amount?fcfa(v.amount):"—"}</td><td><code>${esc(v.ref||"—")}</code></td><td><span class="tag exp" title="${esc(m[1])}">${m[0]}</span></td></tr>`;
+  }).join("");
+  const aCalibrer=list.some(v=>v.reason==="unparsed");
   box.innerHTML=`<table><thead><tr><th>Date</th><th>Contact</th><th style="text-align:right">Montant</th><th>Référence</th><th>Motif</th></tr></thead><tbody>${rows}</tbody></table>`
-    + `<div class="empty" style="margin-top:10px;text-align:left">Émettez la licence à la main depuis <b>admin.html</b>, puis transmettez la clé au client.</div>`;
+    + `<div class="empty" style="margin-top:10px;text-align:left">Émettez la licence à la main depuis <b>admin.html</b>, puis transmettez la clé au client.`
+    + (aCalibrer?` Les lignes « webhook non décodé » signalent un connecteur mal réglé : tant qu'il l'est, <b>aucune</b> licence ne s'émet automatiquement.`:``)
+    + `</div>`;
 }
 
 function renderChart(series){
