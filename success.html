@@ -131,6 +131,13 @@ async function claim(attempt){
         return;
       }
     }
+    // Fenêtre de récupération close : inutile de repoller, le message doit être clair.
+    if(r.status===410){
+      $("#state").style.display="none";
+      show($("#err"));
+      $("#err").firstChild.textContent="Cette référence de paiement n'est plus valable pour récupérer la clé. Votre licence reste active : utilisez la clé reçue par SMS, ou contactez le support avec votre reçu.";
+      return;
+    }
     // pas encore trouvée : le webhook peut arriver avec un léger délai -> on repolle
     if(attempt < 6){
       $("#stateMsg").textContent="Confirmation du paiement en cours…";
