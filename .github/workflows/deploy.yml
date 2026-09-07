@@ -1,0 +1,61 @@
+name: Déploiement PhénoBac
+
+# Déclenché à chaque push sur main (ou manuellement).
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Vérification syntaxe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: node --check sur le serveur et les fonctions
+        run: |
+          node --check server.js
+          for f in netlify/functions/*.js netlify/functions/lib/*.js; do
+            echo "check $f"; node --check "$f";
+          done
+
+  deploy:
+    name: Déploiement VPS
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Préparer la clé SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${{ secrets.SSH_PORT || '22' }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Synchroniser le code et redéployer
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+        run: |
+          # 1) envoyer le code (on préserve .env et les données du serveur)
+          rsync -az --delete \
+            --exclude '.git' --exclude '.github' --exclude '.env' \
+            --exclude 'data' --exclude 'node_modules' \
+            -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
+            ./ "$SSH_USER@$SSH_HOST:/opt/phenobac/"
+
+          # 2) reconstruire et relancer le conteneur sur le VPS
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" '
+            set -e
+            cd /opt/phenobac
+            mkdir -p public
+            cp -f phenobac.html success.html public/
+            cp -f manifest.webmanifest service-worker.js public/ 2>/dev/null || true
+            cp -f icon-192.png icon-512.png icon-maskable-512.png apple-touch-icon.png public/ 2>/dev/null || true
+            docker compose up -d --build
+            docker image prune -f'

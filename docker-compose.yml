@@ -1,0 +1,26 @@
+# PhénoBac — déploiement en une commande :
+#   docker compose up -d --build
+#
+# Les secrets sont lus depuis .env (jamais dans l'image). Les données persistent
+# dans un volume nommé. Le port n'est publié que sur la loopback : nginx (sur l'hôte)
+# fait la façade HTTPS -> voir DEPLOY-VPS.md.
+
+services:
+  phenobac:
+    build: .
+    image: phenobac:latest
+    container_name: phenobac
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      STORE_BACKEND: "file"
+      DATA_DIR: "/data"
+      PORT: "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - phenobac-data:/data
+
+volumes:
+  phenobac-data:
