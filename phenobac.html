@@ -760,7 +760,7 @@
       </ul>
       <div class="modal-price" id="modalPrice"></div>
       <div class="modal-code">
-        <input id="licenseInput" type="text" placeholder="Code d'activation" autocomplete="off" spellcheck="false">
+        <input id="licenseInput" type="text" placeholder="Collez votre clé de licence" autocomplete="off" spellcheck="false">
         <button class="modal-activate" id="activateBtn">Activer</button>
       </div>
       <div class="modal-err" id="modalErr"></div>
@@ -1376,15 +1376,17 @@ const ORG = {
 let state = { org:"ecoli", mode:"sir", results:{}, mic:{}, ctx:{}, bpOverride:{}, lastA:null };
 
 /* ============================================================
-   Modèle freemium — à ajuster librement (prix, code, périmètre)
-   NOTE : ce verrouillage est côté navigateur (démonstration).
-   Pour protéger réellement l'accès, valider le plan côté serveur.
+   Modèle freemium — prix et périmètre, à ajuster librement.
+   L'accès est validé CÔTÉ SERVEUR : la clé saisie ici est une licence
+   signée, vérifiée par /.netlify/functions/verify-license, et le moteur
+   d'interprétation ne répond qu'à une licence valide. Ce que fait le
+   navigateur n'est qu'un affichage : le patcher ne débloque rien.
    ============================================================ */
 const PRICING = {
   price: "5 000 FCFA",
   period: "/ mois",
   annual: "48 000 FCFA / an — 2 mois offerts",
-  demoCode: "PHENO-PRO-2026"
+  buyUrl: ""   // lien de paiement (mobile money / carte). Vide : instructions seules.
 };
 const FREE_SPECIES = ["ecoli","saureus"]; // germes interprétés sans licence (côté serveur)
 
@@ -1394,10 +1396,42 @@ const FREE_SPECIES = ["ecoli","saureus"]; // germes interprétés sans licence (
 const API_BASE = "";
 const PREMIUM_FN = API_BASE + "/.netlify/functions/premium-interpret";
 
+const LICENSE_FN = API_BASE + "/.netlify/functions/verify-license";
+const GRACE_DAYS = 7;   // tolérance hors-ligne entre deux vérifications réussies
+
 function loadPlan(){ try{ return localStorage.getItem("phenobac_plan")==="premium"?"premium":"free"; }catch(e){ return "free"; } }
 function savePlan(p){ try{ localStorage.setItem("phenobac_plan", p); }catch(e){} }
+function loadLicense(){ try{ return localStorage.getItem("phenobac_license")||""; }catch(e){ return ""; } }
 let PLAN = loadPlan();
 function isPremium(){ return PLAN==="premium"; }
+
+// Interroge le serveur sur la licence stockée et aligne l'affichage.
+// Le cache localStorage n'est jamais une preuve d'achat : hors-ligne, on
+// tolère Premium tant qu'une vérification a réussi dans les GRACE_DAYS jours.
+async function checkLicense(){
+  const lic = loadLicense();
+  if(!lic){ setPlan("free"); return; }
+  try{
+    const r = await fetch(LICENSE_FN, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ license: lic })
+    });
+    const data = await r.json();
+    if(data.valid){
+      setPlan("premium");
+      try{ localStorage.setItem("phenobac_lastok", String(Date.now())); }catch(e){}
+    } else {
+      setPlan("free");
+      if(data.reason==="expired"){
+        try{ localStorage.removeItem("phenobac_license"); }catch(e){}
+        openUpgrade("Votre licence a expiré. Renouvelez-la pour retrouver Premium.");
+      }
+    }
+  }catch(e){
+    let last=0; try{ last=parseInt(localStorage.getItem("phenobac_lastok")||"0",10); }catch(_){ }
+    setPlan(last && (Date.now()-last) < GRACE_DAYS*86400*1000 ? "premium" : "free");
+  }
+}
 
 const $ = s => document.querySelector(s);
 const speciesSel = $("#species");
@@ -1681,23 +1715,31 @@ async function interpretRemote(payload){
   });
   if(r.status===402){ return { locked:true }; }
   const data = await r.json();
-  return { interpretation:data.interpretation };
+  return { interpretation:data.interpretation, categories:data.categories };
 }
 
 async function renderInterpretRemote(){
   const myReq = ++_reqSeq;
+  const mic = state.mode==="mic";
   try{
-    const res = await interpretRemote({
-      organism:state.org, mode:"sir", results:state.results, ctx:state.ctx
-    });
+    // En mode CMI, c'est le SERVEUR qui catégorise (S/I/R à partir des mg/L) :
+    // la conversion locale n'est qu'un affichage optimiste, jamais l'autorité.
+    // Le mode CMI étant vendu comme Premium, il exige une licence valide.
+    const res = await interpretRemote(mic
+      ? { organism:state.org, mode:"mic", mic:state.mic, bpOverride:state.bpOverride, ctx:state.ctx }
+      : { organism:state.org, mode:"sir", results:state.results, ctx:state.ctx });
     if(myReq!==_reqSeq) return; // réponse obsolète, ignorée
 
     if(res.locked){
       setLive(null); state.lastA=null;
       interpretEl.innerHTML=`<div class="interp-note"><b>Interprétation Premium requise.</b> Votre licence n'est pas valide ou a expiré.</div>`;
-      openUpgrade("Votre licence Premium n'est pas valide ou a expiré.");
+      openUpgrade(mic
+        ? "La saisie par CMI est une fonction Premium : une licence valide est requise."
+        : "Votre licence Premium n'est pas valide ou a expiré.");
       return;
     }
+    // Catégories faisant foi (mode CMI) : on aligne l'affichage sur le serveur.
+    if(mic && res.categories){ state.results = res.categories; renderAbx(); }
     const A = res.interpretation;
     setLive(A); state.lastA=A;
     renderInterpretView(A);
@@ -2715,7 +2757,9 @@ function renderOffres(){
     note.innerHTML=`Premium est actif sur cet appareil. <a id="offresDowngrade">Repasser en gratuit</a> (pour tester).`;
     $("#offresDowngrade").onclick=()=>{ setPlan("free"); };
   } else {
-    note.innerHTML=`Paiement à brancher selon votre canal (mobile money, carte…). Pour la démonstration, le code d'activation est <code>${PRICING.demoCode}</code>.`;
+    note.innerHTML=PRICING.buyUrl
+      ? `Paiement par mobile money ou carte. Votre clé de licence vous est envoyée par SMS dès la confirmation.`
+      : `Paiement par mobile money. Votre clé de licence vous est envoyée par SMS dès la confirmation.`;
     const up=$("#offresUpgrade"); if(up) up.onclick=()=>openUpgrade("Activez PhénoBac Premium pour l'accès total.");
   }
 }
@@ -2724,7 +2768,9 @@ function renderOffres(){
 function openUpgrade(lead){
   $("#modalLead").textContent = lead || "Cette fonctionnalité fait partie de PhénoBac Premium.";
   $("#modalPrice").innerHTML = `<b>${PRICING.price}</b> ${PRICING.period} · ${PRICING.annual}`;
-  $("#modalHint").innerHTML = `Un canal de paiement (mobile money, carte) se branche ici. Démonstration : saisissez <code>${PRICING.demoCode}</code>.`;
+  $("#modalHint").innerHTML = PRICING.buyUrl
+    ? `<a href="${PRICING.buyUrl}" target="_blank" rel="noopener">Payer par mobile money ou carte</a> — votre clé vous est envoyée par SMS dès le paiement confirmé. Collez-la ci-dessus.`
+    : `Après paiement, votre clé de licence vous est envoyée par SMS. Collez-la ci-dessus, puis « Activer ».`;
   $("#modalErr").textContent="";
   $("#licenseInput").value="";
   $("#upgradeModal").classList.add("open");
@@ -2732,12 +2778,37 @@ function openUpgrade(lead){
 }
 function closeUpgrade(){ $("#upgradeModal").classList.remove("open"); }
 
-function activate(){
-  const code=($("#licenseInput").value||"").trim().toUpperCase();
-  if(code===PRICING.demoCode){
-    closeUpgrade(); setPlan("premium");
-  } else {
-    $("#modalErr").textContent="Code non reconnu. Vérifiez la saisie.";
+async function activate(){
+  const key=($("#licenseInput").value||"").trim();
+  if(!key){ $("#modalErr").textContent="Saisissez votre clé de licence."; return; }
+
+  const btn=$("#activateBtn");
+  btn.disabled=true;
+  $("#modalErr").textContent="Vérification…";
+  try{
+    const r = await fetch(LICENSE_FN, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ license: key })
+    });
+    const data = await r.json();
+    if(data.valid){
+      try{
+        localStorage.setItem("phenobac_license", key);
+        localStorage.setItem("phenobac_lastok", String(Date.now()));
+      }catch(e){}
+      closeUpgrade();
+      setPlan("premium");
+    } else {
+      $("#modalErr").textContent =
+        data.reason==="expired"  ? "Licence expirée. Renouvelez pour réactiver." :
+        data.reason==="revoked"  ? "Licence révoquée. Contactez le support." :
+        data.reason==="server_not_configured" ? "Service indisponible, réessayez plus tard." :
+        "Clé non valide. Vérifiez la saisie.";
+    }
+  }catch(e){
+    $("#modalErr").textContent="Vérification impossible : une connexion est requise pour activer.";
+  }finally{
+    btn.disabled=false;
   }
 }
 
@@ -2803,6 +2874,9 @@ $("#reset").onclick=()=>{ state.results={}; state.mic={}; state.ctx={}; renderAl
 renderPlanChip();
 renderAll();
 renderBankManager();
+
+// L'interface démarre sur le plan mis en cache, puis le serveur tranche.
+checkLicense();
 </script>
 <script>
 if ("serviceWorker" in navigator) {
