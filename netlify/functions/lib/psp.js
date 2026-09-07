@@ -48,8 +48,48 @@
 const crypto = require("crypto");
 
 const SECRET = process.env.PHENOBAC_WEBHOOK_SECRET || "";
-const MODE = (process.env.WEBHOOK_AUTH || "token").toLowerCase();
-const AUTH_HEADER = (process.env.WEBHOOK_AUTH_HEADER || "x-webhook-token").toLowerCase();
+
+/* ---------------------------------------------------- profils prestataires */
+// Un profil ne fait que fournir des valeurs par défaut : toute variable
+// WEBHOOK_* explicitement définie dans .env l'emporte sur le profil.
+// PSP=paydunya | generic (défaut : generic)
+const PROFILES = {
+  paydunya: {
+    // L'IPN PayDunya est un formulaire à clés imbriquées data[...] et porte un
+    // "hash" qui est un condensé de votre clé maîtresse — une valeur FIXE, donc
+    // rejouable telle quelle : elle ne prouve rien sur le contenu de l'appel.
+    // On authentifie donc en reconfirmant la facture auprès de PayDunya.
+    WEBHOOK_AUTH: "confirm",
+    WEBHOOK_CONFIRM_URL: (process.env.PAYDUNYA_MODE === "test"
+      ? "https://app.paydunya.com/sandbox-api/v1/checkout-invoice/confirm/{ref}"
+      : "https://app.paydunya.com/api/v1/checkout-invoice/confirm/{ref}"),
+    WEBHOOK_CONFIRM_STATUS: "status",
+    WEBHOOK_CONFIRM_AMOUNT: "invoice.total_amount",
+    WEBHOOK_FIELD_REF: "data.invoice.token",
+    WEBHOOK_FIELD_STATUS: "data.status",
+    WEBHOOK_FIELD_AMOUNT: "data.invoice.total_amount",
+    WEBHOOK_FIELD_CONTACT: "data.customer.phone",
+    confirmHeaders: () => ({
+      "PAYDUNYA-MASTER-KEY": process.env.PAYDUNYA_MASTER_KEY || "",
+      "PAYDUNYA-PRIVATE-KEY": process.env.PAYDUNYA_PRIVATE_KEY || "",
+      "PAYDUNYA-TOKEN": process.env.PAYDUNYA_TOKEN || ""
+    })
+  },
+  generic: {}
+};
+
+const PROFILE = PROFILES[(process.env.PSP || "generic").toLowerCase()] || PROFILES.generic;
+
+// Valeur d'un réglage : .env d'abord, profil ensuite, défaut enfin.
+function cfg(name, fallback) {
+  const v = process.env[name];
+  if (v !== undefined && v !== "") return v;
+  if (PROFILE[name] !== undefined && PROFILE[name] !== "") return PROFILE[name];
+  return fallback;
+}
+
+const MODE = String(cfg("WEBHOOK_AUTH", "token")).toLowerCase();
+const AUTH_HEADER = String(cfg("WEBHOOK_AUTH_HEADER", "x-webhook-token")).toLowerCase();
 
 const SUCCESS_VALUES = (process.env.WEBHOOK_SUCCESS_VALUES ||
   "success,successful,completed,complete,paid,payment_succeeded,accepted,ok,00,000,1,true")
@@ -67,8 +107,18 @@ function parseBody(raw, headers) {
   if (ctype.includes("form-urlencoded") || (!ctype.includes("json") && !body.trim().startsWith("{") && body.includes("="))) {
     const out = {};
     for (const [k, v] of new URLSearchParams(body)) {
-      // "customer[phone]=..." devient customer.phone
-      out[k.replace(/\[(.*?)\]/g, ".$1")] = v;
+      // "data[invoice][token]=..." doit devenir un OBJET IMBRIQUÉ
+      // { data: { invoice: { token: ... } } }, et non la clé plate
+      // "data.invoice.token" — sans quoi ni la recherche par nom ni les
+      // chemins pointés ne retrouvent le champ. PayDunya poste ce format.
+      const parts = String(k).replace(/\]/g, "").split("[");
+      let cur = out;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i];
+        if (!cur[part] || typeof cur[part] !== "object") cur[part] = {};
+        cur = cur[part];
+      }
+      cur[parts[parts.length - 1]] = v;
     }
     return out;
   }
@@ -125,8 +175,10 @@ function toAmount(v) {
 
 function parsePayment(body) {
   const pick = (envVar, names) => {
-    const path = process.env[envVar];
+    const path = cfg(envVar, "");
     const byPath = path ? get(body, path) : undefined;
+    // Le chemin configuré prime ; s'il ne donne rien (format changé côté
+    // prestataire), on retombe sur la recherche par nom plutôt que d'échouer.
     return byPath !== undefined ? byPath : findAny(body, names);
   };
 
@@ -188,13 +240,14 @@ function authHmac(event) {
 
 // Reconfirmation auprès du PSP : on ne croit que sa réponse.
 async function authConfirm(payment) {
-  const tpl = process.env.WEBHOOK_CONFIRM_URL || "";
+  const tpl = cfg("WEBHOOK_CONFIRM_URL", "");
   if (!tpl) return { ok: false, reason: "confirm_url_missing" };
   if (!payment.ref) return { ok: false, reason: "no_reference" };
 
   const url = tpl.replace("{ref}", encodeURIComponent(payment.ref));
   const headers = { "Accept": "application/json" };
   if (process.env.WEBHOOK_CONFIRM_AUTH) headers["Authorization"] = process.env.WEBHOOK_CONFIRM_AUTH;
+  if (typeof PROFILE.confirmHeaders === "function") Object.assign(headers, PROFILE.confirmHeaders());
 
   let data;
   try {
@@ -207,8 +260,8 @@ async function authConfirm(payment) {
     return { ok: false, reason: "confirm_unreachable" };
   }
 
-  const statusPath = process.env.WEBHOOK_CONFIRM_STATUS;
-  const amountPath = process.env.WEBHOOK_CONFIRM_AMOUNT;
+  const statusPath = cfg("WEBHOOK_CONFIRM_STATUS", "");
+  const amountPath = cfg("WEBHOOK_CONFIRM_AMOUNT", "");
   const status = statusPath ? get(data, statusPath)
     : findAny(data, ["status", "state", "payment_status", "transaction_status"]);
   if (!isSuccess(status)) return { ok: false, reason: "confirm_not_success" };
@@ -226,4 +279,5 @@ async function authenticate(event, payment) {
   return authToken(event);
 }
 
-module.exports = { parseBody, parsePayment, isSuccess, authenticate, MODE, get, findAny, toAmount };
+module.exports = { parseBody, parsePayment, isSuccess, authenticate, MODE, get, findAny, toAmount, cfg,
+                   PROFILE_NAME: (process.env.PSP || "generic").toLowerCase() };

@@ -27,11 +27,51 @@ ne sont pas faits** : sans connecteur de paiement, aucune licence n'est émise.
 
 ## 2. Brancher le prestataire de paiement (obligatoire)
 
-Choisissez un agrégateur qui couvre Orange Money et Moov Money au Mali. Aucun
-format n'est codé en dur : le connecteur (`netlify/functions/lib/psp.js`) se
-règle par variables d'environnement, sans toucher au code.
+Aucun format n'est codé en dur : le connecteur (`netlify/functions/lib/psp.js`)
+se règle par variables d'environnement, sans toucher au code. Un profil
+`PSP=<nom>` fournit les valeurs par défaut d'un prestataire donné ; toute
+variable `WEBHOOK_*` que vous renseignez l'emporte sur le profil.
 
-### 2.1 Comment le prestataire prouve que l'appel vient de lui
+### 2.0 PayDunya
+
+Profil livré et testé. Dans `.env` :
+
+```
+PSP=paydunya
+PAYDUNYA_MASTER_KEY=…      # tableau de bord PayDunya
+PAYDUNYA_PRIVATE_KEY=…
+PAYDUNYA_TOKEN=…
+PAYDUNYA_MODE=test         # puis "live" une fois la recette faite
+```
+
+Il n'y a rien d'autre à régler : le profil sait que l'IPN de PayDunya est un
+formulaire à clés imbriquées (`data[invoice][token]`, `data[customer][phone]`…)
+et où lire chaque champ.
+
+**Pourquoi on ne se fie pas au `hash` de l'IPN.** PayDunya joint à son appel un
+`data[hash]` dérivé de votre clé maîtresse. C'est une valeur **fixe** : elle ne
+dépend pas du contenu de l'appel, donc quiconque l'observe une fois peut la
+rejouer avec un montant ou un statut de son choix. Le profil authentifie donc
+autrement : il rappelle PayDunya sur `/checkout-invoice/confirm/{token}` et ne
+croit que cette réponse. Conséquence utile au passage — **c'est le montant
+confirmé par PayDunya qui décide de la durée**, pas celui annoncé dans l'IPN.
+Vérifié : un IPN annonçant 100 FCFA sur une facture réellement payée 48 000
+délivre bien 365 jours, et un IPN prétendant un succès sur une facture annulée
+n'émet rien.
+
+**À vérifier de votre côté**, sur votre tableau de bord PayDunya et sur le
+premier IPN réel — ces valeurs viennent de la documentation du prestataire et
+peuvent évoluer :
+
+- l'URL de confirmation et sa base sandbox (`WEBHOOK_CONFIRM_URL` les redéfinit
+  sans toucher au code) ;
+- le nom exact des champs de l'IPN, si le décodage ne donne rien.
+
+Le § 2.2 ci-dessous montre comment le constater en une minute. Si un champ ne
+tombe pas juste, le connecteur ne perd pas le paiement : il le consigne et vous
+le signale au tableau de bord.
+
+### 2.1 Si vous changez de prestataire : comment il prouve que l'appel vient de lui
 
 Regardez sa documentation et choisissez `WEBHOOK_AUTH` :
 
@@ -101,7 +141,8 @@ sa licence à la main pendant que vous ajustez.
 
 ### 2.5 Vérifier sans attendre un vrai paiement
 
-En mode `token` :
+Avec PayDunya, servez-vous du bac à sable (`PAYDUNYA_MODE=test`) : la facture
+est réelle, l'argent ne l'est pas. Avec un prestataire réglé en mode `token` :
 
 ```bash
 curl -s -X POST https://VOTRE-DOMAINE/.netlify/functions/payment-webhook \
