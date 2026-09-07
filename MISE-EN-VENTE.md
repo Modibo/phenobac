@@ -14,7 +14,7 @@ que chaque maillon fonctionne avant d'annoncer le produit.
 | Moteur d'interprétation gardé côté serveur (402 sans licence valide) | fait |
 | Activation de la clé dans l'application | fait — vérification serveur, plus de code de démonstration |
 | Émission automatique après paiement | fait — **le connecteur du prestataire reste à écrire** |
-| Envoi de la clé par SMS | fait — **la passerelle reste à brancher** |
+| Envoi de la clé par SMS | fait — connecteur paramétrable, **passerelle à choisir** |
 | Récupération de la clé sur `success.html` | fait |
 | Relances avant expiration | fait — reste à programmer le cron |
 | Tableau de bord des ventes | fait |
@@ -162,15 +162,66 @@ Pensez ensuite à révoquer cette licence de test (voir § 6).
 
 ## 3. Brancher la passerelle SMS (fortement recommandé)
 
-Sans elle, le client doit revenir sur `success.html` avec sa référence : cela marche,
-mais chaque friction coûte des ventes. Adaptez `sendSMS()` dans
-`netlify/functions/lib/deliver.js` (URL, en-tête d'authentification, format du corps),
-puis renseignez `SMS_API_URL`, `SMS_API_KEY`, `SMS_SENDER` dans `.env`.
+Sans SMS, le client doit revenir sur `success.html` avec sa référence. Cela
+marche — mais il ne dispose alors que de 48 heures (§ 7), et chaque friction
+coûte des ventes. Avec `SITE_URL` renseigné, le SMS contient un **lien court**
+vers `success.html?ref=…` plutôt que la clé entière : un seul segment SMS au
+lieu de plusieurs.
 
-Avec `SITE_URL` renseigné, le SMS contient un **lien court** vers `success.html?ref=…`
-plutôt que la clé complète : un seul segment SMS au lieu de plusieurs.
+Comme pour le paiement, aucun format n'est codé en dur. Deux profils sont
+fournis (`SMS_PROFILE=twilio` ou `africastalking`) ; pour toute autre
+passerelle, décrivez la forme de son appel :
 
----
+| La passerelle attend… | Réglage |
+|---|---|
+| du JSON avec un jeton `Bearer` | valeurs par défaut |
+| un formulaire | `SMS_BODY_FORMAT=form` |
+| des paramètres d'URL en GET | `SMS_METHOD=GET` |
+| une authentification Basic (identifiant + mot de passe) | `SMS_AUTH=basic`, `SMS_API_USER`, `SMS_API_KEY` |
+| une clé dans un en-tête à elle | `SMS_AUTH=header`, `SMS_AUTH_HEADER=…` |
+| d'autres noms de champs | `SMS_FIELD_TO`, `SMS_FIELD_FROM`, `SMS_FIELD_TEXT` |
+| des champs en plus (identifiant de compte…) | `SMS_EXTRA={"username":"votre_compte"}` |
+
+`{sid}` dans `SMS_API_URL` est remplacé par `SMS_API_USER`, pour les passerelles
+dont l'identifiant de compte fait partie de l'URL.
+
+### 3.1 Calibrer sans consommer de crédits
+
+Mettez `SMS_DRY_RUN=1` : rien n'est envoyé, mais la requête est construite et
+journalisée. Puis servez-vous de l'endpoint de test — il est réservé au jeton
+admin :
+
+```bash
+curl -s -X POST https://VOTRE-DOMAINE/.netlify/functions/send-test-sms \
+  -H "Authorization: Bearer VOTRE_JETON_ADMIN" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"70 00 00 00"}'
+```
+
+La réponse montre exactement ce qui part — verbe, URL, champs — et ce que la
+passerelle a répondu. Ajustez les `SMS_*` jusqu'à ce que cela corresponde à sa
+documentation, puis remettez `SMS_DRY_RUN=0` et refaites l'appel : vous devez
+recevoir le SMS.
+
+Les numéros locaux sont acceptés : `70 00 00 00` devient `+22370000000`
+(`SMS_COUNTRY_CODE`, défaut `+223`).
+
+### 3.2 Les passerelles qui échouent en répondant « 200 »
+
+Certaines répondent `200 OK` tout en signalant l'échec dans le corps
+(« crédit insuffisant »…). Renseignez `SMS_SUCCESS_MATCH` avec un fragment de
+texte présent **uniquement** en cas de succès : sans lui, ces envois seraient
+comptés comme réussis alors que le client n'a rien reçu.
+
+### 3.3 Un SMS non remis se voit
+
+Le tableau de bord porte une colonne **SMS** sur chaque vente : *remis*,
+*pas de n°*, *refusé*, *non configuré*, *injoignable*… Une clé qui n'est jamais
+parvenue à son acheteur est un problème commercial, pas un détail technique :
+c'est la première colonne à regarder après une vente.
+
+Un échec d'envoi n'empêche jamais l'émission de la licence — le client peut
+toujours récupérer sa clé sur `success.html`.
 
 ## 4. Fixer les tarifs — à deux endroits, qui doivent concorder
 

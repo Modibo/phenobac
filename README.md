@@ -40,6 +40,7 @@ netlify/functions/         les huit points d'entrée de l'API
   payment-webhook.js         émission automatique après paiement     (secret partagé)
   claim-license.js           remise de la clé au client              (référence de paiement)
   send-reminders.js          relances avant expiration               (secret de cron)
+  send-test-sms.js           SMS de test, pour calibrer              (jeton admin)
   lib/                       store, envoi SMS, révocation, CORS + auth
 phenobac.html              l'application
 success.html               page de retour après paiement

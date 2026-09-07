@@ -49,7 +49,8 @@ const FUNCTIONS = [
   "claim-license",
   "revoke-license",
   "stats",
-  "send-reminders"
+  "send-reminders",
+  "send-test-sms"
 ];
 for (const name of FUNCTIONS) {
   const mod = require("./netlify/functions/" + name + ".js");

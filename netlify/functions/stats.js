@@ -72,7 +72,10 @@ exports.handler = async (event) => {
     if (!isRevoked && !isExpired && exp && (exp - now) < 30 * 86400) {
       upcoming.push({ sub, exp, days: Math.max(0, Math.ceil((exp - now) / 86400)) });
     }
-    recent.push({ sub, amount, days: rec.days || null, at, source, revoked: isRevoked, expired: isExpired });
+    // État de la remise du SMS : une clé jamais parvenue à son acheteur est un
+    // problème commercial, pas un détail technique — il doit se voir.
+    const sms = rec.sms ? (rec.sms.sent ? (rec.sms.dryRun ? "dry" : "ok") : (rec.sms.reason || "echec")) : null;
+    recent.push({ sub, amount, days: rec.days || null, at, source, revoked: isRevoked, expired: isExpired, sms });
   }
 
   upcoming.sort((a, b) => a.exp - b.exp);
