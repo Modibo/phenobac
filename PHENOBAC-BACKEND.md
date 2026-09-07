@@ -12,11 +12,16 @@ Ce dossier transforme le freemium « de démonstration » (verrou dans le HTML, 
 - `netlify/functions/claim-license.js` — remet la licence au client via sa référence de paiement.
 - `netlify/functions/lib/deliver.js` — envoi de la clé au client par SMS (module partagé).
 - `netlify/functions/lib/revocation.js` — liste de révocation (module partagé).
+- `netlify/functions/lib/http.js` — CORS verrouillé + authentification admin (module partagé).
 - `netlify/functions/revoke-license.js` — révoquer / restaurer / lister (endpoint admin).
 - `netlify/functions/stats.js` — agrégats de ventes pour le tableau de bord (endpoint admin).
 - `dashboard.html` — tableau de bord des ventes (revenu, licences actives, expirations, révocations).
 - `success.html` — page de retour après paiement : affiche la clé et les instructions.
-- `phenobac-license.js` — le branchement côté client, qui remplace la démo.
+- `phenobac-license.js` — le branchement côté client. **Déjà appliqué** dans
+  `phenobac.html` : ce fichier n'est conservé qu'à titre de référence.
+
+**Pour vendre**, la suite pratique est dans **`MISE-EN-VENTE.md`** : brancher le
+prestataire de paiement et la passerelle SMS, fixer les tarifs, dérouler la recette.
 
 ## L'idée en une image
 

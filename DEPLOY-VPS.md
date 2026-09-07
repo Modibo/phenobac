@@ -1,5 +1,8 @@
 # Déployer PhénoBac sur votre VPS OVH
 
+> Une fois le site en ligne, **`MISE-EN-VENTE.md`** liste ce qui reste à brancher pour
+> encaisser (paiement, SMS, tarifs) et la recette à dérouler avant la première vente.
+
 Vous hébergez tout vous-même : un serveur Node (Express) sert les pages et l'API, derrière nginx en HTTPS. Aucune dépendance à Netlify. Le stockage est un simple fichier local.
 
 Ce guide suppose un VPS **Ubuntu / Debian** et un domaine géré chez OVH.
