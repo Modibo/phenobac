@@ -10,6 +10,7 @@
 const { getStore } = require("./lib/store");
 const { decodePayload } = require("./lib/revocation");
 const { remind } = require("./lib/deliver");
+const { safeEqual } = require("./lib/http");
 
 const CRON_SECRET = process.env.PHENOBAC_CRON_SECRET || process.env.PHENOBAC_ADMIN_TOKEN || "";
 const WINDOW_DAYS = Math.max(1, parseInt(process.env.REMINDER_DAYS || "5", 10));
@@ -30,12 +31,17 @@ async function readRevoked() {
 exports.handler = async (event) => {
   if (!CRON_SECRET) return { statusCode: 500, headers: JSONH, body: JSON.stringify({ error: "server_not_configured" }) };
 
-  // Autorisation : invocation planifiée Netlify (le corps contient next_run),
-  // ou secret en entête pour un cron HTTP (VPS).
+  // Autorisation : secret en entête (cron HTTP, VPS), ou invocation planifiée
+  // Netlify. ATTENTION : « le corps contient next_run » n'est une preuve que sur
+  // Netlify, où seule la plateforme peut déclencher la fonction planifiée. Hors
+  // Netlify, l'endpoint est public : sans ce garde-fou, n'importe qui pourrait
+  // POSTer {"next_run":1} et déclencher un envoi de SMS en masse (à vos frais).
   let scheduled = false;
-  try { const b = JSON.parse(event.body || "{}"); if (b && b.next_run) scheduled = true; } catch (e) {}
+  if (process.env.NETLIFY) {
+    try { const b = JSON.parse(event.body || "{}"); if (b && b.next_run) scheduled = true; } catch (e) {}
+  }
   const secret = (event.headers && (event.headers["x-cron-secret"] || event.headers["X-Cron-Secret"])) || "";
-  if (!scheduled && secret !== CRON_SECRET) {
+  if (!scheduled && !safeEqual(secret, CRON_SECRET)) {
     return { statusCode: 401, headers: JSONH, body: JSON.stringify({ error: "unauthorized" }) };
   }
 

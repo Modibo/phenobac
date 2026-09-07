@@ -16,29 +16,23 @@
 
 const crypto = require("crypto");
 const { getStore } = require("./lib/store");
+const { cors, adminOk } = require("./lib/http");
 const SECRET = process.env.PHENOBAC_SECRET || "";
-const ADMIN = process.env.PHENOBAC_ADMIN_TOKEN || "";
 
 function sign(payloadB64) {
   return crypto.createHmac("sha256", SECRET).update(payloadB64).digest("base64url");
 }
 
-// En prod, remplacez "*" par l'origine exacte de votre page admin.
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
-};
+// Origines autorisées : SITE_URL / ALLOWED_ORIGINS (voir lib/http.js).
 
 exports.handler = async (event) => {
+  const CORS = cors(event, { headers: "Content-Type, Authorization" });
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: "method" }) };
   }
 
-  const auth = event.headers["authorization"] || event.headers["Authorization"] || "";
-  if (!ADMIN || auth !== "Bearer " + ADMIN) {
+  if (!adminOk(event)) {
     return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: "unauthorized" }) };
   }
   if (!SECRET) {

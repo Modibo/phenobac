@@ -5,15 +5,10 @@
 // GET /.netlify/functions/claim-license?ref=REFERENCE
 
 const { getStore } = require("./lib/store");
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",        // en prod : restreindre à l'origine de votre site
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Content-Type": "application/json"
-};
+const { cors } = require("./lib/http");
 
 exports.handler = async (event) => {
+  const CORS = cors(event, { methods: "GET, OPTIONS" });
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
 
   const ref = (event.queryStringParameters || {}).ref || "";

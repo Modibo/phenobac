@@ -9,6 +9,7 @@
 
 const crypto = require("crypto");
 const { isRevoked } = require("./lib/revocation");
+const { cors } = require("./lib/http");
 const SECRET = process.env.PHENOBAC_SECRET || "";
 
 function sign(payloadB64) {
@@ -50,15 +51,10 @@ function verify(token) {
   };
 }
 
-// En production, remplacez "*" par l'origine exacte de votre site.
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
-};
+// Les origines autorisées viennent de SITE_URL / ALLOWED_ORIGINS (voir lib/http.js).
 
 exports.handler = async (event) => {
+  const CORS = cors(event);
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ valid: false, reason: "method" }) };

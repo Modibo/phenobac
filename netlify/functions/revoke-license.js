@@ -9,23 +9,15 @@
 // donner un "sub" révoque toutes les licences de ce client.
 
 const { decodePayload, revoke, restore, list } = require("./lib/revocation");
-
-const ADMIN = process.env.PHENOBAC_ADMIN_TOKEN || "";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",          // en prod : restreindre à l'origine de la page admin
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
-};
-const J = (code, obj) => ({ statusCode: code, headers: CORS, body: JSON.stringify(obj) });
+const { cors, adminOk } = require("./lib/http");
 
 exports.handler = async (event) => {
+  const CORS = cors(event, { headers: "Content-Type, Authorization" });
+  const J = (code, obj) => ({ statusCode: code, headers: CORS, body: JSON.stringify(obj) });
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") return J(405, { error: "method" });
 
-  const auth = event.headers["authorization"] || event.headers["Authorization"] || "";
-  if (!ADMIN || auth !== "Bearer " + ADMIN) return J(401, { error: "unauthorized" });
+  if (!adminOk(event)) return J(401, { error: "unauthorized" });
 
   let body = {};
   try { body = JSON.parse(event.body || "{}"); } catch (e) { return J(400, { error: "bad_json" }); }

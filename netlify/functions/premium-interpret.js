@@ -14,6 +14,7 @@
 
 const crypto = require("crypto");
 const { isRevoked } = require("./lib/revocation");
+const { cors } = require("./lib/http");
 const SECRET = process.env.PHENOBAC_SECRET || "";
 const FREE_SPECIES = ["ecoli", "saureus"]; // interprétés sans licence
 
@@ -857,14 +858,10 @@ function runInterpretation(input) {
 }
 
 /* ======================= Handler ======================= */
-const CORS = {
-  "Access-Control-Allow-Origin": "*",          // en prod : restreindre à votre domaine
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
-};
+// Origines autorisées : SITE_URL / ALLOWED_ORIGINS (voir lib/http.js).
 
 exports.handler = async (event) => {
+  const CORS = cors(event);
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: "method" }) };
 
@@ -873,8 +870,10 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: "bad_json" }) };
   }
 
-  // 1. porte : licence obligatoire SAUF pour les germes gratuits
-  const isFree = FREE_SPECIES.includes(body.organism);
+  // 1. porte : licence obligatoire SAUF pour les germes gratuits EN MODE S/I/R.
+  // La saisie par CMI est vendue comme fonction Premium : elle est donc payante
+  // pour toutes les espèces, y compris les gratuites.
+  const isFree = FREE_SPECIES.includes(body.organism) && String(body.mode || "sir") !== "mic";
   const token = String(body.license || "").trim();
   const lic = verify(token);
   const revoked = lic.valid ? await isRevoked(token) : false;
