@@ -1,0 +1,10 @@
+.git
+.github
+.env
+data
+node_modules
+*.md
+admin.html
+dashboard.html
+phenobac-license.js
+install.sh

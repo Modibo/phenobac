@@ -59,6 +59,10 @@ PHENOBAC_WEBHOOK_SECRET=$(openssl rand -hex 24)
 STORE_BACKEND=file
 DATA_DIR=/data
 SITE_URL=https://$DOMAIN
+# Origines autorisées à appeler l'API (vide = repli sur SITE_URL).
+ALLOWED_ORIGINS=https://$DOMAIN
+# Barème "montant_FCFA:jours". Doit correspondre aux tarifs affichés dans l'app.
+PHENOBAC_PRICE_MAP=5000:30,48000:365
 SMS_API_URL=
 SMS_API_KEY=
 SMS_SENDER=PhenoBac
