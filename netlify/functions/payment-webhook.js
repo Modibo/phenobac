@@ -16,8 +16,23 @@ const { deliver } = require("./lib/deliver");
 const SECRET = process.env.PHENOBAC_SECRET || "";
 const WEBHOOK_SECRET = process.env.PHENOBAC_WEBHOOK_SECRET || "";
 
-// Montant payé (FCFA / XOF) -> durée de la licence en jours. À aligner sur vos tarifs.
-const PRICE_MAP = { 5000: 30, 13000: 90, 48000: 365 };
+// Montant payé (FCFA / XOF) -> durée de la licence en jours.
+// DOIT rester aligné sur les tarifs affichés dans phenobac.html (PRICING).
+// Surchargeable sans toucher au code, via la variable d'environnement
+// PHENOBAC_PRICE_MAP au format "montant:jours,montant:jours" (ex. "5000:30,48000:365").
+const DEFAULT_PRICE_MAP = { 5000: 30, 48000: 365 };
+
+function loadPriceMap() {
+  const raw = (process.env.PHENOBAC_PRICE_MAP || "").trim();
+  if (!raw) return DEFAULT_PRICE_MAP;
+  const map = {};
+  for (const part of raw.split(",")) {
+    const [a, d] = part.split(":").map((x) => parseInt(String(x).trim(), 10));
+    if (Number.isFinite(a) && Number.isFinite(d) && a > 0 && d > 0) map[a] = d;
+  }
+  return Object.keys(map).length ? map : DEFAULT_PRICE_MAP;
+}
+const PRICE_MAP = loadPriceMap();
 
 /* ---- signature de licence (identique à issue-license) ---- */
 function mintLicense(sub, days) {
@@ -74,7 +89,20 @@ exports.handler = async (event) => {
   if (!pay.ref) return ok({ ok: true, issued: false, reason: "no_reference" });
 
   const days = PRICE_MAP[pay.amount];
-  if (!days) return ok({ ok: true, issued: false, reason: "unknown_amount", amount: pay.amount });
+  if (!days) {
+    // Le client a payé, mais le montant ne correspond à aucun tarif connu
+    // (tarif modifié, frais déduits par le PSP, paiement partiel…). On NE perd
+    // pas la vente : on la consigne pour qu'elle apparaisse comme « à traiter »
+    // et qu'une licence soit émise à la main via issue-license.
+    try {
+      await getStore("phenobac-licenses").setJSON("pending:" + pay.ref, {
+        pending: true, reason: "unknown_amount", amount: pay.amount,
+        contact: pay.contact, sub: pay.contact || pay.ref, ref: pay.ref, at: Date.now()
+      });
+    } catch (e) { /* consignation best-effort */ }
+    console.warn("[phenobac] paiement de montant inconnu :", pay.amount, "ref", pay.ref);
+    return ok({ ok: true, issued: false, reason: "unknown_amount", amount: pay.amount });
+  }
 
   const sub = pay.contact || pay.ref;
   const store = getStore("phenobac-licenses");

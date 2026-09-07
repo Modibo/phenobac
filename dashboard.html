@@ -120,6 +120,11 @@
       <div class="card-b"><div class="chart-wrap" id="chart"></div></div>
     </div>
 
+    <div class="card" id="pendingCard" style="display:none">
+      <div class="card-h"><span class="eyebrow">Paiements à traiter</span></div>
+      <div class="card-b" id="pending"></div>
+    </div>
+
     <div class="card">
       <div class="card-h"><span class="eyebrow">Expirations à venir (30 jours)</span></div>
       <div class="card-b" id="upcoming"></div>
@@ -175,6 +180,19 @@ function render(d){
   renderChart((d.series||[]).slice(-12));
   renderUpcoming(d.upcoming||[]);
   renderRecent(d.recent||[]);
+  renderPending(d.pending||[]);
+}
+
+// Paiements encaissés dont le montant ne correspondait à aucun tarif : aucune
+// licence n'a été émise automatiquement. À régler à la main (admin.html), sans
+// quoi le client a payé pour rien.
+function renderPending(list){
+  const card=$("#pendingCard"), box=$("#pending");
+  if(!list.length){ card.style.display="none"; return; }
+  card.style.display="";
+  const rows=list.map(v=>`<tr><td class="num">${fdatems(v.at)}</td><td>${esc(v.contact||"—")}</td><td class="num">${v.amount?fcfa(v.amount):"—"}</td><td><code>${esc(v.ref||"")}</code></td><td><span class="tag exp">montant inconnu</span></td></tr>`).join("");
+  box.innerHTML=`<table><thead><tr><th>Date</th><th>Contact</th><th style="text-align:right">Montant</th><th>Référence</th><th>Motif</th></tr></thead><tbody>${rows}</tbody></table>`
+    + `<div class="empty" style="margin-top:10px;text-align:left">Émettez la licence à la main depuis <b>admin.html</b>, puis transmettez la clé au client.</div>`;
 }
 
 function renderChart(series){

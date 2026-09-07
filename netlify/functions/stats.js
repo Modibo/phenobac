@@ -6,15 +6,7 @@
 
 const { decodePayload } = require("./lib/revocation");
 const { getStore } = require("./lib/store");
-
-const ADMIN = process.env.PHENOBAC_ADMIN_TOKEN || "";
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
-};
-const J = (code, obj) => ({ statusCode: code, headers: CORS, body: JSON.stringify(obj) });
+const { cors, adminOk } = require("./lib/http");
 
 async function readAll(store) {
   const out = [];
@@ -27,13 +19,21 @@ async function readAll(store) {
 }
 
 exports.handler = async (event) => {
+  const CORS = cors(event, { headers: "Content-Type, Authorization" });
+  const J = (code, obj) => ({ statusCode: code, headers: CORS, body: JSON.stringify(obj) });
+
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") return J(405, { error: "method" });
 
-  const auth = event.headers["authorization"] || event.headers["Authorization"] || "";
-  if (!ADMIN || auth !== "Bearer " + ADMIN) return J(401, { error: "unauthorized" });
+  if (!adminOk(event)) return J(401, { error: "unauthorized" });
 
-  const licenses = await readAll(getStore("phenobac-licenses"));
+  const all = await readAll(getStore("phenobac-licenses"));
+
+  // Paiements reçus dont le montant ne correspondait à aucun tarif : ce ne sont
+  // pas des licences (aucune clé émise), mais des ventes à traiter à la main.
+  // On les sort du calcul pour ne pas gonfler le chiffre d'affaires encaissé.
+  const pending = all.filter((r) => r && r.pending);
+  const licenses = all.filter((r) => r && !r.pending);
   const revs = await readAll(getStore("phenobac-revocations"));
 
   const revJti = new Set(), revSub = new Set();
@@ -86,6 +86,10 @@ exports.handler = async (event) => {
     revenue, revenueActive,
     series,
     upcoming: upcoming.slice(0, 60),
-    recent: recent.slice(0, 60)
+    recent: recent.slice(0, 60),
+    pending: pending
+      .map((r) => ({ ref: r.ref, amount: Number(r.amount) || 0, contact: r.contact || "—", reason: r.reason || "", at: r.at || 0 }))
+      .sort((a, b) => (b.at || 0) - (a.at || 0))
+      .slice(0, 60)
   });
 };
