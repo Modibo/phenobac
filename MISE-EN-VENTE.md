@@ -171,6 +171,13 @@ curl -s -X POST https://VOTRE-DOMAINE/.netlify/functions/revoke-license \
 Chaque licence n'est relancée qu'une fois (marqueur `reminded`). Fenêtre par défaut :
 5 jours avant l'échéance (`REMINDER_DAYS`).
 
+**« Je n'arrive plus à récupérer ma clé ».** La page `success.html` ne rend la clé
+que dans les 48 heures suivant l'encaissement (`CLAIM_WINDOW_HOURS`) : passé ce
+délai, la référence de paiement ne suffit plus. C'est voulu — une référence de
+paiement se devine parfois. La licence du client, elle, reste valide : renvoyez-lui
+la clé depuis `dashboard.html` (colonne « Ventes récentes »), ou réémettez-en une
+avec `issue-license` en reprenant la durée restante.
+
 **Sauvegarde.** Tout tient dans le volume Docker `phenobac-data` : licences et
 révocations. Sans lui, vos clients gardent leurs clés (elles restent valides) mais vous
 perdez la comptabilité et la capacité de révoquer.
