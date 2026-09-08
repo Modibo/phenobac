@@ -1,0 +1,49 @@
+# Bloc à ajouter à votre Caddyfile (généralement /etc/caddy/Caddyfile),
+# SANS toucher aux blocs déjà présents.
+#
+#   1. Remplacez phenobac.votre-domaine.ml par votre sous-domaine.
+#   2. Remplacez 8080 par la valeur de HOST_PORT si vous l'avez changée.
+#   3. Vérifiez puis rechargez :
+#        sudo caddy validate --config /etc/caddy/Caddyfile
+#        sudo systemctl reload caddy
+#
+# Caddy obtient et renouvelle le certificat tout seul : ni certbot, ni cron.
+# Condition : un enregistrement DNS A pour ce sous-domaine doit déjà pointer
+# vers l'adresse du serveur, sinon l'émission du certificat échoue.
+
+phenobac.votre-domaine.ml {
+	encode zstd gzip
+
+	# PhénoBac n'écoute que sur la loopback ; Caddy est la seule porte d'entrée.
+	reverse_proxy 127.0.0.1:8080
+
+	header {
+		# L'application est servie en HTTPS uniquement.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Le service worker doit pouvoir se mettre à jour : pas de cache figé
+		# sur sa réponse, sinon les correctifs n'atteignent plus les clients.
+		-Server
+	}
+
+	@sw path /service-worker.js
+	header @sw Cache-Control "no-cache"
+
+	# Journaux séparés de ceux de vos autres sites.
+	log {
+		output file /var/log/caddy/phenobac.log
+		format console
+	}
+}
+
+# ---------------------------------------------------------------------------
+# Rappel : admin.html et dashboard.html ne doivent PAS être servis.
+# Ils ne sont pas copiés dans public/ par install-caddy.sh, donc Caddy ne peut
+# pas les servir. Ouvrez-les depuis votre poste et pointez-les vers l'URL
+# ci-dessus. Si vous tenez à les publier, protégez-les au moins ainsi :
+#
+#   @admin path /admin.html /dashboard.html
+#   basic_auth @admin {
+#       modibo $2a$14$...   # sudo caddy hash-password
+#   }

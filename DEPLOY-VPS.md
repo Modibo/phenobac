@@ -25,6 +25,60 @@ Ce guide suppose un VPS **Ubuntu / Debian** et un domaine géré chez OVH.
 
 `admin.html` reste **en dehors de public/** (voir « Protéger l'admin »).
 
+## 0. Le serveur sert-il déjà un site ?
+
+Si le serveur fait déjà tourner un site derrière nginx **ou Caddy**, ne lancez
+pas `install.sh` : il installe nginx et réclame les ports 80 et 443, ce qui
+entrerait en conflit avec le serveur web déjà en place et couperait le site
+existant.
+
+Utilisez **`install-caddy.sh`** à la place :
+
+```bash
+bash install-caddy.sh
+```
+
+Il ne touche ni au serveur web, ni aux certificats, ni au DNS, ni à quoi que ce
+soit d'autre sur la machine. Il fait tourner PhénoBac en conteneur, écoutant sur
+`127.0.0.1` uniquement, choisit tout seul un port libre si 8080 est pris, et
+engendre les secrets dans `.env`. Il est idempotent.
+
+À ce stade **rien n'est accessible de l'extérieur**, ce qui est voulu. Pour
+vérifier l'application sans rien exposer, ouvrez un tunnel depuis votre poste :
+
+```bash
+ssh -L 8080:127.0.0.1:8080 VOTRE_COMPTE@VOTRE_SERVEUR
+```
+
+puis `http://127.0.0.1:8080` dans votre navigateur.
+
+### Exposer, une fois le domaine en place
+
+1. Créez un enregistrement DNS **A** pour votre sous-domaine, vers l'adresse du
+   serveur, et attendez la propagation.
+2. Ajoutez le contenu de [`deploy/Caddyfile.phenobac`](deploy/Caddyfile.phenobac)
+   à votre `Caddyfile`, **sans toucher aux blocs existants**. Ajustez le
+   sous-domaine et le port. Puis :
+
+   ```bash
+   sudo caddy validate --config /etc/caddy/Caddyfile
+   sudo systemctl reload caddy
+   ```
+
+   Caddy obtient et renouvelle le certificat tout seul : ni certbot, ni cron.
+
+3. Renseignez `SITE_URL` et `ALLOWED_ORIGINS` dans `.env`, puis
+   `docker compose up -d`.
+
+   **Ne sautez pas cette étape** : tant que `SITE_URL` est vide, l'API répond à
+   toutes les origines, et n'importe qui peut faire appeler votre moteur
+   d'interprétation depuis son propre site.
+
+Le reste de ce guide décrit l'installation sur une machine **vierge**, où
+PhénoBac est le seul service.
+
+---
+
 ## 1. Pointer le domaine vers le VPS
 
 Dans l'espace OVH (zone DNS de votre domaine), créez un enregistrement **A** vers l'IP de votre VPS (et un `AAAA` si IPv6). Attendez la propagation.

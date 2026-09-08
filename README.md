@@ -17,15 +17,25 @@ une licence valide. Patcher la page ne débloque rien.
 | comprendre le mécanisme des licences | **[PHENOBAC-BACKEND.md](PHENOBAC-BACKEND.md)** |
 | diffuser l'application sur mobile | **[MOBILE-DEPLOY.md](MOBILE-DEPLOY.md)** |
 
-Installation complète en une commande, sur un VPS Ubuntu/Debian neuf :
+Sur un VPS **vierge**, où PhénoBac sera le seul service :
 
 ```bash
 sudo DOMAIN=phenobac.votre-domaine.ovh LETSENCRYPT_EMAIL=vous@exemple.ml bash install.sh
 ```
 
-Le script installe Docker, nginx et Let's Encrypt, tire au sort les secrets,
-prépare `public/` et démarre le service. Il affiche le jeton d'administration à
+Docker, nginx et Let's Encrypt sont installés, les secrets tirés au sort,
+`public/` préparé et le service démarré. Le jeton d'administration s'affiche à
 la fin : notez-le, il n'est plus réaffiché.
+
+Sur un serveur qui **sert déjà un site** (nginx ou Caddy) :
+
+```bash
+bash install-caddy.sh
+```
+
+Aucun serveur web, certificat ni DNS n'est touché : PhénoBac tourne en conteneur
+sur la loopback, et votre façade existante l'exposera quand vous aurez un
+sous-domaine. Voir [DEPLOY-VPS.md § 0](DEPLOY-VPS.md).
 
 ## Ce que contient le dépôt
 
@@ -46,7 +56,9 @@ phenobac.html              l'application
 success.html               page de retour après paiement
 admin.html                 émission et révocation des licences   — à garder hors ligne
 dashboard.html             tableau de bord des ventes            — à garder hors ligne
-install.sh                 installation complète du VPS
+install.sh                 installation complète, VPS vierge (Docker+nginx+TLS)
+install-caddy.sh           installation en cohabitation, sans toucher à la façade
+deploy/Caddyfile.phenobac  bloc à ajouter à un Caddyfile existant
 Dockerfile / docker-compose.yml
 .github/workflows/deploy.yml   vérification de syntaxe puis déploiement SSH
 ```
