@@ -92,21 +92,36 @@ class Classeur:
         return res
 
 
-# Groupe PhénoBac -> feuille du classeur EUCAST
-FEUILLES = {
-    'entero':   'Enterobacterales',
-    'staph':    'Staphylococcus',
-    'enteroc':  'Enterococcus',
-    'pseudo':   'Pseudomonas',
-    'acineto':  'Acinetobacter',
-    'nonferm':  'S.maltophilia',
-    'pneumo':   'S.pneumoniae',
-    'strep':    'Streptococcus A,B,C,G',
-    'grampos':  'Streptococcus A,B,C,G',
-    'fastid':   'H.influenzae',
-    'curved':   'C.jejuni_C.coli',
-    'anaerobe': 'Anaerobic bacteria_G-negative',
+# Groupe de seuils PhénoBac -> germes couverts, et feuille(s) EUCAST correspondantes.
+#
+# Un groupe n'est comparable que s'il correspond à UNE seule feuille. Quand il
+# en couvre plusieurs, comparer reviendrait à appliquer les seuils d'une espèce
+# à une autre : l'outil refuse, et le dit. C'est arrivé pour « grampos »
+# (Listeria et Corynebacterium) comparé à tort à la feuille des streptocoques
+# A/B/C/G, ce qui a produit trois seuils faux avant qu'on s'en aperçoive.
+GROUPES = {
+    'entero':   (["11 entérobactéries"],                    ['Enterobacterales']),
+    'staph':    (["S. aureus"],                              ['Staphylococcus']),
+    'scn':      (["S. epidermidis", "S. saprophyticus", "S. lugdunensis", "S. haemolyticus"],
+                                                             ['Staphylococcus']),
+    'enteroc':  (["E. faecalis", "E. faecium"],             ['Enterococcus']),
+    'pseudo':   (["P. aeruginosa"],                          ['Pseudomonas']),
+    'acineto':  (["A. baumannii"],                           ['Acinetobacter']),
+    'pneumo':   (["S. pneumoniae"],                          ['S.pneumoniae']),
+    'strep':    (["S. pyogenes", "S. agalactiae", "S. viridans"],
+                 ['Streptococcus A,B,C,G', 'Viridans group streptococci']),
+    'nonferm':  (["S. maltophilia", "B. cepacia"],           ['S.maltophilia', 'B.cepacia']),
+    'fastid':   (["H. influenzae", "N. meningitidis", "N. gonorrhoeae", "M. catarrhalis"],
+                 ['H.influenzae', 'N.meningitidis', 'N.gonorrhoeae', 'M.catarrhalis']),
+    'grampos':  (["L. monocytogenes", "Corynebacterium"],
+                 ['L.monocytogenes', 'Corynebacterium']),
+    'anaerobe': (["B. fragilis", "C. perfringens", "C. difficile"],
+                 ['Anaerobic bacteria_G-negative', 'Anaerobic bacteria_G-positive']),
+    'curved':   (["C. jejuni", "V. cholerae"],               ['C.jejuni_C.coli', 'Vibrio']),
 }
+
+# Compatibilité : les groupes à feuille unique restent comparables.
+FEUILLES = {g: f[0] for g, (_, f) in GROUPES.items() if len(f) == 1}
 
 # Code PhénoBac -> motif de recherche dans la colonne « agent » d'EUCAST.
 # Motifs volontairement larges : mieux vaut plusieurs candidats affichés
@@ -168,11 +183,16 @@ def main():
     bp = seuils_phenobac(racine)
 
     total = {'identique': 0, 'different': 0, 'arbitrer': 0, 'absent': 0}
+    non_comparables = []
     for groupe in sorted(bp):
+        germes, feuilles = GROUPES.get(groupe, ([], []))
+        if len(feuilles) > 1:
+            non_comparables.append((groupe, germes, feuilles))
+            continue
         feuille = FEUILLES.get(groupe)
         print("\n=== groupe %s  ->  feuille EUCAST %s ===" % (groupe, feuille or "(non associée)"))
         if not feuille or feuille not in c.feuilles:
-            print("   feuille introuvable — association à compléter dans FEUILLES")
+            print("   feuille introuvable — association à compléter dans GROUPES")
             continue
         lignes = c.lignes(feuille)
         for code in sorted(bp[groupe]):
@@ -180,8 +200,15 @@ def main():
             motif = AGENTS.get(code)
             cands = []
             if motif:
+                # Deux groupes partagent la feuille des staphylocoques : on ne
+                # retient que les lignes de l'espèce concernée, sinon celles de
+                # S. aureus et des coagulase-négative se mélangent.
+                espece = {'staph': r'S\. aureus', 'scn': r'[Cc]oagulase-negative'}.get(groupe)
+                autre  = {'staph': r'[Cc]oagulase-negative', 'scn': r'S\. aureus'}.get(groupe)
                 for cel in lignes:
                     nom = cel.get('A', '')
+                    if autre and re.search(autre, nom) and not (espece and re.search(espece, nom)):
+                        continue
                     if re.search(motif, nom, re.I):
                         bruts = (cel.get('B'), cel.get('C'))
                         sE, rE = nombre(bruts[0]), nombre(bruts[1])
@@ -223,6 +250,15 @@ def main():
                 for nom, sE, rE in cands:
                     concorde = "  <- concorde" if (sE == sA and rE == rA) else ""
                     print("            %-58s S<=%-7s R>%s%s" % (nom[:58], sE, rE, concorde))
+
+    if non_comparables:
+        print("\n=== groupes NON COMPARABLES : ils couvrent plusieurs feuilles EUCAST ===")
+        print("Comparer reviendrait à appliquer les seuils d'une espèce à une autre.")
+        print("Le remède n'est pas de choisir une feuille, mais de scinder le groupe.")
+        for g, germes, feuilles in non_comparables:
+            print("\n  %s — %s" % (g, ", ".join(germes)))
+            print("      feuilles concernées : %s" % ", ".join(feuilles))
+            print("      seuils en attente   : %d" % len(bp.get(g, {})))
 
     print("\n=== bilan ===")
     print("  identiques         : %d" % total['identique'])

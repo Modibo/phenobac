@@ -886,6 +886,16 @@ const BP = {
     GEN:{S:2,R:2}, SXT:{S:0.5,R:0.5}, RD:{S:0.06,R:0.06},
     VA:{S:2,R:2}, TEC:{S:2,R:2}, LZD:{S:4,R:4}
   },
+
+  /* Staphylocoques à COAGULASE NÉGATIVE.
+     Identique à « staph » (S. aureus) SAUF les glycopeptides : EUCAST donne
+     4 mg/L aux coagulase-négative et 2 mg/L à S. aureus. Confondre les deux
+     rend sensible une souche qui ne l'est pas, ou l'inverse. */
+  scn:{
+    FOX:{S:4,R:4}, OXA:{S:0.25,R:0.25}, PEN:{S:0.125,R:0.125}, E:{S:1,R:1}, DA:{S:0.25,R:0.25},
+    GEN:{S:2,R:2}, SXT:{S:0.5,R:0.5}, RD:{S:0.06,R:0.06},
+    VA:{S:4,R:4}, TEC:{S:4,R:4}, LZD:{S:4,R:4}
+  },
   enteroc:{
     AMP:{S:4,R:4}, VA:{S:4,R:4}, TEC:{S:2,R:2},
     HLG:{S:128,R:128}, LZD:{S:4,R:4}, CIP:{S:4,R:4}
@@ -917,8 +927,8 @@ const BP = {
     RD:{S:1,R:1}, SXT:{S:0.5,R:0.5}, CAF:{S:2,R:2}
   },
   grampos:{
-    AMP:{S:1,R:1}, AMX:{S:2,R:2}, PEN:{S:0.12,R:0.25}, SXT:{S:0.5,R:0.5},
-    GEN:{S:1,R:1}, VA:{S:2,R:2}, MEM:{S:0.5,R:0.5}, E:{S:0.25,R:0.25}, LZD:{S:2,R:2}, CTX:{S:1,R:1}
+    AMP:{S:1,R:1}, AMX:{S:2,R:2}, PEN:{S:0.12,R:0.25}, SXT:{S:0.5,R:1},
+    GEN:{S:1,R:1}, VA:{S:2,R:2}, MEM:{S:0.5,R:0.5}, E:{S:1,R:2}, LZD:{S:2,R:4}, CTX:{S:1,R:1}
   },
   anaerobe:{
     PEN:{S:0.25,R:0.5}, AMC:{S:4,R:8}, TZP:{S:8,R:16}, IPM:{S:2,R:8},
@@ -934,7 +944,8 @@ const BPGROUP = {
   ecoli:"entero", kpneu:"entero", ecloacae:"entero", proteus:"entero", salmonella:"entero",
   koxytoca:"entero", kaerogenes:"entero", serratia:"entero", cfreundii:"entero", pvulgaris:"entero", shigella:"entero",
   saureus:"staph", efaecalis:"enteroc", efaecium:"enteroc",
-  sepidermidis:"staph", ssaprophyticus:"staph", slugdunensis:"staph", shaemolyticus:"staph",
+  /* coagulase négative : glycopeptides à 4 mg/L, contre 2 pour S. aureus */
+  sepidermidis:"scn", ssaprophyticus:"scn", slugdunensis:"scn", shaemolyticus:"scn",
   spyogenes:"strep", sagalactiae:"strep", sviridans:"strep",
   pneumocoque:"pneumo", paeru:"pseudo", acineto:"acineto",
   steno:"nonferm", burk:"nonferm",

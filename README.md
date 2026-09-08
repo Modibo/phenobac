@@ -129,13 +129,25 @@ Deux conventions retenues, à revoir si votre pratique diffère :
 - **Prélèvement méningé** : traité à part, par la table `BP_MENINGE` et la
   question posée à la saisie — les deux jeux coexistent au lieu qu'on choisisse.
 
-**Limite connue.** Deux groupes de seuils rassemblent des espèces qu'EUCAST
-sépare : `staph` couvre *S. aureus* et les staphylocoques à coagulase négative
-(vancomycine et teicoplanine diffèrent : 2 contre 4 mg/L), et `anaerobe` couvre
-des anaérobies à Gram positif comme à Gram négatif, traités sur deux feuilles
-distinctes. Tant que ces groupes ne sont pas scindés, ces seuils ne peuvent pas
-être alignés — choisir une ligne reviendrait à l'appliquer aux mauvaises
-espèces.
+**Limite connue : des groupes de seuils rassemblent des espèces qu'EUCAST
+sépare.** `staph` a été scindé en `staph` (*S. aureus*) et `scn`
+(coagulase-négative), les glycopeptides différant — 2 contre 4 mg/L. Six groupes
+restent dans ce cas :
+
+| groupe | germes | feuilles EUCAST |
+|---|---|---|
+| `strep` | S. pyogenes, S. agalactiae, **S. viridans** | 2 |
+| `fastid` | H. influenzae, **N. meningitidis, N. gonorrhoeae, M. catarrhalis** | 4 |
+| `grampos` | L. monocytogenes, Corynebacterium | 2 |
+| `nonferm` | S. maltophilia, **B. cepacia** | 2 |
+| `anaerobe` | B. fragilis, **C. perfringens, C. difficile** | 2 |
+| `curved` | C. jejuni, **V. cholerae** | 2 |
+
+`outils/comparer-eucast.py` **refuse** de comparer ces groupes plutôt que de
+choisir une feuille en silence. C'est délibéré : comparer `grampos` (Listeria,
+Corynebacterium) à la feuille des streptocoques a produit trois seuils faux
+avant qu'on s'en aperçoive. Le remède n'est pas de choisir une ligne, mais de
+scinder le groupe — comme cela a été fait pour les staphylocoques.
 
 ## Avertissement d'usage
 
