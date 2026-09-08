@@ -142,14 +142,17 @@ def seuils_phenobac(racine):
     for mg in re.finditer(r'(\w+)\s*:\s*\{((?:[^{}]|\{[^{}]*\})*)\}', bloc):
         groupe, corps = mg.group(1), mg.group(2)
         entrees = {}
-        for ma in re.finditer(r'(\w+)\s*:\s*\{\s*S:\s*([\d.]+)\s*,\s*R:\s*([\d.]+)\s*\}', corps):
-            entrees[ma.group(1)] = (float(ma.group(2)), float(ma.group(3)))
+        for ma in re.finditer(r'(\w+)\s*:\s*\{\s*S:\s*([\d.]+|null)\s*,\s*R:\s*([\d.]+|null)\s*\}', corps):
+            lire = lambda t: None if t == 'null' else float(t)
+            entrees[ma.group(1)] = (lire(ma.group(2)), lire(ma.group(3)))
         if entrees:
             table[groupe] = entrees
     return table
 
 
 def nombre(txt):
+    """« 0.001 » dans le classeur EUCAST signifie « pas de catégorie S » ; on le
+    laisse tel quel ici, la comparaison le traduit en None côté application."""
     if txt is None: return None
     t = str(txt).strip().strip('()')
     if t in ('-', '', 'IE', 'NA'): return None
@@ -189,6 +192,7 @@ def main():
                 etat, detail = 'absent', "aucune ligne EUCAST correspondante sur cette feuille"
             elif len(cands) == 1:
                 nom, sE, rE = cands[0]
+                if sE == 0.001: sE = None      # « pas de catégorie S » <-> S: null
                 if sE == sA and rE == rA:
                     etat, detail = 'identique', nom
                 else:

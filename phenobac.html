@@ -855,13 +855,14 @@ const REFERENTIEL = {
   nom: "EUCAST",
   version: "16.1",
   publie: "2026-06-24",
-  etat: "a_valider",
+  etat: "partiel",
   source: "https://www.eucast.org/bacteria/clinical-breakpoints-and-interpretation/clinical-breakpoint-tables/"
 };
 function refLibelle(){
-  return REFERENTIEL.etat === "valide"
-    ? REFERENTIEL.nom + " v" + REFERENTIEL.version
-    : REFERENTIEL.nom + " v" + REFERENTIEL.version + " (seuils par défaut, à vérifier)";
+  const base = REFERENTIEL.nom + " v" + REFERENTIEL.version;
+  if (REFERENTIEL.etat === "valide") return base;
+  if (REFERENTIEL.etat === "partiel") return base + " (alignement partiel)";
+  return base + " (seuils par défaut, à vérifier)";
 }
 
 /* ------------------------------------------------------------
@@ -881,50 +882,50 @@ const BP = {
     SXT:{S:2,R:4}, FOS:{S:8,R:8}, COL:{S:2,R:2}, AZM:{S:16,R:16}
   },
   staph:{
-    FOX:{S:4,R:4}, OXA:{S:0.25,R:0.25}, PEN:{S:0.125,R:0.125}, E:{S:1,R:2}, DA:{S:0.25,R:0.5},
-    GEN:{S:1,R:1}, SXT:{S:2,R:4}, RD:{S:0.06,R:0.5},
+    FOX:{S:4,R:4}, OXA:{S:0.25,R:0.25}, PEN:{S:0.125,R:0.125}, E:{S:1,R:1}, DA:{S:0.25,R:0.25},
+    GEN:{S:1,R:1}, SXT:{S:0.5,R:0.5}, RD:{S:0.06,R:0.5},
     VA:{S:2,R:2}, TEC:{S:2,R:2}, LZD:{S:4,R:4}
   },
   enteroc:{
-    AMP:{S:4,R:8}, VA:{S:4,R:4}, TEC:{S:2,R:2},
+    AMP:{S:4,R:4}, VA:{S:4,R:4}, TEC:{S:2,R:2},
     HLG:{S:128,R:128}, LZD:{S:4,R:4}, CIP:{S:4,R:4}
   },
   pseudo:{
-    TZP:{S:16,R:16}, CAZ:{S:8,R:8}, FEP:{S:8,R:8}, IPM:{S:2,R:4}, MEM:{S:2,R:8},
-    CIP:{S:0.5,R:0.5}, GEN:{S:4,R:4}, AMK:{S:16,R:16}, COL:{S:2,R:2}
+    TZP:{S:null,R:16}, CAZ:{S:null,R:8}, FEP:{S:null,R:8}, IPM:{S:null,R:4}, MEM:{S:2,R:8},
+    CIP:{S:null,R:0.5}, GEN:{S:4,R:4}, AMK:{S:16,R:16}, COL:{S:4,R:4}
   },
   pneumo:{
     PEN:{S:0.06,R:2}, AMX:{S:0.5,R:2}, CTX:{S:0.5,R:2},
-    E:{S:0.25,R:0.5}, DA:{S:0.5,R:0.5}, LVX:{S:2,R:2},
-    VA:{S:2,R:2}, LZD:{S:4,R:4}, SXT:{S:1,R:2}
+    E:{S:0.25,R:0.25}, DA:{S:0.5,R:0.5}, LVX:{S:null,R:2},
+    VA:{S:2,R:2}, LZD:{S:2,R:2}, SXT:{S:1,R:1}
   },
   acineto:{
     TZP:{S:16,R:16}, CAZ:{S:8,R:8}, FEP:{S:8,R:8}, IPM:{S:2,R:4}, MEM:{S:2,R:8},
-    CIP:{S:1,R:1}, GEN:{S:4,R:4}, AMK:{S:8,R:8}, SXT:{S:2,R:4}, COL:{S:2,R:2}
+    CIP:{S:null,R:1}, GEN:{S:4,R:4}, AMK:{S:8,R:8}, SXT:{S:0.5,R:0.5}, COL:{S:2,R:2}
   },
   strep:{
     PEN:{S:0.25,R:2}, AMX:{S:0.5,R:2}, CTX:{S:0.5,R:2},
-    E:{S:0.25,R:0.5}, DA:{S:0.5,R:0.5}, LVX:{S:2,R:2}, VA:{S:2,R:2}, LZD:{S:2,R:4}
+    E:{S:0.25,R:0.25}, DA:{S:0.5,R:0.5}, LVX:{S:null,R:2}, VA:{S:2,R:2}, LZD:{S:2,R:2}
   },
   nonferm:{
-    SXT:{S:2,R:4}, CAZ:{S:8,R:8}, LVX:{S:1,R:2}, MEM:{S:2,R:8},
+    SXT:{S:null,R:2}, CAZ:{S:8,R:8}, LVX:{S:1,R:2}, MEM:{S:2,R:8},
     IPM:{S:2,R:4}, GEN:{S:4,R:4}, AMK:{S:16,R:16}, COL:{S:2,R:2}, TZP:{S:16,R:16}
   },
   fastid:{
     AMP:{S:1,R:1}, AMX:{S:2,R:2}, AMC:{S:2,R:2}, PEN:{S:0.06,R:0.25},
-    CTX:{S:0.12,R:0.12}, AZM:{S:0.25,R:0.5}, CIP:{S:0.06,R:0.06},
-    RD:{S:1,R:1}, SXT:{S:0.5,R:1}, CAF:{S:2,R:2}
+    CTX:{S:0.125,R:0.125}, AZM:{S:0.25,R:0.5}, CIP:{S:0.03,R:0.03},
+    RD:{S:1,R:1}, SXT:{S:0.5,R:0.5}, CAF:{S:2,R:2}
   },
   grampos:{
-    AMP:{S:1,R:1}, AMX:{S:2,R:2}, PEN:{S:0.12,R:0.25}, SXT:{S:0.5,R:1},
-    GEN:{S:1,R:1}, VA:{S:2,R:2}, MEM:{S:0.5,R:0.5}, E:{S:1,R:2}, LZD:{S:2,R:4}, CTX:{S:1,R:1}
+    AMP:{S:1,R:1}, AMX:{S:2,R:2}, PEN:{S:0.12,R:0.25}, SXT:{S:0.5,R:0.5},
+    GEN:{S:1,R:1}, VA:{S:2,R:2}, MEM:{S:0.5,R:0.5}, E:{S:0.25,R:0.25}, LZD:{S:2,R:2}, CTX:{S:1,R:1}
   },
   anaerobe:{
     PEN:{S:0.25,R:0.5}, AMC:{S:4,R:8}, TZP:{S:8,R:16}, IPM:{S:2,R:8},
     MEM:{S:2,R:8}, DA:{S:4,R:4}, MTZ:{S:4,R:4}, VA:{S:2,R:2}
   },
   curved:{
-    AZM:{S:0.5,R:0.5}, E:{S:4,R:8}, CIP:{S:0.5,R:0.5}, DOX:{S:4,R:8}, SXT:{S:2,R:4}
+    AZM:{S:0.5,R:0.5}, E:{S:4,R:8}, CIP:{S:null,R:0.5}, DOX:{S:4,R:8}, SXT:{S:2,R:4}
   }
 };
 
@@ -963,6 +964,13 @@ function catFromMic(str,bp){
   if(!bp) return null;
   const p=parseMic(str); if(!p) return null;
   const {op,v}=p, {S,R}=bp;
+  // S null : le référentiel ne prévoit AUCUNE catégorie « sensible » à posologie
+  // standard pour ce couple germe/antibiotique. La souche est au mieux
+  // « sensible à forte posologie » — donc I jusqu'à R, jamais S.
+  if(S===null||S===undefined){
+    if((op===">"||op===">=") && v>=R) return "R";
+    return v>R ? "R" : "I";
+  }
   // valeurs hors échelle
   if((op==="<="||op==="<") && v<=S) return "S";
   if((op===">"||op===">=") && v>=R) return "R";

@@ -29,6 +29,10 @@ def bloc_bp(chemin):
     raise SystemExit("table BP mal formée dans %s" % chemin)
 
 
+def _val(t):
+    return None if t == 'null' else float(t)
+
+
 def seuils(bloc):
     """{groupe: {code: (S, R)}} — insensible aux commentaires et à la mise en forme."""
     bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
@@ -36,8 +40,10 @@ def seuils(bloc):
     table = {}
     for mg in re.finditer(r'(\w+)\s*:\s*\{((?:[^{}]|\{[^{}]*\})*)\}', bloc):
         entrees = {}
-        for ma in re.finditer(r'(\w+)\s*:\s*\{\s*S:\s*([\d.]+)\s*,\s*R:\s*([\d.]+)\s*\}', mg.group(2)):
-            entrees[ma.group(1)] = (float(ma.group(2)), float(ma.group(3)))
+        # « null » signifie « pas de catégorie S » : à lire comme une valeur à
+        # part entière, sinon ces seuils sortent silencieusement du contrôle.
+        for ma in re.finditer(r'(\w+)\s*:\s*\{\s*S:\s*([\d.]+|null)\s*,\s*R:\s*([\d.]+|null)\s*\}', mg.group(2)):
+            entrees[ma.group(1)] = (_val(ma.group(2)), _val(ma.group(3)))
         if entrees:
             table[mg.group(1)] = entrees
     return table
@@ -91,8 +97,11 @@ def main():
     print("Tables concordantes : %d groupes, %d seuils." % (len(b), nb))
     if rb:
         print("Référentiel déclaré : %s v%s (%s)." % (rb.get('nom'), rb.get('version'), rb.get('etat')))
-        if rb.get('etat') != 'valide':
-            print("Note : les seuils n'ont pas encore été validés contre le tableau officiel")
+        if rb.get('etat') == 'partiel':
+            print("Note : alignement partiel — les seuils à ligne officielle unique sont")
+            print("       conformes ; ceux à lignes multiples attendent un arbitrage.")
+        elif rb.get('etat') != 'valide':
+            print("Note : les seuils n'ont pas encore été confrontés au tableau officiel")
             print("       (outils/comparer-eucast.py). Ce n'est pas une erreur, c'est un état.")
     return 0
 
