@@ -59,6 +59,7 @@ dashboard.html             tableau de bord des ventes            — à garder h
 install.sh                 installation complète, VPS vierge (Docker+nginx+TLS)
 install-caddy.sh           installation en cohabitation, sans toucher à la façade
 verifier-installation.sh   recette automatique, à lancer après installation
+sauvegarder.sh             sauvegarde vérifiée du volume et du .env
 deploy/Caddyfile.phenobac  bloc à ajouter à un Caddyfile existant
 Dockerfile / docker-compose.yml
 .github/workflows/deploy.yml   vérification de syntaxe puis déploiement SSH

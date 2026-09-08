@@ -334,14 +334,29 @@ paiement se devine parfois. La licence du client, elle, reste valide : renvoyez-
 la clé depuis `dashboard.html` (colonne « Ventes récentes »), ou réémettez-en une
 avec `issue-license` en reprenant la durée restante.
 
-**Sauvegarde.** Tout tient dans le volume Docker `phenobac-data` : licences et
-révocations. Sans lui, vos clients gardent leurs clés (elles restent valides) mais vous
-perdez la comptabilité et la capacité de révoquer.
+**Sauvegarde.** Une commande, à programmer une fois pour toutes :
 
 ```bash
-docker run --rm -v phenobac-data:/data -v "$PWD":/sauvegarde alpine \
-  tar czf /sauvegarde/phenobac-$(date +%F).tar.gz -C /data .
+bash sauvegarder.sh /var/backups/phenobac
 ```
+
+Elle archive le volume de données (licences, révocations) **et le `.env`**, puis
+vérifie l'archive produite. Le `.env` est le plus important des deux : il
+contient `PHENOBAC_SECRET`, et le perdre invalide d'un coup toutes les licences
+vendues, y compris celles déjà en service chez vos clients. L'archive contient
+donc des secrets — elle est créée en 600, ne la déposez pas sur un partage
+ouvert.
+
+Programmez-la, ainsi que les relances, dans la crontab de l'hôte :
+
+```
+17 8 * * * curl -fsS -X POST https://VOTRE-DOMAINE/.netlify/functions/send-reminders -H "X-Cron-Secret: VOTRE_JETON_ADMIN" >/dev/null
+40 2 * * * cd /opt/phenobac && bash sauvegarder.sh /var/backups/phenobac >/dev/null
+```
+
+**Restauration**, vérifiée : après destruction du volume *et* du `.env`, la
+restauration rend la comptabilité intacte, et surtout **les clés déjà chez vos
+clients restent valides** — c'est le `.env` restauré qui le permet.
 
 **Ne changez jamais `PHENOBAC_SECRET`** une fois des licences vendues : cela invalide
 toutes les clés en circulation, d'un coup.
