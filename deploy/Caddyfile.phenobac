@@ -14,8 +14,16 @@
 phenobac.votre-domaine.ml {
 	encode zstd gzip
 
-	# PhénoBac n'écoute que sur la loopback ; Caddy est la seule porte d'entrée.
-	reverse_proxy 127.0.0.1:8080
+	# PhénoBac n'écoute pas sur l'internet ; Caddy est la seule porte d'entrée.
+	#
+	# Caddy installé SUR L'HÔTE (service systemd) :
+	#reverse_proxy 127.0.0.1:8080
+	#
+	# Caddy EN CONTENEUR : « 127.0.0.1 » désignerait la loopback du conteneur
+	# Caddy lui-même, et PhénoBac serait injoignable. Mettez les deux conteneurs
+	# sur le même réseau Docker (voir docker-compose.caddy.yml) et visez le nom
+	# du conteneur, que Docker résout en interne :
+	reverse_proxy phenobac:8080
 
 	header {
 		# L'application est servie en HTTPS uniquement.
@@ -27,8 +35,11 @@ phenobac.votre-domaine.ml {
 		-Server
 	}
 
+	# Le préfixe « > » REMPLACE l'en-tête au lieu de l'ajouter : sans lui, la
+	# réponse porte deux Cache-Control (celui de l'application et celui-ci),
+	# ce qui est ambigu pour le navigateur.
 	@sw path /service-worker.js
-	header @sw Cache-Control "no-cache"
+	header @sw >Cache-Control "no-cache"
 
 	# Journaux séparés de ceux de vos autres sites.
 	log {

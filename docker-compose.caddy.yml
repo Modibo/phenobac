@@ -1,0 +1,30 @@
+# docker-compose.caddy.yml — surcouche pour un serveur de façade EN CONTENEUR.
+#
+# À utiliser quand nginx ou Caddy tourne lui-même dans Docker. Dans ce cas,
+# « 127.0.0.1 » vu depuis le conteneur de façade désigne SA PROPRE loopback,
+# pas celle de l'hôte : il ne peut pas atteindre PhénoBac par cette adresse.
+# La solution est de placer les deux conteneurs sur le même réseau Docker, et
+# de laisser la façade joindre PhénoBac par son nom.
+#
+#   1. Trouvez le réseau du conteneur de façade :
+#        docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' NOM_DU_CONTENEUR_CADDY
+#   2. Renseignez-le dans .env :
+#        PROXY_NETWORK=nexolab-api_default
+#   3. Démarrez avec les DEUX fichiers :
+#        docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d
+#   4. Dans le Caddyfile, visez le nom du conteneur :
+#        reverse_proxy phenobac:8080
+#
+# La publication sur 127.0.0.1 est conservée : elle ne rend rien public et
+# reste commode pour le tunnel SSH de vérification.
+
+services:
+  phenobac:
+    networks:
+      - default
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:?PROXY_NETWORK doit être renseigné dans .env (nom du réseau Docker de votre serveur de façade)}

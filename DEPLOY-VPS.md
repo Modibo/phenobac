@@ -57,15 +57,37 @@ puis `http://127.0.0.1:8080` dans votre navigateur.
 1. Créez un enregistrement DNS **A** pour votre sous-domaine, vers l'adresse du
    serveur, et attendez la propagation.
 2. Ajoutez le contenu de [`deploy/Caddyfile.phenobac`](deploy/Caddyfile.phenobac)
-   à votre `Caddyfile`, **sans toucher aux blocs existants**. Ajustez le
-   sous-domaine et le port. Puis :
+   à votre `Caddyfile`, **sans toucher aux blocs existants**, en ajustant le
+   sous-domaine. Caddy obtient et renouvelle le certificat tout seul : ni
+   certbot, ni cron.
+
+   **Si Caddy tourne sur l'hôte** (service systemd) :
 
    ```bash
-   sudo caddy validate --config /etc/caddy/Caddyfile
-   sudo systemctl reload caddy
+   sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
    ```
 
-   Caddy obtient et renouvelle le certificat tout seul : ni certbot, ni cron.
+   **Si Caddy tourne en conteneur** — cas fréquent quand il sert déjà d'autres
+   applications — `127.0.0.1` désigne alors la loopback du conteneur Caddy, et
+   PhénoBac y est injoignable. Placez les deux conteneurs sur le même réseau
+   Docker et visez PhénoBac par son nom :
+
+   ```bash
+   docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' NOM_DU_CONTENEUR_CADDY
+   ```
+
+   Reportez ce nom dans `.env` (`PROXY_NETWORK=…`), employez `reverse_proxy
+   phenobac:8080` dans le bloc, et démarrez avec la surcouche :
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d
+   ```
+
+   Rechargez ensuite la façade :
+
+   ```bash
+   docker exec NOM_DU_CONTENEUR_CADDY caddy reload --config /etc/caddy/Caddyfile
+   ```
 
 3. Renseignez `SITE_URL` et `ALLOWED_ORIGINS` dans `.env`, puis
    `docker compose up -d`.
