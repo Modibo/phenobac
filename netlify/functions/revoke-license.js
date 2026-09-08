@@ -12,7 +12,7 @@ const { decodePayload, revoke, restore, list } = require("./lib/revocation");
 const { cors, adminOk } = require("./lib/http");
 
 exports.handler = async (event) => {
-  const CORS = cors(event, { headers: "Content-Type, Authorization" });
+  const CORS = cors(event, { headers: "Content-Type, Authorization", open: true });
   const J = (code, obj) => ({ statusCode: code, headers: CORS, body: JSON.stringify(obj) });
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") return J(405, { error: "method" });

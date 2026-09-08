@@ -68,6 +68,13 @@ Dockerfile / docker-compose.yml
 ouvrez-les depuis votre poste et pointez-les vers l'URL du site. Ils ne
 contiennent aucun secret, le jeton admin est saisi à l'ouverture.
 
+Ces deux pages appellent des points d'entrée ouverts à toutes les origines, pour
+qu'elles fonctionnent depuis un simple fichier local. Ce n'est pas un
+relâchement : ils exigent le jeton d'administration dans un en-tête, jamais un
+cookie, et répondent 401 sans lui quelle que soit l'origine. Les points d'entrée
+qui portent la valeur — moteur d'interprétation, vérification de licence —
+restent réservés à `SITE_URL`.
+
 ## Modèle
 
 | | Gratuit | Premium |

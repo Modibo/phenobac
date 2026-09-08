@@ -26,7 +26,7 @@ function sign(payloadB64) {
 // Origines autorisées : SITE_URL / ALLOWED_ORIGINS (voir lib/http.js).
 
 exports.handler = async (event) => {
-  const CORS = cors(event, { headers: "Content-Type, Authorization" });
+  const CORS = cors(event, { headers: "Content-Type, Authorization", open: true });
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: "method" }) };

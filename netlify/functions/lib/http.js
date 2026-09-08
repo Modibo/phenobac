@@ -40,10 +40,19 @@ function pickOrigin(event) {
 
 // En-têtes CORS pour une requête donnée. `opts.methods` et `opts.headers`
 // permettent d'ajuster par endpoint (GET, en-tête Authorization…).
+//
+// `opts.open` ouvre l'endpoint à toutes les origines. Réservé aux points
+// d'entrée d'ADMINISTRATION, et ce n'est pas un relâchement : ils exigent le
+// jeton d'administration dans un en-tête Authorization, jamais un cookie. Sans
+// ce jeton, la réponse est 401 quelle que soit l'origine — le CORS n'y protège
+// donc rien, il empêchait seulement d'ouvrir admin.html et dashboard.html
+// depuis un fichier local, où le navigateur envoie « Origin: null ».
+// Les points d'entrée qui portent la valeur (premium-interpret, verify-license,
+// claim-license) restent, eux, strictement réservés à SITE_URL.
 function cors(event, opts) {
   const o = opts || {};
   return {
-    "Access-Control-Allow-Origin": pickOrigin(event),
+    "Access-Control-Allow-Origin": o.open ? "*" : pickOrigin(event),
     "Vary": "Origin",
     "Access-Control-Allow-Headers": o.headers || "Content-Type",
     "Access-Control-Allow-Methods": o.methods || "POST, OPTIONS",

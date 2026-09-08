@@ -12,7 +12,7 @@ const { sendSMS, buildRequest, normalizePhone, isConfigured, PROFILE_NAME, DRY_R
 const { cors, adminOk } = require("./lib/http");
 
 exports.handler = async (event) => {
-  const CORS = cors(event, { headers: "Content-Type, Authorization" });
+  const CORS = cors(event, { headers: "Content-Type, Authorization", open: true });
   const J = (code, obj) => ({ statusCode: code, headers: CORS, body: JSON.stringify(obj) });
 
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
