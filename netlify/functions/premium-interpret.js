@@ -80,7 +80,7 @@ const BP = {
     CIP: { S: null, R: 0.5 }, GEN: { S: 4, R: 4 }, AMK: { S: 16, R: 16 }, COL: { S: 4, R: 4 }
   },
   pneumo: {
-    PEN: { S: 0.06, R: 2 }, AMX: { S: 0.5, R: 2 }, CTX: { S: 0.5, R: 2 },
+    PEN: { S: 0.06, R: 1 }, AMX: { S: 0.5, R: 1 }, CTX: { S: 0.5, R: 2 },
     E: { S: 0.25, R: 0.25 }, DA: { S: 0.5, R: 0.5 }, LVX: { S: null, R: 2 },
     VA: { S: 2, R: 2 }, LZD: { S: 2, R: 2 }, SXT: { S: 1, R: 1 }
   },
@@ -840,9 +840,32 @@ function catFromMic(str, bp) {
   if (v > R) return "R";
   return "I";
 }
-function getBP(bpOverride, group, k) {
+/* ------------------------------------------------------------
+   Seuils du PRÉLÈVEMENT MÉNINGÉ (LCR).
+   EUCAST donne, pour quelques couples, deux jeux de seuils : « meningitis »
+   et « indications other than meningitis ». Le premier est plus strict — la
+   diffusion dans le liquide céphalo-rachidien est mauvaise.
+   Ces valeurs ne remplacent les seuils courants QUE si le contexte méningé
+   est renseigné (ctx.mening === "Oui").
+
+   Attention en relisant le tableau officiel : « meningitis » apparaît AUSSI
+   dans « indications other than meningitis ». Confondre les deux inverse les
+   seuils.  Les lignes sans valeur chiffrée (renvoi « Note ») sont écartées :
+   H. influenzae / ampicilline et amoxicilline en méningite sont dans ce cas.
+   ------------------------------------------------------------ */
+const BP_MENINGE = {
+  acineto: { MEM: { S: 2, R: 2 } },
+  entero: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
+  pneumo: { AMX: { S: 0.06, R: 0.06 }, CTX: { S: 0.5, R: 0.5 }, PEN: { S: 0.06, R: 0.06 } },
+  pseudo: { MEM: { S: 2, R: 2 } }
+};
+
+function getBP(bpOverride, group, k, ctx) {
   const o = bpOverride && bpOverride[group + ":" + k];
-  if (o && o.S !== undefined && o.R !== undefined) return o;
+  if (o && o.S !== undefined && o.R !== undefined) return o;   // saisie de l'utilisateur : prioritaire
+  if (ctx && ctx.mening === "Oui" && BP_MENINGE[group] && BP_MENINGE[group][k]) {
+    return BP_MENINGE[group][k];
+  }
   return (BP[group] && BP[group][k]) || null;
 }
 
@@ -856,7 +879,7 @@ function runInterpretation(input) {
   if (input.mode === "mic") {
     const mic = input.mic || {};
     Object.keys(mic).forEach(k => {
-      const cat = catFromMic(mic[k], getBP(input.bpOverride || {}, org.bpGroup, k));
+      const cat = catFromMic(mic[k], getBP(input.bpOverride || {}, org.bpGroup, k, input.ctx || {}));
       if (cat) results[k] = cat;
     });
   } else {

@@ -895,7 +895,7 @@ const BP = {
     CIP:{S:null,R:0.5}, GEN:{S:4,R:4}, AMK:{S:16,R:16}, COL:{S:4,R:4}
   },
   pneumo:{
-    PEN:{S:0.06,R:2}, AMX:{S:0.5,R:2}, CTX:{S:0.5,R:2},
+    PEN:{S:0.06,R:1}, AMX:{S:0.5,R:1}, CTX:{S:0.5,R:2},
     E:{S:0.25,R:0.25}, DA:{S:0.5,R:0.5}, LVX:{S:null,R:2},
     VA:{S:2,R:2}, LZD:{S:2,R:2}, SXT:{S:1,R:1}
   },
@@ -980,10 +980,34 @@ function catFromMic(str,bp){
   return "I";
 }
 
-/* seuil courant (surcharge utilisateur sinon défaut) */
+/* ------------------------------------------------------------
+   Seuils du PRÉLÈVEMENT MÉNINGÉ (LCR).
+   EUCAST donne, pour quelques couples, deux jeux de seuils : « meningitis »
+   et « indications other than meningitis ». Le premier est plus strict — la
+   diffusion dans le liquide céphalo-rachidien est mauvaise.
+   Ces valeurs ne remplacent les seuils courants QUE si le contexte méningé
+   est renseigné (ctx.mening === "Oui").
+
+   Attention en relisant le tableau officiel : « meningitis » apparaît AUSSI
+   dans « indications other than meningitis ». Confondre les deux inverse les
+   seuils.  Les lignes sans valeur chiffrée (renvoi « Note ») sont écartées :
+   H. influenzae / ampicilline et amoxicilline en méningite sont dans ce cas.
+   ------------------------------------------------------------ */
+const BP_MENINGE = {
+  acineto: { MEM: { S: 2, R: 2 } },
+  entero: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
+  pneumo: { AMX: { S: 0.06, R: 0.06 }, CTX: { S: 0.5, R: 0.5 }, PEN: { S: 0.06, R: 0.06 } },
+  pseudo: { MEM: { S: 2, R: 2 } }
+};
+
+/* seuil courant : saisie de l'utilisateur, sinon seuil méningé si le contexte
+   l'indique, sinon seuil par défaut. */
 function getBP(group,k){
   const o = state.bpOverride[group+":"+k];
   if(o && o.S!==undefined && o.R!==undefined) return o;
+  if(state.ctx && state.ctx.mening==="Oui" && BP_MENINGE[group] && BP_MENINGE[group][k]){
+    return BP_MENINGE[group][k];
+  }
   return (BP[group] && BP[group][k]) || null;
 }
 
@@ -1656,10 +1680,29 @@ function renderBpEditor(){
 }
 
 /* --- questions de contexte conditionnelles --- */
+// Question du prélèvement méningé : posée automatiquement pour tout germe dont
+// le groupe possède des seuils LCR, dès qu'un des antibiotiques concernés est
+// renseigné. Évite de la déclarer sur chacun des germes, et évite surtout de
+// l'oublier sur l'un d'eux.
+function questionMeninge(){
+  const g = bpGroup(), t = BP_MENINGE[g];
+  if(!t) return null;
+  const codes = Object.keys(t);
+  return {
+    id:"mening",
+    q:"Prélèvement méningé (LCR) ? Les seuils y sont plus stricts.",
+    opts:["Oui","Non"],
+    when:r=>codes.some(k=>r[k]!==undefined || (state.mode==="mic" && state.mic[k]))
+  };
+}
+
 function renderCtx(){
   const org=currentOrg();
   ctxWrap.innerHTML="";
-  (org.ctx||[]).forEach(q=>{
+  // la question méningée d'abord, sauf si le germe la déclare déjà lui-même
+  const propres=(org.ctx||[]);
+  const qm=propres.some(q=>q.id==="mening") ? null : questionMeninge();
+  (qm ? [qm].concat(propres) : propres).forEach(q=>{
     if(q.when && !q.when(state.results)) { delete state.ctx[q.id]; return; }
     const box=document.createElement("div"); box.className="ctx-q";
     box.innerHTML=`<div class="q">${q.q}</div>`;

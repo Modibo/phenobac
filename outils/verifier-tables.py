@@ -14,9 +14,11 @@ Ce contrôle échoue si les deux tables divergent. Lancé par la CI à chaque pu
 import os, re, sys
 
 
-def bloc_bp(chemin):
+def bloc_bp(chemin, nom='const BP ='):
     s = open(chemin, encoding='utf-8').read()
-    i = s.index('const BP =')
+    if nom not in s:
+        return None
+    i = s.index(nom)
     j = s.index('{', i)
     prof = 0
     for k in range(j, len(s)):
@@ -65,18 +67,30 @@ def main():
     cli = os.path.join(racine, 'phenobac.html')
     srv = os.path.join(racine, 'netlify', 'functions', 'premium-interpret.js')
 
-    a, b = seuils(bloc_bp(cli)), seuils(bloc_bp(srv))
     ecarts = []
+    totaux = {}
 
-    for g in sorted(set(a) | set(b)):
-        if g not in a:
-            ecarts.append("groupe %s absent du client" % g); continue
-        if g not in b:
-            ecarts.append("groupe %s absent du serveur" % g); continue
-        for code in sorted(set(a[g]) | set(b[g])):
-            va, vb = a[g].get(code), b[g].get(code)
-            if va != vb:
-                ecarts.append("%s/%s : client %s, serveur %s" % (g, code, va, vb))
+    # Les deux tables existent en double : les seuils courants, et ceux du
+    # prélèvement méningé. Les deux doivent être contrôlées, sinon l'ajout
+    # d'une table échappe silencieusement au garde-fou.
+    for nom, etiquette in (('const BP =', 'seuils courants'),
+                           ('const BP_MENINGE =', 'seuils méningés')):
+        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
+        if ba is None and bb is None:
+            continue
+        if ba is None or bb is None:
+            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
+        a, b = seuils(ba), seuils(bb)
+        totaux[etiquette] = sum(len(v) for v in b.values())
+        for g in sorted(set(a) | set(b)):
+            if g not in a:
+                ecarts.append("%s : groupe %s absent du client" % (etiquette, g)); continue
+            if g not in b:
+                ecarts.append("%s : groupe %s absent du serveur" % (etiquette, g)); continue
+            for code in sorted(set(a[g]) | set(b[g])):
+                va, vb = a[g].get(code), b[g].get(code)
+                if va != vb:
+                    ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
 
     ra, rb = referentiel(cli), referentiel(srv)
     if ra and rb:
@@ -86,7 +100,6 @@ def main():
     elif ra or rb:
         ecarts.append("constante REFERENTIEL absente d'un des deux fichiers")
 
-    nb = sum(len(v) for v in b.values())
     if ecarts:
         print("Les deux tables DIVERGENT :")
         for e in ecarts:
@@ -94,7 +107,7 @@ def main():
         print("\nLe moteur serveur fait foi. Alignez phenobac.html sur lui.")
         return 1
 
-    print("Tables concordantes : %d groupes, %d seuils." % (len(b), nb))
+    print("Tables concordantes : " + ", ".join("%s %d" % (k, v) for k, v in totaux.items()) + ".")
     if rb:
         print("Référentiel déclaré : %s v%s (%s)." % (rb.get('nom'), rb.get('version'), rb.get('etat')))
         if rb.get('etat') == 'partiel':
