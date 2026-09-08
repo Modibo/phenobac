@@ -263,7 +263,19 @@ contiennent aucun secret ; le jeton admin est saisi à l'ouverture.
 
 ## 6. Recette avant la première vente
 
-À dérouler dans l'ordre, sur le site en ligne :
+Le plus simple est de lancer la recette automatique, **sur le serveur**, depuis
+le dossier de l'application :
+
+```bash
+bash verifier-installation.sh
+```
+
+Elle déroule les contrôles ci-dessous et dit ce qui va, ce qui ne va pas, et ce
+qui reste à régler avant d'ouvrir au public. Elle émet une licence d'essai
+(« verification-installation », 0 FCFA) pour prouver que la chaîne fonctionne,
+puis la révoque : elle apparaîtra une fois au tableau de bord, révoquée.
+
+Le détail de ce qu'elle vérifie, si vous préférez le faire à la main :
 
 1. **Le gratuit fonctionne hors licence.** E. coli, mode S/I/R : l'interprétation
    s'affiche. Une espèce Premium : cadenas et modale d'achat.

@@ -58,6 +58,7 @@ admin.html                 émission et révocation des licences   — à garder
 dashboard.html             tableau de bord des ventes            — à garder hors ligne
 install.sh                 installation complète, VPS vierge (Docker+nginx+TLS)
 install-caddy.sh           installation en cohabitation, sans toucher à la façade
+verifier-installation.sh   recette automatique, à lancer après installation
 deploy/Caddyfile.phenobac  bloc à ajouter à un Caddyfile existant
 Dockerfile / docker-compose.yml
 .github/workflows/deploy.yml   vérification de syntaxe puis déploiement SSH
