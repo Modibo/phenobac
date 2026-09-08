@@ -837,6 +837,33 @@ const isR = v => v==="R";
 const isRI = v => v==="R"||v==="I";
 const has = (r,k)=> r[k]!==undefined && r[k]!==null && r[k]!=="";
 
+/* ============================================================
+   Référentiel des concentrations critiques — DÉCLARATION EXPLICITE.
+   C'est la première chose qu'un laboratoire demande, et cela doit
+   figurer sur le compte-rendu qu'il remettra au clinicien.
+
+   « etat » vaut :
+     "valide"     les seuils par défaut ont été confrontés au tableau
+                  officiel et validés par un biologiste ;
+     "a_valider"  ils ne l'ont pas encore été.
+
+   Pour les confronter au tableau officiel :
+       python3 outils/comparer-eucast.py v_16.1_Breakpoint_Tables.xlsx
+   Ne passez « etat » à "valide" qu'après cette confrontation.
+   ============================================================ */
+const REFERENTIEL = {
+  nom: "EUCAST",
+  version: "16.1",
+  publie: "2026-06-24",
+  etat: "a_valider",
+  source: "https://www.eucast.org/bacteria/clinical-breakpoints-and-interpretation/clinical-breakpoint-tables/"
+};
+function refLibelle(){
+  return REFERENTIEL.etat === "valide"
+    ? REFERENTIEL.nom + " v" + REFERENTIEL.version
+    : REFERENTIEL.nom + " v" + REFERENTIEL.version + " (seuils par défaut, à vérifier)";
+}
+
 /* ------------------------------------------------------------
    Concentrations critiques — VALEURS PAR DÉFAUT INDICATIVES
    Modèle : {S, R} en mg/L → catégorie S si CMI ≤ S ; R si CMI > R ;
@@ -1584,7 +1611,7 @@ function renderBpEditor(){
   if(wasOpen) det.setAttribute("open","");
   det.innerHTML=`<summary><span class="caret">▸</span>Concentrations critiques (mg/L) — référentiel</summary>`;
   const body=document.createElement("div"); body.className="bp-body";
-  body.innerHTML=`<div class="bp-note">Valeurs par défaut indicatives. Ajustez-les au référentiel CA-SFM / EUCAST de l'année en cours. La catégorie se recalcule aussitôt.</div>`;
+  body.innerHTML=`<div class="bp-note">Référentiel déclaré : <b>${refLibelle()}</b>. Valeurs par défaut indicatives — ajustez-les à votre référentiel avant tout rendu. La catégorie se recalcule aussitôt.</div>`;
 
   const seen=new Set();
   org.panel.forEach(grp=>grp.abx.forEach(k=>{
@@ -1842,6 +1869,7 @@ function buildReport(A){
 
     <div class="rp-foot">
       Interprétation d'orientation produite par PhénoBac (v0.4) selon l'esprit des règles CA-SFM / EUCAST.
+      Référentiel des concentrations critiques : ${refLibelle()} — publié le ${REFERENTIEL.publie}.
       Les concentrations critiques employées sont paramétrables et doivent être vérifiées sur le référentiel de l'année en cours.
       Ce document ne remplace pas la validation biologique ni les tests de confirmation.
     </div>`;

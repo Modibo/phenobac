@@ -13,6 +13,10 @@
 // Réponse : { valid, plan, interpretation:{sev,name,mech,alerts,rules,comment}, categories }
 
 const crypto = require("crypto");
+
+// Référentiel des concentrations critiques employées par ce moteur.
+// Doit rester identique à la constante REFERENTIEL de phenobac.html.
+const REFERENTIEL = { nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "a_valider" };
 const { isRevoked } = require("./lib/revocation");
 const { cors } = require("./lib/http");
 const SECRET = process.env.PHENOBAC_SECRET || "";
@@ -888,7 +892,7 @@ exports.handler = async (event) => {
   return {
     statusCode: 200,
     headers: CORS,
-    body: JSON.stringify({ valid: true, plan: (lic.valid && !revoked) ? lic.plan : "free", interpretation: out.interpretation, categories: out.categories })
+    body: JSON.stringify({ valid: true, plan: (lic.valid && !revoked) ? lic.plan : "free", interpretation: out.interpretation, categories: out.categories, referentiel: REFERENTIEL })
   };
 };
 

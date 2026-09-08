@@ -60,6 +60,8 @@ install.sh                 installation complète, VPS vierge (Docker+nginx+TLS)
 install-caddy.sh           installation en cohabitation, sans toucher à la façade
 verifier-installation.sh   recette automatique, à lancer après installation
 sauvegarder.sh             sauvegarde vérifiée du volume et du .env
+outils/comparer-eucast.py  confronte les seuils au tableau EUCAST officiel
+outils/verifier-tables.py  concordance des deux tables de seuils (lancé par la CI)
 deploy/Caddyfile.phenobac  bloc à ajouter à un Caddyfile existant
 Dockerfile / docker-compose.yml
 .github/workflows/deploy.yml   vérification de syntaxe puis déploiement SSH
@@ -99,6 +101,24 @@ Deux avertissements :
 - **Sauvegardez le volume `phenobac-data`.** Il contient les licences émises et
   les révocations. Sans lui vos clients gardent leurs clés, mais vous perdez la
   comptabilité et la capacité de révoquer.
+
+## Référentiel des concentrations critiques
+
+La version déclarée figure dans la constante `REFERENTIEL` (identique dans
+`phenobac.html` et `premium-interpret.js`), s'affiche dans l'éditeur de seuils
+et **sur le compte-rendu**. Son champ `etat` dit la vérité sur ces seuils :
+`a_valider` tant qu'ils n'ont pas été confrontés au tableau officiel, `valide`
+ensuite. Ne le passez à `valide` qu'après confrontation réelle.
+
+Chaque janvier, EUCAST publie une nouvelle version. Pour la répercuter :
+
+```bash
+python3 outils/comparer-eucast.py v_16.1_Breakpoint_Tables.xlsx
+```
+
+Le rapport confronte chaque seuil de l'application à la ligne officielle. Il ne
+modifie rien : les écarts et les cas à arbitrer (un même antibiotique a
+plusieurs lignes selon la voie et l'indication) relèvent du biologiste.
 
 ## Avertissement d'usage
 
