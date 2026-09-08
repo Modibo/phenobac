@@ -183,9 +183,25 @@ def main():
                 for cel in lignes:
                     nom = cel.get('A', '')
                     if re.search(motif, nom, re.I):
-                        sE, rE = nombre(cel.get('B')), nombre(cel.get('C'))
+                        bruts = (cel.get('B'), cel.get('C'))
+                        sE, rE = nombre(bruts[0]), nombre(bruts[1])
                         if sE is not None or rE is not None:
+                            # EUCAST met certains seuils entre parenthèses. La
+                            # valeur reste la bonne, mais la parenthèse est une
+                            # réserve du référentiel : la faire disparaître
+                            # silencieusement serait perdre une information.
+                            if any("(" in str(x or "") for x in bruts):
+                                nom = nom + "  ⟨valeur entre parenthèses⟩"
                             cands.append((nom, sE, rE))
+            # Plusieurs lignes portant la MÊME valeur ne constituent pas une
+            # ambiguïté : il n'y a rien à arbitrer. Sans cette réduction, un
+            # écart réel avec l'application se retrouve classé « à arbitrer »
+            # et passe inaperçu — c'est arrivé pour la gentamicine.
+            if cands:
+                distinctes = {(None if s0 == 0.001 else s0, r0) for _, s0, r0 in cands}
+                if len(distinctes) == 1:
+                    cands = [cands[0]]
+
             if not motif:
                 etat, detail = 'absent', "aucun motif de recherche défini pour ce code"
             elif not cands:

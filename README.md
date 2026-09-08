@@ -120,6 +120,23 @@ Le rapport confronte chaque seuil de l'application à la ligne officielle. Il ne
 modifie rien : les écarts et les cas à arbitrer (un même antibiotique a
 plusieurs lignes selon la voie et l'indication) relèvent du biologiste.
 
+Deux conventions retenues, à revoir si votre pratique diffère :
+
+- **Voie d'administration** : la ligne **intraveineuse** sert de référence. Un
+  antibiogramme est rendu sans connaître la voie qui sera prescrite, et c'est la
+  ligne générale du tableau. Les lignes orales, notamment « uncomplicated UTI »,
+  supposent une indication que le laboratoire ne connaît pas.
+- **Prélèvement méningé** : traité à part, par la table `BP_MENINGE` et la
+  question posée à la saisie — les deux jeux coexistent au lieu qu'on choisisse.
+
+**Limite connue.** Deux groupes de seuils rassemblent des espèces qu'EUCAST
+sépare : `staph` couvre *S. aureus* et les staphylocoques à coagulase négative
+(vancomycine et teicoplanine diffèrent : 2 contre 4 mg/L), et `anaerobe` couvre
+des anaérobies à Gram positif comme à Gram négatif, traités sur deux feuilles
+distinctes. Tant que ces groupes ne sont pas scindés, ces seuils ne peuvent pas
+être alignés — choisir une ligne reviendrait à l'appliquer aux mauvaises
+espèces.
+
 ## Avertissement d'usage
 
 PhénoBac propose une interprétation d'orientation fondée sur les phénotypes
