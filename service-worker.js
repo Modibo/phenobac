@@ -12,7 +12,7 @@
 // ni correctif d'interprétation, ni nouvelle espèce. C'est inacceptable pour un
 // produit payant : ne revenez pas à cette stratégie.
 
-const VERSION = "v2";                 // à incrémenter à chaque livraison
+const VERSION = "v3";                 // à incrémenter à chaque livraison
 const CACHE = "phenobac-" + VERSION;
 
 const SHELL = [
@@ -34,16 +34,33 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+// Prévient les onglets ouverts qu'une version plus récente a été récupérée.
+// Sans cela, l'utilisateur travaille sur la version précédente jusqu'à ce
+// qu'il recharge de lui-même — or une livraison peut corriger des seuils.
+function prevenirOnglets() {
+  self.clients.matchAll({ type: "window" }).then((cs) => {
+    cs.forEach((c) => c.postMessage({ type: "phenobac-maj" }));
+  }).catch(() => {});
+}
+
 // Récupère sur le réseau et met à jour le cache. Ne rejette jamais :
-// hors-ligne, on se contente de garder ce qui est déjà en cache.
+// hors-ligne, on garde ce qui est déjà en cache. Si le contenu récupéré diffère
+// de celui en cache, les onglets ouverts en sont informés.
 function revalidate(req, key) {
-  return fetch(req).then((resp) => {
-    if (resp && resp.status === 200 && (resp.type === "basic" || resp.type === "default")) {
-      const copy = resp.clone();
-      caches.open(CACHE).then((c) => c.put(key || req, copy)).catch(() => {});
-    }
-    return resp;
-  }).catch(() => null);
+  const cle = key || req;
+  return caches.open(CACHE).then((c) =>
+    c.match(cle).then((ancien) =>
+      fetch(req).then((resp) => {
+        if (resp && resp.status === 200 && (resp.type === "basic" || resp.type === "default")) {
+          const marque = (r) => r.headers.get("etag") || r.headers.get("last-modified") || "";
+          const change = !!ancien && marque(ancien) !== marque(resp);
+          c.put(cle, resp.clone()).catch(() => {});
+          if (change) prevenirOnglets();
+        }
+        return resp;
+      }).catch(() => null)
+    )
+  ).catch(() => null);
 }
 
 self.addEventListener("fetch", (e) => {

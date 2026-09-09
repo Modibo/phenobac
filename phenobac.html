@@ -678,6 +678,36 @@
   .brand-open{ background:none; border:none; padding:0; cursor:pointer; display:inline-flex;
                align-items:center; gap:8px; }
 
+  /* Bandeau de mise à jour. Une livraison peut corriger des concentrations
+     critiques : l'utilisateur doit savoir qu'il travaille sur une version
+     dépassée, sans pour autant qu'on recharge sous ses doigts et qu'on lui
+     fasse perdre un antibiogramme en cours de saisie. */
+  .maj-bar{
+    position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:60;
+    display:none; align-items:center; gap:14px; max-width:calc(100% - 32px);
+    background:var(--ink); color:#fff; border-radius:100px;
+    padding:10px 12px 10px 20px; box-shadow:0 6px 26px rgba(15,33,41,.28);
+    font-size:13.5px; line-height:1.4;
+  }
+  .maj-bar.on{ display:flex; }
+  .maj-bar b{ font-weight:600; }
+  .maj-bar .maj-txt{ opacity:.88; }
+  .maj-recharger{
+    font-family:'IBM Plex Sans'; font-size:13px; font-weight:600; cursor:pointer;
+    background:#fff; color:var(--ink); border:none; border-radius:100px;
+    padding:7px 16px; white-space:nowrap; transition:.12s;
+  }
+  .maj-recharger:hover{ background:var(--teal-wash); }
+  .maj-plus-tard{
+    background:none; border:none; color:#fff; opacity:.6; cursor:pointer;
+    font-size:18px; line-height:1; padding:0 6px;
+  }
+  .maj-plus-tard:hover{ opacity:1; }
+  .maj-recharger:focus-visible,.maj-plus-tard:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  @media(max-width:560px){
+    .maj-bar{ border-radius:10px; padding:12px 12px 12px 16px; bottom:12px; font-size:13px; }
+  }
+
   @media(max-width:720px){
     .intro-body{ grid-template-columns:1fr; gap:14px; padding:22px 18px 18px; }
     .intro-mark{ width:48px; height:55px; }
@@ -920,6 +950,12 @@
     <div class="card-h"><span class="eyebrow"><span class="num">03</span>Identification présumée</span></div>
     <div class="card-b" id="idResults"></div>
   </div>
+</div>
+
+<div class="maj-bar" id="majBar" role="status" aria-live="polite">
+  <span class="maj-txt"><b>Nouvelle version disponible.</b> Elle peut contenir des seuils corrigés.</span>
+  <button class="maj-recharger" id="majRecharger">Recharger</button>
+  <button class="maj-plus-tard" id="majPlusTard" aria-label="Plus tard">&times;</button>
 </div>
 
 <div class="report" id="report" aria-hidden="true"></div>
@@ -3210,6 +3246,24 @@ checkLicense();
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
     navigator.serviceWorker.register("/service-worker.js").catch(function () {});
+  });
+
+  // Le service worker sert la page depuis le cache puis la rafraîchit derrière.
+  // Sans avertissement, l'utilisateur reste donc sur la version précédente
+  // jusqu'à ce qu'il recharge — y compris après une correction de seuils.
+  // On le prévient, sans jamais recharger de nous-mêmes : il pourrait être en
+  // train de saisir un antibiogramme.
+  navigator.serviceWorker.addEventListener("message", function (e) {
+    if (!e.data || e.data.type !== "phenobac-maj") return;
+    var bar = document.getElementById("majBar");
+    if (bar) bar.classList.add("on");
+  });
+  document.addEventListener("click", function (e) {
+    if (e.target && e.target.id === "majRecharger") location.reload();
+    if (e.target && e.target.id === "majPlusTard") {
+      var bar = document.getElementById("majBar");
+      if (bar) bar.classList.remove("on");
+    }
   });
 }
 </script>

@@ -109,6 +109,13 @@ utilisateurs. Et si `PROXY_NETWORK` est renseigné, le conteneur doit rester sur
 le réseau du serveur de façade ; l'oublier le sort de ce réseau et le site
 répond 502.
 
+Les utilisateurs déjà installés voient la version précédente au premier
+chargement — le service worker sert la page mise en cache, puis récupère la
+nouvelle derrière. Un bandeau « Nouvelle version disponible » le leur signale
+alors : c'est voulu, on ne recharge pas sous les doigts de quelqu'un qui saisit
+un antibiogramme. Pour vérifier vous-même après une livraison, rechargez deux
+fois.
+
 Contrôlez ensuite :
 
 ```bash
