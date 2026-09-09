@@ -100,24 +100,30 @@ class Classeur:
 # (Listeria et Corynebacterium) comparé à tort à la feuille des streptocoques
 # A/B/C/G, ce qui a produit trois seuils faux avant qu'on s'en aperçoive.
 GROUPES = {
-    'entero':   (["11 entérobactéries"],                    ['Enterobacterales']),
+    'entero':   (["11 entérobactéries"],                     ['Enterobacterales']),
     'staph':    (["S. aureus"],                              ['Staphylococcus']),
     'scn':      (["S. epidermidis", "S. saprophyticus", "S. lugdunensis", "S. haemolyticus"],
                                                              ['Staphylococcus']),
-    'enteroc':  (["E. faecalis", "E. faecium"],             ['Enterococcus']),
+    'enteroc':  (["E. faecalis", "E. faecium"],              ['Enterococcus']),
     'pseudo':   (["P. aeruginosa"],                          ['Pseudomonas']),
     'acineto':  (["A. baumannii"],                           ['Acinetobacter']),
     'pneumo':   (["S. pneumoniae"],                          ['S.pneumoniae']),
-    'strep':    (["S. pyogenes", "S. agalactiae", "S. viridans"],
-                 ['Streptococcus A,B,C,G', 'Viridans group streptococci']),
-    'nonferm':  (["S. maltophilia", "B. cepacia"],           ['S.maltophilia', 'B.cepacia']),
-    'fastid':   (["H. influenzae", "N. meningitidis", "N. gonorrhoeae", "M. catarrhalis"],
-                 ['H.influenzae', 'N.meningitidis', 'N.gonorrhoeae', 'M.catarrhalis']),
-    'grampos':  (["L. monocytogenes", "Corynebacterium"],
-                 ['L.monocytogenes', 'Corynebacterium']),
-    'anaerobe': (["B. fragilis", "C. perfringens", "C. difficile"],
-                 ['Anaerobic bacteria_G-negative', 'Anaerobic bacteria_G-positive']),
-    'curved':   (["C. jejuni", "V. cholerae"],               ['C.jejuni_C.coli', 'Vibrio']),
+    'strepacg': (["S. pyogenes"],                            ['Streptococcus A,B,C,G']),
+    'strepb':   (["S. agalactiae"],                          ['Streptococcus A,B,C,G']),
+    'viridans': (["streptocoques viridans"],                 ['Viridans group streptococci']),
+    'listeria': (["L. monocytogenes"],                       ['L.monocytogenes']),
+    'coryne':   (["Corynebacterium spp."],                   ['Corynebacterium']),
+    'haemo':    (["H. influenzae"],                          ['H.influenzae']),
+    'nmening':  (["N. meningitidis"],                        ['N.meningitidis']),
+    'ngono':    (["N. gonorrhoeae"],                         ['N.gonorrhoeae']),
+    'moraxella':(["M. catarrhalis"],                         ['M.catarrhalis']),
+    'steno':    (["S. maltophilia"],                         ['S.maltophilia']),
+    'burk':     (["B. cepacia"],                             ['B.cepacia']),
+    'campylo':  (["C. jejuni"],                              ['C.jejuni_C.coli']),
+    'vibrio':   (["V. cholerae"],                            ['Vibrio']),
+    'bfragilis':(["B. fragilis"],                            ['Anaerobic bacteria_G-negative']),
+    'cperfringens':(["C. perfringens"],                      ['Anaerobic bacteria_G-positive']),
+    'cdifficile':(["C. difficile"],                          ['Anaerobic bacteria_G-positive']),
 }
 
 # Compatibilité : les groupes à feuille unique restent comparables.
@@ -203,8 +209,14 @@ def main():
                 # Deux groupes partagent la feuille des staphylocoques : on ne
                 # retient que les lignes de l'espèce concernée, sinon celles de
                 # S. aureus et des coagulase-négative se mélangent.
-                espece = {'staph': r'S\. aureus', 'scn': r'[Cc]oagulase-negative'}.get(groupe)
-                autre  = {'staph': r'[Cc]oagulase-negative', 'scn': r'S\. aureus'}.get(groupe)
+                ESPECES = {'staph':    r'S\. aureus',
+                           'scn':      r'[Cc]oagulase-negative',
+                           'strepacg': r'groups A, C and G',
+                           'strepb':   r'S\.\s*agalactiae',
+                           'campylo':  r'C\. jejuni'}
+                espece = ESPECES.get(groupe)
+                autres = [v for k, v in ESPECES.items() if k != groupe and v != espece]
+                autre  = "|".join(autres) if (espece and autres) else None
                 for cel in lignes:
                     nom = cel.get('A', '')
                     if autre and re.search(autre, nom) and not (espece and re.search(espece, nom)):

@@ -98,32 +98,87 @@ const BP = {
     TZP: { S: 16, R: 16 }, CAZ: { S: 8, R: 8 }, FEP: { S: 8, R: 8 }, IPM: { S: 2, R: 4 }, MEM: { S: 2, R: 8 },
     CIP: { S: null, R: 1 }, GEN: { S: 4, R: 4 }, AMK: { S: 8, R: 8 }, SXT: { S: 0.5, R: 0.5 }, COL: { S: 2, R: 2 }
   },
-  strep: {
-    PEN: { S: 0.25, R: 2 }, AMX: { S: 0.5, R: 2 }, CTX: { S: 0.5, R: 2 },
-    E: { S: 0.25, R: 0.25 }, DA: { S: 0.5, R: 0.5 }, LVX: { S: null, R: 2 },
-    VA: { S: 2, R: 2 }, LZD: { S: 2, R: 2 }
+
+
+  /* S. pyogenes (groupes A, C, G) */
+  strepacg: {
+    AMX: { S: 0.5, R: 2 }, CTX: { S: 0.5, R: 2 }, DA: { S: 0.5, R: 0.5 }, E: { S: 0.25, R: 0.25 }, LVX: { S: null, R: 2 }, LZD: { S: 2, R: 2 }, PEN: { S: 0.03, R: 0.03 }, VA: { S: 2, R: 2 }
   },
-  nonferm: {
-    SXT: { S: null, R: 2 }, CAZ: { S: 8, R: 8 }, LVX: { S: 1, R: 2 }, MEM: { S: 2, R: 8 },
-    IPM: { S: 2, R: 4 }, GEN: { S: 4, R: 4 }, AMK: { S: 16, R: 16 }, COL: { S: 2, R: 2 }, TZP: { S: 16, R: 16 }
+
+  /* S. agalactiae (groupe B) */
+  strepb: {
+    AMX: { S: 0.5, R: 2 }, CTX: { S: 0.5, R: 2 }, DA: { S: 0.5, R: 0.5 }, E: { S: 0.25, R: 0.25 }, LVX: { S: null, R: 2 }, LZD: { S: 2, R: 2 }, PEN: { S: 0.125, R: 0.125 }, VA: { S: 2, R: 2 }
   },
-  fastid: {
-    AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, AMC: { S: 2, R: 2 }, PEN: { S: 0.06, R: 0.25 },
-    CTX: { S: 0.125, R: 0.125 }, AZM: { S: 0.25, R: 0.5 }, CIP: { S: 0.03, R: 0.03 },
-    RD: { S: 1, R: 1 }, SXT: { S: 0.5, R: 0.5 }, CAF: { S: 2, R: 2 }
+
+  /* streptocoques du groupe viridans */
+  viridans: {
+    AMX: { S: 0.5, R: 2 }, CTX: { S: 0.5, R: 0.5 }, DA: { S: 0.5, R: 0.5 }, E: { S: 0.25, R: 0.25 }, LVX: { S: null, R: 2 }, LZD: { S: 2, R: 2 }, PEN: { S: 0.25, R: 2 }, VA: { S: 2, R: 2 }
   },
-  grampos: {
-    AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, PEN: { S: 0.12, R: 0.25 }, SXT: { S: 0.5, R: 1 },
-    GEN: { S: 1, R: 1 }, VA: { S: 2, R: 2 }, MEM: { S: 0.5, R: 0.5 }, E: { S: 1, R: 2 }, LZD: { S: 2, R: 4 }, CTX: { S: 1, R: 1 }
+
+  /* L. monocytogenes */
+  listeria: {
+    AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, CTX: { S: 1, R: 1 }, E: { S: 1, R: 1 }, GEN: { S: 1, R: 1 }, LZD: { S: 2, R: 4 }, MEM: { S: 0.25, R: 0.25 }, PEN: { S: 1, R: 1 }, SXT: { S: 0.06, R: 0.06 }, VA: { S: 2, R: 2 }
   },
-  anaerobe: {
-    PEN: { S: 0.25, R: 0.5 }, AMC: { S: 4, R: 8 }, TZP: { S: 8, R: 16 }, IPM: { S: 2, R: 8 },
-    MEM: { S: 2, R: 8 }, DA: { S: 4, R: 4 }, MTZ: { S: 4, R: 4 }, VA: { S: 2, R: 2 }
+
+  /* Corynebacterium spp. */
+  coryne: {
+    AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, CTX: { S: 1, R: 1 }, E: { S: 1, R: 2 }, GEN: { S: 1, R: 1 }, LZD: { S: 2, R: 2 }, MEM: { S: 0.5, R: 0.5 }, PEN: { S: null, R: 1 }, SXT: { S: 0.5, R: 1 }, VA: { S: 2, R: 2 }
   },
-  curved: {
-    AZM: { S: 0.5, R: 0.5 }, E: { S: 4, R: 4 }, CIP: { S: null, R: 0.5 },
-    DOX: { S: 4, R: 8 }, SXT: { S: 2, R: 4 }
-  }
+
+  /* H. influenzae */
+  haemo: {
+    AMC: { S: 2, R: 2 }, AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, AZM: { S: 0.25, R: 0.5 }, CAF: { S: 2, R: 2 }, CIP: { S: 0.03, R: 0.03 }, CTX: { S: 0.125, R: 0.125 }, PEN: { S: 0.06, R: 0.25 }, RD: { S: 1, R: 1 }, SXT: { S: 0.5, R: 0.5 }
+  },
+
+  /* N. meningitidis */
+  nmening: {
+    AMC: { S: 2, R: 2 }, AMP: { S: 0.125, R: 1 }, AMX: { S: 0.125, R: 1 }, AZM: { S: 0.25, R: 0.5 }, CAF: { S: 2, R: 2 }, CIP: { S: 0.016, R: 0.016 }, CTX: { S: 0.125, R: 0.125 }, PEN: { S: 0.25, R: 0.25 }, RD: { S: 0.25, R: 0.25 }, SXT: { S: 0.5, R: 0.5 }
+  },
+
+  /* N. gonorrhoeae */
+  ngono: {
+    AMC: { S: 2, R: 2 }, AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, AZM: { S: 0.25, R: 0.5 }, CAF: { S: 2, R: 2 }, CIP: { S: 0.03, R: 0.06 }, CTX: { S: 0.125, R: 0.125 }, PEN: { S: 0.06, R: 1 }, RD: { S: 1, R: 1 }, SXT: { S: 0.5, R: 0.5 }
+  },
+
+  /* M. catarrhalis */
+  moraxella: {
+    AMC: { S: 1, R: 1 }, AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, AZM: { S: 0.25, R: 0.25 }, CAF: { S: 2, R: 2 }, CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 2 }, PEN: { S: 0.06, R: 0.25 }, RD: { S: 1, R: 1 }, SXT: { S: 1, R: 1 }
+  },
+
+  /* S. maltophilia */
+  steno: {
+    AMK: { S: 16, R: 16 }, CAZ: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, GEN: { S: 4, R: 4 }, IPM: { S: 2, R: 4 }, LVX: { S: 1, R: 2 }, MEM: { S: 2, R: 8 }, SXT: { S: null, R: 2 }, TZP: { S: 16, R: 16 }
+  },
+
+  /* B. cepacia — EUCAST ne fixe AUCUN seuil : conventions de laboratoire */
+  burk: {
+    AMK: { S: 16, R: 16 }, CAZ: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, GEN: { S: 4, R: 4 }, IPM: { S: 2, R: 4 }, LVX: { S: 1, R: 2 }, MEM: { S: 2, R: 8 }, SXT: { S: null, R: 2 }, TZP: { S: 16, R: 16 }
+  },
+
+  /* C. jejuni */
+  campylo: {
+    AZM: { S: 0.5, R: 0.5 }, CIP: { S: null, R: 0.5 }, DOX: { S: 4, R: 8 }, E: { S: 4, R: 4 }, SXT: { S: 2, R: 4 }
+  },
+
+  /* V. cholerae */
+  vibrio: {
+    AZM: { S: 4, R: 4 }, CIP: { S: 0.25, R: 0.25 }, DOX: { S: 0.5, R: 0.5 }, E: { S: 4, R: 4 }, SXT: { S: 0.25, R: 0.25 }
+  },
+
+  /* B. fragilis */
+  bfragilis: {
+    AMC: { S: 4, R: 8 }, DA: { S: 4, R: 4 }, IPM: { S: 2, R: 8 }, MEM: { S: 2, R: 8 }, MTZ: { S: 4, R: 4 }, PEN: { S: 0.25, R: 0.5 }, TZP: { S: 8, R: 16 }, VA: { S: 2, R: 2 }
+  },
+
+  /* C. perfringens */
+  cperfringens: {
+    AMC: { S: 0.25, R: 0.25 }, DA: { S: 0.25, R: 0.25 }, IPM: { S: 0.5, R: 0.5 }, MEM: { S: 0.125, R: 0.125 }, MTZ: { S: 4, R: 4 }, PEN: { S: 0.5, R: 0.5 }, TZP: { S: 0.5, R: 0.5 }, VA: { S: 2, R: 2 }
+  },
+
+  /* C. difficile */
+  cdifficile: {
+    AMC: { S: 4, R: 8 }, DA: { S: 4, R: 4 }, IPM: { S: 2, R: 8 }, MEM: { S: 2, R: 8 }, MTZ: { S: 2, R: 2 }, PEN: { S: 0.25, R: 0.5 }, TZP: { S: 8, R: 16 }, VA: { S: 2, R: 2 }
+  },
 };
 
 // définitions d'organismes : moteur, arguments, groupe de seuils, résistances naturelles
@@ -141,35 +196,35 @@ const ORG = {
   ssaprophyticus:{ engine: "staph", args: { species: "Staphylococcus saprophyticus", coNS: true }, bpGroup: "scn", intrinsic: {} },
   slugdunensis:  { engine: "staph", args: { species: "Staphylococcus lugdunensis", coNS: true }, bpGroup: "scn", intrinsic: {} },
   shaemolyticus: { engine: "staph", args: { species: "Staphylococcus haemolyticus", coNS: true }, bpGroup: "scn", intrinsic: {} },
-  spyogenes:   { engine: "strep", args: { species: "Streptococcus pyogenes", group: "A" }, bpGroup: "strep", intrinsic: {} },
-  sagalactiae: { engine: "strep", args: { species: "Streptococcus agalactiae", group: "B" }, bpGroup: "strep", intrinsic: {} },
-  sviridans:   { engine: "strep", args: { species: "Streptocoque du groupe viridans", group: "viridans" }, bpGroup: "strep", intrinsic: {} },
-  steno:      { engine: "stenoburk", args: { species: "Stenotrophomonas maltophilia", type: "steno" }, bpGroup: "nonferm",
+  spyogenes:   { engine: "strep", args: { species: "Streptococcus pyogenes", group: "A" }, bpGroup: "strepacg", intrinsic: {} },
+  sagalactiae: { engine: "strep", args: { species: "Streptococcus agalactiae", group: "B" }, bpGroup: "strepb", intrinsic: {} },
+  sviridans:   { engine: "strep", args: { species: "Streptocoque du groupe viridans", group: "viridans" }, bpGroup: "viridans", intrinsic: {} },
+  steno:      { engine: "stenoburk", args: { species: "Stenotrophomonas maltophilia", type: "steno" }, bpGroup: "steno",
                 intrinsic: {
                   IPM: "Résistance naturelle (carbapénémase L1) — carbapénème inactif in vivo.",
                   MEM: "Résistance naturelle (carbapénémase L1) — carbapénème inactif in vivo.",
                   ETP: "Résistance naturelle aux carbapénèmes.",
                   GEN: "Résistance naturelle aux aminosides.",
                   AMK: "Résistance naturelle aux aminosides." } },
-  burk:       { engine: "stenoburk", args: { species: "Burkholderia cepacia", type: "burk" }, bpGroup: "nonferm",
+  burk:       { engine: "stenoburk", args: { species: "Burkholderia cepacia", type: "burk" }, bpGroup: "burk",
                 intrinsic: {
                   COL: "Résistance naturelle aux polymyxines (colistine).",
                   GEN: "Résistance naturelle aux aminosides.",
                   AMK: "Résistance naturelle aux aminosides." } },
-  haemophilus:  { engine: "fastid", args: { species: "Haemophilus influenzae", type: "haemophilus" }, bpGroup: "fastid", intrinsic: {} },
-  nmeningitidis:{ engine: "fastid", args: { species: "Neisseria meningitidis", type: "meningitidis" }, bpGroup: "fastid", intrinsic: {} },
-  ngonorrhoeae: { engine: "fastid", args: { species: "Neisseria gonorrhoeae", type: "gonorrhoeae" }, bpGroup: "fastid", intrinsic: {} },
-  moraxella:    { engine: "fastid", args: { species: "Moraxella catarrhalis", type: "moraxella" }, bpGroup: "fastid", intrinsic: {} },
-  listeria:   { engine: "gramposrod", args: { species: "Listeria monocytogenes", type: "listeria" }, bpGroup: "grampos",
+  haemophilus:  { engine: "fastid", args: { species: "Haemophilus influenzae", type: "haemophilus" }, bpGroup: "haemo", intrinsic: {} },
+  nmeningitidis:{ engine: "fastid", args: { species: "Neisseria meningitidis", type: "meningitidis" }, bpGroup: "nmening", intrinsic: {} },
+  ngonorrhoeae: { engine: "fastid", args: { species: "Neisseria gonorrhoeae", type: "gonorrhoeae" }, bpGroup: "ngono", intrinsic: {} },
+  moraxella:    { engine: "fastid", args: { species: "Moraxella catarrhalis", type: "moraxella" }, bpGroup: "moraxella", intrinsic: {} },
+  listeria:   { engine: "gramposrod", args: { species: "Listeria monocytogenes", type: "listeria" }, bpGroup: "listeria",
                 intrinsic: {
                   CTX: "Céphalosporines naturellement inactives (toutes, dont C3G).",
                   FOX: "Céphalosporines / céphamycines naturellement inactives." } },
-  coryne:     { engine: "gramposrod", args: { species: "Corynebacterium spp.", type: "coryne" }, bpGroup: "grampos", intrinsic: {} },
-  bfragilis:  { engine: "anaerobe", args: { species: "Bacteroides fragilis", type: "bfragilis" }, bpGroup: "anaerobe", intrinsic: {} },
-  cperfringens:{ engine: "anaerobe", args: { species: "Clostridium perfringens", type: "cperfringens" }, bpGroup: "anaerobe", intrinsic: {} },
-  cdifficile: { engine: "anaerobe", args: { species: "Clostridioides difficile", type: "cdifficile" }, bpGroup: "anaerobe", intrinsic: {} },
-  campylobacter:{ engine: "curved", args: { species: "Campylobacter jejuni", type: "campylobacter" }, bpGroup: "curved", intrinsic: {} },
-  vibrio:     { engine: "curved", args: { species: "Vibrio cholerae", type: "vibrio" }, bpGroup: "curved", intrinsic: {} },
+  coryne:     { engine: "gramposrod", args: { species: "Corynebacterium spp.", type: "coryne" }, bpGroup: "coryne", intrinsic: {} },
+  bfragilis:  { engine: "anaerobe", args: { species: "Bacteroides fragilis", type: "bfragilis" }, bpGroup: "bfragilis", intrinsic: {} },
+  cperfringens:{ engine: "anaerobe", args: { species: "Clostridium perfringens", type: "cperfringens" }, bpGroup: "cperfringens", intrinsic: {} },
+  cdifficile: { engine: "anaerobe", args: { species: "Clostridioides difficile", type: "cdifficile" }, bpGroup: "cdifficile", intrinsic: {} },
+  campylobacter:{ engine: "curved", args: { species: "Campylobacter jejuni", type: "campylobacter" }, bpGroup: "campylo", intrinsic: {} },
+  vibrio:     { engine: "curved", args: { species: "Vibrio cholerae", type: "vibrio" }, bpGroup: "vibrio", intrinsic: {} },
   efaecalis:  { engine: "enterococcus", args: { species: "E. faecalis", ampExpectedS: true }, bpGroup: "enteroc", intrinsic: {} },
   efaecium:   { engine: "enterococcus", args: { species: "E. faecium", ampExpectedS: false }, bpGroup: "enteroc", intrinsic: {} },
   paeru:      { engine: "pseudo", bpGroup: "pseudo", intrinsic: {} },

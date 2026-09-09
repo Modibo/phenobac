@@ -129,25 +129,27 @@ Deux conventions retenues, à revoir si votre pratique diffère :
 - **Prélèvement méningé** : traité à part, par la table `BP_MENINGE` et la
   question posée à la saisie — les deux jeux coexistent au lieu qu'on choisisse.
 
-**Limite connue : des groupes de seuils rassemblent des espèces qu'EUCAST
-sépare.** `staph` a été scindé en `staph` (*S. aureus*) et `scn`
-(coagulase-négative), les glycopeptides différant — 2 contre 4 mg/L. Six groupes
-restent dans ce cas :
+**Un groupe de seuils = une espèce (ou un genre) du tableau EUCAST.** Les
+groupes larges d'origine ont été scindés : `staph` en *S. aureus* et
+coagulase-négative ; `strep` en groupes A/C/G, groupe B et viridans ; `fastid`
+en *H. influenzae*, *N. meningitidis*, *N. gonorrhoeae* et *M. catarrhalis* ;
+`grampos` en *Listeria* et *Corynebacterium* ; `curved` en *Campylobacter* et
+*Vibrio* ; `nonferm` en *S. maltophilia* et *B. cepacia* ; `anaerobe` en
+*B. fragilis*, *C. perfringens* et *C. difficile*. Vingt-trois groupes, chacun
+tiré d'une seule feuille officielle.
 
-| groupe | germes | feuilles EUCAST |
-|---|---|---|
-| `strep` | S. pyogenes, S. agalactiae, **S. viridans** | 2 |
-| `fastid` | H. influenzae, **N. meningitidis, N. gonorrhoeae, M. catarrhalis** | 4 |
-| `grampos` | L. monocytogenes, Corynebacterium | 2 |
-| `nonferm` | S. maltophilia, **B. cepacia** | 2 |
-| `anaerobe` | B. fragilis, **C. perfringens, C. difficile** | 2 |
-| `curved` | C. jejuni, **V. cholerae** | 2 |
+`outils/comparer-eucast.py` **refuse** de comparer un groupe qui couvrirait
+plusieurs feuilles. Ce garde-fou n'est pas théorique : comparer l'ancien
+`grampos` (Listeria, Corynebacterium) à la feuille des streptocoques avait
+produit trois seuils faux.
 
-`outils/comparer-eucast.py` **refuse** de comparer ces groupes plutôt que de
-choisir une feuille en silence. C'est délibéré : comparer `grampos` (Listeria,
-Corynebacterium) à la feuille des streptocoques a produit trois seuils faux
-avant qu'on s'en aperçoive. Le remède n'est pas de choisir une ligne, mais de
-scinder le groupe — comme cela a été fait pour les staphylocoques.
+**Seuils sans équivalent officiel.** EUCAST ne fixe aucun seuil pour certaines
+associations : *Burkholderia cepacia* (la feuille l'indique explicitement),
+l'oxacilline et la céfoxitine sur staphylocoque (tests de dépistage), la
+gentamicine haut niveau chez l'entérocoque, les aminopénicillines sur
+streptocoque A/B/C/G. Les valeurs employées par PhénoBac y sont des conventions
+de laboratoire, pas des seuils EUCAST, et le rapport de confrontation les
+signale comme telles.
 
 ## Avertissement d'usage
 
