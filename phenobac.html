@@ -747,7 +747,7 @@
         <div class="intro-facts">
           <span class="intro-fact">37 espèces</span>
           <span class="intro-fact">Phénotypes &amp; alertes de cohérence</span>
-          <span class="intro-fact">Seuils EUCAST v16.1</span>
+          <span class="intro-fact" id="introRef">Seuils EUCAST</span>
           <span class="intro-fact">Saisie S/I/R ou CMI</span>
           <span class="intro-fact">Compte-rendu prêt à copier</span>
           <span class="intro-fact gold">S'installe sur mobile, marche hors-ligne</span>
@@ -996,6 +996,14 @@ const REFERENTIEL = {
   etat: "partiel",
   source: "https://www.eucast.org/bacteria/clinical-breakpoints-and-interpretation/clinical-breakpoint-tables/"
 };
+// Date de publication en toutes lettres, tirée de la même constante que la
+// version : les deux ne peuvent pas diverger dans l'interface.
+function refDate(){
+  const M=["janvier","février","mars","avril","mai","juin",
+           "juillet","août","septembre","octobre","novembre","décembre"];
+  const d=new Date(REFERENTIEL.publie + "T00:00:00");
+  return isNaN(d) ? REFERENTIEL.publie : M[d.getMonth()] + " " + d.getFullYear();
+}
 function refLibelle(){
   const base = REFERENTIEL.nom + " v" + REFERENTIEL.version;
   if (REFERENTIEL.etat === "valide") return base;
@@ -2126,7 +2134,7 @@ function buildReport(A){
 
     <div class="rp-foot">
       Interprétation d'orientation produite par PhénoBac (v0.4) selon l'esprit des règles CA-SFM / EUCAST.
-      Référentiel des concentrations critiques : ${refLibelle()} — publié le ${REFERENTIEL.publie}.
+      Référentiel des concentrations critiques : ${refLibelle()}, publié en ${refDate()}.
       Les concentrations critiques employées sont paramétrables et doivent être vérifiées sur le référentiel de l'année en cours.
       Ce document ne remplace pas la validation biologique ni les tests de confirmation.
     </div>`;
@@ -3187,6 +3195,8 @@ $("#brandOpen").onclick = ()=>{
   montrerIntro(true);
   introEl.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
 };
+$("#introRef").textContent =
+  "Seuils " + REFERENTIEL.nom + " v" + REFERENTIEL.version + " — " + refDate();
 montrerIntro(false);
 
 renderPlanChip();
