@@ -603,6 +603,104 @@
     display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
   .credit b{color:var(--ink-soft);font-weight:500}
   a{color:var(--teal-deep)}
+
+  /* ============================================================
+     Présentation d'accueil. Montrée à la première visite, refermée
+     ensuite et mémorisée ; le logo la rouvre. Elle explique ce que
+     fait PhénoBac avant que l'utilisateur ne se trouve devant un
+     formulaire vide, et sert de vitrine.
+     ============================================================ */
+  .intro{
+    max-width:1160px; margin:18px auto 0; padding:0 20px;
+  }
+  .intro-card{
+    position:relative; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;
+  }
+  /* filet teal en tête de carte : rappel de l'accent, sans dégradé tapageur */
+  .intro-card::before{
+    content:""; position:absolute; inset:0 0 auto 0; height:3px;
+    background:linear-gradient(90deg,var(--teal) 0%,var(--teal-deep) 45%,var(--gold,#a9812f) 100%);
+  }
+  .intro-body{ display:grid; grid-template-columns:auto 1fr; gap:22px; padding:26px 26px 20px; }
+  .intro-mark{ width:64px; height:73px; flex:none; }
+  .intro-eyebrow{
+    font-family:'IBM Plex Mono'; font-size:10.5px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--teal); margin-bottom:9px;
+  }
+  .intro-title{
+    font-size:clamp(20px,2.6vw,27px); font-weight:600; line-height:1.22;
+    letter-spacing:-.01em; color:var(--ink); margin-bottom:10px; text-wrap:balance;
+  }
+  .intro-lead{ font-size:14.5px; line-height:1.62; color:var(--ink-soft); max-width:66ch; }
+  .intro-lead b{ color:var(--ink); font-weight:600; }
+
+  .intro-facts{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;
+  }
+  .intro-fact{
+    font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:.02em;
+    background:var(--teal-wash); color:var(--teal-deep);
+    border:1px solid #bfdfe1; border-radius:100px; padding:5px 11px; white-space:nowrap;
+  }
+  .intro-fact.gold{ background:var(--gold-wash,#f7f0df); color:var(--gold-deep,#7a5207);
+                    border-color:var(--gold-line,#e3d3ad); }
+
+  .intro-actions{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:20px; }
+  .intro-cta{
+    font-family:'IBM Plex Sans'; font-size:13.5px; font-weight:600; cursor:pointer;
+    background:var(--teal); color:#fff; border:1px solid var(--teal-deep);
+    border-radius:100px; padding:9px 20px; transition:.12s;
+  }
+  .intro-cta:hover{ background:var(--teal-deep); }
+  .intro-alt{
+    font-family:'IBM Plex Sans'; font-size:13.5px; font-weight:500; cursor:pointer;
+    background:#fff; color:var(--ink-soft); border:1px solid var(--line-strong);
+    border-radius:100px; padding:9px 18px; transition:.12s;
+  }
+  .intro-alt:hover{ border-color:var(--teal); color:var(--teal-deep); }
+
+  .intro-foot{
+    border-top:1px solid var(--line); background:var(--surface-2);
+    padding:11px 26px; font-size:12.5px; color:var(--ink-faint); line-height:1.5;
+  }
+  .intro-foot b{ color:var(--ink-soft); font-weight:600; }
+
+  .intro-close{
+    position:absolute; top:12px; right:12px; width:28px; height:28px; line-height:1;
+    border:1px solid var(--line); background:#fff; color:var(--ink-faint);
+    border-radius:50%; cursor:pointer; font-size:15px; transition:.12s;
+  }
+  .intro-close:hover{ color:var(--ink); border-color:var(--line-strong); }
+  .intro-cta:focus-visible,.intro-alt:focus-visible,.intro-close:focus-visible,
+  .brand-open:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+
+  .brand-open{ background:none; border:none; padding:0; cursor:pointer; display:inline-flex;
+               align-items:center; gap:8px; }
+
+  @media(max-width:720px){
+    .intro-body{ grid-template-columns:1fr; gap:14px; padding:22px 18px 18px; }
+    .intro-mark{ width:48px; height:55px; }
+    .intro-foot{ padding:11px 18px; }
+    /* Sur téléphone, six pastilles à la ligne repoussaient l'application très
+       bas : on les resserre pour qu'elles se rangent à deux ou trois par ligne. */
+    .intro-lead{ font-size:14px; }
+    .intro-fact{ font-size:10px; padding:4px 9px; }
+    .intro-actions{ margin-top:16px; }
+    .intro-cta,.intro-alt{ flex:1 1 auto; text-align:center; }
+  }
+
+  /* L'en-tête débordait sous 420px : l'onglet « Offres » était coupé.
+     On libère la largeur prise par le sous-titre, et la barre d'onglets
+     peut défiler si elle ne tient toujours pas. */
+  @media(max-width:640px){
+    .brand .sub{ display:none; }
+  }
+  @media(max-width:460px){
+    .tabs{ max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .tabs::-webkit-scrollbar{ display:none; }
+    .tabs button{ padding:7px 9px; font-size:11.5px; }
+  }
 </style>
 </head>
 <body>
@@ -610,8 +708,10 @@
 <header>
   <div class="bar">
     <div class="brand">
-      <span class="pheno-mark brand-mark" aria-hidden="true"></span>
-      <span class="logo">Phéno<b>Bac</b></span>
+      <button class="brand-open" id="brandOpen" title="Revoir la présentation">
+        <span class="pheno-mark brand-mark" aria-hidden="true"></span>
+        <span class="logo">Phéno<b>Bac</b></span>
+      </button>
       <span class="sub">Lecture interprétative</span>
     </div>
     <div class="tabs" id="tabs">
@@ -627,6 +727,44 @@
     <div class="plan-chip free" id="planChip"></div>
   </div>
 </header>
+
+<!-- Présentation : première visite, puis rouvrable par le logo -->
+<section class="intro" id="introView" style="display:none" aria-labelledby="introTitre">
+  <div class="intro-card">
+    <button class="intro-close" id="introClose" aria-label="Fermer la présentation">&times;</button>
+    <div class="intro-body">
+      <span class="pheno-mark intro-mark" aria-hidden="true"></span>
+      <div>
+        <p class="intro-eyebrow">Lecture interprétative de l'antibiogramme</p>
+        <h1 class="intro-title" id="introTitre">Derrière vos S, I et R, il y a un phénotype. PhénoBac le nomme.</h1>
+        <p class="intro-lead">
+          Saisissez un antibiogramme : l'application reconnaît le <b>mécanisme de résistance</b>
+          — BLSE, carbapénémase, SARM, MLS<sub>b</sub>, AmpC déréprimée —, signale les
+          <b>incohérences</b> avec les résistances naturelles attendues, et rédige le
+          <b>commentaire à joindre au compte-rendu</b>. Conçue à Mopti pour les laboratoires
+          qui interprètent sans automate.
+        </p>
+        <div class="intro-facts">
+          <span class="intro-fact">37 espèces</span>
+          <span class="intro-fact">Phénotypes &amp; alertes de cohérence</span>
+          <span class="intro-fact">Seuils EUCAST v16.1</span>
+          <span class="intro-fact">Saisie S/I/R ou CMI</span>
+          <span class="intro-fact">Compte-rendu prêt à copier</span>
+          <span class="intro-fact gold">S'installe sur mobile, marche hors-ligne</span>
+        </div>
+        <div class="intro-actions">
+          <button class="intro-cta" id="introStart">Commencer une interprétation</button>
+          <button class="intro-alt" id="introOffres">Gratuit ou Premium ?</button>
+        </div>
+      </div>
+    </div>
+    <div class="intro-foot">
+      <b>Aide à la décision, pas un rendu.</b> PhénoBac propose une interprétation d'orientation
+      fondée sur les phénotypes usuels ; la validation biologique, les tests de confirmation et le
+      référentiel en vigueur restent de la responsabilité du biologiste.
+    </div>
+  </div>
+</section>
 
 <main id="workView">
   <!-- COLONNE GAUCHE -->
@@ -2822,6 +2960,11 @@ function useForAntibiogram(id){
 
 /* --- bascule de vue --- */
 function setView(v){
+  // Changer d'onglet referme la présentation, sans la marquer comme lue :
+  // le logo la rouvrira. On passe par getElementById plutôt que par la
+  // constante déclarée plus bas, que setView précède à l'initialisation.
+  const intro = document.getElementById("introView");
+  if(intro) intro.style.display = "none";
   $("#workView").style.display = v==="work" ? "" : "none";
   $("#identView").style.display = v==="ident" ? "" : "none";
   $("#quizView").style.display = v==="quiz" ? "" : "none";
@@ -3017,6 +3160,34 @@ speciesSel.onchange=()=>{
   state.org=sel; state.results={}; state.mic={}; state.ctx={}; renderAll();
 };
 $("#reset").onclick=()=>{ state.results={}; state.mic={}; state.ctx={}; renderAll(); };
+
+/* ============================================================
+   Présentation d'accueil : visible à la première visite, puis
+   refermée et mémorisée. Le logo la rouvre à tout moment.
+   Le stockage local peut être refusé (navigation privée) :
+   dans ce doute, on montre la présentation plutôt que de la
+   masquer à tort.
+   ============================================================ */
+const introEl = $("#introView");
+function introVue(){
+  try{ return localStorage.getItem("phenobac_intro") === "vue"; }catch(e){ return false; }
+}
+function montrerIntro(force){
+  if(!force && introVue()) return;
+  introEl.style.display = "";
+}
+function fermerIntro(memoriser){
+  introEl.style.display = "none";
+  if(memoriser){ try{ localStorage.setItem("phenobac_intro","vue"); }catch(e){} }
+}
+$("#introClose").onclick = ()=> fermerIntro(true);
+$("#introStart").onclick = ()=>{ fermerIntro(true); setView("work"); };
+$("#introOffres").onclick = ()=>{ fermerIntro(true); setView("offres"); };
+$("#brandOpen").onclick = ()=>{
+  montrerIntro(true);
+  introEl.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
+};
+montrerIntro(false);
 
 renderPlanChip();
 renderAll();
