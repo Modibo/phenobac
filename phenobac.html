@@ -3266,12 +3266,19 @@ function useForAntibiogram(id){
 }
 
 /* --- bascule de vue --- */
+// Vue courante, pour que la présentation sache si elle doit s'afficher.
+// « var » et non « let » : setView est appelée à l'initialisation avant cette
+// ligne, et « let » lèverait une erreur de zone morte temporelle.
+var vueCourante = "work";
+
 function setView(v){
-  // Changer d'onglet referme la présentation, sans la marquer comme lue :
-  // le logo la rouvrira. On passe par getElementById plutôt que par la
-  // constante déclarée plus bas, que setView précède à l'initialisation.
-  const intro = document.getElementById("introView");
-  if(intro) intro.style.display = "none";
+  vueCourante = v;
+  // La présentation reste affichée d'un onglet à l'autre : elle sert de mode
+  // d'emploi permanent. Seul « À propos » la masque — cette page reprend le
+  // même propos, et les deux côte à côte feraient doublon.
+  // On passe par getElementById plutôt que par la constante déclarée plus bas,
+  // que setView précède à l'initialisation.
+  if(typeof majAffichageIntro === "function") majAffichageIntro();
   $("#workView").style.display = v==="work" ? "" : "none";
   $("#identView").style.display = v==="ident" ? "" : "none";
   $("#quizView").style.display = v==="quiz" ? "" : "none";
@@ -3451,27 +3458,52 @@ const introEl = $("#introView");
 function introDesactivee(){
   try{ return localStorage.getItem("phenobac_intro") === "jamais"; }catch(e){ return false; }
 }
-function montrerIntro(force){
-  if(!force && introDesactivee()) return;
-  introEl.style.display = "";
+// Fermée à la main pour la visite en cours (le « × »). Distinct de la
+// désactivation définitive, qui, elle, est mémorisée.
+var introFermeeSession = false;
+
+// Seule fonction qui décide de l'affichage : trois conditions, une seule règle.
+function majAffichageIntro(){
+  // getElementById plutôt que la constante introEl : cette fonction est
+  // appelée par setView, elle-même exécutée avant la déclaration de la
+  // constante lors de l'initialisation.
+  const el = document.getElementById("introView");
+  if(!el) return;
+  const afficher = !introDesactivee()
+                && !introFermeeSession
+                && vueCourante !== "offres";
+  el.style.display = afficher ? "" : "none";
 }
-// « definitif » : ne plus jamais l'ouvrir d'elle-même. Fermer sans cela ne vaut
-// que pour la visite en cours.
+function montrerIntro(force){
+  if(force){ introFermeeSession = false; }
+  majAffichageIntro();
+}
+// « definitif » : ne plus l'afficher du tout, y compris aux visites suivantes.
 function fermerIntro(definitif){
-  introEl.style.display = "none";
+  introFermeeSession = true;
   if(definitif){ try{ localStorage.setItem("phenobac_intro","jamais"); }catch(e){} }
+  majAffichageIntro();
 }
 $("#introClose").onclick = ()=> fermerIntro(false);
-$("#introStart").onclick = ()=>{ fermerIntro(false); setView("work"); };
-$("#introOffres").onclick = ()=>{ fermerIntro(false); setView("offres"); };
+// « Commencer » ne referme pas la présentation : elle est permanente. Elle
+// bascule sur l'onglet d'interprétation et amène la saisie sous les yeux.
+$("#introStart").onclick = ()=>{
+  setView("work");
+  const cible = document.getElementById("workView");
+  if(cible) cible.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
+};
+$("#introOffres").onclick = ()=> setView("offres");
 $("#introJamais").onclick = ()=> fermerIntro(true);
 $("#brandOpen").onclick = ()=>{
+  // Le logo la ramène toujours — y compris depuis « À propos » ou après
+  // désactivation : c'est la porte de sortie si on l'a masquée par erreur.
+  if(vueCourante === "offres") setView("work");
   montrerIntro(true);
   introEl.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
 };
 $("#introRef").textContent =
   "Seuils " + REFERENTIEL.nom + " v" + REFERENTIEL.version + " — " + refDate();
-montrerIntro(false);
+majAffichageIntro();
 
 renderPlanChip();
 renderAll();
