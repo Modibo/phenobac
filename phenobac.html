@@ -663,11 +663,52 @@
   }
   .intro-alt:hover{ border-color:var(--teal); color:var(--teal-deep); }
 
-  .intro-foot{
+  /* Mode d'emploi : quatre gestes numérotés, dans l'ordre où on les fait.
+     La numérotation reprend celle des encadrés de l'application (01, 02, 03),
+     pour que l'utilisateur retrouve à l'écran ce qu'il vient de lire. */
+  .guide{
     border-top:1px solid var(--line); background:var(--surface-2);
+    padding:20px 26px 22px;
+  }
+  .guide-titre{
+    font-family:'IBM Plex Mono'; font-size:10.5px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--teal); margin-bottom:14px;
+  }
+  .guide-etapes{ list-style:none; display:grid; grid-template-columns:repeat(2,1fr); gap:14px 26px; }
+  .guide-etapes li{ display:flex; gap:11px; align-items:flex-start; }
+  .ge-num{
+    flex:none; width:22px; height:22px; border-radius:50%;
+    background:var(--teal); color:#fff; font-family:'IBM Plex Mono';
+    font-size:11px; font-weight:600; display:flex; align-items:center;
+    justify-content:center; margin-top:1px;
+  }
+  .guide-etapes li div{ font-size:13.5px; line-height:1.55; color:var(--ink-soft); }
+  .guide-etapes b{ color:var(--ink); font-weight:600; }
+  .ge-ref{
+    font-family:'IBM Plex Mono'; font-size:11.5px; background:var(--surface);
+    border:1px solid var(--line-strong); border-radius:3px; padding:1px 5px;
+    color:var(--ink-soft); white-space:nowrap;
+  }
+  .guide-astuce{
+    margin-top:16px; padding-top:13px; border-top:1px dashed var(--line-strong);
+    font-size:13px; line-height:1.6; color:var(--ink-soft);
+  }
+  .guide-astuce b{ color:var(--ink); font-weight:600; }
+
+  .intro-foot{
+    border-top:1px solid var(--line); background:var(--surface);
     padding:11px 26px; font-size:12.5px; color:var(--ink-faint); line-height:1.5;
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
   }
   .intro-foot b{ color:var(--ink-soft); font-weight:600; }
+  .intro-foot-txt{ flex:1 1 420px; }
+  .intro-jamais{
+    flex:none; background:none; border:none; cursor:pointer; padding:4px 2px;
+    font-family:'IBM Plex Sans'; font-size:12.5px; color:var(--ink-faint);
+    text-decoration:underline; text-underline-offset:2px; white-space:nowrap;
+  }
+  .intro-jamais:hover{ color:var(--ink-soft); }
+  .intro-jamais:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
 
   .intro-close{
     position:absolute; top:12px; right:12px; width:28px; height:28px; line-height:1;
@@ -744,6 +785,10 @@
     .intro-fact{ font-size:10px; padding:4px 9px; }
     .intro-actions{ margin-top:16px; }
     .intro-cta,.intro-alt{ flex:1 1 auto; text-align:center; }
+    .guide{ padding:18px 18px 20px; }
+    .guide-etapes{ grid-template-columns:1fr; gap:13px; }
+    .intro-foot{ padding:12px 18px; gap:10px; }
+    .intro-jamais{ padding-left:0; }
   }
 
   /* L'en-tête débordait sous 420px : l'onglet « Offres » était coupé.
@@ -804,10 +849,8 @@
           <span class="intro-fact">37 espèces</span>
           <span class="intro-fact">Phénotypes &amp; alertes de cohérence</span>
           <span class="intro-fact" id="introRef">Seuils EUCAST</span>
-          <span class="intro-fact">Saisie S/I/R ou CMI</span>
-          <span class="intro-fact">Compte-rendu prêt à copier</span>
           <span class="intro-fact gold">Gratuit et complet, sans compte</span>
-          <span class="intro-fact">S'installe sur mobile, marche hors-ligne</span>
+          <span class="intro-fact">Hors-ligne, installable sur mobile</span>
         </div>
         <div class="intro-actions">
           <button class="intro-cta" id="introStart">Commencer une interprétation</button>
@@ -815,11 +858,63 @@
         </div>
       </div>
     </div>
+
+    <!-- Mode d'emploi : les quatre gestes, dans l'ordre où on les fait. -->
+    <div class="guide">
+      <p class="guide-titre">En quatre gestes</p>
+      <ol class="guide-etapes">
+        <li>
+          <span class="ge-num">1</span>
+          <div>
+            <b>Choisissez l'espèce et le prélèvement.</b>
+            Encadré <span class="ge-ref">01 Contexte</span>. Un doute sur l'espèce ? L'onglet
+            <span class="ge-ref">Identification</span> vous y conduit par les caractères
+            biochimiques.
+          </div>
+        </li>
+        <li>
+          <span class="ge-num">2</span>
+          <div>
+            <b>Saisissez l'antibiogramme.</b>
+            Encadré <span class="ge-ref">02 Antibiogramme</span> : cliquez <b>S</b>, <b>I</b> ou
+            <b>R</b> pour chaque antibiotique. Le bouton <span class="ge-ref">CMI mg/L</span>
+            permet d'entrer des concentrations — la catégorie se calcule alors toute seule.
+          </div>
+        </li>
+        <li>
+          <span class="ge-num">3</span>
+          <div>
+            <b>Lisez le phénotype.</b>
+            Encadré <span class="ge-ref">03 Interprétation</span> : le mécanisme est nommé, avec
+            son niveau de risque. Une <b>alerte de cohérence</b> apparaît si un résultat contredit
+            les résistances naturelles attendues de l'espèce.
+          </div>
+        </li>
+        <li>
+          <span class="ge-num">4</span>
+          <div>
+            <b>Reprenez le commentaire.</b>
+            Copiez le texte rédigé pour le compte-rendu, ou exportez-le en PDF avec
+            l'identification du prélèvement et le nom du valideur.
+          </div>
+        </li>
+      </ol>
+      <p class="guide-astuce">
+        <b>Pressé ?</b> Les <b>exemples de démonstration</b> — E. coli · BLSE, K. pneumoniae ·
+        carbapénémase, S. aureus · SARM… — remplissent un cas complet en un clic.
+        L'onglet <span class="ge-ref">Entraînement</span> propose des cas à interpréter soi-même,
+        et <span class="ge-ref">Concentrations critiques</span> permet de caler les seuils sur
+        votre référentiel.
+      </p>
+    </div>
     <div class="intro-foot">
-      <b>Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.</b>
-      PhénoBac propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir
-      de résultats que vous avez déjà lus. La validation biologique, les tests de confirmation et
-      le référentiel en vigueur restent entièrement de la responsabilité du biologiste.
+      <div class="intro-foot-txt">
+        <b>Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.</b>
+        PhénoBac propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir
+        de résultats que vous avez déjà lus. La validation biologique, les tests de confirmation et
+        le référentiel en vigueur restent entièrement de la responsabilité du biologiste.
+      </div>
+      <button class="intro-jamais" id="introJamais">Ne plus afficher à l'ouverture</button>
     </div>
   </div>
 </section>
@@ -3348,20 +3443,28 @@ $("#reset").onclick=()=>{ state.results={}; state.mic={}; state.ctx={}; renderAl
    masquer à tort.
    ============================================================ */
 const introEl = $("#introView");
-function introVue(){
-  try{ return localStorage.getItem("phenobac_intro") === "vue"; }catch(e){ return false; }
+
+// La page d'accueil s'ouvre à CHAQUE visite : elle sert autant de mode d'emploi
+// que de vitrine, et un laboratoire où plusieurs personnes se succèdent au même
+// poste y gagne. Celui que cela lasse la désactive une fois pour toutes ; le
+// logo la rouvre à volonté.
+function introDesactivee(){
+  try{ return localStorage.getItem("phenobac_intro") === "jamais"; }catch(e){ return false; }
 }
 function montrerIntro(force){
-  if(!force && introVue()) return;
+  if(!force && introDesactivee()) return;
   introEl.style.display = "";
 }
-function fermerIntro(memoriser){
+// « definitif » : ne plus jamais l'ouvrir d'elle-même. Fermer sans cela ne vaut
+// que pour la visite en cours.
+function fermerIntro(definitif){
   introEl.style.display = "none";
-  if(memoriser){ try{ localStorage.setItem("phenobac_intro","vue"); }catch(e){} }
+  if(definitif){ try{ localStorage.setItem("phenobac_intro","jamais"); }catch(e){} }
 }
-$("#introClose").onclick = ()=> fermerIntro(true);
-$("#introStart").onclick = ()=>{ fermerIntro(true); setView("work"); };
-$("#introOffres").onclick = ()=>{ fermerIntro(true); setView("offres"); };
+$("#introClose").onclick = ()=> fermerIntro(false);
+$("#introStart").onclick = ()=>{ fermerIntro(false); setView("work"); };
+$("#introOffres").onclick = ()=>{ fermerIntro(false); setView("offres"); };
+$("#introJamais").onclick = ()=> fermerIntro(true);
 $("#brandOpen").onclick = ()=>{
   montrerIntro(true);
   introEl.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
