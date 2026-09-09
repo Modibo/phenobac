@@ -447,6 +447,9 @@
   .bp-row .bpn{flex:1;font-size:12.5px;min-width:0}
   .bp-row .bpn .code{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);margin-left:6px}
   .bp-row .bplab{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint)}
+  .bp-conv{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
+    background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
+    border-radius:100px;padding:1px 6px;margin-left:7px;white-space:nowrap;cursor:help}
   .bp-row .bpin{width:52px;font-family:'IBM Plex Mono';font-size:12px;text-align:right;
     padding:5px 6px;border:1px solid var(--line-strong);border-radius:3px;background:#fff;color:var(--ink)}
   .bp-row .bpin:focus{outline:1.5px solid var(--teal);border-color:var(--teal)}
@@ -1101,7 +1104,7 @@ const REFERENTIEL = {
   nom: "EUCAST",
   version: "16.1",
   publie: "2026-06-24",
-  etat: "partiel",
+  etat: "aligne",
   source: "https://www.eucast.org/bacteria/clinical-breakpoints-and-interpretation/clinical-breakpoint-tables/"
 };
 // Date de publication en toutes lettres, tirée de la même constante que la
@@ -1115,6 +1118,9 @@ function refDate(){
 function refLibelle(){
   const base = REFERENTIEL.nom + " v" + REFERENTIEL.version;
   if (REFERENTIEL.etat === "valide") return base;
+  // « aligné » : tous les seuils qu'EUCAST définit sont conformes ; ceux qu'il
+  // ne définit pas sont marqués « hors EUCAST » dans l'éditeur.
+  if (REFERENTIEL.etat === "aligne")  return base;
   if (REFERENTIEL.etat === "partiel") return base + " (alignement partiel)";
   return base + " (seuils par défaut, à vérifier)";
 }
@@ -1133,7 +1139,7 @@ const BP = {
     CTX:{S:1,R:2}, CAZ:{S:1,R:4}, FEP:{S:1,R:4},
     ETP:{S:0.5,R:0.5}, IPM:{S:2,R:4}, MEM:{S:2,R:8},
     CIP:{S:0.25,R:0.5}, GEN:{S:2,R:2}, AMK:{S:8,R:8},
-    SXT:{S:2,R:4}, FOS:{S:8,R:8}, COL:{S:2,R:2}, AZM:{S:16,R:16}
+    SXT:{S:0.5,R:0.5}, FOS:{S:8,R:8}, COL:{S:2,R:2}, AZM:{S:16,R:16}
   },
   staph:{
     FOX:{S:4,R:4}, OXA:{S:0.25,R:0.25}, PEN:{S:0.125,R:0.125}, E:{S:1,R:1}, DA:{S:0.25,R:0.25},
@@ -1181,7 +1187,7 @@ const BP = {
 
   /* streptocoques du groupe viridans */
   viridans:{
-    AMX:{S:0.5,R:2}, CTX:{S:0.5,R:0.5}, DA:{S:0.5,R:0.5}, E:{S:0.25,R:0.25}, LVX:{S:null,R:2}, LZD:{S:2,R:2}, PEN:{S:0.25,R:2}, VA:{S:2,R:2}
+    AMX:{S:0.5,R:2}, CTX:{S:0.5,R:0.5}, DA:{S:0.5,R:0.5}, E:{S:0.25,R:0.25}, LVX:{S:null,R:2}, LZD:{S:2,R:2}, PEN:{S:0.25,R:1}, VA:{S:2,R:2}
   },
 
   /* L. monocytogenes */
@@ -1248,12 +1254,39 @@ const BP = {
   cdifficile:{
     AMC:{S:4,R:8}, DA:{S:4,R:4}, IPM:{S:2,R:8}, MEM:{S:2,R:8}, MTZ:{S:2,R:2}, PEN:{S:0.25,R:0.5}, TZP:{S:8,R:16}, VA:{S:2,R:2}
   },
+
+  /* Salmonella spp. — ciprofloxacine plus stricte (0,06). Identique aux entérobactéries pour le reste. */
+  salmonella:{
+    AMX:{S:8,R:8}, AMP:{S:8,R:8}, AMC:{S:8,R:8}, TZP:{S:8,R:8}, FOX:{S:8,R:8},
+    CTX:{S:1,R:2}, CAZ:{S:1,R:4}, FEP:{S:1,R:4},
+    ETP:{S:0.5,R:0.5}, IPM:{S:2,R:4}, MEM:{S:2,R:8},
+    CIP:{S:0.06,R:0.06}, GEN:{S:2,R:2}, AMK:{S:8,R:8},
+    SXT:{S:0.5,R:0.5}, FOS:{S:8,R:8}, COL:{S:2,R:2}, AZM:{S:16,R:16}
+  },
+
+  /* Morganellaceae (Proteus) — imipénème sans catégorie S. Identique aux entérobactéries pour le reste. */
+  morganella:{
+    AMX:{S:8,R:8}, AMP:{S:8,R:8}, AMC:{S:8,R:8}, TZP:{S:8,R:8}, FOX:{S:8,R:8},
+    CTX:{S:1,R:2}, CAZ:{S:1,R:4}, FEP:{S:1,R:4},
+    ETP:{S:0.5,R:0.5}, IPM:{S:null,R:4}, MEM:{S:2,R:8},
+    CIP:{S:0.25,R:0.5}, GEN:{S:2,R:2}, AMK:{S:8,R:8},
+    SXT:{S:0.5,R:0.5}, FOS:{S:8,R:8}, COL:{S:2,R:2}, AZM:{S:16,R:16}
+  },
+
+  /* Serratia spp. — triméthoprime-sulfaméthoxazole sans catégorie S. Identique aux entérobactéries pour le reste. */
+  serratia:{
+    AMX:{S:8,R:8}, AMP:{S:8,R:8}, AMC:{S:8,R:8}, TZP:{S:8,R:8}, FOX:{S:8,R:8},
+    CTX:{S:1,R:2}, CAZ:{S:1,R:4}, FEP:{S:1,R:4},
+    ETP:{S:0.5,R:0.5}, IPM:{S:2,R:4}, MEM:{S:2,R:8},
+    CIP:{S:0.25,R:0.5}, GEN:{S:2,R:2}, AMK:{S:8,R:8},
+    SXT:{S:null,R:2}, FOS:{S:8,R:8}, COL:{S:2,R:2}, AZM:{S:16,R:16}
+  },
 };
 
 /* espèce -> groupe de seuils */
 const BPGROUP = {
-  ecoli:"entero", kpneu:"entero", ecloacae:"entero", proteus:"entero", salmonella:"entero",
-  koxytoca:"entero", kaerogenes:"entero", serratia:"entero", cfreundii:"entero", pvulgaris:"entero", shigella:"entero",
+  ecoli:"entero", kpneu:"entero", ecloacae:"entero", proteus:"morganella", salmonella:"salmonella",
+  koxytoca:"entero", kaerogenes:"entero", serratia:"serratia", cfreundii:"entero", pvulgaris:"morganella", shigella:"entero",
   saureus:"staph", efaecalis:"enteroc", efaecium:"enteroc",
   /* coagulase négative : glycopeptides à 4 mg/L, contre 2 pour S. aureus */
   sepidermidis:"scn", ssaprophyticus:"scn", slugdunensis:"scn", shaemolyticus:"scn",
@@ -1303,6 +1336,55 @@ function catFromMic(str,bp){
 }
 
 /* ------------------------------------------------------------
+   Couples germe / antibiotique pour lesquels EUCAST v16.1 ne fixe
+   AUCUN seuil chiffré : soit la feuille l'indique explicitement
+   (Burkholderia cepacia), soit la ligne renvoie à une note ou à un
+   test de dépistage (oxacilline et céfoxitine sur staphylocoque,
+   gentamicine haut niveau chez l'entérocoque, aminopénicillines sur
+   streptocoque A/B/C/G).
+
+   Les valeurs employées ici sont des CONVENTIONS DE LABORATOIRE, pas
+   des seuils officiels. Elles restent utiles — un antibiotique testé
+   doit pouvoir être catégorisé — mais l'interface le signale, pour
+   qu'on ne les prenne pas pour de l'EUCAST.
+
+   Cette liste est produite par outils/comparer-eucast.py ; elle se
+   régénère à chaque changement de version du référentiel.
+   ------------------------------------------------------------ */
+const HORS_EUCAST = {
+  acineto: ["CAZ", "FEP", "TZP"],
+  bfragilis: ["AMC", "DA", "IPM", "MEM", "MTZ", "PEN", "TZP", "VA"],
+  burk: ["AMK", "CAZ", "COL", "GEN", "IPM", "LVX", "MEM", "SXT", "TZP"],
+  campylo: ["AZM", "DOX", "SXT"],
+  cdifficile: ["AMC", "DA", "IPM", "MEM", "PEN", "TZP"],
+  coryne: ["AMP", "AMX", "CTX", "E", "GEN", "MEM", "SXT"],
+  entero: ["AZM", "FOX"],
+  enteroc: ["HLG"],
+  haemo: ["AZM", "PEN"],
+  listeria: ["AMX", "CTX", "GEN", "LZD", "VA"],
+  moraxella: ["AMP", "AMX", "CAF", "PEN", "RD"],
+  morganella: ["AZM", "FOX"],
+  ngono: ["AMC", "AMP", "AMX", "AZM", "CAF", "RD", "SXT"],
+  nmening: ["AMC", "AZM", "CAF", "SXT"],
+  pseudo: ["GEN"],
+  salmonella: ["AZM", "FOX"],
+  scn: ["FOX", "OXA"],
+  serratia: ["AZM", "FOX"],
+  staph: ["FOX", "OXA"],
+  steno: ["AMK", "CAZ", "COL", "GEN", "IPM", "LVX", "MEM", "TZP"],
+  strepacg: ["AMX", "CTX"],
+  strepb: ["AMX", "CTX"],
+  vibrio: ["E"],
+  viridans: ["E", "LVX", "LZD"]
+};
+
+// Ce seuil est-il une convention de laboratoire plutôt qu'un seuil EUCAST ?
+function horsEucast(groupe, code){
+  const l = HORS_EUCAST[groupe];
+  return !!l && l.indexOf(code) !== -1;
+}
+
+/* ------------------------------------------------------------
    Seuils du PRÉLÈVEMENT MÉNINGÉ (LCR).
    EUCAST donne, pour quelques couples, deux jeux de seuils : « meningitis »
    et « indications other than meningitis ». Le premier est plus strict — la
@@ -1319,7 +1401,10 @@ const BP_MENINGE = {
   acineto: { MEM: { S: 2, R: 2 } },
   entero: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
   pneumo: { AMX: { S: 0.06, R: 0.06 }, CTX: { S: 0.5, R: 0.5 }, PEN: { S: 0.06, R: 0.06 } },
-  pseudo: { MEM: { S: 2, R: 2 } }
+  pseudo: { MEM: { S: 2, R: 2 } },
+  salmonella: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
+  morganella: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
+  serratia: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
 };
 
 /* seuil courant : saisie de l'utilisateur, sinon seuil méningé si le contexte
@@ -1969,14 +2054,20 @@ function renderBpEditor(){
   if(wasOpen) det.setAttribute("open","");
   det.innerHTML=`<summary><span class="caret">▸</span>Concentrations critiques (mg/L) — référentiel</summary>`;
   const body=document.createElement("div"); body.className="bp-body";
-  body.innerHTML=`<div class="bp-note">Référentiel déclaré : <b>${refLibelle()}</b>. Valeurs par défaut indicatives — ajustez-les à votre référentiel avant tout rendu. La catégorie se recalcule aussitôt.</div>`;
+  body.innerHTML=`<div class="bp-note">Référentiel appliqué : <b>${refLibelle()}</b>, publié en ${refDate()}. Les seuils marqués <span class="bp-conv">hors EUCAST</span> sont des conventions de laboratoire : le référentiel n'en fixe pas. Ajustez tout cela au vôtre avant rendu ; la catégorie se recalcule aussitôt.</div>`;
 
   const seen=new Set();
   org.panel.forEach(grp=>grp.abx.forEach(k=>{
     if(seen.has(k)) return; seen.add(k);
     const bp=getBP(g,k);
     const row=document.createElement("div"); row.className="bp-row";
-    row.innerHTML=`<div class="bpn">${ABX[k].n}<span class="code">${ABX[k].code}</span></div>`;
+    // Signaler les seuils qui ne viennent pas d'EUCAST : ce sont des
+    // conventions de laboratoire, et l'utilisateur doit pouvoir les distinguer
+    // de ceux que le référentiel fixe réellement.
+    const conv = horsEucast(bpGroup(), k)
+      ? `<span class="bp-conv" title="EUCAST ne fixe pas de seuil pour ce couple ; valeur conventionnelle, à caler sur votre référentiel">hors EUCAST</span>`
+      : "";
+    row.innerHTML=`<div class="bpn">${ABX[k].n}<span class="code">${ABX[k].code}</span>${conv}</div>`;
     const mk=(field,val)=>{
       const lab=document.createElement("span"); lab.className="bplab"; lab.textContent=field==="S"?"S ≤":"R >";
       const inp=document.createElement("input"); inp.className="bpin"; inp.type="text"; inp.inputMode="decimal";

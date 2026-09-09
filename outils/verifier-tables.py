@@ -110,7 +110,10 @@ def main():
     print("Tables concordantes : " + ", ".join("%s %d" % (k, v) for k, v in totaux.items()) + ".")
     if rb:
         print("Référentiel déclaré : %s v%s (%s)." % (rb.get('nom'), rb.get('version'), rb.get('etat')))
-        if rb.get('etat') == 'partiel':
+        if rb.get('etat') == 'aligne':
+            print("Tous les seuils qu'EUCAST définit sont conformes ; ceux qu'il ne")
+            print("définit pas sont marqués « hors EUCAST » dans l'éditeur.")
+        elif rb.get('etat') == 'partiel':
             print("Note : alignement partiel — les seuils à ligne officielle unique sont")
             print("       conformes ; ceux à lignes multiples attendent un arbitrage.")
         elif rb.get('etat') != 'valide':

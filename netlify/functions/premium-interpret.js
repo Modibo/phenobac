@@ -16,7 +16,7 @@ const crypto = require("crypto");
 
 // Référentiel des concentrations critiques employées par ce moteur.
 // Doit rester identique à la constante REFERENTIEL de phenobac.html.
-const REFERENTIEL = { nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "partiel" };
+const REFERENTIEL = { nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "aligne" };
 const { isRevoked } = require("./lib/revocation");
 const { cors } = require("./lib/http");
 const SECRET = process.env.PHENOBAC_SECRET || "";
@@ -68,7 +68,7 @@ const BP = {
     CTX: { S: 1, R: 2 }, CAZ: { S: 1, R: 4 }, FEP: { S: 1, R: 4 },
     ETP: { S: 0.5, R: 0.5 }, IPM: { S: 2, R: 4 }, MEM: { S: 2, R: 8 },
     CIP: { S: 0.25, R: 0.5 }, GEN: { S: 2, R: 2 }, AMK: { S: 8, R: 8 },
-    SXT: { S: 2, R: 4 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 }
+    SXT: { S: 0.5, R: 0.5 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 }
   },
   staph: {
     FOX: { S: 4, R: 4 }, OXA: { S: 0.25, R: 0.25 }, PEN: { S: 0.125, R: 0.125 }, E: { S: 1, R: 1 }, DA: { S: 0.25, R: 0.25 },
@@ -116,7 +116,7 @@ const BP = {
 
   /* streptocoques du groupe viridans */
   viridans: {
-    AMX: { S: 0.5, R: 2 }, CTX: { S: 0.5, R: 0.5 }, DA: { S: 0.5, R: 0.5 }, E: { S: 0.25, R: 0.25 }, LVX: { S: null, R: 2 }, LZD: { S: 2, R: 2 }, PEN: { S: 0.25, R: 2 }, VA: { S: 2, R: 2 }
+    AMX: { S: 0.5, R: 2 }, CTX: { S: 0.5, R: 0.5 }, DA: { S: 0.5, R: 0.5 }, E: { S: 0.25, R: 0.25 }, LVX: { S: null, R: 2 }, LZD: { S: 2, R: 2 }, PEN: { S: 0.25, R: 1 }, VA: { S: 2, R: 2 }
   },
 
   /* L. monocytogenes */
@@ -183,6 +183,33 @@ const BP = {
   cdifficile: {
     AMC: { S: 4, R: 8 }, DA: { S: 4, R: 4 }, IPM: { S: 2, R: 8 }, MEM: { S: 2, R: 8 }, MTZ: { S: 2, R: 2 }, PEN: { S: 0.25, R: 0.5 }, TZP: { S: 8, R: 16 }, VA: { S: 2, R: 2 }
   },
+
+  /* Salmonella spp. — ciprofloxacine plus stricte (0,06). Identique aux entérobactéries pour le reste. */
+  salmonella: {
+    AMX: { S: 8, R: 8 }, AMP: { S: 8, R: 8 }, AMC: { S: 8, R: 8 }, TZP: { S: 8, R: 8 }, FOX: { S: 8, R: 8 },
+    CTX: { S: 1, R: 2 }, CAZ: { S: 1, R: 4 }, FEP: { S: 1, R: 4 },
+    ETP: { S: 0.5, R: 0.5 }, IPM: { S: 2, R: 4 }, MEM: { S: 2, R: 8 },
+    CIP: { S: 0.06, R: 0.06 }, GEN: { S: 2, R: 2 }, AMK: { S: 8, R: 8 },
+    SXT: { S: 0.5, R: 0.5 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 }
+  },
+
+  /* Morganellaceae (Proteus) — imipénème sans catégorie S. Identique aux entérobactéries pour le reste. */
+  morganella: {
+    AMX: { S: 8, R: 8 }, AMP: { S: 8, R: 8 }, AMC: { S: 8, R: 8 }, TZP: { S: 8, R: 8 }, FOX: { S: 8, R: 8 },
+    CTX: { S: 1, R: 2 }, CAZ: { S: 1, R: 4 }, FEP: { S: 1, R: 4 },
+    ETP: { S: 0.5, R: 0.5 }, IPM: { S: null, R: 4 }, MEM: { S: 2, R: 8 },
+    CIP: { S: 0.25, R: 0.5 }, GEN: { S: 2, R: 2 }, AMK: { S: 8, R: 8 },
+    SXT: { S: 0.5, R: 0.5 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 }
+  },
+
+  /* Serratia spp. — triméthoprime-sulfaméthoxazole sans catégorie S. Identique aux entérobactéries pour le reste. */
+  serratia: {
+    AMX: { S: 8, R: 8 }, AMP: { S: 8, R: 8 }, AMC: { S: 8, R: 8 }, TZP: { S: 8, R: 8 }, FOX: { S: 8, R: 8 },
+    CTX: { S: 1, R: 2 }, CAZ: { S: 1, R: 4 }, FEP: { S: 1, R: 4 },
+    ETP: { S: 0.5, R: 0.5 }, IPM: { S: 2, R: 4 }, MEM: { S: 2, R: 8 },
+    CIP: { S: 0.25, R: 0.5 }, GEN: { S: 2, R: 2 }, AMK: { S: 8, R: 8 },
+    SXT: { S: null, R: 2 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 }
+  },
 };
 
 // définitions d'organismes : moteur, arguments, groupe de seuils, résistances naturelles
@@ -233,8 +260,8 @@ const ORG = {
   efaecium:   { engine: "enterococcus", args: { species: "E. faecium", ampExpectedS: false }, bpGroup: "enteroc", intrinsic: {} },
   paeru:      { engine: "pseudo", bpGroup: "pseudo", intrinsic: {} },
   acineto:    { engine: "acineto", bpGroup: "acineto", intrinsic: {} },
-  proteus:    { engine: "proteus", bpGroup: "entero", intrinsic: {} },
-  salmonella: { engine: "salmonella", bpGroup: "entero", intrinsic: {} },
+  proteus:    { engine: "proteus", bpGroup: "morganella", intrinsic: {} },
+  salmonella: { engine: "salmonella", bpGroup: "salmonella", intrinsic: {} },
   pneumocoque:{ engine: "pneumo", bpGroup: "pneumo", intrinsic: {} },
 
   // --- Extension Entérobactéries (moteurs réutilisés) ---
@@ -245,7 +272,7 @@ const ORG = {
                   AMX: "Résistance naturelle (céphalosporinase AmpC chromosomique inductible).",
                   AMC: "Résistance naturelle (AmpC non inhibée par le clavulanate).",
                   FOX: "Résistance naturelle (AmpC)." } },
-  serratia:   { engine: "enterobacter", args: { species: "Serratia marcescens" }, bpGroup: "entero",
+  serratia:   { engine: "enterobacter", args: { species: "Serratia marcescens" }, bpGroup: "serratia",
                 intrinsic: {
                   AMX: "Résistance naturelle (céphalosporinase AmpC chromosomique inductible).",
                   AMC: "Résistance naturelle (AmpC non inhibée par le clavulanate).",
@@ -256,7 +283,7 @@ const ORG = {
                   AMX: "Résistance naturelle (céphalosporinase AmpC chromosomique inductible).",
                   AMC: "Résistance naturelle (AmpC non inhibée par le clavulanate).",
                   FOX: "Résistance naturelle (AmpC)." } },
-  pvulgaris:  { engine: "proteus", args: { species: "Proteus vulgaris" }, bpGroup: "entero",
+  pvulgaris:  { engine: "proteus", args: { species: "Proteus vulgaris" }, bpGroup: "morganella",
                 intrinsic: { AMX: "Résistance naturelle (céphalosporinase chromosomique K1) aux aminopénicillines." } },
   shigella:   { engine: "entero", args: { amino: "AMX", species: "Shigella spp." }, bpGroup: "entero", intrinsic: {} }
 };
@@ -910,6 +937,55 @@ function catFromMic(str, bp) {
   return "I";
 }
 /* ------------------------------------------------------------
+   Couples germe / antibiotique pour lesquels EUCAST v16.1 ne fixe
+   AUCUN seuil chiffré : soit la feuille l'indique explicitement
+   (Burkholderia cepacia), soit la ligne renvoie à une note ou à un
+   test de dépistage (oxacilline et céfoxitine sur staphylocoque,
+   gentamicine haut niveau chez l'entérocoque, aminopénicillines sur
+   streptocoque A/B/C/G).
+
+   Les valeurs employées ici sont des CONVENTIONS DE LABORATOIRE, pas
+   des seuils officiels. Elles restent utiles — un antibiotique testé
+   doit pouvoir être catégorisé — mais l'interface le signale, pour
+   qu'on ne les prenne pas pour de l'EUCAST.
+
+   Cette liste est produite par outils/comparer-eucast.py ; elle se
+   régénère à chaque changement de version du référentiel.
+   ------------------------------------------------------------ */
+const HORS_EUCAST = {
+  acineto: ["CAZ", "FEP", "TZP"],
+  bfragilis: ["AMC", "DA", "IPM", "MEM", "MTZ", "PEN", "TZP", "VA"],
+  burk: ["AMK", "CAZ", "COL", "GEN", "IPM", "LVX", "MEM", "SXT", "TZP"],
+  campylo: ["AZM", "DOX", "SXT"],
+  cdifficile: ["AMC", "DA", "IPM", "MEM", "PEN", "TZP"],
+  coryne: ["AMP", "AMX", "CTX", "E", "GEN", "MEM", "SXT"],
+  entero: ["AZM", "FOX"],
+  enteroc: ["HLG"],
+  haemo: ["AZM", "PEN"],
+  listeria: ["AMX", "CTX", "GEN", "LZD", "VA"],
+  moraxella: ["AMP", "AMX", "CAF", "PEN", "RD"],
+  morganella: ["AZM", "FOX"],
+  ngono: ["AMC", "AMP", "AMX", "AZM", "CAF", "RD", "SXT"],
+  nmening: ["AMC", "AZM", "CAF", "SXT"],
+  pseudo: ["GEN"],
+  salmonella: ["AZM", "FOX"],
+  scn: ["FOX", "OXA"],
+  serratia: ["AZM", "FOX"],
+  staph: ["FOX", "OXA"],
+  steno: ["AMK", "CAZ", "COL", "GEN", "IPM", "LVX", "MEM", "TZP"],
+  strepacg: ["AMX", "CTX"],
+  strepb: ["AMX", "CTX"],
+  vibrio: ["E"],
+  viridans: ["E", "LVX", "LZD"]
+};
+
+// Ce seuil est-il une convention de laboratoire plutôt qu'un seuil EUCAST ?
+function horsEucast(groupe, code){
+  const l = HORS_EUCAST[groupe];
+  return !!l && l.indexOf(code) !== -1;
+}
+
+/* ------------------------------------------------------------
    Seuils du PRÉLÈVEMENT MÉNINGÉ (LCR).
    EUCAST donne, pour quelques couples, deux jeux de seuils : « meningitis »
    et « indications other than meningitis ». Le premier est plus strict — la
@@ -926,7 +1002,10 @@ const BP_MENINGE = {
   acineto: { MEM: { S: 2, R: 2 } },
   entero: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
   pneumo: { AMX: { S: 0.06, R: 0.06 }, CTX: { S: 0.5, R: 0.5 }, PEN: { S: 0.06, R: 0.06 } },
-  pseudo: { MEM: { S: 2, R: 2 } }
+  pseudo: { MEM: { S: 2, R: 2 } },
+  salmonella: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
+  morganella: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
+  serratia: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
 };
 
 function getBP(bpOverride, group, k, ctx) {

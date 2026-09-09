@@ -104,52 +104,39 @@ Deux avertissements :
 
 ## Référentiel des concentrations critiques
 
-La version déclarée figure dans la constante `REFERENTIEL` (identique dans
-`phenobac.html` et `premium-interpret.js`), s'affiche dans l'éditeur de seuils
-et **sur le compte-rendu**. Son champ `etat` dit la vérité sur ces seuils :
-`a_valider` tant qu'ils n'ont pas été confrontés au tableau officiel, `valide`
-ensuite. Ne le passez à `valide` qu'après confrontation réelle.
+**EUCAST v16.1, juin 2026 — aligné.** Tous les seuils que le référentiel définit
+sont conformes : 0 écart, 0 cas en attente d'arbitrage, contrôlés par
+`outils/comparer-eucast.py` contre le classeur officiel.
+
+Les 89 seuils qu'EUCAST **ne définit pas** — *Burkholderia cepacia*, pour lequel
+la feuille indique explicitement qu'aucun seuil n'est fixé ; l'oxacilline et la
+céfoxitine sur staphylocoque, qui sont des tests de dépistage ; la gentamicine
+haut niveau chez l'entérocoque ; les aminopénicillines sur streptocoque A/B/C/G
+— sont des **conventions de laboratoire**. Ils restent utilisables, mais
+l'éditeur de seuils les marque « hors EUCAST » pour qu'on ne les confonde pas.
+
+Un groupe de seuils correspond à **une espèce ou un genre du tableau officiel**,
+jamais à plusieurs : 27 groupes, dont *Salmonella*, les Morganellaceae et
+*Serratia* séparés des autres entérobactéries, parce qu'EUCAST leur donne des
+seuils propres. Le comparateur refuse de comparer un groupe qui couvrirait
+plusieurs feuilles.
 
 Chaque janvier, EUCAST publie une nouvelle version. Pour la répercuter :
 
 ```bash
-python3 outils/comparer-eucast.py v_16.1_Breakpoint_Tables.xlsx
+python3 outils/comparer-eucast.py v_17.0_Breakpoint_Tables.xlsx
+python3 outils/proposer-scission.py v_17.0_Breakpoint_Tables.xlsx
 ```
 
-Le rapport confronte chaque seuil de l'application à la ligne officielle. Il ne
-modifie rien : les écarts et les cas à arbitrer (un même antibiotique a
-plusieurs lignes selon la voie et l'indication) relèvent du biologiste.
+Le premier confronte chaque seuil à la ligne officielle, le second propose les
+valeurs d'un groupe à partir de la bonne feuille. Ni l'un ni l'autre ne modifie
+quoi que ce soit : les écarts se relisent avant d'être portés.
 
-Deux conventions retenues, à revoir si votre pratique diffère :
-
-- **Voie d'administration** : la ligne **intraveineuse** sert de référence. Un
-  antibiogramme est rendu sans connaître la voie qui sera prescrite, et c'est la
-  ligne générale du tableau. Les lignes orales, notamment « uncomplicated UTI »,
-  supposent une indication que le laboratoire ne connaît pas.
-- **Prélèvement méningé** : traité à part, par la table `BP_MENINGE` et la
-  question posée à la saisie — les deux jeux coexistent au lieu qu'on choisisse.
-
-**Un groupe de seuils = une espèce (ou un genre) du tableau EUCAST.** Les
-groupes larges d'origine ont été scindés : `staph` en *S. aureus* et
-coagulase-négative ; `strep` en groupes A/C/G, groupe B et viridans ; `fastid`
-en *H. influenzae*, *N. meningitidis*, *N. gonorrhoeae* et *M. catarrhalis* ;
-`grampos` en *Listeria* et *Corynebacterium* ; `curved` en *Campylobacter* et
-*Vibrio* ; `nonferm` en *S. maltophilia* et *B. cepacia* ; `anaerobe` en
-*B. fragilis*, *C. perfringens* et *C. difficile*. Vingt-trois groupes, chacun
-tiré d'une seule feuille officielle.
-
-`outils/comparer-eucast.py` **refuse** de comparer un groupe qui couvrirait
-plusieurs feuilles. Ce garde-fou n'est pas théorique : comparer l'ancien
-`grampos` (Listeria, Corynebacterium) à la feuille des streptocoques avait
-produit trois seuils faux.
-
-**Seuils sans équivalent officiel.** EUCAST ne fixe aucun seuil pour certaines
-associations : *Burkholderia cepacia* (la feuille l'indique explicitement),
-l'oxacilline et la céfoxitine sur staphylocoque (tests de dépistage), la
-gentamicine haut niveau chez l'entérocoque, les aminopénicillines sur
-streptocoque A/B/C/G. Les valeurs employées par PhénoBac y sont des conventions
-de laboratoire, pas des seuils EUCAST, et le rapport de confrontation les
-signale comme telles.
+**Conventions retenues**, à revoir si votre pratique diffère : ligne
+**intraveineuse** et infection **systémique** comme référence — un antibiogramme
+est rendu sans connaître la voie ni le site ; **hors méningite** et **hors
+endocardite** pour le rendu courant, les seuils méningés étant appliqués
+automatiquement quand le prélèvement est déclaré LCR.
 
 ## Avertissement d'usage
 

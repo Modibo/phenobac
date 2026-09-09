@@ -100,7 +100,11 @@ class Classeur:
 # (Listeria et Corynebacterium) comparé à tort à la feuille des streptocoques
 # A/B/C/G, ce qui a produit trois seuils faux avant qu'on s'en aperçoive.
 GROUPES = {
-    'entero':   (["11 entérobactéries"],                     ['Enterobacterales']),
+    'entero':   (["E. coli, Klebsiella, Enterobacter, Citrobacter, Shigella"],
+                                                             ['Enterobacterales']),
+    'salmonella':(["Salmonella spp."],                        ['Enterobacterales']),
+    'morganella':(["Proteus spp. (Morganellaceae)"],          ['Enterobacterales']),
+    'serratia': (["Serratia spp."],                           ['Enterobacterales']),
     'staph':    (["S. aureus"],                              ['Staphylococcus']),
     'scn':      (["S. epidermidis", "S. saprophyticus", "S. lugdunensis", "S. haemolyticus"],
                                                              ['Staphylococcus']),
@@ -126,6 +130,15 @@ GROUPES = {
     'cdifficile':(["C. difficile"],                          ['Anaerobic bacteria_G-positive']),
 }
 
+# Les feuilles d'anaérobies sont découpées en blocs par genre, et le genre ne
+# figure QUE dans l'intertitre — pas dans la ligne de l'antibiotique. Sans cette
+# correspondance, on compare un Clostridium aux seuils d'un Bacteroides.
+SECTIONS = {
+    'bfragilis':    'Bacteroides spp.',
+    'cperfringens': 'Clostridium perfringens',
+    'cdifficile':   'Clostridioides difficile',
+}
+
 # Compatibilité : les groupes à feuille unique restent comparables.
 FEUILLES = {g: f[0] for g, (_, f) in GROUPES.items() if len(f) == 1}
 
@@ -136,7 +149,8 @@ AGENTS = {
     'AMX': r'^amoxicillin\b(?!-)', 'AMP': r'^ampicillin\b(?!-)',
     'AMC': r'^amoxicillin-clavulanic', 'TZP': r'^piperacillin-tazobactam',
     'FOX': r'^cefoxitin', 'CTX': r'^cefotaxime', 'CAZ': r'^ceftazidime\b(?!-)',
-    'FEP': r'^cefepime', 'ETP': r'^ertapenem', 'IPM': r'^imipenem\b(?!-)',
+    'FEP': r'^cefepime\b(?!-)',   # exclut le céfépime-enmétazobactam
+    'ETP': r'^ertapenem', 'IPM': r'^imipenem\b(?!-)',
     'MEM': r'^meropenem\b(?!-)', 'CIP': r'^ciprofloxacin', 'LVX': r'^levofloxacin',
     'GEN': r'^gentamicin\b(?!.*high)', 'HLG': r'gentamicin.*high|high.*gentamicin',
     'AMK': r'^amikacin', 'SXT': r'^trimethoprim-sulfamethoxazole',
@@ -201,6 +215,16 @@ def main():
             print("   feuille introuvable — association à compléter dans GROUPES")
             continue
         lignes = c.lignes(feuille)
+        section = SECTIONS.get(groupe)
+        if section:
+            garde, dedans = [], False
+            for cel in lignes:
+                nom = cel.get('A', '').replace("\n", " ").strip()
+                seul = nom and len([k for k in cel if k != 'A']) == 0
+                if seul:
+                    dedans = (nom == section); continue
+                if dedans: garde.append(cel)
+            lignes = garde
         for code in sorted(bp[groupe]):
             sA, rA = bp[groupe][code]
             motif = AGENTS.get(code)
@@ -209,17 +233,29 @@ def main():
                 # Deux groupes partagent la feuille des staphylocoques : on ne
                 # retient que les lignes de l'espèce concernée, sinon celles de
                 # S. aureus et des coagulase-négative se mélangent.
-                ESPECES = {'staph':    r'S\. aureus',
+                ESPECES = {'salmonella': r'Salmonella',
+                           'morganella': r'\bMorganellaceae\b(?!.*except)',
+                           'serratia':   r'Serratia',
+                           'staph':    r'S\. aureus',
                            'scn':      r'[Cc]oagulase-negative',
                            'strepacg': r'groups A, C and G',
                            'strepb':   r'S\.\s*agalactiae',
                            'campylo':  r'C\. jejuni'}
                 espece = ESPECES.get(groupe)
-                autres = [v for k, v in ESPECES.items() if k != groupe and v != espece]
-                autre  = "|".join(autres) if (espece and autres) else None
+                # Indications particulières : le rendu courant se fait hors
+                # méningite, hors endocardite, et un « screen only » n'est pas
+                # un seuil de catégorisation.
+                # Indications particulières : le rendu courant se fait hors
+                # méningite, hors endocardite ; un « screen only » n'est pas un
+                # seuil de catégorisation. Les seuils méningés vivent dans la
+                # table BP_MENINGE et sont contrôlés à part.
+                PARTICULIER = r'\bscreen only\b|endocarditis|meningitis'
                 for cel in lignes:
-                    nom = cel.get('A', '')
-                    if autre and re.search(autre, nom) and not (espece and re.search(espece, nom)):
+                    # Un retour à la ligne dans le libellé faisait passer
+                    # « Cefepime-\nenmetazobactam » pour du céfépime : le motif
+                    # voyait une fin de mot là où il y avait un trait d'union.
+                    nom = re.sub(r'\s+', ' ', cel.get('A', '')).strip()
+                    if re.search(PARTICULIER, nom, re.I) and not re.search(r'other than|all indications|including', nom, re.I):
                         continue
                     if re.search(motif, nom, re.I):
                         bruts = (cel.get('B'), cel.get('C'))
@@ -232,6 +268,39 @@ def main():
                             if any("(" in str(x or "") for x in bruts):
                                 nom = nom + "  ⟨valeur entre parenthèses⟩"
                             cands.append((nom, sE, rE))
+            # Si des lignes nomment l'espèce du groupe, elles seules valent :
+            # sans cela, C. coli concurrence C. jejuni sur la même feuille.
+            if espece and cands:
+                visees = [x for x in cands if re.search(espece, x[0])]
+                if visees: cands = visees
+
+            # Convention documentée dans le README : la ligne intraveineuse et
+            # l'infection systémique servent de référence, un antibiogramme
+            # étant rendu sans connaître la voie ni le site.
+            for ecarte in (r'urinary|uncomplicated UTI', r'\boral\b'):
+                reste = [x for x in cands if not re.search(ecarte, x[0], re.I)]
+                if reste: cands = reste
+
+            # Pour le groupe général, écarter les lignes propres à un genre
+            # particulier : « except Morganellaceae » est la ligne générale.
+            GENRES = {'salmonella': 'Salmonella', 'morganella': 'Morganellaceae', 'serratia': 'Serratia'}
+            if groupe in ('entero',) + tuple(GENRES) and cands:
+                mien = GENRES.get(groupe)
+                autres = [v for k, v in GENRES.items() if k != groupe]
+                def garder(nom):
+                    # la ligne de mon genre l'emporte
+                    if mien and re.search(mien, nom, re.I) and not re.search(r'except', nom, re.I):
+                        return True
+                    # sinon on écarte les lignes propres à un autre genre
+                    for a in autres:
+                        if re.search(a, nom, re.I) and not re.search(r'except\s+' + a, nom, re.I):
+                            return False
+                    if mien and re.search(r'except\s+' + mien, nom, re.I):
+                        return False
+                    return True
+                reste = [x for x in cands if garder(x[0])]
+                if reste: cands = reste
+
             # Plusieurs lignes portant la MÊME valeur ne constituent pas une
             # ambiguïté : il n'y a rien à arbitrer. Sans cette réduction, un
             # écart réel avec l'application se retrouve classé « à arbitrer »
