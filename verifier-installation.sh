@@ -59,13 +59,17 @@ for f in admin.html dashboard.html .env server.js package.json; do
   attendu "$f absent du web" "$(code $BASE/$f)" "404"
 done
 
-titre "3. Le gratuit fonctionne, le payant est verrouillé"
+titre "3. Tout est gratuit et ouvert"
+# PhénoBac est gratuit : aucune fonction n'est verrouillée. Ces contrôles
+# vérifiaient l'inverse à l'époque du modèle payant.
 attendu "E. coli en S/I/R, sans licence" \
   "$(code -X POST $FN/premium-interpret -H 'Content-Type: application/json' -d '{"organism":"ecoli","mode":"sir","results":{"AMX":"R"},"ctx":{}}')" "200"
 attendu "E. coli en CMI, sans licence" \
-  "$(code -X POST $FN/premium-interpret -H 'Content-Type: application/json' -d '{"organism":"ecoli","mode":"mic","mic":{"AMX":"32"},"ctx":{}}')" "402"
+  "$(code -X POST $FN/premium-interpret -H 'Content-Type: application/json' -d '{"organism":"ecoli","mode":"mic","mic":{"AMX":"32"},"ctx":{}}')" "200"
 attendu "P. aeruginosa, sans licence" \
-  "$(code -X POST $FN/premium-interpret -H 'Content-Type: application/json' -d '{"organism":"paeru","mode":"sir","results":{"CAZ":"R"},"ctx":{}}')" "402"
+  "$(code -X POST $FN/premium-interpret -H 'Content-Type: application/json' -d '{"organism":"paeru","mode":"sir","results":{"CAZ":"R"},"ctx":{}}')" "200"
+attendu "S. epidermidis en CMI, sans licence" \
+  "$(code -X POST $FN/premium-interpret -H 'Content-Type: application/json' -d '{"organism":"sepidermidis","mode":"mic","mic":{"VA":"4"},"ctx":{}}')" "200"
 attendu "ancienne clé de démonstration refusée" \
   "$(post $FN/verify-license '{"license":"PHENO-PRO-2026"}' | grep -c '"valid":false')" "1"
 
@@ -77,7 +81,7 @@ attendu "send-test-sms sans jeton" "$(code -X POST $FN/send-test-sms -H 'Content
 attendu "relances sans secret de cron" "$(code -X POST $FN/send-reminders -H 'Content-Type: application/json' -d '{"next_run":1}')" "401"
 attendu "webhook sans authentification" "$(code -X POST $FN/payment-webhook -H 'Content-Type: application/json' -d '{"status":"SUCCESS","amount":5000,"reference":"VERIF"}')" "401"
 
-titre "5. La chaîne de licence, de bout en bout"
+titre "5. La chaîne de licence (conservée, mais ne conditionne plus l'accès)"
 REP="$(curl -s -m 15 -X POST "$FN/issue-license" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
        -d '{"sub":"verification-installation","days":1,"amount":0}' 2>/dev/null)"
 LIC="$(printf '%s' "$REP" | sed -n 's/.*"license":"\([^"]*\)".*/\1/p')"
@@ -109,8 +113,10 @@ else
   curl -s -m 15 -o /dev/null -X POST "$FN/revoke-license" -H "Authorization: Bearer $ADMIN" \
        -H 'Content-Type: application/json' -d "$P_REVOQ" 2>/dev/null
 
-  C_REVOQ="$(code -X POST "$FN/premium-interpret" -H 'Content-Type: application/json' -d "$P_PAERU")"
-  attendu "révoquée, elle ne débloque plus rien" "$C_REVOQ" "402"
+  # L'application étant gratuite, une licence révoquée ne ferme plus rien —
+  # on vérifie que la révocation reste enregistrée, pas qu'elle bloque l'accès.
+  attendu "licence révoquée : verify la refuse" \
+    "$(post "$FN/verify-license" "$P_VERIF" | grep -c '"reason":"revoked"')" "1"
 
   C_STATS="$(code -X POST "$FN/stats" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{}')"
   attendu "tableau de bord accessible avec le jeton" "$C_STATS" "200"
@@ -143,11 +149,17 @@ fi
 titre "7. Ce qui reste à régler avant d'ouvrir au public"
 [ -n "$SITE" ] && vert "SITE_URL renseigné" "$SITE" \
   || jaune "SITE_URL vide" "l'API accepte TOUTES les origines — à renseigner avant d'exposer"
-if [ "$PSP" = "paydunya" ] && [ -z "$(sed -n 's/^PAYDUNYA_MASTER_KEY=//p' .env | tail -1)" ]; then
-  jaune "clés PayDunya absentes" "aucune licence ne s'émettra automatiquement"
+
+# PhénoBac est gratuit : paiement et passerelle SMS ne sont plus nécessaires.
+# On ne les signale que s'ils sont configurés à moitié, ce qui trahirait un
+# reste de l'ancien modèle plutôt qu'une intention.
+PAYK="$(sed -n 's/^PAYDUNYA_MASTER_KEY=//p' .env | tail -1)"
+SMSU="$(sed -n 's/^SMS_API_URL=//p' .env | tail -1)"
+SMSK="$(sed -n 's/^SMS_API_KEY=//p' .env | tail -1)"
+[ -n "$PAYK" ] && jaune "clés PayDunya renseignées" "sans objet : l'application est gratuite"
+if { [ -n "$SMSU" ] && [ -z "$SMSK" ]; } || { [ -z "$SMSU" ] && [ -n "$SMSK" ]; }; then
+  jaune "passerelle SMS à moitié configurée" "renseignez SMS_API_URL et SMS_API_KEY, ou laissez les deux vides"
 fi
-[ -z "$(sed -n 's/^SMS_API_URL=//p' .env | tail -1)" ] && \
-  jaune "passerelle SMS non configurée" "les clés ne partiront pas par SMS"
 
 printf "\n\033[1mRésultat : %d conformes, %d écarts, %d points d'attention\033[0m\n" "$OK" "$KO" "$AVERT"
 [ "$KO" -eq 0 ] && echo "L'installation est saine. Les points d'attention sont des réglages qui vous appartiennent." \
