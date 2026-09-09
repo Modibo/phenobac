@@ -124,12 +124,20 @@ if command -v ss >/dev/null 2>&1; then
     vert "écoute limitée à la loopback" "rien n'est exposé directement"
   fi
 fi
-if systemctl is-active --quiet caddy 2>/dev/null; then
-  vert "le serveur web existant tourne toujours" "caddy actif"
-elif systemctl is-active --quiet nginx 2>/dev/null; then
-  vert "le serveur web existant tourne toujours" "nginx actif"
+# Le serveur de façade peut être un service système OU un conteneur : ne
+# chercher que dans systemd donne une fausse alerte là où Caddy tourne dans
+# Docker, ce qui est le cas dès qu'il sert déjà d'autres applications.
+FACADE=""
+if systemctl is-active --quiet caddy 2>/dev/null; then FACADE="caddy (service système)"
+elif systemctl is-active --quiet nginx 2>/dev/null; then FACADE="nginx (service système)"
+elif command -v docker >/dev/null 2>&1; then
+  FACADE="$(docker ps --format '{{.Names}} {{.Image}} {{.Ports}}' 2>/dev/null \
+            | awk '/caddy|nginx|traefik/ && /:80->|:443->/ {print $1" (conteneur)"; exit}')"
+fi
+if [ -n "$FACADE" ]; then
+  vert "le serveur web de façade tourne toujours" "$FACADE"
 else
-  jaune "serveur web de façade" "ni caddy ni nginx actif — normal si PhénoBac est seul"
+  jaune "aucun serveur web de façade détecté" "normal si PhénoBac est seul sur la machine"
 fi
 
 titre "7. Ce qui reste à régler avant d'ouvrir au public"
