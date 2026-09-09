@@ -675,6 +675,29 @@
   .intro-cta:focus-visible,.intro-alt:focus-visible,.intro-close:focus-visible,
   .brand-open:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
 
+  /* Page « À propos » : texte de positionnement, plus de grille tarifaire. */
+  .apropos{ max-width:760px; margin:26px auto 0; display:flex; flex-direction:column; gap:22px; }
+  .ap-bloc{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:20px 22px;
+  }
+  .ap-bloc h2{
+    font-size:15px; font-weight:600; color:var(--ink); margin-bottom:9px; letter-spacing:-.005em;
+  }
+  .ap-bloc p{ font-size:14px; line-height:1.62; color:var(--ink-soft); }
+  .ap-bloc p + p{ margin-top:9px; }
+  .ap-bloc b{ color:var(--ink); font-weight:600; }
+  .ap-liste{ list-style:none; display:flex; flex-direction:column; gap:10px; }
+  .ap-liste li{
+    font-size:14px; line-height:1.55; color:var(--ink-soft);
+    padding-left:16px; position:relative;
+  }
+  .ap-liste li::before{
+    content:""; position:absolute; left:0; top:.62em; width:6px; height:6px;
+    border-radius:50%; background:var(--teal);
+  }
+  @media(max-width:560px){ .apropos{ padding:0 4px; } .ap-bloc{ padding:16px 16px; } }
+
   .brand-open{ background:none; border:none; padding:0; cursor:pointer; display:inline-flex;
                align-items:center; gap:8px; }
 
@@ -748,13 +771,13 @@
       <button data-view="ident">Identification</button>
       <button data-view="work" class="on">Interprétation</button>
       <button data-view="quiz">Entraînement</button>
-      <button data-view="offres">Offres</button>
+      <button data-view="offres">À propos</button>
     </div>
     <div class="live-chip" id="liveChip">
       <span class="led" id="liveLed"></span>
       <span class="lbl" id="liveLbl">En attente</span>
     </div>
-    <div class="plan-chip free" id="planChip"></div>
+    <div class="plan-chip free" id="planChip" style="display:none"></div>
   </div>
 </header>
 
@@ -780,18 +803,20 @@
           <span class="intro-fact" id="introRef">Seuils EUCAST</span>
           <span class="intro-fact">Saisie S/I/R ou CMI</span>
           <span class="intro-fact">Compte-rendu prêt à copier</span>
-          <span class="intro-fact gold">S'installe sur mobile, marche hors-ligne</span>
+          <span class="intro-fact gold">Gratuit et complet, sans compte</span>
+          <span class="intro-fact">S'installe sur mobile, marche hors-ligne</span>
         </div>
         <div class="intro-actions">
           <button class="intro-cta" id="introStart">Commencer une interprétation</button>
-          <button class="intro-alt" id="introOffres">Gratuit ou Premium ?</button>
+          <button class="intro-alt" id="introOffres">À propos de PhénoBac</button>
         </div>
       </div>
     </div>
     <div class="intro-foot">
-      <b>Aide à la décision, pas un rendu.</b> PhénoBac propose une interprétation d'orientation
-      fondée sur les phénotypes usuels ; la validation biologique, les tests de confirmation et le
-      référentiel en vigueur restent de la responsabilité du biologiste.
+      <b>Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.</b>
+      PhénoBac propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir
+      de résultats que vous avez déjà lus. La validation biologique, les tests de confirmation et
+      le référentiel en vigueur restent entièrement de la responsabilité du biologiste.
     </div>
   </div>
 </section>
@@ -889,21 +914,68 @@
 </div>
 
 <div class="offres-wrap" id="offresView" style="display:none">
-  <div class="offres-hero">
-    <div class="pheno-mark offres-mark" aria-hidden="true"></div>
-    <div class="oh-eyebrow">Offres PhénoBac</div>
-    <h1>Le raisonnement expert, à portée de paillasse.</h1>
-    <p>Identifiez vos souches et interprétez l'antibiogramme des germes les plus fréquents, gratuitement. Passez à Premium pour l'interprétation des 37 espèces, la saisie par CMI, l'export des comptes-rendus et la banque d'entraînement extensible.</p>
-    <div class="oh-tagline">Interprétez&nbsp;· Décidez&nbsp;· Agissez</div>
+    <div class="offres-hero">
+      <div class="pheno-mark offres-mark" aria-hidden="true"></div>
+      <div class="oh-eyebrow">Gratuit, sans compte, sans licence</div>
+      <h1>Le raisonnement expert, à portée de paillasse.</h1>
+      <p>
+        PhénoBac est un <b>outil d'aide à l'interprétation et à la formation</b>. Il nomme le
+        phénotype de résistance derrière un antibiogramme, signale les incohérences avec les
+        résistances naturelles attendues, et rédige le commentaire du compte-rendu. Toutes les
+        espèces, la saisie par CMI, l'export et l'entraînement sont accessibles à tous.
+      </p>
+      <div class="oh-tagline">Interprétez&nbsp;· Comprenez&nbsp;· Formez</div>
+    </div>
+
+    <div class="apropos">
+      <section class="ap-bloc">
+        <h2>Ce que PhénoBac n'est pas</h2>
+        <p>
+          Ce n'est <b>pas un dispositif médical de diagnostic in vitro</b>, et il ne lit pas vos
+          boîtes : il part des résultats que vous avez déjà lus, en catégories S/I/R ou en CMI.
+          Il ne remplace ni le jugement du biologiste, ni les tests de confirmation, ni le
+          référentiel en vigueur. La validation biologique reste entière.
+        </p>
+      </section>
+
+      <section class="ap-bloc">
+        <h2>Ce qu'il apporte</h2>
+        <ul class="ap-liste">
+          <li><b>Le phénotype, pas seulement la catégorie.</b> BLSE, carbapénémase, SARM, MLS<sub>b</sub>, AmpC déréprimée, ERV, PSDP — nommés, avec le mécanisme et le niveau de risque.</li>
+          <li><b>Les incohérences.</b> Un résultat contraire aux résistances naturelles attendues de l'espèce est signalé avant le rendu.</li>
+          <li><b>Le commentaire du compte-rendu</b>, rédigé et prêt à copier.</li>
+          <li><b>Un mode entraînement</b> — interprétation, identification, cas complets — pour la formation des techniciens et des étudiants.</li>
+          <li><b>Hors-ligne.</b> Installable sur téléphone, utilisable sans réseau une fois ouvert.</li>
+        </ul>
+      </section>
+
+      <section class="ap-bloc">
+        <h2>Concentrations critiques</h2>
+        <p id="apRef">Référentiel employé : —</p>
+        <p>
+          Les seuils sont modifiables dans « Concentrations critiques » : calez-les sur le
+          référentiel de votre laboratoire avant tout rendu. Lorsque le référentiel ne fixe pas
+          de seuil pour un couple germe-antibiotique, la valeur proposée est une convention de
+          laboratoire, pas une valeur officielle.
+        </p>
+      </section>
+
+      <section class="ap-bloc">
+        <h2>Qui l'a fait</h2>
+        <p>
+          Conçu et développé par <b>Modibo Coulibaly</b>, biologie médicale, Mopti (Mali), pour
+          les laboratoires qui interprètent sans automate. Remarques, corrections de seuils et
+          demandes de formation sont les bienvenues.
+        </p>
+      </section>
+    </div>
   </div>
-  <div class="plans" id="plansGrid"></div>
-  <div class="offres-note" id="offresNote"></div>
 </div>
 
 <footer>
   <div class="disclaimer">
-    <b style="color:var(--i)">Aide à la décision — validation biologique requise.</b>
-    PhénoBac propose une interprétation d'orientation fondée sur les phénotypes usuels et l'esprit des règles CA-SFM / EUCAST. Il ne remplace ni le jugement du biologiste, ni les tests de confirmation (synergie, carba NP, biologie moléculaire), ni le référentiel en vigueur. Les concentrations critiques fournies sont des <b style="color:#7a5207">valeurs par défaut indicatives</b> : vérifiez-les et ajustez-les à votre référentiel de l'année en cours dans « Concentrations critiques » avant tout rendu.
+    <b style="color:var(--i)">Outil d'aide et de formation — validation biologique requise.</b>
+    PhénoBac n'est <b>pas un dispositif médical de diagnostic in vitro</b>. Il propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir de résultats déjà lus, et ne remplace ni le jugement du biologiste, ni les tests de confirmation (synergie, carba NP, biologie moléculaire), ni le référentiel en vigueur. Les concentrations critiques fournies sont des <b style="color:#7a5207">valeurs par défaut</b> : vérifiez-les et ajustez-les à votre référentiel dans « Concentrations critiques » avant tout rendu.
   </div>
   <div class="credit">
     <span>PhénoBac · MVP v1.0 · identification biochimique · verrou serveur · 37 espèces · CMI · PDF · quiz</span>
@@ -1712,7 +1784,11 @@ function loadPlan(){ try{ return localStorage.getItem("phenobac_plan")==="premiu
 function savePlan(p){ try{ localStorage.setItem("phenobac_plan", p); }catch(e){} }
 function loadLicense(){ try{ return localStorage.getItem("phenobac_license")||""; }catch(e){ return ""; } }
 let PLAN = loadPlan();
-function isPremium(){ return PLAN==="premium"; }
+// PhénoBac est GRATUIT et complet : aucune fonction n'est verrouillée.
+// Cette fonction est conservée — l'interface la consulte en quarante endroits —
+// et renvoie toujours vrai. Le mécanisme de licence reste disponible dans le
+// code si un usage institutionnel devait un jour le justifier.
+function isPremium(){ return true; }
 
 // Interroge le serveur sur la licence stockée et aligne l'affichage.
 // Le cache localStorage n'est jamais une preuve d'achat : hors-ligne, on
@@ -2169,7 +2245,8 @@ function buildReport(A){
     </div>
 
     <div class="rp-foot">
-      Interprétation d'orientation produite par PhénoBac (v0.4) selon l'esprit des règles CA-SFM / EUCAST.
+      Interprétation d'orientation produite par PhénoBac (v0.4), outil d'aide et de formation —
+      pas un dispositif médical de diagnostic in vitro.
       Référentiel des concentrations critiques : ${refLibelle()}, publié en ${refDate()}.
       Les concentrations critiques employées sont paramétrables et doivent être vérifiées sur le référentiel de l'année en cours.
       Ce document ne remplace pas la validation biologique ni les tests de confirmation.
@@ -3059,43 +3136,10 @@ const PLAN_FEATURES = [
 ];
 
 function renderOffres(){
-  const grid=$("#plansGrid");
-  const feat=(on)=>`<span class="ck">${on?"✓":"—"}</span>`;
-  const freeList = PLAN_FEATURES.map(f=>`<li class="${f.free?"on":"off"}">${feat(f.free)}<span>${f.label}</span></li>`).join("");
-  const proList  = PLAN_FEATURES.map(f=>`<li class="on">${feat(true)}<span>${f.label}</span></li>`).join("");
-
-  grid.innerHTML=`
-    <div class="plan free">
-      <span class="plan-tag">Gratuit</span>
-      <div class="plan-name">PhénoBac Gratuit</div>
-      <div class="plan-price">0 <small>FCFA</small></div>
-      <div class="plan-sub">Identification des 37 espèces et interprétation des germes les plus fréquents.</div>
-      <ul class="plan-feats">${freeList}</ul>
-      ${isPremium()
-        ? `<div class="plan-current">Inclus dans Premium</div>`
-        : `<div class="plan-current">Votre offre actuelle</div>`}
-    </div>
-    <div class="plan premium">
-      <span class="plan-tag">Premium · Accès total</span>
-      <div class="plan-name">PhénoBac Premium</div>
-      <div class="plan-price">${PRICING.price} <small>${PRICING.period}</small></div>
-      <div class="plan-sub">${PRICING.annual}</div>
-      <ul class="plan-feats">${proList}</ul>
-      ${isPremium()
-        ? `<div class="plan-current" style="border-color:var(--gold-line);color:var(--gold-deep)">Offre active ◆</div>`
-        : `<button class="plan-cta" id="offresUpgrade">Passer à Premium</button>`}
-    </div>`;
-
-  const note=$("#offresNote");
-  if(isPremium()){
-    note.innerHTML=`Premium est actif sur cet appareil. <a id="offresDowngrade">Repasser en gratuit</a> (pour tester).`;
-    $("#offresDowngrade").onclick=()=>{ setPlan("free"); };
-  } else {
-    note.innerHTML=PRICING.buyUrl
-      ? `Paiement par mobile money ou carte. Votre clé de licence vous est envoyée par SMS dès la confirmation.`
-      : `Paiement par mobile money. Votre clé de licence vous est envoyée par SMS dès la confirmation.`;
-    const up=$("#offresUpgrade"); if(up) up.onclick=()=>openUpgrade("Activez PhénoBac Premium pour l'accès total.");
-  }
+  // La page « À propos » est statique : seule la ligne du référentiel est
+  // remplie depuis la constante, pour qu'elle ne puisse pas dater.
+  const el = $("#apRef");
+  if(el) el.innerHTML = "Référentiel employé : <b>" + refLibelle() + "</b>, publié en " + refDate() + ".";
 }
 
 /* modale */

@@ -20,7 +20,11 @@ const REFERENTIEL = { nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat
 const { isRevoked } = require("./lib/revocation");
 const { cors } = require("./lib/http");
 const SECRET = process.env.PHENOBAC_SECRET || "";
-const FREE_SPECIES = ["ecoli", "saureus"]; // interprétés sans licence
+// PhénoBac est GRATUIT : toutes les espèces et le mode CMI sont ouverts.
+// La vérification de licence reste dans le code (lib, endpoints, révocation)
+// mais ne conditionne plus l'accès — elle resservira si un jour des licences
+// d'établissement sont émises pour un usage institutionnel ou de formation.
+const FREE_SPECIES = null;   // null = tout est gratuit
 
 /* ---------- Vérification de licence (identique à verify-license) ---------- */
 function verify(token) {
@@ -972,7 +976,8 @@ exports.handler = async (event) => {
   // 1. porte : licence obligatoire SAUF pour les germes gratuits EN MODE S/I/R.
   // La saisie par CMI est vendue comme fonction Premium : elle est donc payante
   // pour toutes les espèces, y compris les gratuites.
-  const isFree = FREE_SPECIES.includes(body.organism) && String(body.mode || "sir") !== "mic";
+  const isFree = (FREE_SPECIES === null)
+    || (FREE_SPECIES.includes(body.organism) && String(body.mode || "sir") !== "mic");
   const token = String(body.license || "").trim();
   const lic = verify(token);
   const revoked = lic.valid ? await isRevoked(token) : false;
