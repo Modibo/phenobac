@@ -109,8 +109,17 @@ else
 fi
 
 # --- Démarrage ------------------------------------------------------------
+# Si PROXY_NETWORK est renseigné, le conteneur doit rester sur le réseau du
+# serveur de façade : la surcouche est indispensable. L'oublier sort PhénoBac
+# de ce réseau et le site répond 502.
+COMPOSE=(docker compose -f docker-compose.yml)
+if grep -q '^PROXY_NETWORK=.\+' .env 2>/dev/null; then
+  COMPOSE+=(-f docker-compose.caddy.yml)
+  log "Réseau de façade détecté : la surcouche docker-compose.caddy.yml est utilisée."
+fi
+
 log "Construction et démarrage du conteneur…"
-docker compose up -d --build
+"${COMPOSE[@]}" up -d --build
 
 log "Attente de la sonde de santé…"
 SANTE="à vérifier"
@@ -146,6 +155,9 @@ cat <<FIN
       Tant que SITE_URL est vide, l'API accepte toutes les origines.
 
   Logs        : docker compose logs -f
-  Mise à jour : git pull && docker compose up -d --build
+  Mise à jour : git pull && bash install-caddy.sh
+                (le script recopie public/ et reprend la surcouche réseau ;
+                 un simple « docker compose up --build » ne ferait ni l'un
+                 ni l'autre)
   Données     : volume Docker (licences + révocations) — à sauvegarder
 FIN

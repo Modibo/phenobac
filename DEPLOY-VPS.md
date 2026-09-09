@@ -96,6 +96,25 @@ puis `http://127.0.0.1:8080` dans votre navigateur.
    toutes les origines, et n'importe qui peut faire appeler votre moteur
    d'interprétation depuis son propre site.
 
+### Mettre à jour
+
+```bash
+cd /opt/phenobac && git pull && bash install-caddy.sh
+```
+
+Toujours par le script, jamais par un `docker compose up --build` seul : deux
+choses lui échapperaient. L'image embarque `public/`, que le script recopie
+depuis les sources — sans lui, la page mise à jour ne parvient pas aux
+utilisateurs. Et si `PROXY_NETWORK` est renseigné, le conteneur doit rester sur
+le réseau du serveur de façade ; l'oublier le sort de ce réseau et le site
+répond 502.
+
+Contrôlez ensuite :
+
+```bash
+cd /opt/phenobac && bash verifier-installation.sh
+```
+
 Le reste de ce guide décrit l'installation sur une machine **vierge**, où
 PhénoBac est le seul service.
 
