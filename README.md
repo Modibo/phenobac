@@ -138,6 +138,25 @@ est rendu sans connaître la voie ni le site ; **hors méningite** et **hors
 endocardite** pour le rendu courant, les seuils méningés étant appliqués
 automatiquement quand le prélèvement est déclaré LCR.
 
+## Résistances naturelles et contrôle de cohérence
+
+Chaque germe déclare les antibiotiques auxquels il est **naturellement
+résistant**, transcrits du document officiel EUCAST *Expected Resistant
+Phenotypes* v1.2 (janvier 2023) et restreints aux antibiotiques que PhénoBac
+teste. Chaque entrée cite la règle dont elle vient — 2.7 pour *P. aeruginosa*,
+4.11 pour *Listeria*, etc. La transcription est conservée dans
+`outils/naturelles.py`.
+
+Ces antibiotiques **apparaissent d'eux-mêmes dans la liste de saisie**, sous
+« Résistances naturelles attendues », même s'ils ne figurent pas au panel
+habituel du germe. C'est la condition du contrôle : un antibiotique qu'on ne
+peut pas saisir ne peut pas être contredit. Rendre « sensible » un antibiotique
+naturellement inactif déclenche alors une alerte d'incohérence, qui invite à
+vérifier l'identification, la saisie, ou les deux.
+
+Le panel effectif est **calculé**, jamais recopié dans les 37 germes : déclarer
+une résistance naturelle suffit à la faire apparaître à la saisie.
+
 ## Avertissement d'usage
 
 PhénoBac propose une interprétation d'orientation fondée sur les phénotypes
