@@ -1073,10 +1073,10 @@
 <footer>
   <div class="disclaimer">
     <b style="color:var(--i)">Outil d'aide et de formation — validation biologique requise.</b>
-    PhénoBac n'est <b>pas un dispositif médical de diagnostic in vitro</b>. Il propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir de résultats déjà lus, et ne remplace ni le jugement du biologiste, ni les tests de confirmation (synergie, carba NP, biologie moléculaire), ni le référentiel en vigueur. Les concentrations critiques fournies sont des <b style="color:#7a5207">valeurs par défaut</b> : vérifiez-les et ajustez-les à votre référentiel dans « Concentrations critiques » avant tout rendu.
+    PhénoBac n'est <b>pas un dispositif médical de diagnostic in vitro</b>. Il propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir de résultats déjà lus, et ne remplace ni le jugement du biologiste, ni les tests de confirmation (synergie, carba NP, biologie moléculaire), ni le référentiel en vigueur. Les concentrations critiques fournies sont <span id="footRef">celles du référentiel EUCAST</span>. Quelques couples germe-antibiotique, pour lesquels EUCAST ne fixe aucun seuil, y font exception : l'éditeur les signale <b style="color:#7a5207">hors EUCAST</b>. Vérifiez-les et ajustez-les à votre référentiel dans « Concentrations critiques » avant tout rendu.
   </div>
   <div class="credit">
-    <span>PhénoBac · MVP v1.0 · identification biochimique · verrou serveur · 37 espèces · CMI · PDF · quiz</span>
+    <span>PhénoBac · MVP v1.0 · identification biochimique · moteur serveur · 37 espèces · CMI · PDF · quiz</span>
     <span><b>Conception : Modibo Coulibaly</b> — Biologiste médicale, Mopti</span>
   </div>
 </footer>
@@ -3503,6 +3503,10 @@ $("#brandOpen").onclick = ()=>{
 };
 $("#introRef").textContent =
   "Seuils " + REFERENTIEL.nom + " v" + REFERENTIEL.version + " — " + refDate();
+// Le pied de page nomme le référentiel appliqué. Comme ailleurs, la version et
+// la date viennent de la constante : elles ne peuvent pas diverger du moteur.
+$("#footRef").textContent =
+  "celles du référentiel " + REFERENTIEL.nom + " v" + REFERENTIEL.version + ", publié en " + refDate();
 majAffichageIntro();
 
 renderPlanChip();
