@@ -118,6 +118,68 @@ dire("\nUn antibiotique non testé n'est jamais rendu résistant");
 reporte("Méropénème non testé, carbapénémase confirmée",
   sir("kpneu", { AMX: "R", CTX: "R", ETP: "R", IPM: "S" }, { carba: "Oui — autre enzyme" }, "casfm"), "MEM", false);
 
+// La ZIT est-elle détectée ? Elle porte sur une valeur de CMI définie.
+function zitDetectee(titre, entree, abx, attendu) {
+  var A = E.runInterpretation(entree).interpretation;
+  var got = (A.zit || []).some(function (x) { return x.abx === abx; });
+  var ok = got === attendu;
+  ok ? OK++ : KO++;
+  dire((ok ? "  ok   " : "  ÉCHEC") + "  " + titre + " — " + abx + (got ? " en ZIT" : " hors ZIT") +
+       (ok ? "" : " (attendu " + (attendu ? "en ZIT" : "hors ZIT") + ")"));
+}
+
+dire("\nZones d'incertitude technique communes aux deux référentiels");
+// EUCAST ATU 16 mg/L, CA-SFM ZIT 16 mg/L : même valeur, même effet.
+zitDetectee("Entérobactérie, pipéracilline-tazobactam 16 mg/L, EUCAST", mic("ecoli", { TZP: "16" }, {}, "eucast"), "TZP", true);
+zitDetectee("Entérobactérie, pipéracilline-tazobactam 16 mg/L, CA-SFM", mic("ecoli", { TZP: "16" }, {}, "casfm"), "TZP", true);
+zitDetectee("Entérobactérie, pipéracilline-tazobactam 8 mg/L", mic("ecoli", { TZP: "8" }, {}, "eucast"), "TZP", false);
+// Un résultat franchement au-dessus de la ZIT n'est pas incertain ; un
+// résultat censuré « ≤ » ne permet pas de l'exclure.
+zitDetectee("Entérobactérie, > 16 mg/L", mic("ecoli", { TZP: ">16" }, {}, "eucast"), "TZP", false);
+zitDetectee("Entérobactérie, ≤ 16 mg/L", mic("ecoli", { TZP: "<=16" }, {}, "eucast"), "TZP", true);
+zitDetectee("Entérobactérie, ciprofloxacine 0,5 mg/L", mic("ecoli", { CIP: "0,5" }, {}, "eucast"), "CIP", true);
+// La méningite et Salmonella ont chacune leur ligne, sans ZIT.
+zitDetectee("Ciprofloxacine 0,5 mg/L en contexte méningé", mic("ecoli", { CIP: "0,5" }, { mening: "Oui" }, "eucast"), "CIP", false);
+zitDetectee("Salmonella, ciprofloxacine 0,5 mg/L", mic("salmonella", { CIP: "0,5" }, {}, "eucast"), "CIP", false);
+zitDetectee("Salmonella, pipéracilline-tazobactam 16 mg/L", mic("salmonella", { TZP: "16" }, {}, "eucast"), "TZP", true);
+
+dire("\nZones d'incertitude technique propres au CA-SFM");
+zitDetectee("S. aureus, vancomycine 2 mg/L, EUCAST", mic("saureus", { VA: "2" }, {}, "eucast"), "VA", false);
+zitDetectee("S. aureus, vancomycine 2 mg/L, CA-SFM", mic("saureus", { VA: "2" }, {}, "casfm"), "VA", true);
+zitDetectee("S. epidermidis, vancomycine 2 mg/L, CA-SFM", mic("sepidermidis", { VA: "2" }, {}, "casfm"), "VA", false);
+zitDetectee("P. aeruginosa, colistine 4 mg/L, EUCAST", mic("paeru", { COL: "4" }, {}, "eucast"), "COL", false);
+zitDetectee("P. aeruginosa, colistine 4 mg/L, CA-SFM", mic("paeru", { COL: "4" }, {}, "casfm"), "COL", true);
+
+dire("\nCe que la ZIT ne fait pas");
+// Les seuils saisis par le biologiste ne sont pas ceux du comité : la ZIT
+// publiée ne s'y rapporte plus.
+zitDetectee("Seuils forcés par le biologiste",
+  { organism: "ecoli", mode: "mic", mic: { TZP: "16" }, bpOverride: { "entero:TZP": { S: 16, R: 32 } }, ctx: {}, ref: "eucast" },
+  "TZP", false);
+// Sans CMI, il n'y a rien à situer.
+zitDetectee("Saisie en S/I/R", sir("ecoli", { TZP: "I" }, {}, "eucast"), "TZP", false);
+
+(function () {
+  // PhénoBac ne dégrade jamais la catégorie de lui-même — l'EUCAST le permet
+  // parmi d'autres options, le CA-SFM le déconseille ; la décision revient
+  // au biologiste.
+  var o = E.runInterpretation(mic("saureus", { VA: "2" }, {}, "casfm"));
+  var ok = o.categories.VA === "R" && o.rendues.VA === "R";
+  ok ? OK++ : KO++;
+  dire((ok ? "  ok   " : "  ÉCHEC") + "  la catégorie en ZIT est conservée, jamais dégradée d'office");
+
+  var txt = function (ref) {
+    return (E.runInterpretation(mic("ecoli", { TZP: "16" }, {}, ref)).interpretation.rules || [])
+      .map(function (x) { return x.txt; }).join(" ");
+  };
+  var ok2 = txt("casfm").indexOf("ne pas dégrader") !== -1;
+  ok2 ? OK++ : KO++;
+  dire((ok2 ? "  ok   " : "  ÉCHEC") + "  CA-SFM : la consigne de ne pas dégrader est rendue");
+  var ok3 = txt("eucast").indexOf("est permis") !== -1;
+  ok3 ? OK++ : KO++;
+  dire((ok3 ? "  ok   " : "  ÉCHEC") + "  EUCAST : la dégradation est présentée comme permise");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " vérifications."
                 : OK + " vérifications, aucune divergence inattendue."));
 if (KO && typeof process === "object" && process.exit) process.exit(1);

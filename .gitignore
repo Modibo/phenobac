@@ -3,3 +3,4 @@ data/
 node_modules/
 public/
 .DS_Store
+__pycache__/

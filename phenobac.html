@@ -429,6 +429,11 @@
   .cat-chip.I{background:var(--i-bg);color:var(--i);border-color:var(--i-line)}
   .cat-chip.R{background:var(--r-bg);color:var(--r);border-color:var(--r-line)}
   .cat-chip.none{background:var(--surface-2);color:var(--ink-faint);border-color:var(--line)}
+  /* Incertitude technique : un avertissement, pas une catégorie — d'où une
+     pastille plate, distincte des pastilles S/I/R. */
+  .zit-chip{font-family:'IBM Plex Mono';font-size:9px;font-weight:600;letter-spacing:.05em;
+    background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
+    border-radius:100px;padding:2px 6px;margin-right:6px;white-space:nowrap;cursor:help}
   .bp-hint{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);margin-top:3px;letter-spacing:.02em}
 
   /* éditeur de seuils */
@@ -1717,6 +1722,77 @@ const CASFM_PANEL = {
   ngonorrhoeae: { t: "Ajout CA-SFM", abx: ["GEN"] }
 };
 
+/* ============================================================
+   ZONES D'INCERTITUDE TECHNIQUE (ZIT, « ATU » chez l'EUCAST).
+
+   Toute mesure varie. Pour quelques couples germe/antibiotique, la
+   valeur mesurée tombe si près du seuil que la catégorisation n'est plus
+   reproductible : une CMI de 1 mg/L doit être tenue pour comprise entre
+   0,5 et 2 mg/L. Les deux comités signalent ces valeurs.
+
+   La ZIT n'est PAS une catégorie clinique de plus : c'est un
+   avertissement sur la fiabilité de la catégorie rendue.
+
+   La ZIT est « une valeur de CMI définie, une seule dilution sauf
+   exception » (CA-SFM 2026, chapitre ZIT) : on compare donc à une
+   valeur, pas à un intervalle.
+
+   Sources : EUCAST v16.1, colonne « ATU » des tableaux (6 couples en CMI
+   dans tout le référentiel) ; CA-SFM 2026, colonne « ZIT » (10 couples).
+   Beaucoup d'autres ZIT existent, mais sur les DIAMÈTRES : PhénoBac ne
+   travaille pas sur les diamètres, elles ne le concernent pas — et le
+   CA-SFM précise que déterminer la CMI lève alors l'incertitude.
+   ============================================================ */
+
+/* Commune aux deux référentiels. */
+const ZIT = {
+  // Pipéracilline-tazobactam : EUCAST ATU 16 mg/L ; CA-SFM ZIT 16 mg/L.
+  // Ciprofloxacine : EUCAST ATU 0,5 ; CA-SFM ZIT 0,5. Le tableau des
+  // fluoroquinolones du CA-SFM est intitulé « Enterobacterales (à
+  // l'exception du genre Salmonella) », et l'EUCAST donne à Salmonella sa
+  // propre ligne, sans ATU : le genre est donc exclu de la ZIT.
+  entero:     { TZP: 16, CIP: 0.5 },
+  morganella: { TZP: 16, CIP: 0.5 },
+  serratia:   { TZP: 16, CIP: 0.5 },
+  salmonella: { TZP: 16 }
+};
+
+/* Propre au CA-SFM : deux ZIT que l'EUCAST ne déclare pas. */
+const ZIT_CASFM = {
+  // Colistine / Pseudomonas : ZIT 4 mg/L (CA-SFM 2026, chapitre 5.2).
+  pseudo: { COL: 4 },
+  // Vancomycine / S. aureus : ZIT 2 mg/L. Elle accompagne l'abaissement du
+  // seuil à 1 mg/L — le CA-SFM coupe la limite haute des souches sauvages
+  // et compense par cette ZIT (CA-SFM 2026, p. 11 du document des
+  // différences). Ne concerne pas les staphylocoques à coagulase négative.
+  staph:  { VA: 2 }
+};
+
+/* La ZIT applicable à ce couple, ou null.
+   Elle se rapporte aux seuils PUBLIÉS : si le biologiste a saisi les siens,
+   la valeur du comité ne s'y rapporte plus et on se tait. */
+function zitPour(group, k){
+  if(state.bpOverride && state.bpOverride[group + ":" + k]) return null;
+  // En contexte méningé, la ciprofloxacine relève d'une ligne distincte,
+  // que ni l'EUCAST ni le CA-SFM n'assortissent d'une ZIT.
+  if(k === "CIP" && state.ctx && state.ctx.mening === "Oui") return null;
+  if(estCasfm() && ZIT_CASFM[group] && ZIT_CASFM[group][k] !== undefined) return ZIT_CASFM[group][k];
+  const z = ZIT[group] && ZIT[group][k];
+  return (z === undefined) ? null : z;
+}
+
+/* Cette CMI tombe-t-elle dans la zone d'incertitude ?
+   « > 0,5 » est franchement au-dessus, « < 0,5 » franchement en dessous :
+   ni l'un ni l'autre n'est incertain. « ≤ » et « ≥ » ne permettent pas
+   d'exclure la valeur, on avertit. */
+function enZit(str, group, k){
+  const z = zitPour(group, k);
+  if(z === null) return false;
+  const p = parseMic(str);
+  if(!p || p.v !== z) return false;
+  return p.op !== ">" && p.op !== "<";
+}
+
 /* seuil courant : saisie de l'utilisateur, sinon seuil méningé si le contexte
    l'indique, sinon seuil par défaut. */
 function getBP(group,k){
@@ -2370,16 +2446,22 @@ function renderAbx(){
         inp.setAttribute("aria-label","CMI "+ABX[k].n+" en mg/L");
         const unit=document.createElement("span"); unit.className="mic-unit"; unit.textContent="mg/L";
         const chip=document.createElement("div"); chip.id="chip-"+k;
-        const c0=catFromMic(state.mic[k], getBP(g,k));
-        chip.className="cat-chip "+(c0||"none"); chip.textContent=c0||"—";
+        // Marqueur d'incertitude technique : il ne remplace pas la catégorie,
+        // il dit qu'à cette valeur la catégorie n'est pas reproductible.
+        const zc=document.createElement("span"); zc.className="zit-chip"; zc.textContent="ZIT";
+        zc.title="Zone d'incertitude technique : à cette valeur, la catégorisation est peu reproductible. Ni l'EUCAST ni le CA-SFM n'en font une catégorie ; PhénoBac ne modifie rien de lui-même.";
+        const majChips=(c)=>{
+          chip.className="cat-chip "+(c||"none"); chip.textContent=c?lettreCat(c):"—";
+          zc.hidden = !enZit(state.mic[k], g, k);
+        };
+        majChips(catFromMic(state.mic[k], getBP(g,k)));
         inp.oninput=()=>{
           state.mic[k]=inp.value;
           recomputeFromMic();
-          const c=state.results[k];
-          chip.className="cat-chip "+(c||"none"); chip.textContent=c||"—";
+          majChips(state.results[k]);
           renderCtx(); renderInterpret();
         };
-        wrap.appendChild(inp); wrap.appendChild(unit); wrap.appendChild(chip);
+        wrap.appendChild(inp); wrap.appendChild(unit); wrap.appendChild(zc); wrap.appendChild(chip);
         row.appendChild(wrap);
       }
       gr.appendChild(row);
@@ -2397,7 +2479,11 @@ function bpHint(group,k){
   const bp=getBP(group,k);
   if(!bp) return "pas de seuil défini · saisir en S/I/R";
   const s=fmt(bp.S), r=fmt(bp.R);
-  return (bp.S===bp.R) ? `seuil : S ≤ ${s} · R > ${r}` : `seuils : S ≤ ${s} · R > ${r}`;
+  const base = (bp.S===bp.R) ? `seuil : S ≤ ${s} · R > ${r}` : `seuils : S ≤ ${s} · R > ${r}`;
+  // Annoncer la ZIT avant la saisie : le biologiste sait alors à quelle
+  // valeur sa mesure deviendra douteuse, au lieu de le découvrir après.
+  const z = zitPour(group,k);
+  return z===null ? base : base + ` · ZIT ${fmt(z)}`;
 }
 function fmt(x){ return (Math.round(x*1000)/1000).toString(); }
 

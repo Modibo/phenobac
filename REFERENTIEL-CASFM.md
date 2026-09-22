@@ -31,6 +31,7 @@ d'un patient au suivant.
 | Seuils du site méningé | `BP_MENINGE_CASFM` | idem |
 | Couples couverts par le CA-SFM seul | `CASFM_COUVRE` | idem |
 | Molécules ajoutées au panel | `CASFM_PANEL` | — |
+| Zones d'incertitude technique | `ZIT`, `ZIT_CASFM` | idem, + `zitPour()` / `enZit()` |
 | Règles transversales | — | `reglesCasfm()` |
 | Lecture interprétative | — | `rendreR()`, moteurs `entero` / `enterobacter` |
 
@@ -42,6 +43,13 @@ Deux garde-fous sont lancés par la CI à chaque push :
 ```bash
 python3 outils/verifier-tables.py      # les deux copies des tables concordent
 node outils/essai-referentiel.js       # changer de référentiel change le rendu
+```
+
+Et, à la main, quand un nouveau millésime paraît :
+
+```bash
+python3 outils/comparer-eucast.py v_16.1_Breakpoint_Tables.xlsx   # les seuils
+python3 outils/comparer-zit.py    v_16.1_Breakpoint_Tables.xlsx CASFM2026_V1.0-SEPTEMBRE-2026.pdf
 ```
 
 Sans Node sur la machine, le second tourne aussi sous JavaScriptCore :
@@ -134,6 +142,84 @@ exige en plus.
 | Anaérobies | 16, 17 | Gélose Brucella (BBA) et non FAA ; amoxicilline testée directement plutôt que déduite de la pénicilline G. Pas de seuils propres à *C. difficile*, dont l'antibiogramme sur selles n'est pas recommandé en France. |
 | *Burkholderia cepacia* | 10 | Chapitre et concentrations critiques **supprimés** en 2026 : microdilution en milieu liquide seulement, CMI interprétées face aux valeurs PK/PD. |
 
+## Zones d'incertitude technique (ZIT / ATU)
+
+Toute mesure varie. Pour quelques couples germe-antibiotique, la valeur tombe
+si près du seuil que la catégorisation n'est plus reproductible : une CMI de
+1 mg/L doit être tenue pour comprise entre 0,5 et 2 mg/L. Les deux comités
+signalent ces valeurs — l'EUCAST sous le nom d'**ATU** (*area of technical
+uncertainty*), le CA-SFM sous celui de **ZIT**.
+
+**Ce n'est pas une catégorie clinique de plus.** C'est un avertissement sur la
+fiabilité de la catégorie rendue. PhénoBac l'affiche, et ne touche à rien.
+
+### Les valeurs appliquées
+
+La ZIT est « une valeur de CMI définie, une seule dilution sauf exception » :
+on compare donc à une valeur, pas à un intervalle.
+
+| Couple | ZIT | EUCAST | CA-SFM | Source |
+|---|---|---|---|---|
+| Entérobactéries / pipéracilline-tazobactam | 16 mg/L | ATU 16 | ZIT 16 | EUCAST v16.1, feuille *Enterobacterales* ; CA-SFM 2026 p. 48 |
+| Entérobactéries / ciprofloxacine | 0,5 mg/L | ATU 0,5 | ZIT 0,5 | idem ; CA-SFM 2026 p. 52 |
+| *Pseudomonas* / colistine | 4 mg/L | — | ZIT 4 | CA-SFM 2026, chapitre 5.2 |
+| *S. aureus* / vancomycine | 2 mg/L | — | ZIT 2 | CA-SFM 2026, chapitre 5.5 |
+
+Trois restrictions, lues dans les documents :
+
+- **Salmonella est exclu** de la ZIT de la ciprofloxacine. Le tableau des
+  fluoroquinolones du CA-SFM est intitulé « Enterobacterales (à l'exception du
+  genre *Salmonella*) », et l'EUCAST donne au genre sa propre ligne, sans ATU.
+  La ZIT de la pipéracilline-tazobactam, elle, s'y applique.
+- **Le contexte méningé** relève d'une ligne distincte — « Ciprofloxacine
+  (méningites) » — qu'aucun des deux comités n'assortit d'une ZIT.
+- **Les staphylocoques à coagulase négative** ne sont pas concernés par la ZIT
+  de la vancomycine : la ligne « Vancomycine, SCN » n'en porte pas. Cette ZIT
+  accompagne l'abaissement du seuil à 1 mg/L, qui ne vaut que pour *S. aureus*.
+
+Enfin, la ZIT publiée se rapporte aux **seuils publiés**. Dès que le biologiste
+saisit les siens dans « Concentrations critiques », PhénoBac cesse de
+l'afficher : elle ne s'y rapporte plus.
+
+### Pourquoi si peu de valeurs
+
+La grande majorité des ZIT portent sur les **diamètres d'inhibition**, pas sur
+les CMI. PhénoBac ne travaille pas sur les diamètres : elles ne le concernent
+pas — et le CA-SFM précise que, dans ce cas, déterminer la CMI lève
+l'incertitude. Restent six ATU en CMI dans tout l'EUCAST v16.1 et dix ZIT en
+CMI dans tout le CA-SFM 2026, dont une partie seulement porte sur des molécules
+et des espèces que PhénoBac couvre. Les autres concernent la ceftaroline, le
+ceftobiprole, la daptomycine, le céfuroxime iv et le complexe *Mycobacterium
+abscessus*.
+
+### La conduite à tenir, et la différence entre les deux comités
+
+L'EUCAST énumère cinq options : répéter le test, recourir à un test alternatif,
+**dégrader la catégorie**, inclure l'incertitude dans le compte rendu, ou ne pas
+rendre le résultat.
+
+Le CA-SFM reprend ces options **sauf une** : il écarte expressément la
+dégradation systématique dans la catégorie immédiatement inférieure, au motif
+que la pratique tendrait à se généraliser dans certains laboratoires et
+fausserait la surveillance épidémiologique de la résistance. Il ajoute qu'« il
+est préférable de signaler que le résultat se situe en zone d'incertitude
+technique plutôt que d'occulter le résultat ».
+
+**PhénoBac ne dégrade jamais une catégorie de lui-même**, sous aucun des deux
+référentiels. Il signale, rappelle les options — formulées selon le référentiel
+actif — et laisse la décision au biologiste, qui seul connaît la nature du
+prélèvement, la gravité de l'infection et les alternatives disponibles.
+
+### Vérifier les valeurs
+
+```bash
+python3 outils/comparer-zit.py v_16.1_Breakpoint_Tables.xlsx CASFM2026_V1.0-SEPTEMBRE-2026.pdf
+```
+
+L'outil lit la colonne « ATU » du classeur EUCAST et la colonne « ZIT » des
+tableaux du CA-SFM, et les confronte à ce que l'application applique. Il ne
+modifie rien.
+
 ## Ce qui n'est pas repris, et pourquoi
 
 Le document source décrit des différences que PhénoBac ne peut pas appliquer
@@ -154,22 +240,26 @@ listées ici pour que l'écart soit connu plutôt que silencieux.
 | *S. pettenkoferi* : oxacilline à 2 mg/L | 11 | Espèce absente |
 | *B. pseudomallei* / doxycycline : seuil unique à 2 mg/L | 10 | Espèce absente |
 | Stratégie de dépistage des carbapénémases (logigramme, annexe 6) | 9 | Relève de la paillasse, pas de l'interprétation |
-| Zones d'incertitude technique (ZIT) | 11, 12, 13 | PhénoBac ne modélise pas encore les ZIT |
 | *H. pylori*, *Campylobacter* : méthodologie du CNR | 15 | Relève de la méthode, pas des seuils |
 
 ## Mettre à jour
 
 Le CA-SFM publie une version par an, en général à la rentrée.
 
-1. Récupérer le nouveau document de différences sur la page du groupe
-   *Comité de l'Antibiogramme* du site de la SFM. Le lien de téléchargement
-   n'est pas exposé sur la fiche boutique : il se trouve sur la page du groupe
-   de travail, sous la forme `wp-content/uploads/<année>/<mois>/CASFM<année>EUCAST.pdf`.
+1. Récupérer **deux** documents sur le site de la SFM. Le lien n'est exposé ni
+   sur la fiche boutique ni dans la page du groupe pour le second :
+   - le document des différences,
+     `wp-content/uploads/<année>/<mois>/CASFM<année>EUCAST.pdf`, listé sur la
+     page du groupe *Comité de l'Antibiogramme* ;
+   - le communiqué complet, qui porte les tableaux et donc les ZIT,
+     `wp-content/uploads/<année>/<mois>/CASFM<année>_V1.0-<MOIS>-<année>.pdf`
+     (pour 2026 : `.../2026/09/CASFM2026_V1.0-SEPTEMBRE-2026.pdf`).
 2. Comparer, différence par différence, avec les tableaux ci-dessus.
 3. Corriger `BP_CASFM*` et `reglesCasfm()` **dans le moteur d'abord**, puis
    recopier dans le client.
 4. Mettre à jour `REFERENTIELS.casfm.version` et `.publie` des deux côtés.
-5. Relancer `verifier-tables.py` et `essai-referentiel.js`, et compléter ce
+5. Passer les ZIT au crible de `comparer-zit.py`, qui lit les deux sources.
+6. Relancer `verifier-tables.py` et `essai-referentiel.js`, et compléter ce
    fichier — y compris la liste des différences non reprises.
 
 ## Avertissement

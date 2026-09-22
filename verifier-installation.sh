@@ -87,6 +87,16 @@ attendu "carbapénémase confirmée, CA-SFM → imipénème reporté en R" \
   "$(post $FN/premium-interpret '{"organism":"kpneu","mode":"sir","results":{"CTX":"R","ETP":"R","IPM":"S"},"ctx":{"carba":"Oui — autre enzyme"},"ref":"casfm"}' | grep -c '"abx":"IPM"')" "1"
 attendu "carbapénémase confirmée, EUCAST → aucun report" \
   "$(post $FN/premium-interpret '{"organism":"kpneu","mode":"sir","results":{"CTX":"R","ETP":"R","IPM":"S"},"ctx":{"carba":"Oui — autre enzyme"},"ref":"eucast"}' | grep -c '"abx":"IPM"')" "0"
+# Zones d'incertitude technique : la vancomycine à 2 mg/L sur S. aureus est en
+# ZIT pour le CA-SFM (qui a descendu le seuil à 1 mg/L), pas pour l'EUCAST.
+attendu "S. aureus, vancomycine 2 mg/L, CA-SFM → signalée en ZIT" \
+  "$(post $FN/premium-interpret '{"organism":"saureus","mode":"mic","mic":{"VA":"2"},"ctx":{},"ref":"casfm"}' | grep -c '"zit"')" "1"
+attendu "S. aureus, vancomycine 2 mg/L, EUCAST → pas de ZIT" \
+  "$(post $FN/premium-interpret '{"organism":"saureus","mode":"mic","mic":{"VA":"2"},"ctx":{},"ref":"eucast"}' | grep -c '"zit"')" "0"
+# La ZIT ne dégrade jamais la catégorie : elle reste celle que les seuils donnent.
+attendu "la catégorie en ZIT n'est pas dégradée" \
+  "$(post $FN/premium-interpret '{"organism":"ecoli","mode":"mic","mic":{"TZP":"16"},"ctx":{},"ref":"casfm"}' | grep -c '"TZP":"R"')" "1"
+
 # Un référentiel inconnu ne doit pas faire tomber le moteur : il retombe sur
 # l'EUCAST, qui est le socle commun.
 attendu "référentiel inconnu → repli sur EUCAST" \

@@ -51,6 +51,21 @@ def seuils(bloc):
     return table
 
 
+def valeurs_simples(bloc):
+    """{groupe: {code: valeur}} — pour les tables à une seule valeur par
+    couple, comme les zones d'incertitude technique."""
+    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
+    bloc = re.sub(r'//[^\n]*', ' ', bloc)
+    table = {}
+    for mg in re.finditer(r'(\w+)\s*:\s*\{([^{}]*)\}', bloc):
+        entrees = {}
+        for ma in re.finditer(r'(\w+)\s*:\s*([\d.]+)', mg.group(2)):
+            entrees[ma.group(1)] = float(ma.group(2))
+        if entrees:
+            table[mg.group(1)] = entrees
+    return table
+
+
 def referentiels(chemin):
     """{cle: {nom, version, etat, ...}} pour chaque entrée du registre."""
     s = open(chemin, encoding='utf-8').read()
@@ -111,6 +126,23 @@ def main():
                 ecarts.append("%s : groupe %s absent du serveur" % (etiquette, g)); continue
             for code in sorted(set(a[g]) | set(b[g])):
                 va, vb = a[g].get(code), b[g].get(code)
+                if va != vb:
+                    ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
+
+    # Les zones d'incertitude technique existent elles aussi en double, et
+    # elles ne portent qu'une valeur par couple : autre forme, autre lecture.
+    for nom, etiquette in (('const ZIT =', 'ZIT communes'),
+                           ('const ZIT_CASFM =', 'ZIT propres au CA-SFM')):
+        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
+        if ba is None and bb is None:
+            continue
+        if ba is None or bb is None:
+            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
+        a, b = valeurs_simples(ba), valeurs_simples(bb)
+        totaux[etiquette] = sum(len(v) for v in b.values())
+        for g in sorted(set(a) | set(b)):
+            for code in sorted(set(a.get(g, {})) | set(b.get(g, {}))):
+                va, vb = a.get(g, {}).get(code), b.get(g, {}).get(code)
                 if va != vb:
                     ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
 

@@ -60,7 +60,10 @@ install.sh                 installation complète, VPS vierge (Docker+nginx+TLS)
 install-caddy.sh           installation en cohabitation, sans toucher à la façade
 verifier-installation.sh   recette automatique, à lancer après installation
 sauvegarder.sh             sauvegarde vérifiée du volume et du .env
+outils/classeur.py         lecture d'un .xlsx (partagé par les comparateurs)
+outils/pdfpos.py           lecture positionnelle d'un PDF (tableaux du CA-SFM)
 outils/comparer-eucast.py  confronte les seuils au tableau EUCAST officiel
+outils/comparer-zit.py     confronte les zones d'incertitude technique aux deux sources
 outils/verifier-tables.py  concordance des deux copies des tables (lancé par la CI)
 outils/essai-referentiel.js  changer de référentiel change bien le rendu (idem)
 REFERENTIEL-CASFM.md       les différences CA-SFM appliquées, page par page
@@ -122,6 +125,13 @@ céphalosporines en cas de BLSE, le CA-SFM le fait, et rend les carbapénèmes
 résistants dès qu'une carbapénémase est confirmée. Quand une catégorie est ainsi
 modifiée, le compte-rendu porte **la catégorie rendue et la catégorie lue**,
 avec le motif : on ne masque jamais la mesure.
+
+S'y ajoutent les **zones d'incertitude technique** (ZIT chez le CA-SFM, ATU chez
+l'EUCAST) : quatre couples pour lesquels la valeur mesurée tombe si près du
+seuil que la catégorie n'est plus reproductible. PhénoBac les signale — pastille
+« ZIT » sur la ligne, alerte dans l'interprétation — et **ne dégrade jamais une
+catégorie de lui-même** : l'EUCAST le permet parmi d'autres options, le CA-SFM
+l'écarte expressément, et la décision revient au biologiste.
 
 Le détail, différence par différence et avec sa page dans le document officiel,
 est dans **[REFERENTIEL-CASFM.md](REFERENTIEL-CASFM.md)** — y compris la liste

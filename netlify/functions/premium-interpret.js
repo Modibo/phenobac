@@ -297,6 +297,8 @@ const ORG = {
 // organisme actif pour finalize (défini juste avant l'appel, calcul synchrone)
 let _activeOrg = null;
 let _activeId = null;
+// Couples tombant dans la zone d'incertitude technique pour la requête en cours.
+let _zit = [];
 
 /* ------------------------------------------------------------
    Lecture interprétative — rendre R ce qui a été lu S ou SFP.
@@ -405,6 +407,26 @@ function finalize(A, r) {
     }
   }
   reglesCasfm(A, r);
+
+  /* Zone d'incertitude technique.
+     PhénoBac ne dégrade JAMAIS la catégorie de lui-même : l'EUCAST le permet
+     parmi d'autres options, le CA-SFM le déconseille expressément — la
+     pratique deviendrait systématique et fausserait la surveillance de la
+     résistance. La décision revient au biologiste, au vu du contexte. */
+  if (_zit.length) {
+    A.zit = _zit.slice();
+    _zit.forEach(z => {
+      const nom = ABXNAME[z.abx] || z.abx;
+      A.alerts.push({ lvl: "warn",
+        txt: `${nom} à ${z.mic} mg/L : valeur en zone d'incertitude technique (ZIT ${z.valeur} mg/L). ` +
+             `La catégorie « ${z.cat || "—"} » n'est pas reproductible à cette valeur — la traiter comme incertaine.` });
+    });
+    A.rules.push({ k: "≈", txt: "Conduite à tenir : répéter le test si une erreur technique est plausible ; recourir à une autre méthode (CMI par microdilution, test génotypique) ; signaler l'incertitude sur le compte rendu." });
+    A.rules.push(estCasfm()
+      ? { k: "≈", txt: "CA-SFM : ne pas dégrader la catégorie dans celle immédiatement inférieure — la pratique tendrait à devenir systématique et fausserait la surveillance épidémiologique. Signaler l'incertitude plutôt que l'occulter." }
+      : { k: "≈", txt: "EUCAST : dégrader la catégorie (S→I, I→R, S→R) est permis s'il reste d'autres options thérapeutiques, à condition de le commenter et de conserver la souche. PhénoBac ne le fait pas de lui-même." });
+  }
+
   if (A.alerts.length === 0) {
     A.alerts.push({ lvl: "info", txt: "Aucune incohérence détectée avec les résistances naturelles attendues." });
   }
@@ -1225,6 +1247,43 @@ const CASFM_COUVRE_ESPECE = { "entero:FOX": ["ecoli"] };
 let _ref = "eucast";
 const estCasfm = () => _ref === "casfm";
 
+/* ============================================================
+   ZONES D'INCERTITUDE TECHNIQUE (ZIT / ATU) — copie conforme du client.
+
+   La ZIT n'est pas une catégorie clinique : c'est un avertissement sur la
+   reproductibilité de la catégorie rendue, à une valeur de CMI définie.
+
+   Sources : EUCAST v16.1, colonne « ATU » ; CA-SFM 2026, colonne « ZIT ».
+   outils/verifier-tables.py échoue si ces tables divergent du client.
+   ============================================================ */
+const ZIT = {
+  entero:     { TZP: 16, CIP: 0.5 },
+  morganella: { TZP: 16, CIP: 0.5 },
+  serratia:   { TZP: 16, CIP: 0.5 },
+  salmonella: { TZP: 16 }            // pas de ZIT ciprofloxacine chez Salmonella
+};
+const ZIT_CASFM = {
+  pseudo: { COL: 4 },                // CA-SFM 2026, chapitre 5.2
+  staph:  { VA: 2 }                  // accompagne l'abaissement du seuil à 1 mg/L
+};
+
+function zitPour(bpOverride, group, k, ctx) {
+  if (bpOverride && bpOverride[group + ":" + k]) return null;   // seuils saisis : la ZIT publiée ne s'y rapporte plus
+  if (k === "CIP" && ctx && ctx.mening === "Oui") return null;  // ligne « méningites », sans ZIT
+  if (estCasfm() && ZIT_CASFM[group] && ZIT_CASFM[group][k] !== undefined) return ZIT_CASFM[group][k];
+  const z = ZIT[group] && ZIT[group][k];
+  return (z === undefined) ? null : z;
+}
+
+function enZit(str, bpOverride, group, k, ctx) {
+  const z = zitPour(bpOverride, group, k, ctx);
+  if (z === null) return false;
+  const p = parseMic(str);
+  if (!p || p.v !== z) return false;
+  // « > 0,5 » est franchement au-dessus, « < 0,5 » franchement en dessous.
+  return p.op !== ">" && p.op !== "<";
+}
+
 function getBP(bpOverride, group, k, ctx) {
   const o = bpOverride && bpOverride[group + ":" + k];
   if (o && o.S !== undefined && o.R !== undefined) return o;   // saisie de l'utilisateur : prioritaire
@@ -1251,11 +1310,18 @@ function runInterpretation(input) {
   _ref = REFERENTIELS[String(input.ref || "eucast")] ? String(input.ref) : "eucast";
 
   let results = {};
+  _zit = [];
   if (input.mode === "mic") {
     const mic = input.mic || {};
     Object.keys(mic).forEach(k => {
       const cat = catFromMic(mic[k], getBP(input.bpOverride || {}, org.bpGroup, k, input.ctx || {}));
       if (cat) results[k] = cat;
+      // La ZIT porte sur une valeur mesurée : en mode S/I/R il n'y en a pas,
+      // et c'est correct — sans CMI, il n'y a rien à situer.
+      if (enZit(mic[k], input.bpOverride || {}, org.bpGroup, k, input.ctx || {})) {
+        _zit.push({ abx: k, mic: String(mic[k]), cat: cat || null,
+                    valeur: zitPour(input.bpOverride || {}, org.bpGroup, k, input.ctx || {}) });
+      }
     });
   } else {
     results = input.results || {};
