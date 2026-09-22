@@ -865,80 +865,17 @@
 <section class="intro" id="introView" style="display:none" aria-labelledby="introTitre">
   <div class="intro-card">
     <button class="intro-close" id="introClose" aria-label="Fermer la présentation">&times;</button>
+    <!-- La présentation reste affichée d'un onglet à l'autre, mais son contenu
+         change avec lui : sur « Identification » et « Entraînement », décrire
+         l'interprétation n'apprenait rien à personne. Tout est rendu par
+         renderIntro() à partir de PRESENTATIONS. -->
     <div class="intro-body">
       <span class="pheno-mark intro-mark" aria-hidden="true"></span>
-      <div>
-        <p class="intro-eyebrow">Lecture interprétative de l'antibiogramme</p>
-        <h1 class="intro-title" id="introTitre">Derrière vos S, I et R, il y a un phénotype. PhénoBac le nomme.</h1>
-        <p class="intro-lead">
-          Saisissez un antibiogramme : l'application reconnaît le <b>mécanisme de résistance</b>
-          — BLSE, carbapénémase, SARM, MLS<sub>b</sub>, AmpC déréprimée —, signale les
-          <b>incohérences</b> avec les résistances naturelles attendues, et rédige le
-          <b>commentaire à joindre au compte-rendu</b>. Conçue à Mopti pour les laboratoires
-          qui interprètent sans automate.
-        </p>
-        <div class="intro-facts">
-          <span class="intro-fact">37 espèces</span>
-          <span class="intro-fact">Phénotypes &amp; alertes de cohérence</span>
-          <span class="intro-fact" id="introRef">Seuils EUCAST</span>
-          <span class="intro-fact gold">Gratuit et complet, sans compte</span>
-          <span class="intro-fact">Hors-ligne, installable sur mobile</span>
-        </div>
-        <div class="intro-actions">
-          <button class="intro-cta" id="introStart">Commencer une interprétation</button>
-          <button class="intro-alt" id="introOffres">À propos de PhénoBac</button>
-        </div>
-      </div>
+      <div id="introTexte"></div>
     </div>
 
-    <!-- Mode d'emploi : les quatre gestes, dans l'ordre où on les fait. -->
-    <div class="guide">
-      <p class="guide-titre">En quatre gestes</p>
-      <ol class="guide-etapes">
-        <li>
-          <span class="ge-num">1</span>
-          <div>
-            <b>Choisissez l'espèce et le prélèvement.</b>
-            Encadré <span class="ge-ref">01 Contexte</span>. Un doute sur l'espèce ? L'onglet
-            <span class="ge-ref">Identification</span> vous y conduit par les caractères
-            biochimiques.
-          </div>
-        </li>
-        <li>
-          <span class="ge-num">2</span>
-          <div>
-            <b>Saisissez l'antibiogramme.</b>
-            Encadré <span class="ge-ref">02 Antibiogramme</span> : cliquez <b>S</b>, <b>I</b> ou
-            <b>R</b> pour chaque antibiotique. Le bouton <span class="ge-ref">CMI mg/L</span>
-            permet d'entrer des concentrations — la catégorie se calcule alors toute seule.
-          </div>
-        </li>
-        <li>
-          <span class="ge-num">3</span>
-          <div>
-            <b>Lisez le phénotype.</b>
-            Encadré <span class="ge-ref">03 Interprétation</span> : le mécanisme est nommé, avec
-            son niveau de risque. Une <b>alerte de cohérence</b> apparaît si un résultat contredit
-            les résistances naturelles attendues de l'espèce.
-          </div>
-        </li>
-        <li>
-          <span class="ge-num">4</span>
-          <div>
-            <b>Reprenez le commentaire.</b>
-            Copiez le texte rédigé pour le compte-rendu, ou exportez-le en PDF avec
-            l'identification du prélèvement et le nom du valideur.
-          </div>
-        </li>
-      </ol>
-      <p class="guide-astuce">
-        <b>Pressé ?</b> Les <b>exemples de démonstration</b> — E. coli · BLSE, K. pneumoniae ·
-        carbapénémase, S. aureus · SARM… — remplissent un cas complet en un clic.
-        L'onglet <span class="ge-ref">Entraînement</span> propose des cas à interpréter soi-même,
-        et <span class="ge-ref">Concentrations critiques</span> permet de caler les seuils sur
-        votre référentiel.
-      </p>
-    </div>
+    <div class="guide" id="introGuide"></div>
+
     <div class="intro-foot">
       <div class="intro-foot-txt">
         <b>Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.</b>
@@ -1062,8 +999,9 @@
       <p>
         PhénoBac est un <b>outil d'aide à l'interprétation et à la formation</b>. Il nomme le
         phénotype de résistance derrière un antibiogramme, signale les incohérences avec les
-        résistances naturelles attendues, et rédige le commentaire du compte-rendu. Toutes les
-        espèces, la saisie par CMI, l'export et l'entraînement sont accessibles à tous.
+        résistances naturelles attendues, et rédige le commentaire du compte-rendu. Il applique
+        au choix l'<b>EUCAST</b> ou le <b>CA-SFM</b>, qui ne rendent pas toujours la même chose.
+        Toutes les espèces, la saisie par CMI, l'export et l'entraînement sont accessibles à tous.
       </p>
       <div class="oh-tagline">Interprétez&nbsp;· Comprenez&nbsp;· Formez</div>
     </div>
@@ -1083,7 +1021,11 @@
         <h2>Ce qu'il apporte</h2>
         <ul class="ap-liste">
           <li><b>Le phénotype, pas seulement la catégorie.</b> BLSE, carbapénémase, SARM, MLS<sub>b</sub>, AmpC déréprimée, ERV, PSDP — nommés, avec le mécanisme et le niveau de risque.</li>
+          <li><b>Deux référentiels, au choix.</b> EUCAST ou CA-SFM, avec leurs différences réelles : seuils déplacés, molécules que l'un conserve et l'autre a retirées, et règles de lecture qui divergent.</li>
+          <li><b>La lecture interprétative, visible.</b> Quand une catégorie est modifiée — BLSE, carbapénémase confirmée —, le compte-rendu porte <i>la catégorie rendue et celle qui a été lue</i>, avec le motif. Le résultat de paillasse n'est jamais effacé.</li>
           <li><b>Les incohérences.</b> Un résultat contraire aux résistances naturelles attendues de l'espèce est signalé avant le rendu.</li>
+          <li><b>Les zones d'incertitude technique.</b> Quand la valeur mesurée tombe là où la catégorie n'est plus reproductible, PhénoBac le dit et rappelle la conduite à tenir — sans jamais dégrader la catégorie de lui-même.</li>
+          <li><b>Les molécules de recours.</b> Témocilline, céfidérocol, daptomycine, minocycline, moxifloxacine, à côté du panel usuel.</li>
           <li><b>Le commentaire du compte-rendu</b>, rédigé et prêt à copier.</li>
           <li><b>Un mode entraînement</b> — interprétation, identification, cas complets — pour la formation des techniciens et des étudiants.</li>
           <li><b>Hors-ligne.</b> Installable sur téléphone, utilisable sans réseau une fois ouvert.</li>
@@ -1110,10 +1052,17 @@
           catégorie lue, avec le motif.
         </p>
         <p>
+          Quelques couples portent en outre une <b>zone d'incertitude technique</b> : à cette
+          valeur précise de CMI, la catégorisation n'est pas reproductible. PhénoBac l'affiche
+          et rappelle les options — répéter le test, recourir à une autre méthode, signaler
+          l'incertitude —, mais ne dégrade jamais la catégorie de lui-même : l'EUCAST l'admet
+          parmi d'autres options, le CA-SFM l'écarte, et la décision appartient au biologiste.
+        </p>
+        <p>
           Les seuils sont modifiables dans « Concentrations critiques » : calez-les sur le
           référentiel de votre laboratoire avant tout rendu. Lorsque le référentiel ne fixe pas
           de seuil pour un couple germe-antibiotique, la valeur proposée est une convention de
-          laboratoire, pas une valeur officielle.
+          laboratoire, pas une valeur officielle — l'éditeur la marque.
         </p>
       </section>
 
@@ -1135,7 +1084,7 @@
     PhénoBac n'est <b>pas un dispositif médical de diagnostic in vitro</b>. Il propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir de résultats déjà lus, et ne remplace ni le jugement du biologiste, ni les tests de confirmation (synergie, carba NP, biologie moléculaire), ni le référentiel en vigueur. Les concentrations critiques fournies sont <span id="footRef">celles du référentiel EUCAST</span>. Quelques couples germe-antibiotique, pour lesquels <span id="footNom">l'EUCAST</span> ne fixe aucun seuil, y font exception : l'éditeur les signale <b style="color:#7a5207" id="footHors">hors EUCAST</b>. Vérifiez-les et ajustez-les à votre référentiel dans « Concentrations critiques » avant tout rendu.
   </div>
   <div class="credit">
-    <span>PhénoBac · MVP v1.0 · identification biochimique · moteur serveur · 37 espèces · CMI · PDF · quiz</span>
+    <span>PhénoBac · MVP v1.0 · identification biochimique · moteur serveur · 37 espèces · EUCAST &amp; CA-SFM · CMI · PDF · quiz</span>
     <span><b>Conception : Modibo Coulibaly</b> — Biologiste médicale, Mopti</span>
   </div>
 </footer>
@@ -3969,6 +3918,8 @@ function majAffichageIntro(){
                 && !introFermeeSession
                 && vueCourante !== "offres";
   el.style.display = afficher ? "" : "none";
+  // Le contenu suit l'onglet : inutile de le composer quand il est masqué.
+  if(afficher && typeof renderIntro === "function") renderIntro();
 }
 function montrerIntro(force){
   if(force){ introFermeeSession = false; }
@@ -3981,14 +3932,163 @@ function fermerIntro(definitif){
   majAffichageIntro();
 }
 $("#introClose").onclick = ()=> fermerIntro(false);
-// « Commencer » ne referme pas la présentation : elle est permanente. Elle
-// bascule sur l'onglet d'interprétation et amène la saisie sous les yeux.
-$("#introStart").onclick = ()=>{
-  setView("work");
-  const cible = document.getElementById("workView");
-  if(cible) cible.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
+/* ============================================================
+   Présentation d'accueil — une par onglet.
+
+   Elle reste affichée d'un onglet à l'autre parce qu'elle sert de mode
+   d'emploi permanent. Mais décrire l'interprétation au-dessus de
+   l'identification ou de l'entraînement n'apprenait rien : chaque onglet
+   a désormais sa présentation, ses repères et son mode d'emploi.
+
+   « À propos » reste la seule vue qui la masque : elle reprend le même
+   propos, et les deux côte à côte feraient doublon.
+   ============================================================ */
+var PRESENTATIONS = {
+
+  work: {
+    eyebrow: "Lecture interprétative de l'antibiogramme",
+    titre: "Derrière vos S, I et R, il y a un phénotype. PhénoBac le nomme.",
+    lead: `Saisissez un antibiogramme : l'application reconnaît le <b>mécanisme de résistance</b>
+           — BLSE, carbapénémase, SARM, MLS<sub>b</sub>, AmpC déréprimée —, signale les
+           <b>incohérences</b> avec les résistances naturelles attendues, et rédige le
+           <b>commentaire à joindre au compte-rendu</b>. Vous choisissez le référentiel :
+           <b>EUCAST</b> ou <b>CA-SFM</b>, qui ne rendent pas toujours la même chose.
+           Conçue à Mopti pour les laboratoires qui interprètent sans automate.`,
+    reperes: ["37 espèces", "EUCAST ou CA-SFM 2026", "Phénotypes &amp; alertes de cohérence",
+              "Gratuit et complet, sans compte", "Hors-ligne, installable sur mobile"],
+    cta: "Commencer une interprétation",
+    cible: "workView",
+    guideTitre: "En quatre gestes",
+    etapes: [
+      `<b>Choisissez l'espèce et le prélèvement.</b>
+       Encadré <span class="ge-ref">01 Contexte</span>. Un doute sur l'espèce ? L'onglet
+       <span class="ge-ref">Identification</span> vous y conduit par les caractères biochimiques.`,
+      `<b>Choisissez le référentiel, puis saisissez.</b>
+       Encadré <span class="ge-ref">02 Antibiogramme</span> : <span class="ge-ref">EUCAST</span>
+       ou <span class="ge-ref">CA-SFM</span>, puis <b>S</b>, <b>I</b> ou <b>R</b> pour chaque
+       antibiotique. Le bouton <span class="ge-ref">CMI mg/L</span> permet d'entrer des
+       concentrations — la catégorie se calcule alors toute seule.`,
+      `<b>Lisez le phénotype.</b>
+       Encadré <span class="ge-ref">03 Interprétation</span> : le mécanisme est nommé, avec son
+       niveau de risque. Une <b>alerte de cohérence</b> apparaît si un résultat contredit les
+       résistances naturelles attendues, et une pastille <span class="ge-ref">ZIT</span> si la
+       CMI tombe dans une zone où la catégorie n'est pas reproductible.`,
+      `<b>Reprenez le commentaire.</b>
+       Copiez le texte rédigé pour le compte-rendu, ou exportez-le en PDF avec l'identification
+       du prélèvement et le nom du valideur. Si la lecture interprétative a modifié une
+       catégorie, le compte-rendu porte <b>la catégorie rendue et celle qui a été lue</b>.`
+    ],
+    astuce: `<b>Pressé ?</b> Les <b>exemples de démonstration</b> — E. coli · BLSE,
+       K. pneumoniae · carbapénémase, S. aureus · SARM… — remplissent un cas complet en un clic.
+       <span class="ge-ref">Concentrations critiques</span> permet de caler les seuils sur votre
+       référentiel : ceux que le comité ne fixe pas y sont marqués, ceux que le CA-SFM déplace
+       aussi.`
+  },
+
+  ident: {
+    eyebrow: "Identification biochimique",
+    titre: "Un doute sur l'espèce ? Remontez-y par les caractères.",
+    lead: `Partez de ce que vous voyez : la <b>coloration de Gram</b> et la morphologie. PhénoBac
+           propose alors les <b>tests biochimiques</b> qui séparent réellement les candidates, et
+           resserre à chaque réponse jusqu'à une <b>identification présumée</b> parmi les 37
+           espèces qu'il couvre. Aucun automate, aucune galerie commerciale : les tests usuels de
+           la paillasse suffisent.`,
+    reperes: ["37 espèces", "Gram &amp; morphologie d'abord", "Tests usuels de paillasse",
+              "Sans automate ni galerie", "Hors-ligne"],
+    cta: "Commencer une identification",
+    cible: "identView",
+    guideTitre: "En trois gestes",
+    etapes: [
+      `<b>Déclarez le Gram et la morphologie.</b>
+       Encadré <span class="ge-ref">01 Coloration de Gram &amp; morphologie</span> : cocci ou
+       bacilles, positif ou négatif. C'est ce qui ouvre l'arbre.`,
+      `<b>Répondez aux tests proposés.</b>
+       Encadré <span class="ge-ref">02 Tests biochimiques</span> : oxydase, catalase,
+       fermentation, uréase, indole… Seuls les tests qui discriminent encore vous sont demandés.`,
+      `<b>Lisez l'identification présumée.</b>
+       Encadré <span class="ge-ref">03 Identification présumée</span> : les espèces compatibles
+       sont classées, et celle que vous retenez bascule directement vers
+       <span class="ge-ref">Interprétation</span>, son panel d'antibiotiques déjà prêt.`
+    ],
+    astuce: `<b>Présumée</b> veut dire présumée. Un profil biochimique oriente, il ne tranche pas :
+       confirmez par galerie ou spectrométrie de masse lorsque vous en disposez, et méfiez-vous
+       des caractères variables. L'onglet <span class="ge-ref">Entraînement</span> propose des
+       identifications à faire soi-même, correction à l'appui.`
+  },
+
+  quiz: {
+    eyebrow: "Entraînement guidé",
+    titre: "S'exercer sur des cas, jusqu'à ce que le phénotype saute aux yeux.",
+    lead: `Quatre modes : <b>interprétation</b> d'un antibiogramme, <b>identification</b> d'une
+           souche, <b>mixte</b>, ou <b>cas complet</b> — de la boîte au commentaire. Chaque
+           réponse est corrigée et expliquée, et le score suit votre progression. La banque de
+           cas est <b>extensible</b> : créez les vôtres, importez ceux d'un collègue, exportez
+           les vôtres pour une séance de formation.`,
+    reperes: ["4 modes d'exercice", "Correction expliquée", "Banque de cas extensible",
+              "Score et progression", "Hors-ligne"],
+    cta: "Commencer l'entraînement",
+    cible: "quizView",
+    guideTitre: "En trois gestes",
+    etapes: [
+      `<b>Choisissez le mode.</b>
+       <span class="ge-ref">Interprétation</span>, <span class="ge-ref">Identification</span>,
+       <span class="ge-ref">Mixte</span> ou <span class="ge-ref">Cas complet</span>. Le dernier
+       enchaîne identification puis antibiogramme sur la même souche.`,
+      `<b>Répondez.</b>
+       Un cas vous est présenté comme il le serait à la paillasse. Prenez le temps de nommer le
+       mécanisme avant de regarder les propositions.`,
+      `<b>Lisez la correction.</b>
+       La bonne réponse est justifiée : mécanisme, règles appliquées, pièges. C'est là que
+       l'exercice sert — plus que dans le score.`
+    ],
+    astuce: `<b>Pour former une équipe :</b> créez vos propres cas à partir de souches réellement
+       isolées chez vous — le moteur en déduit la réponse attendue —, puis exportez la banque et
+       distribuez-la. L'épidémiologie locale vaut mieux que n'importe quel cas d'école.`
+  }
 };
-$("#introOffres").onclick = ()=> setView("offres");
+
+// La présentation suit l'onglet. « À propos » ne l'affiche pas du tout.
+function renderIntro(){
+  // setView, donc majAffichageIntro, s'exécute avant cette déclaration lors
+  // de l'initialisation : on sort sans bruit, le rendu suivra.
+  if(typeof PRESENTATIONS === "undefined" || !PRESENTATIONS) return;
+  const p = PRESENTATIONS[vueCourante];
+  const txt = document.getElementById("introTexte");
+  const gui = document.getElementById("introGuide");
+  if(!p || !txt || !gui) return;
+
+  // Le référentiel appliqué est un repère de l'onglet d'interprétation : il
+  // est composé au rendu, pour qu'il suive le sélecteur sans traitement à part.
+  const reperes = p.reperes.map(r=>`<span class="intro-fact">${r}</span>`).join("")
+    + (vueCourante === "work" ? `<span class="intro-fact" id="introRef">Seuils ${refLibelle()} — ${refDate()}</span>` : "");
+
+  txt.innerHTML =
+    `<p class="intro-eyebrow">${p.eyebrow}</p>
+     <h1 class="intro-title" id="introTitre">${p.titre}</h1>
+     <p class="intro-lead">${p.lead}</p>
+     <div class="intro-facts">${reperes}</div>
+     <div class="intro-actions">
+       <button class="intro-cta" id="introStart">${p.cta}</button>
+       <button class="intro-alt" id="introOffres">À propos de PhénoBac</button>
+     </div>`;
+
+  gui.innerHTML =
+    `<p class="guide-titre">${p.guideTitre}</p>
+     <ol class="guide-etapes">` +
+     p.etapes.map((e,i)=>`<li><span class="ge-num">${i+1}</span><div>${e}</div></li>`).join("") +
+     `</ol>
+     <p class="guide-astuce">${p.astuce}</p>`;
+
+  // Les boutons sont recréés à chaque rendu : on les recâble ici.
+  const start = document.getElementById("introStart");
+  if(start) start.onclick = ()=>{
+    const cible = document.getElementById(p.cible);
+    if(cible) cible.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
+  };
+  const off = document.getElementById("introOffres");
+  if(off) off.onclick = ()=> setView("offres");
+}
+
 $("#introJamais").onclick = ()=> fermerIntro(true);
 $("#brandOpen").onclick = ()=>{
   // Le logo la ramène toujours — y compris depuis « À propos » ou après
@@ -4002,8 +4102,8 @@ $("#brandOpen").onclick = ()=>{
 // moteur, et elles suivent le sélecteur à chaque changement.
 function majMentionsReferentiel(){
   const R = referentiel();
-  const intro = $("#introRef");
-  if(intro) intro.textContent = "Seuils " + refLibelle() + " — " + refDate();
+  // Le repère de l'accueil est composé par renderIntro, avec le reste.
+  if(typeof renderIntro === "function") renderIntro();
   const foot = $("#footRef");
   if(foot) foot.textContent = "celles du référentiel " + refLibelle() + ", publié en " + refDate();
   const hors = $("#footHors");
