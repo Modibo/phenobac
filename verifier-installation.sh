@@ -73,7 +73,26 @@ attendu "S. epidermidis en CMI, sans licence" \
 attendu "ancienne clé de démonstration refusée" \
   "$(post $FN/verify-license '{"license":"PHENO-PRO-2026"}' | grep -c '"valid":false')" "1"
 
-titre "4. Les accès d'administration sont fermés"
+titre "4. Les deux référentiels sont servis, et ils ne rendent pas la même chose"
+# Deux référentiels qui produiraient le même résultat seraient un mensonge
+# d'interface. On prend le cas le plus net : vancomycine à 2 mg/L sur
+# S. aureus — sensible pour l'EUCAST, résistante pour le CA-SFM (p. 11).
+attendu "S. aureus, vancomycine 2 mg/L, EUCAST → S" \
+  "$(post $FN/premium-interpret '{"organism":"saureus","mode":"mic","mic":{"VA":"2"},"ctx":{},"ref":"eucast"}' | grep -c '"VA":"S"')" "1"
+attendu "S. aureus, vancomycine 2 mg/L, CA-SFM → R" \
+  "$(post $FN/premium-interpret '{"organism":"saureus","mode":"mic","mic":{"VA":"2"},"ctx":{},"ref":"casfm"}' | grep -c '"VA":"R"')" "1"
+# Et la lecture interprétative : une carbapénémase confirmée fait rendre les
+# carbapénèmes résistants en CA-SFM, jamais en EUCAST (p. 8).
+attendu "carbapénémase confirmée, CA-SFM → imipénème reporté en R" \
+  "$(post $FN/premium-interpret '{"organism":"kpneu","mode":"sir","results":{"CTX":"R","ETP":"R","IPM":"S"},"ctx":{"carba":"Oui — autre enzyme"},"ref":"casfm"}' | grep -c '"abx":"IPM"')" "1"
+attendu "carbapénémase confirmée, EUCAST → aucun report" \
+  "$(post $FN/premium-interpret '{"organism":"kpneu","mode":"sir","results":{"CTX":"R","ETP":"R","IPM":"S"},"ctx":{"carba":"Oui — autre enzyme"},"ref":"eucast"}' | grep -c '"abx":"IPM"')" "0"
+# Un référentiel inconnu ne doit pas faire tomber le moteur : il retombe sur
+# l'EUCAST, qui est le socle commun.
+attendu "référentiel inconnu → repli sur EUCAST" \
+  "$(post $FN/premium-interpret '{"organism":"saureus","mode":"mic","mic":{"VA":"2"},"ctx":{},"ref":"n-importe-quoi"}' | grep -c '"VA":"S"')" "1"
+
+titre "5. Les accès d'administration sont fermés"
 attendu "issue-license sans jeton" "$(code -X POST $FN/issue-license -H 'Content-Type: application/json' -d '{"sub":"x","days":1}')" "401"
 attendu "stats sans jeton" "$(code -X POST $FN/stats -H 'Content-Type: application/json' -d '{}')" "401"
 attendu "revoke-license sans jeton" "$(code -X POST $FN/revoke-license -H 'Content-Type: application/json' -d '{"action":"list"}')" "401"
@@ -81,7 +100,7 @@ attendu "send-test-sms sans jeton" "$(code -X POST $FN/send-test-sms -H 'Content
 attendu "relances sans secret de cron" "$(code -X POST $FN/send-reminders -H 'Content-Type: application/json' -d '{"next_run":1}')" "401"
 attendu "webhook sans authentification" "$(code -X POST $FN/payment-webhook -H 'Content-Type: application/json' -d '{"status":"SUCCESS","amount":5000,"reference":"VERIF"}')" "401"
 
-titre "5. La chaîne de licence (conservée, mais ne conditionne plus l'accès)"
+titre "6. La chaîne de licence (conservée, mais ne conditionne plus l'accès)"
 REP="$(curl -s -m 15 -X POST "$FN/issue-license" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
        -d '{"sub":"verification-installation","days":1,"amount":0}' 2>/dev/null)"
 LIC="$(printf '%s' "$REP" | sed -n 's/.*"license":"\([^"]*\)".*/\1/p')"
@@ -122,7 +141,7 @@ else
   attendu "tableau de bord accessible avec le jeton" "$C_STATS" "200"
 fi
 
-titre "6. Exposition et cohabitation"
+titre "7. Exposition et cohabitation"
 if command -v ss >/dev/null 2>&1; then
   if ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\[?::\]?):$PORT$"; then
     rouge "écoute limitée à la loopback" "le port $PORT est ouvert sur toutes les interfaces"
@@ -146,7 +165,7 @@ else
   jaune "aucun serveur web de façade détecté" "normal si PhénoBac est seul sur la machine"
 fi
 
-titre "7. Ce qui reste à régler avant d'ouvrir au public"
+titre "8. Ce qui reste à régler avant d'ouvrir au public"
 [ -n "$SITE" ] && vert "SITE_URL renseigné" "$SITE" \
   || jaune "SITE_URL vide" "l'API accepte TOUTES les origines — à renseigner avant d'exposer"
 

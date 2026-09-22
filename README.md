@@ -61,7 +61,9 @@ install-caddy.sh           installation en cohabitation, sans toucher à la faç
 verifier-installation.sh   recette automatique, à lancer après installation
 sauvegarder.sh             sauvegarde vérifiée du volume et du .env
 outils/comparer-eucast.py  confronte les seuils au tableau EUCAST officiel
-outils/verifier-tables.py  concordance des deux tables de seuils (lancé par la CI)
+outils/verifier-tables.py  concordance des deux copies des tables (lancé par la CI)
+outils/essai-referentiel.js  changer de référentiel change bien le rendu (idem)
+REFERENTIEL-CASFM.md       les différences CA-SFM appliquées, page par page
 deploy/Caddyfile.phenobac  bloc à ajouter à un Caddyfile existant
 Dockerfile / docker-compose.yml
 .github/workflows/deploy.yml   vérification de syntaxe puis déploiement SSH
@@ -102,7 +104,35 @@ Deux avertissements :
   les révocations. Sans lui vos clients gardent leurs clés, mais vous perdez la
   comptabilité et la capacité de révoquer.
 
-## Référentiel des concentrations critiques
+## Référentiels
+
+Deux référentiels sont proposés dans l'application, encadré « Antibiogramme ».
+Le choix est mémorisé d'une session à l'autre.
+
+**EUCAST v16.1** — le socle. **CA-SFM 2026** — l'EUCAST assorti des différences
+françaises. PhénoBac ne recopie que ces différences : tout couple absent des
+tables `BP_CASFM*` garde sa valeur EUCAST. C'est la règle du document source, et
+c'est ce qui rend l'écart vérifiable plutôt que d'avoir deux référentiels
+entiers à tenir en parallèle.
+
+Le choix n'est pas cosmétique : il déplace des seuils (vancomycine sur
+*S. aureus*, pénicilline G sur les streptocoques A/C/G, cotrimoxazole selon le
+site) et il change la lecture interprétative — l'EUCAST ne réinterprète plus les
+céphalosporines en cas de BLSE, le CA-SFM le fait, et rend les carbapénèmes
+résistants dès qu'une carbapénémase est confirmée. Quand une catégorie est ainsi
+modifiée, le compte-rendu porte **la catégorie rendue et la catégorie lue**,
+avec le motif : on ne masque jamais la mesure.
+
+Le détail, différence par différence et avec sa page dans le document officiel,
+est dans **[REFERENTIEL-CASFM.md](REFERENTIEL-CASFM.md)** — y compris la liste
+des différences que PhénoBac ne reprend pas encore, et pourquoi.
+
+```bash
+python3 outils/verifier-tables.py      # les deux copies des tables concordent
+node outils/essai-referentiel.js       # le choix du référentiel change le rendu
+```
+
+### Concentrations critiques
 
 **EUCAST v16.1, juin 2026 — aligné.** Tous les seuils que le référentiel définit
 sont conformes : 0 écart, 0 cas en attente d'arbitrage, contrôlés par

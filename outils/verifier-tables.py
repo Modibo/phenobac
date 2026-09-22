@@ -51,15 +51,33 @@ def seuils(bloc):
     return table
 
 
-def referentiel(chemin):
+def referentiels(chemin):
+    """{cle: {nom, version, etat, ...}} pour chaque entrée du registre."""
     s = open(chemin, encoding='utf-8').read()
-    m = re.search(r'REFERENTIEL\s*=\s*\{([^}]*)\}', s)
+    m = re.search(r'const REFERENTIELS\s*=\s*\{', s)
     if not m:
         return None
-    d = {}
-    for k, v in re.findall(r'(\w+)\s*:\s*"([^"]*)"', m.group(1)):
-        d[k] = v
-    return d
+    j = s.index('{', m.start())
+    prof = 0
+    for k in range(j, len(s)):
+        if s[k] == '{':
+            prof += 1
+        elif s[k] == '}':
+            prof -= 1
+            if prof == 0:
+                bloc = s[j:k + 1]
+                break
+    else:
+        raise SystemExit("registre REFERENTIELS mal formé dans %s" % chemin)
+    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
+    bloc = re.sub(r'//[^\n]*', ' ', bloc)
+    out = {}
+    for mg in re.finditer(r'(\w+)\s*:\s*\{([^{}]*)\}', bloc):
+        d = {}
+        for k2, v2 in re.findall(r'(\w+)\s*:\s*"([^"]*)"', mg.group(2)):
+            d[k2] = v2
+        out[mg.group(1)] = d
+    return out
 
 
 def main():
@@ -70,11 +88,15 @@ def main():
     ecarts = []
     totaux = {}
 
-    # Les deux tables existent en double : les seuils courants, et ceux du
-    # prélèvement méningé. Les deux doivent être contrôlées, sinon l'ajout
-    # d'une table échappe silencieusement au garde-fou.
+    # Quatre tables existent maintenant en double : les seuils courants, ceux
+    # du prélèvement méningé, et les deux tables de différences du CA-SFM.
+    # Toutes doivent être contrôlées, sinon l'ajout d'une table échappe
+    # silencieusement au garde-fou.
     for nom, etiquette in (('const BP =', 'seuils courants'),
-                           ('const BP_MENINGE =', 'seuils méningés')):
+                           ('const BP_MENINGE =', 'seuils méningés'),
+                           ('const BP_CASFM =', 'différences CA-SFM'),
+                           ('const BP_CASFM_URIN =', 'CA-SFM, infection urinaire'),
+                           ('const BP_MENINGE_CASFM =', 'CA-SFM, contexte méningé')):
         ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
         if ba is None and bb is None:
             continue
@@ -92,13 +114,19 @@ def main():
                 if va != vb:
                     ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
 
-    ra, rb = referentiel(cli), referentiel(srv)
+    ra, rb = referentiels(cli), referentiels(srv)
     if ra and rb:
-        for cle in ('nom', 'version', 'etat'):
-            if ra.get(cle) != rb.get(cle):
-                ecarts.append("référentiel %s : client %r, serveur %r" % (cle, ra.get(cle), rb.get(cle)))
+        for nom_ref in sorted(set(ra) | set(rb)):
+            if nom_ref not in ra:
+                ecarts.append("référentiel %s absent du client" % nom_ref); continue
+            if nom_ref not in rb:
+                ecarts.append("référentiel %s absent du serveur" % nom_ref); continue
+            for cle in ('nom', 'version', 'etat'):
+                if ra[nom_ref].get(cle) != rb[nom_ref].get(cle):
+                    ecarts.append("référentiel %s, %s : client %r, serveur %r"
+                                  % (nom_ref, cle, ra[nom_ref].get(cle), rb[nom_ref].get(cle)))
     elif ra or rb:
-        ecarts.append("constante REFERENTIEL absente d'un des deux fichiers")
+        ecarts.append("registre REFERENTIELS absent d'un des deux fichiers")
 
     if ecarts:
         print("Les deux tables DIVERGENT :")
@@ -108,17 +136,23 @@ def main():
         return 1
 
     print("Tables concordantes : " + ", ".join("%s %d" % (k, v) for k, v in totaux.items()) + ".")
-    if rb:
-        print("Référentiel déclaré : %s v%s (%s)." % (rb.get('nom'), rb.get('version'), rb.get('etat')))
-        if rb.get('etat') == 'aligne':
-            print("Tous les seuils qu'EUCAST définit sont conformes ; ceux qu'il ne")
-            print("définit pas sont marqués « hors EUCAST » dans l'éditeur.")
-        elif rb.get('etat') == 'partiel':
-            print("Note : alignement partiel — les seuils à ligne officielle unique sont")
-            print("       conformes ; ceux à lignes multiples attendent un arbitrage.")
-        elif rb.get('etat') != 'valide':
-            print("Note : les seuils n'ont pas encore été confrontés au tableau officiel")
-            print("       (outils/comparer-eucast.py). Ce n'est pas une erreur, c'est un état.")
+    for cle in ('eucast', 'casfm'):
+        d = (rb or {}).get(cle)
+        if not d:
+            continue
+        print("Référentiel déclaré : %s %s (%s)." % (d.get('nom'), d.get('version'), d.get('etat')))
+        if d.get('etat') == 'aligne':
+            print("  Tous les seuils qu'EUCAST définit sont conformes ; ceux qu'il ne")
+            print("  définit pas sont marqués « hors EUCAST » dans l'éditeur.")
+        elif d.get('etat') == 'delta':
+            print("  Différences françaises seulement : tout couple absent des tables")
+            print("  CA-SFM garde sa valeur EUCAST. Voir REFERENTIEL-CASFM.md.")
+        elif d.get('etat') == 'partiel':
+            print("  Note : alignement partiel — les seuils à ligne officielle unique sont")
+            print("         conformes ; ceux à lignes multiples attendent un arbitrage.")
+        elif d.get('etat') != 'valide':
+            print("  Note : les seuils n'ont pas encore été confrontés au tableau officiel")
+            print("         (outils/comparer-eucast.py). Ce n'est pas une erreur, c'est un état.")
     return 0
 
 

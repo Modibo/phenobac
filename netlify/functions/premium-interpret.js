@@ -16,7 +16,15 @@ const crypto = require("crypto");
 
 // Référentiel des concentrations critiques employées par ce moteur.
 // Doit rester identique à la constante REFERENTIEL de phenobac.html.
-const REFERENTIEL = { nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "aligne" };
+/* Référentiels servis par le moteur. Le CA-SFM n'est pas un second jeu
+   complet de seuils : c'est l'EUCAST assorti des différences françaises que
+   son comité publie et justifie (« Différences principales entre le CA-SFM
+   et l'EUCAST », version CA-SFM 2026). Voir REFERENTIEL-CASFM.md. */
+const REFERENTIELS = {
+  eucast: { cle: "eucast", nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "aligne" },
+  casfm:  { cle: "casfm",  nom: "CA-SFM", version: "2026", publie: "2026-09-01", etat: "delta", base: "eucast" }
+};
+const REFERENTIEL = REFERENTIELS.eucast;   // défaut, conservé pour compatibilité
 const { isRevoked } = require("./lib/revocation");
 const { cors } = require("./lib/http");
 const SECRET = process.env.PHENOBAC_SECRET || "";
@@ -288,6 +296,103 @@ const ORG = {
 
 // organisme actif pour finalize (défini juste avant l'appel, calcul synchrone)
 let _activeOrg = null;
+let _activeId = null;
+
+/* ------------------------------------------------------------
+   Lecture interprétative — rendre R ce qui a été lu S ou SFP.
+
+   C'est le geste le plus lourd de conséquence de l'application : il
+   contredit la paillasse. On ne l'efface donc jamais — on enregistre
+   le résultat brut, le résultat rendu et le motif, et le compte-rendu
+   affiche les deux. Le biologiste doit pouvoir refaire le raisonnement.
+
+   Un antibiotique non testé n'est pas rendu résistant : on ne conclut
+   pas sur une molécule qu'on n'a pas lue.
+   ------------------------------------------------------------ */
+function rendreR(A, r, codes, motif) {
+  codes.forEach(k => {
+    const v = r[k];
+    if (v === undefined || v === null || v === "") return;  // non testé : on se tait
+    if (v === "R") return;                                  // déjà résistant
+    A.rendu = A.rendu || [];
+    if (A.rendu.some(x => x.abx === k)) return;             // une seule fois
+    A.rendu.push({ abx: k, brut: v, rendu: "R", motif: motif });
+  });
+}
+
+// Une carbapénémase a-t-elle été confirmée, et laquelle ?
+function carbaConfirmee(c) {
+  const v = (c && typeof c.carba === "string") ? c.carba : "";
+  return { confirmee: v.indexOf("Oui") === 0, oxa48: v.indexOf("OXA-48") !== -1 };
+}
+
+/* ------------------------------------------------------------
+   Règles CA-SFM communes à plusieurs chapitres, appliquées à la fin
+   de chaque moteur. Elles ne changent pas de catégorie : elles disent
+   au biologiste ce que le référentiel français exige en plus.
+   ------------------------------------------------------------ */
+function reglesCasfm(A, r) {
+  if (!estCasfm()) return;
+  const g = (_activeOrg && _activeOrg.bpGroup) || "";
+  const id = _activeId || "";
+
+  // p. 5 — la rifampicine n'est jamais employée seule (hors prophylaxie du
+  // méningocoque et d'Haemophilus). L'EUCAST ne le signale pas ; le CA-SFM si.
+  if ((r.RD === "S" || r.RD === "I") && id !== "nmeningitidis" && id !== "haemophilus") {
+    A.rules.push({ k: "✚", txt: "CA-SFM : la rifampicine ne doit être rendue qu'assortie de la mention « à utiliser en association »." });
+  }
+
+  // p. 2 — masquage du méropénème chez Pseudomonas : prescrire un carbapénème
+  // quand une β-lactamine de spectre plus étroit reste active est un mésusage.
+  if (g === "pseudo" && (r.MEM === "S" || r.MEM === "I")) {
+    const etroites = ["TZP", "CAZ", "FEP"].filter(k => r[k] === "S" || r[k] === "I");
+    if (etroites.length) {
+      A.rules.push({ k: "⊘", txt: "CA-SFM : règle de masquage — ne pas rendre le méropénème tant qu'une β-lactamine de spectre plus étroit reste active (" + etroites.map(k => ABXNAME[k] || k).join(", ") + ")." });
+    }
+  }
+
+  // p. 9 — la lévofloxacine est moins active que la ciprofloxacine sur
+  // Pseudomonas, et le CA-SFM la veut à forte posologie au minimum.
+  if (g === "pseudo" && (r.LVX === "S" || r.LVX === "I")) {
+    A.rules.push({ k: "!", txt: "CA-SFM : lévofloxacine à forte posologie au minimum ; son activité est à considérer comme inférieure à celle de la ciprofloxacine." });
+  }
+
+  // p. 14 et 15 — recherche de β-lactamase par test chromogénique avant de
+  // rendre une pénicilline sensible. L'EUCAST ne l'exige pas.
+  if (id === "nmeningitidis" && ["PEN", "AMX", "AMP"].some(k => r[k] === "S" || r[k] === "I")) {
+    A.alerts.push({ lvl: "warn", txt: "CA-SFM : rechercher une β-lactamase par test chromogénique avant de rendre la pénicilline G ou une aminopénicilline sensible — ces souches réémergent." });
+  }
+  if (id === "moraxella" && ["AMX", "AMP"].some(k => r[k] === "S" || r[k] === "I")) {
+    A.alerts.push({ lvl: "warn", txt: "CA-SFM : rechercher la β-lactamase par test chromogénique. Les souches non productrices (< 1 %) peuvent être rendues sensibles aux aminopénicillines ; les autres sont résistantes." });
+  }
+
+  // p. 11 — S. saprophyticus : le dépistage à l'ampicilline ne suffit pas.
+  if (id === "ssaprophyticus" && (r.AMX === "S" || r.AMP === "S")) {
+    A.alerts.push({ lvl: "warn", txt: "CA-SFM : un dépistage négatif à l'ampicilline ne suffit pas chez S. saprophyticus — vérifier aussi que la souche est méticillino-sensible avant de rendre l'amoxicilline sensible." });
+  }
+
+  // p. 16 et 17 — anaérobies : le CA-SFM travaille sur gélose Brucella (BBA)
+  // et non sur FAA, et ne teste ni pénicilline G ni ampicilline.
+  if (g === "bfragilis" || g === "cperfringens" || g === "cdifficile") {
+    A.rules.push({ k: "⚗", txt: "CA-SFM : antibiogramme des anaérobies sur gélose Brucella (BBA), pas sur FAA ; amoxicilline testée directement plutôt que déduite de la pénicilline G." });
+    if (g === "cdifficile") {
+      A.alerts.push({ lvl: "info", txt: "CA-SFM : l'antibiogramme de C. difficile isolé de selles n'est pas recommandé en France, et le comité ne propose pas de seuils propres à cette espèce." });
+    }
+  }
+
+  // p. 10 — Burkholderia cepacia complex : chapitre supprimé en 2026.
+  if (g === "burk") {
+    A.alerts.push({ lvl: "warn", txt: "CA-SFM 2026 : le chapitre Burkholderia cepacia et ses concentrations critiques cliniques ont été supprimés. Seule la microdilution en milieu liquide est adaptée, et les CMI s'interprètent face aux valeurs PK/PD (fiche pratique, annexe 3)." });
+  }
+
+  // p. 18 — genres pour lesquels le CA-SFM adapte les valeurs du CLSI.
+  if (g === "acineto") {
+    A.rules.push({ k: "📕", txt: "CA-SFM : pipéracilline-tazobactam, ceftazidime et céfépime sur des valeurs adaptées du CLSI M100 — l'EUCAST n'en propose pas." });
+  }
+  if (g === "steno") {
+    A.rules.push({ k: "📕", txt: "CA-SFM : lévofloxacine sur une valeur adaptée du CLSI M100, retenue à 1 mg/L ; l'ECOFF EUCAST à 4 mg/L exposerait à des doses toxiques." });
+  }
+}
 
 function finalize(A, r) {
   const org = _activeOrg;
@@ -299,6 +404,7 @@ function finalize(A, r) {
       }
     }
   }
+  reglesCasfm(A, r);
   if (A.alerts.length === 0) {
     A.alerts.push({ lvl: "info", txt: "Aucune incohérence détectée avec les résistances naturelles attendues." });
   }
@@ -321,6 +427,34 @@ function enteroInterpret(r, c, { amino, species, klebsiella, imipenemIntrinsic }
     A.alerts.push({ lvl: "warn", txt: "Confirmer le mécanisme : discordance imipénème/méropénème/ertapénème possible (imperméabilité vs carbapénémase vraie)." });
     A.rules.push({ k: "→R", txt: "Interpréter l'ensemble des β-lactamines avec prudence tant que le mécanisme n'est pas confirmé." });
     A.comment = `${species} de sensibilité diminuée aux carbapénèmes. Suspicion de carbapénémase à confirmer. Souche à signaler, précautions complémentaires contact.`;
+
+    // CA-SFM 2026, p. 8 : une fois la carbapénémase confirmée, les carbapénèmes
+    // sont rendus résistants quelles que soient les CMI et quel que soit le
+    // type d'enzyme — leur activité in vivo est incertaine et les alternatives
+    // doivent être privilégiées. L'EUCAST, lui, se borne à un commentaire.
+    if (estCasfm()) {
+      const cb = carbaConfirmee(c);
+      if (cb.confirmee) {
+        A.name = "Carbapénémase confirmée";
+        A.mech = "Carbapénémase confirmée. Le CA-SFM 2026 rend les carbapénèmes résistants quelles que soient les concentrations minimales inhibitrices.";
+        // Le mécanisme n'est plus à confirmer : les consignes d'attente
+        // n'ont plus lieu d'être et brouilleraient le compte-rendu.
+        A.rules = A.rules.filter(x => x.txt.indexOf("tant que le mécanisme") === -1);
+        A.alerts = A.alerts.filter(x => x.txt.indexOf("Confirmer le mécanisme") === -1);
+        rendreR(A, r, ["ETP", "IPM", "MEM"],
+          "Carbapénémase confirmée — CA-SFM 2026, chapitre 5.1 et annexe 5.");
+        A.rules.push({ k: "→R", txt: "CA-SFM : ertapénème, imipénème et méropénème rendus résistants, quel que soit le type d'enzyme et quelles que soient les CMI." });
+        if (cb.oxa48) {
+          rendreR(A, r, ["CTX"], "OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.");
+          A.rules.push({ k: "→R", txt: "OXA-48 : céfotaxime et ceftriaxone rendus résistants (règle CA-SFM depuis 2023)." });
+        }
+        A.comment = `${species} productrice de carbapénémase confirmée. Conformément au CA-SFM, les carbapénèmes sont rendus résistants quelles que soient les concentrations minimales inhibitrices ; privilégier les alternatives thérapeutiques. Souche à signaler, précautions complémentaires contact.`;
+      } else {
+        A.alerts.push({ lvl: "warn", txt: "CA-SFM : confirmez le mécanisme. Une carbapénémase confirmée fait rendre les carbapénèmes résistants quelles que soient les CMI." });
+      }
+    } else {
+      A.rules.push({ k: "=", txt: "EUCAST v16.0 : les carbapénèmes qui apparaissent S ou I sont rendus tels quels, avec la consigne de les employer à forte posologie et en association." });
+    }
     return finalize(A, r);
   }
 
@@ -329,15 +463,30 @@ function enteroInterpret(r, c, { amino, species, klebsiella, imipenemIntrinsic }
       A.sev = "high"; A.name = "BLSE";
       A.mech = "β-lactamase à spectre étendu : synergie C3G + clavulanate positive. La céfoxitine reste habituellement sensible.";
       A.alerts.push({ lvl: "warn", txt: "Précautions complémentaires contact ; signalement selon la politique locale." });
-      A.rules.push({ k: "→R", txt: "Harmonisation : pénicillines, C1G, C2G, C3G et aztréonam rendus R quel que soit le résultat in vitro." });
       A.rules.push({ k: "?", txt: "Céfépime : interpréter selon la CMI (effet inoculum possible)." });
-      A.comment = `${species} productrice de β-lactamase à spectre étendu (BLSE). Par harmonisation, l'ensemble des pénicillines et des céphalosporines de 1re à 3e génération ainsi que l'aztréonam sont rendus résistants, indépendamment du résultat in vitro. Souche à signaler, précautions complémentaires contact.`;
+      // Ici les deux référentiels divergent franchement (CA-SFM 2026, p. 8) :
+      // l'EUCAST a cessé de réinterpréter les C3G/C4G et l'aztréonam en cas de
+      // BLSE ; le CA-SFM est revenu en 2024 à la lecture interprétative.
+      if (estCasfm()) {
+        A.rules.push({ k: "→R", txt: "CA-SFM : lecture interprétative — pénicillines, C1G, C2G, C3G et aztréonam rendus R quel que soit le résultat in vitro." });
+        rendreR(A, r, [amino, "CTX", "CAZ"], "BLSE — lecture interprétative du CA-SFM (retour décidé en 2024).");
+        A.comment = `${species} productrice de β-lactamase à spectre étendu (BLSE). Conformément au CA-SFM, l'ensemble des pénicillines et des céphalosporines de 1re à 3e génération ainsi que l'aztréonam sont rendus résistants, indépendamment du résultat in vitro. Souche à signaler, précautions complémentaires contact.`;
+      } else {
+        A.rules.push({ k: "=", txt: "EUCAST : pas de réinterprétation — céphalosporines et aztréonam rendus tels que testés (tableau v16.1 ; Expert Rules v3.3)." });
+        A.alerts.push({ lvl: "info", txt: "L'EUCAST ne réinterprète plus les C3G/C4G ni l'aztréonam en cas de BLSE ; le CA-SFM, si. Changez de référentiel pour comparer les deux rendus." });
+        A.comment = `${species} productrice de β-lactamase à spectre étendu (BLSE). Conformément à l'EUCAST, les céphalosporines et l'aztréonam sont rendus tels qu'ils ont été testés. Souche à signaler, précautions complémentaires contact.`;
+      }
     } else if (isRI(r.FOX)) {
       A.sev = "high"; A.name = "Céphalosporinase hyperproduite (AmpC)";
       A.mech = "Résistance C3G + céfoxitine sans synergie au clavulanate : profil de céphalosporinase déréprimée / plasmidique.";
-      A.rules.push({ k: "→R", txt: "C1G à C3G et céfoxitine résistantes ; associations avec inhibiteur peu fiables." });
       A.rules.push({ k: "?", txt: "Céfépime souvent conservé — vérifier la CMI." });
-      A.comment = `${species} exprimant une céphalosporinase hyperproduite (AmpC). Céphalosporines de 1re à 3e génération et céfoxitine résistantes. Céfépime à interpréter selon la CMI.`;
+      if (estCasfm()) {
+        A.rules.push({ k: "→R", txt: "CA-SFM : lecture interprétative — C1G à C3G et céfoxitine rendues R ; associations avec inhibiteur peu fiables." });
+        rendreR(A, r, [amino, "CTX", "CAZ", "FOX"], "Céphalosporinase hyperproduite — lecture interprétative du CA-SFM.");
+      } else {
+        A.rules.push({ k: "=", txt: "EUCAST : pas de réinterprétation — céphalosporines rendues telles que testées ; associations avec inhibiteur peu fiables." });
+      }
+      A.comment = `${species} exprimant une céphalosporinase hyperproduite (AmpC). Céphalosporines de 1re à 3e génération et céfoxitine concernées ; céfépime à interpréter selon la CMI.`;
     } else {
       A.sev = "high"; A.name = "Résistance aux C3G — mécanisme à préciser";
       A.mech = "Résistance aux C3G sans donnée de synergie. Réaliser le test de synergie clavulanate pour trancher BLSE vs AmpC.";
@@ -384,18 +533,48 @@ function enterobacterInterpret(r, c, a) {
     A.alerts.push({ lvl: "crit", txt: "Précautions complémentaires contact et signalement." });
     A.rules.push({ k: "→R", txt: "β-lactamines à interpréter avec prudence jusqu'à confirmation." });
     A.comment = `${sp} de sensibilité diminuée aux carbapénèmes. Suspicion de carbapénémase à confirmer. Souche à signaler.`;
+    // Même règle que pour les autres entérobactéries (CA-SFM 2026, p. 8).
+    if (estCasfm()) {
+      const cb = carbaConfirmee(c);
+      if (cb.confirmee) {
+        A.name = "Carbapénémase confirmée (sur fond d'AmpC)";
+        A.mech = "Carbapénémase confirmée chez une souche à AmpC naturelle. Le CA-SFM 2026 rend les carbapénèmes résistants quelles que soient les CMI.";
+        A.rules = A.rules.filter(x => x.txt.indexOf("jusqu'à confirmation") === -1);
+        rendreR(A, r, ["ETP", "IPM", "MEM"],
+          "Carbapénémase confirmée — CA-SFM 2026, chapitre 5.1 et annexe 5.");
+        A.rules.push({ k: "→R", txt: "CA-SFM : carbapénèmes rendus résistants quelles que soient les CMI." });
+        if (cb.oxa48) {
+          rendreR(A, r, ["CTX"], "OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.");
+          A.rules.push({ k: "→R", txt: "OXA-48 : céfotaxime et ceftriaxone rendus résistants." });
+        }
+        A.comment = `${sp} producteur d'une carbapénémase confirmée. Conformément au CA-SFM, les carbapénèmes sont rendus résistants quelles que soient les concentrations minimales inhibitrices. Souche à signaler.`;
+      } else {
+        A.alerts.push({ lvl: "warn", txt: "CA-SFM : confirmez le mécanisme. Une carbapénémase confirmée fait rendre les carbapénèmes résistants quelles que soient les CMI." });
+      }
+    }
   } else if (c3g) {
     if (c && c.syn === "Positif") {
       A.sev = "crit"; A.name = "AmpC + BLSE surajoutée";
       A.mech = "Résistance C3G avec synergie clavulanate positive : BLSE en plus de la céphalosporinase naturelle.";
-      A.rules.push({ k: "→R", txt: "Pénicillines, C1G–C3G et aztréonam rendus R (harmonisation BLSE)." });
       A.rules.push({ k: "?", txt: "Céfépime souvent touché en cas de BLSE + AmpC — vérifier la CMI." });
-      A.comment = `${sp} producteur d'une BLSE surajoutée à sa céphalosporinase naturelle. Pénicillines, C1G à C3G et aztréonam rendus résistants. Souche à signaler.`;
+      if (estCasfm()) {
+        A.rules.push({ k: "→R", txt: "CA-SFM : lecture interprétative — pénicillines, C1G à C3G et aztréonam rendus R." });
+        rendreR(A, r, ["AMX", "AMP", "CTX", "CAZ"], "BLSE surajoutée — lecture interprétative du CA-SFM.");
+        A.comment = `${sp} producteur d'une BLSE surajoutée à sa céphalosporinase naturelle. Conformément au CA-SFM, pénicillines, C1G à C3G et aztréonam sont rendus résistants. Souche à signaler.`;
+      } else {
+        A.rules.push({ k: "=", txt: "EUCAST : pas de réinterprétation — céphalosporines et aztréonam rendus tels que testés." });
+        A.comment = `${sp} producteur d'une BLSE surajoutée à sa céphalosporinase naturelle. Conformément à l'EUCAST, les céphalosporines et l'aztréonam sont rendus tels qu'ils ont été testés. Souche à signaler.`;
+      }
     } else {
       A.sev = "high"; A.name = "Céphalosporinase déréprimée (AmpC hyperproduite)";
       A.mech = "Résistance C3G sans synergie clavulanate : dérepression de l'AmpC chromosomique.";
-      A.rules.push({ k: "→R", txt: "C1G à C3G résistantes ; associations avec inhibiteur inefficaces." });
       A.rules.push({ k: "?", txt: "Céfépime habituellement conservé (stable vis-à-vis de l'AmpC) — vérifier la CMI." });
+      if (estCasfm()) {
+        A.rules.push({ k: "→R", txt: "CA-SFM : lecture interprétative — C1G à C3G rendues R ; associations avec inhibiteur inefficaces." });
+        rendreR(A, r, ["AMX", "AMP", "AMC", "CTX", "CAZ"], "Céphalosporinase déréprimée — lecture interprétative du CA-SFM.");
+      } else {
+        A.rules.push({ k: "=", txt: "EUCAST : pas de réinterprétation — céphalosporines rendues telles que testées ; associations avec inhibiteur inefficaces." });
+      }
       A.comment = `${sp} exprimant une céphalosporinase déréprimée (AmpC hyperproduite). C3G résistantes, céfépime à interpréter selon la CMI. Attention au risque de sélection de mutants sous C3G.`;
     }
   } else {
@@ -1006,11 +1185,58 @@ const BP_MENINGE = {
   serratia: { CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 1 }, MEM: { S: 2, R: 2 } },
 };
 
+/* ============================================================
+   CA-SFM — DIFFÉRENCES AVEC L'EUCAST (copie conforme du client).
+   Source : « Différences principales entre le CA-SFM et l'EUCAST »,
+   version CA-SFM 2026. Chaque entrée porte sa page.
+   Tout couple absent de ces tables garde sa valeur EUCAST.
+   outils/verifier-tables.py échoue si ces tables divergent du client.
+   ============================================================ */
+const BP_CASFM = {
+  staph:    { VA: { S: 1, R: 1 } },            // p. 11 — EUCAST 2 mg/L
+  strepacg: { PEN: { S: 0.06, R: 0.06 } },     // p. 12 — EUCAST 0,03 mg/L
+  acineto:  { SXT: { S: 0.5, R: 2 } },         // p. 6  — SFP conservée jusqu'à 2
+  coryne:   { SXT: { S: 2, R: 2 } },           // p. 18 — CLSI M45
+  ngono:    { GEN: { S: 16, R: 16 } }          // p. 14 — ECOFF ; EUCAST écarte
+};
+// p. 6 — infection urinaire sans signe de gravité : le CA-SFM refuse
+// l'abaissement du cotrimoxazole à 0,5 mg/L dans l'urine.
+const BP_CASFM_URIN = {
+  entero:     { SXT: { S: 2, R: 2 } },
+  salmonella: { SXT: { S: 2, R: 2 } },
+  morganella: { SXT: { S: 2, R: 2 } },
+  serratia:   { SXT: { S: 2, R: 2 } },
+  staph:      { SXT: { S: 2, R: 2 } },
+  scn:        { SXT: { S: 2, R: 2 } },
+  acineto:    { SXT: { S: 2, R: 2 } }
+};
+// p. 14 — méningite à méningocoque : seuil unique sur l'amoxicilline.
+const BP_MENINGE_CASFM = {
+  nmening: { AMX: { S: 0.125, R: 0.125 } }
+};
+// p. 18 et p. 7 — couples sans seuil EUCAST que le CA-SFM couvre.
+const CASFM_COUVRE = {
+  acineto: ["TZP", "CAZ", "FEP"], steno: ["LVX"], coryne: ["SXT"],
+  ngono: ["GEN"], entero: ["FOX"]
+};
+const CASFM_COUVRE_ESPECE = { "entero:FOX": ["ecoli"] };
+
+// Référentiel de la requête en cours (fixé juste avant le calcul, synchrone).
+let _ref = "eucast";
+const estCasfm = () => _ref === "casfm";
+
 function getBP(bpOverride, group, k, ctx) {
   const o = bpOverride && bpOverride[group + ":" + k];
   if (o && o.S !== undefined && o.R !== undefined) return o;   // saisie de l'utilisateur : prioritaire
-  if (ctx && ctx.mening === "Oui" && BP_MENINGE[group] && BP_MENINGE[group][k]) {
-    return BP_MENINGE[group][k];
+  const c = ctx || {};
+  // Le contexte méningé l'emporte sur tout le reste : un LCR n'est pas une urine.
+  if (c.mening === "Oui") {
+    if (estCasfm() && BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return BP_MENINGE_CASFM[group][k];
+    if (BP_MENINGE[group] && BP_MENINGE[group][k]) return BP_MENINGE[group][k];
+  }
+  if (estCasfm()) {
+    if (c.urin === "Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]) return BP_CASFM_URIN[group][k];
+    if (BP_CASFM[group] && BP_CASFM[group][k]) return BP_CASFM[group][k];
   }
   return (BP[group] && BP[group][k]) || null;
 }
@@ -1020,6 +1246,9 @@ function runInterpretation(input) {
   const organism = input.organism;
   if (!ORG[organism]) return { error: "unknown_organism" };
   const org = ORG[organism];
+
+  // Référentiel demandé. Inconnu ou absent : EUCAST, qui est le socle commun.
+  _ref = REFERENTIELS[String(input.ref || "eucast")] ? String(input.ref) : "eucast";
 
   let results = {};
   if (input.mode === "mic") {
@@ -1032,9 +1261,14 @@ function runInterpretation(input) {
     results = input.results || {};
   }
 
-  _activeOrg = org;                            // fixé juste avant le calcul (synchrone)
+  _activeOrg = org; _activeId = organism;      // fixés juste avant le calcul (synchrone)
   const A = ENGINE[org.engine](results, input.ctx || {}, org.args || {});
-  return { interpretation: A, categories: results };
+  // Lecture interprétative : les catégories rendues peuvent différer des
+  // catégories brutes. Le client doit recevoir les deux, jamais l'une à la
+  // place de l'autre — sans quoi on masquerait au biologiste ce qu'il a lu.
+  const rendues = Object.assign({}, results);
+  (A.rendu || []).forEach(x => { rendues[x.abx] = x.rendu; });
+  return { interpretation: A, categories: results, rendues: rendues, referentiel: REFERENTIELS[_ref] };
 }
 
 /* ======================= Handler ======================= */
@@ -1069,7 +1303,7 @@ exports.handler = async (event) => {
   return {
     statusCode: 200,
     headers: CORS,
-    body: JSON.stringify({ valid: true, plan: (lic.valid && !revoked) ? lic.plan : "free", interpretation: out.interpretation, categories: out.categories, referentiel: REFERENTIEL })
+    body: JSON.stringify({ valid: true, plan: (lic.valid && !revoked) ? lic.plan : "free", interpretation: out.interpretation, categories: out.categories, rendues: out.rendues, referentiel: out.referentiel || REFERENTIEL })
   };
 };
 

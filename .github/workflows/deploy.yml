@@ -25,6 +25,12 @@ jobs:
       - name: Concordance des tables de concentrations critiques
         run: python3 outils/verifier-tables.py
 
+      # Deux référentiels qui rendraient le même résultat seraient un mensonge
+      # d'interface : ce banc vérifie que chaque différence déclarée produit
+      # bien un rendu différent, dans un sens comme dans l'autre.
+      - name: Le choix du référentiel change bien le rendu
+        run: node outils/essai-referentiel.js
+
   deploy:
     name: Déploiement VPS
     needs: test
