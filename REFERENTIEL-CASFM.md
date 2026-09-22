@@ -75,6 +75,7 @@ Sans Node sur la machine, le second tourne aussi sous JavaScriptCore :
 | Couple | EUCAST | CA-SFM | Page | Motif |
 |---|---|---|---|---|
 | Entérobactéries, *Acinetobacter*, staphylocoques / cotrimoxazole, **infection urinaire sans signe de gravité** | S ≤ 0,5 | **S ≤ 2** | 6 | Le CA-SFM a suivi l'EUCAST en abaissant le seuil pour les infections systémiques, mais l'a refusé dans l'urine : pas de signal d'échec clinique, et des paramètres PK/PD très favorables. |
+| Entérobactéries / témocilline, **infection urinaire sans signe de gravité** | un seul seuil (S ≤ 0,001 · R > 16) | **S ≤ 8 · R > 16** | 7 | L'EUCAST ne fait figurer qu'une valeur critique, séparant « sensible à forte posologie » de « résistant » ; la posologie standard n'est autorisée que dans le tableau des posologies. Le CA-SFM donne deux seuils et l'autorise donc explicitement. Les deux comités restreignent la molécule à *E. coli*, *Klebsiella* spp. (sauf *K. aerogenes*) et *P. mirabilis*. |
 | *N. meningitidis* / amoxicilline, **méningite** | S ≤ 0,125 · R > 1 | **S ≤ 0,125 · R > 0,125** | 14 | En France, le choix du relais dépend de la CMI d'amoxicilline ; l'EUCAST le fonde sur celle de la pénicilline G. |
 
 Le contexte méningé l'emporte sur le contexte urinaire : un LCR n'est pas une
@@ -88,8 +89,11 @@ qui leur donne des valeurs.
 
 | Groupe | Molécules | Page | Source de la valeur |
 |---|---|---|---|
-| *Acinetobacter* | pipéracilline-tazobactam, ceftazidime, céfépime | 18 | CLSI M100, adapté |
-| *S. maltophilia* | lévofloxacine | 18 | CLSI M100 ; 1 mg/L retenu, l'ECOFF EUCAST à 4 mg/L exposant à des doses toxiques |
+| *Acinetobacter* | pipéracilline-tazobactam, ceftazidime, céfépime, minocycline | 18 | CLSI M100, adapté ; pour la minocycline le seuil « R » est celui de l'ECOFF (2 mg/L) |
+| *S. maltophilia* | lévofloxacine, minocycline | 18 | CLSI M100 ; 1 mg/L retenu pour la lévofloxacine, l'ECOFF EUCAST à 4 mg/L exposant à des doses toxiques |
+| *Acinetobacter*, *S. maltophilia* | céfidérocol | 5 | L'EUCAST refuse d'y voir de vraies valeurs critiques cliniques et stratifie en trois niveaux de probabilité ; le CA-SFM s'en tient à deux — « utilisation possible » ou « déconseillée » — sur la valeur PK/PD de 2 mg/L |
+| Entérocoques | daptomycine | 12 | L'EUCAST la note « IE » ; le CA-SFM retient 2 mg/L, la posologie française étant de 8 à 12 mg/kg/j |
+| Anaérobies | moxifloxacine | 17 | Aucune recommandation EUCAST ; le CA-SFM retient 2 mg/L pour l'ensemble des bactéries anaérobies |
 | *Corynebacterium* | cotrimoxazole | 18 | CLSI M45 |
 | *N. gonorrhoeae* | gentamicine | 14 | ECOFF |
 | *E. coli* seulement | céfoxitine | 7 | L'EUCAST la réserve au dépistage des AmpC ; la molécule sert en France d'alternative aux carbapénèmes contre les souches BLSE |
@@ -140,6 +144,7 @@ exige en plus.
 | β-lactamase chromogénique | 14, 15 | *N. meningitidis* et *M. catarrhalis* : rechercher la β-lactamase avant de rendre une pénicilline sensible. |
 | *S. saprophyticus* | 11 | Un dépistage négatif à l'ampicilline ne suffit pas — vérifier aussi la sensibilité à la méticilline. |
 | Anaérobies | 16, 17 | Gélose Brucella (BBA) et non FAA ; amoxicilline testée directement plutôt que déduite de la pénicilline G. Pas de seuils propres à *C. difficile*, dont l'antibiogramme sur selles n'est pas recommandé en France. |
+| Céfidérocol | 5 | Chez les entérobactéries, à tester uniquement par microdilution en milieu liquide : la corrélation diamètre/CMI fait défaut sur les souches multirésistantes, celles où le test est utile. Chez *Acinetobacter* et *S. maltophilia*, le rendu est à deux niveaux plutôt qu'une catégorisation clinique. |
 | *Burkholderia cepacia* | 10 | Chapitre et concentrations critiques **supprimés** en 2026 : microdilution en milieu liquide seulement, CMI interprétées face aux valeurs PK/PD. |
 
 ## Zones d'incertitude technique (ZIT / ATU)
@@ -164,6 +169,7 @@ on compare donc à une valeur, pas à un intervalle.
 | Entérobactéries / ciprofloxacine | 0,5 mg/L | ATU 0,5 | ZIT 0,5 | idem ; CA-SFM 2026 p. 52 |
 | *Pseudomonas* / colistine | 4 mg/L | — | ZIT 4 | CA-SFM 2026, chapitre 5.2 |
 | *S. aureus* / vancomycine | 2 mg/L | — | ZIT 2 | CA-SFM 2026, chapitre 5.5 |
+| Entérocoques / daptomycine | 4 mg/L | — | ZIT 4 | CA-SFM 2026, chapitre 5.6. Le seuil de 2 mg/L coupe partiellement la population sauvage (ECOFF 4 chez *E. faecalis*, 8 chez *E. faecium*) et les objectifs PK/PD sont inatteignables au-delà de 4 mg/L |
 
 Trois restrictions, lues dans les documents :
 
@@ -228,14 +234,10 @@ listées ici pour que l'écart soit connu plutôt que silencieux.
 
 | Différence | Page | Pourquoi elle n'est pas appliquée |
 |---|---|---|
-| Témocilline (deux seuils, urinaire et autres) | 7 | Molécule absente du panel |
 | Céfalexine : ne pas rendre le résultat | 7 | Molécule absente |
 | Ticarcilline conservée par le CA-SFM | 4 | Molécule absente |
 | Acide nalidixique conservé (dépistage FQ) | 9 | Molécule absente — PhénoBac utilise la péfloxacine |
 | Kanamycine conservée (dépistage de l'amikacine) | 11 | Molécule absente |
-| Daptomycine / entérocoques : S ≤ 2, ZIT à 4 | 12 | Molécule absente |
-| Céfidérocol : méthode et rendu à deux niveaux | 5 | Molécule absente |
-| Minocycline / *Acinetobacter* et *S. maltophilia* | 18 | Non testée dans ces panels |
 | Rifampicine / anaérobies : 4 mg/L | 17 | Non testée dans ces panels |
 | *S. pettenkoferi* : oxacilline à 2 mg/L | 11 | Espèce absente |
 | *B. pseudomallei* / doxycycline : seuil unique à 2 mg/L | 10 | Espèce absente |

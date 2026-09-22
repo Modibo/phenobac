@@ -67,7 +67,9 @@ const ABXNAME = {
   E: "Érythromycine", DA: "Clindamycine", VA: "Vancomycine", TEC: "Teicoplanine",
   RD: "Rifampicine", LZD: "Linézolide", HLG: "Gentamicine haut niveau",
   CAF: "Chloramphénicol", DOX: "Doxycycline",
-  OXA: "Oxacilline", LVX: "Lévofloxacine", PEF: "Péfloxacine", AZM: "Azithromycine"
+  OXA: "Oxacilline", LVX: "Lévofloxacine", PEF: "Péfloxacine", AZM: "Azithromycine",
+  TEM: "Témocilline", FDC: "Céfidérocol", DAP: "Daptomycine", MXF: "Moxifloxacine",
+  MIN: "Minocycline"
 };
 
 // concentrations critiques (valeurs par défaut, surchargées par bpOverride côté client)
@@ -77,12 +79,17 @@ const BP = {
     CTX: { S: 1, R: 2 }, CAZ: { S: 1, R: 4 }, FEP: { S: 1, R: 4 },
     ETP: { S: 0.5, R: 0.5 }, IPM: { S: 2, R: 4 }, MEM: { S: 2, R: 8 },
     CIP: { S: 0.25, R: 0.5 }, GEN: { S: 2, R: 2 }, AMK: { S: 8, R: 8 },
-    SXT: { S: 0.5, R: 0.5 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 }
+    SXT: { S: 0.5, R: 0.5 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 },
+    // Témocilline : les deux référentiels restreignent la ligne à E. coli,
+    // Klebsiella spp. (sauf K. aerogenes) et P. mirabilis — seules ces
+    // espèces la portent à leur panel.
+    TEM:{S:null,R:16}, FDC:{S:2,R:2}
   },
   staph: {
     FOX: { S: 4, R: 4 }, OXA: { S: 0.25, R: 0.25 }, PEN: { S: 0.125, R: 0.125 }, E: { S: 1, R: 1 }, DA: { S: 0.25, R: 0.25 },
     GEN: { S: 2, R: 2 }, SXT: { S: 0.5, R: 0.5 }, RD: { S: 0.06, R: 0.06 },
-    VA: { S: 2, R: 2 }, TEC: { S: 2, R: 2 }, LZD: { S: 4, R: 4 }
+    VA: { S: 2, R: 2 }, TEC: { S: 2, R: 2 }, LZD: { S: 4, R: 4 },
+    DAP:{S:1,R:1}, MIN:{S:0.5,R:0.5}, MXF:{S:0.25,R:0.25}
   },
 
   /* Staphylocoques à COAGULASE NÉGATIVE.
@@ -92,24 +99,29 @@ const BP = {
   scn: {
     FOX: { S: 4, R: 4 }, OXA: { S: 0.25, R: 0.25 }, PEN: { S: 0.125, R: 0.125 }, E: { S: 1, R: 1 }, DA: { S: 0.25, R: 0.25 },
     GEN: { S: 2, R: 2 }, SXT: { S: 0.5, R: 0.5 }, RD: { S: 0.06, R: 0.06 },
-    VA: { S: 4, R: 4 }, TEC: { S: 4, R: 4 }, LZD: { S: 4, R: 4 }
+    VA: { S: 4, R: 4 }, TEC: { S: 4, R: 4 }, LZD: { S: 4, R: 4 },
+    MIN:{S:0.5,R:0.5}, MXF:{S:0.25,R:0.25}
   },
   enteroc: {
     AMP: { S: 4, R: 4 }, VA: { S: 4, R: 4 }, TEC: { S: 2, R: 2 },
-    HLG: { S: 128, R: 128 }, LZD: { S: 4, R: 4 }, CIP: { S: 4, R: 4 }
+    HLG: { S: 128, R: 128 }, LZD: { S: 4, R: 4 }, CIP: { S: 4, R: 4 },
+    DAP:{S:2,R:2}
   },
   pseudo: {
     TZP: { S: null, R: 16 }, CAZ: { S: null, R: 8 }, FEP: { S: null, R: 8 }, IPM: { S: null, R: 4 }, MEM: { S: 2, R: 8 },
-    CIP: { S: null, R: 0.5 }, GEN: { S: 4, R: 4 }, AMK: { S: 16, R: 16 }, COL: { S: 4, R: 4 }
+    CIP: { S: null, R: 0.5 }, GEN: { S: 4, R: 4 }, AMK: { S: 16, R: 16 }, COL: { S: 4, R: 4 },
+    FDC:{S:2,R:2}
   },
   pneumo: {
     PEN: { S: 0.06, R: 1 }, AMX: { S: 0.5, R: 1 }, CTX: { S: 0.5, R: 2 },
     E: { S: 0.25, R: 0.25 }, DA: { S: 0.5, R: 0.5 }, LVX: { S: null, R: 2 },
-    VA: { S: 2, R: 2 }, LZD: { S: 2, R: 2 }, SXT: { S: 1, R: 1 }
+    VA: { S: 2, R: 2 }, LZD: { S: 2, R: 2 }, SXT: { S: 1, R: 1 },
+    MXF:{S:0.5,R:0.5}
   },
   acineto: {
     TZP: { S: 16, R: 16 }, CAZ: { S: 8, R: 8 }, FEP: { S: 8, R: 8 }, IPM: { S: 2, R: 4 }, MEM: { S: 2, R: 8 },
-    CIP: { S: null, R: 1 }, GEN: { S: 4, R: 4 }, AMK: { S: 8, R: 8 }, SXT: { S: 0.5, R: 0.5 }, COL: { S: 2, R: 2 }
+    CIP: { S: null, R: 1 }, GEN: { S: 4, R: 4 }, AMK: { S: 8, R: 8 }, SXT: { S: 0.5, R: 0.5 }, COL: { S: 2, R: 2 },
+    FDC:{S:2,R:2}, MIN:{S:null,R:2}
   },
 
 
@@ -135,12 +147,14 @@ const BP = {
 
   /* Corynebacterium spp. */
   coryne: {
-    AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, CTX: { S: 1, R: 1 }, E: { S: 1, R: 2 }, GEN: { S: 1, R: 1 }, LZD: { S: 2, R: 2 }, MEM: { S: 0.5, R: 0.5 }, PEN: { S: null, R: 1 }, SXT: { S: 0.5, R: 1 }, VA: { S: 2, R: 2 }
+    AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, CTX: { S: 1, R: 1 }, E: { S: 1, R: 2 }, GEN: { S: 1, R: 1 }, LZD: { S: 2, R: 2 }, MEM: { S: 0.5, R: 0.5 }, PEN: { S: null, R: 1 }, SXT: { S: 0.5, R: 1 }, VA: { S: 2, R: 2 },
+    MXF:{S:0.5,R:0.5}
   },
 
   /* H. influenzae */
   haemo: {
-    AMC: { S: 2, R: 2 }, AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, AZM: { S: 0.25, R: 0.5 }, CAF: { S: 2, R: 2 }, CIP: { S: 0.03, R: 0.03 }, CTX: { S: 0.125, R: 0.125 }, PEN: { S: 0.06, R: 0.25 }, RD: { S: 1, R: 1 }, SXT: { S: 0.5, R: 0.5 }
+    AMC: { S: 2, R: 2 }, AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, AZM: { S: 0.25, R: 0.5 }, CAF: { S: 2, R: 2 }, CIP: { S: 0.03, R: 0.03 }, CTX: { S: 0.125, R: 0.125 }, PEN: { S: 0.06, R: 0.25 }, RD: { S: 1, R: 1 }, SXT: { S: 0.5, R: 0.5 },
+    MXF:{S:0.125,R:0.125}
   },
 
   /* N. meningitidis */
@@ -155,17 +169,20 @@ const BP = {
 
   /* M. catarrhalis */
   moraxella: {
-    AMC: { S: 1, R: 1 }, AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, AZM: { S: 0.25, R: 0.25 }, CAF: { S: 2, R: 2 }, CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 2 }, PEN: { S: 0.06, R: 0.25 }, RD: { S: 1, R: 1 }, SXT: { S: 1, R: 1 }
+    AMC: { S: 1, R: 1 }, AMP: { S: 1, R: 1 }, AMX: { S: 2, R: 2 }, AZM: { S: 0.25, R: 0.25 }, CAF: { S: 2, R: 2 }, CIP: { S: 0.125, R: 0.125 }, CTX: { S: 1, R: 2 }, PEN: { S: 0.06, R: 0.25 }, RD: { S: 1, R: 1 }, SXT: { S: 1, R: 1 },
+    MXF:{S:0.25,R:0.25}
   },
 
   /* S. maltophilia */
   steno: {
-    AMK: { S: 16, R: 16 }, CAZ: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, GEN: { S: 4, R: 4 }, IPM: { S: 2, R: 4 }, LVX: { S: 1, R: 2 }, MEM: { S: 2, R: 8 }, SXT: { S: null, R: 2 }, TZP: { S: 16, R: 16 }
+    AMK: { S: 16, R: 16 }, CAZ: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, GEN: { S: 4, R: 4 }, IPM: { S: 2, R: 4 }, LVX: { S: 1, R: 2 }, MEM: { S: 2, R: 8 }, SXT: { S: null, R: 2 }, TZP: { S: 16, R: 16 },
+    FDC:{S:2,R:2}, MIN:{S:null,R:2}
   },
 
   /* B. cepacia — EUCAST ne fixe AUCUN seuil : conventions de laboratoire */
   burk: {
-    AMK: { S: 16, R: 16 }, CAZ: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, GEN: { S: 4, R: 4 }, IPM: { S: 2, R: 4 }, LVX: { S: 1, R: 2 }, MEM: { S: 2, R: 8 }, SXT: { S: null, R: 2 }, TZP: { S: 16, R: 16 }
+    AMK: { S: 16, R: 16 }, CAZ: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, GEN: { S: 4, R: 4 }, IPM: { S: 2, R: 4 }, LVX: { S: 1, R: 2 }, MEM: { S: 2, R: 8 }, SXT: { S: null, R: 2 }, TZP: { S: 16, R: 16 },
+    MIN:{S:null,R:2}
   },
 
   /* C. jejuni */
@@ -180,12 +197,14 @@ const BP = {
 
   /* B. fragilis */
   bfragilis: {
-    AMC: { S: 4, R: 8 }, DA: { S: 4, R: 4 }, IPM: { S: 2, R: 8 }, MEM: { S: 2, R: 8 }, MTZ: { S: 4, R: 4 }, PEN: { S: 0.25, R: 0.5 }, TZP: { S: 8, R: 16 }, VA: { S: 2, R: 2 }
+    AMC: { S: 4, R: 8 }, DA: { S: 4, R: 4 }, IPM: { S: 2, R: 8 }, MEM: { S: 2, R: 8 }, MTZ: { S: 4, R: 4 }, PEN: { S: 0.25, R: 0.5 }, TZP: { S: 8, R: 16 }, VA: { S: 2, R: 2 },
+    MXF:{S:2,R:2}
   },
 
   /* C. perfringens */
   cperfringens: {
-    AMC: { S: 0.25, R: 0.25 }, DA: { S: 0.25, R: 0.25 }, IPM: { S: 0.5, R: 0.5 }, MEM: { S: 0.125, R: 0.125 }, MTZ: { S: 4, R: 4 }, PEN: { S: 0.5, R: 0.5 }, TZP: { S: 0.5, R: 0.5 }, VA: { S: 2, R: 2 }
+    AMC: { S: 0.25, R: 0.25 }, DA: { S: 0.25, R: 0.25 }, IPM: { S: 0.5, R: 0.5 }, MEM: { S: 0.125, R: 0.125 }, MTZ: { S: 4, R: 4 }, PEN: { S: 0.5, R: 0.5 }, TZP: { S: 0.5, R: 0.5 }, VA: { S: 2, R: 2 },
+    MXF:{S:2,R:2}
   },
 
   /* C. difficile */
@@ -208,7 +227,11 @@ const BP = {
     CTX: { S: 1, R: 2 }, CAZ: { S: 1, R: 4 }, FEP: { S: 1, R: 4 },
     ETP: { S: 0.5, R: 0.5 }, IPM: { S: null, R: 4 }, MEM: { S: 2, R: 8 },
     CIP: { S: 0.25, R: 0.5 }, GEN: { S: 2, R: 2 }, AMK: { S: 8, R: 8 },
-    SXT: { S: 0.5, R: 0.5 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 }
+    SXT: { S: 0.5, R: 0.5 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 },
+    // Témocilline : les deux référentiels restreignent la ligne à E. coli,
+    // Klebsiella spp. (sauf K. aerogenes) et P. mirabilis — seules ces
+    // espèces la portent à leur panel.
+    TEM:{S:null,R:16}, FDC:{S:2,R:2}
   },
 
   /* Serratia spp. — triméthoprime-sulfaméthoxazole sans catégorie S. Identique aux entérobactéries pour le reste. */
@@ -217,7 +240,8 @@ const BP = {
     CTX: { S: 1, R: 2 }, CAZ: { S: 1, R: 4 }, FEP: { S: 1, R: 4 },
     ETP: { S: 0.5, R: 0.5 }, IPM: { S: 2, R: 4 }, MEM: { S: 2, R: 8 },
     CIP: { S: 0.25, R: 0.5 }, GEN: { S: 2, R: 2 }, AMK: { S: 8, R: 8 },
-    SXT: { S: null, R: 2 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 }
+    SXT: { S: null, R: 2 }, FOS: { S: 8, R: 8 }, COL: { S: 2, R: 2 }, AZM: { S: 16, R: 16 },
+    FDC:{S:2,R:2}
   },
 };
 
@@ -333,6 +357,9 @@ function carbaConfirmee(c) {
    de chaque moteur. Elles ne changent pas de catégorie : elles disent
    au biologiste ce que le référentiel français exige en plus.
    ------------------------------------------------------------ */
+// Groupes de seuils correspondant aux Enterobacterales.
+const GROUPES_ENTEROBACTERALES_SRV = ["entero", "salmonella", "morganella", "serratia"];
+
 function reglesCasfm(A, r) {
   if (!estCasfm()) return;
   const g = (_activeOrg && _activeOrg.bpGroup) || "";
@@ -389,10 +416,22 @@ function reglesCasfm(A, r) {
 
   // p. 18 — genres pour lesquels le CA-SFM adapte les valeurs du CLSI.
   if (g === "acineto") {
-    A.rules.push({ k: "📕", txt: "CA-SFM : pipéracilline-tazobactam, ceftazidime et céfépime sur des valeurs adaptées du CLSI M100 — l'EUCAST n'en propose pas." });
+    A.rules.push({ k: "📕", txt: "CA-SFM : pipéracilline-tazobactam, ceftazidime, céfépime et minocycline sur des valeurs adaptées du CLSI M100 — l'EUCAST n'en propose pas. Pour la minocycline, le seuil « R » est celui de l'ECOFF (2 mg/L)." });
   }
   if (g === "steno") {
-    A.rules.push({ k: "📕", txt: "CA-SFM : lévofloxacine sur une valeur adaptée du CLSI M100, retenue à 1 mg/L ; l'ECOFF EUCAST à 4 mg/L exposerait à des doses toxiques." });
+    A.rules.push({ k: "📕", txt: "CA-SFM : lévofloxacine et minocycline sur des valeurs adaptées du CLSI M100. La lévofloxacine est retenue à 1 mg/L, l'ECOFF EUCAST à 4 mg/L exposerait à des doses toxiques ; la minocycline a son seuil « R » à l'ECOFF (2 mg/L)." });
+  }
+
+  // p. 5 — céfidérocol. L'EUCAST refuse d'y voir de vraies valeurs critiques
+  // cliniques pour les non-fermentants et propose une stratification en trois
+  // niveaux de probabilité ; le CA-SFM s'en tient à deux niveaux, sur la
+  // valeur PK/PD. Chez les entérobactéries, il écarte la méthode des disques.
+  if (r.FDC !== undefined && r.FDC !== null && r.FDC !== "") {
+    if (g === "acineto" || g === "steno") {
+      A.rules.push({ k: "📕", txt: "CA-SFM : pour le céfidérocol, le rendu est à deux niveaux — « utilisation possible » ou « utilisation déconseillée » — sur la valeur critique PK/PD de 2 mg/L, et non une catégorisation clinique. Les diamètres ne servent qu'à dépister les souches sensibles." });
+    } else if (GROUPES_ENTEROBACTERALES_SRV.indexOf(g) !== -1) {
+      A.rules.push({ k: "⚗", txt: "CA-SFM : céfidérocol à tester uniquement par microdilution en milieu liquide chez les entérobactéries — la corrélation diamètre/CMI fait défaut sur les souches multirésistantes, celles où le test est utile." });
+    }
   }
 }
 
@@ -1152,14 +1191,15 @@ function catFromMic(str, bp) {
    régénère à chaque changement de version du référentiel.
    ------------------------------------------------------------ */
 const HORS_EUCAST = {
-  acineto: ["CAZ", "FEP", "TZP"],
-  bfragilis: ["AMC", "DA", "IPM", "MEM", "MTZ", "PEN", "TZP", "VA"],
-  burk: ["AMK", "CAZ", "COL", "GEN", "IPM", "LVX", "MEM", "SXT", "TZP"],
+  acineto: ["CAZ", "FDC", "FEP", "MIN", "TZP"],
+  bfragilis: ["AMC", "DA", "IPM", "MEM", "MTZ", "MXF", "PEN", "TZP", "VA"],
+  burk: ["AMK", "CAZ", "COL", "GEN", "IPM", "LVX", "MEM", "MIN", "SXT", "TZP"],
   campylo: ["AZM", "DOX", "SXT"],
   cdifficile: ["AMC", "DA", "IPM", "MEM", "PEN", "TZP"],
+  cperfringens: ["MXF"],
   coryne: ["AMP", "AMX", "CTX", "E", "GEN", "MEM", "SXT"],
   entero: ["AZM", "FOX"],
-  enteroc: ["HLG"],
+  enteroc: ["DAP", "HLG"],
   haemo: ["AZM", "PEN"],
   listeria: ["AMX", "CTX", "GEN", "LZD", "VA"],
   moraxella: ["AMP", "AMX", "CAF", "PEN", "RD"],
@@ -1171,7 +1211,7 @@ const HORS_EUCAST = {
   scn: ["FOX", "OXA"],
   serratia: ["AZM", "FOX"],
   staph: ["FOX", "OXA"],
-  steno: ["AMK", "CAZ", "COL", "GEN", "IPM", "LVX", "MEM", "TZP"],
+  steno: ["AMK", "CAZ", "COL", "FDC", "GEN", "IPM", "LVX", "MEM", "MIN", "TZP"],
   strepacg: ["AMX", "CTX"],
   strepb: ["AMX", "CTX"],
   vibrio: ["E"],
@@ -1224,9 +1264,12 @@ const BP_CASFM = {
 // p. 6 — infection urinaire sans signe de gravité : le CA-SFM refuse
 // l'abaissement du cotrimoxazole à 0,5 mg/L dans l'urine.
 const BP_CASFM_URIN = {
-  entero:     { SXT: { S: 2, R: 2 } },
+  // Témocilline (p. 7) : le CA-SFM autorise la posologie standard dans les
+  // infections urinaires sans signe de gravité, là où l'EUCAST n'affiche
+  // qu'un seuil « sensible à forte posologie ».
+  entero:     { SXT: { S: 2, R: 2 }, TEM: { S: 8, R: 16 } },
   salmonella: { SXT: { S: 2, R: 2 } },
-  morganella: { SXT: { S: 2, R: 2 } },
+  morganella: { SXT: { S: 2, R: 2 }, TEM: { S: 8, R: 16 } },
   serratia:   { SXT: { S: 2, R: 2 } },
   staph:      { SXT: { S: 2, R: 2 } },
   scn:        { SXT: { S: 2, R: 2 } },
@@ -1238,8 +1281,13 @@ const BP_MENINGE_CASFM = {
 };
 // p. 18 et p. 7 — couples sans seuil EUCAST que le CA-SFM couvre.
 const CASFM_COUVRE = {
-  acineto: ["TZP", "CAZ", "FEP"], steno: ["LVX"], coryne: ["SXT"],
-  ngono: ["GEN"], entero: ["FOX"]
+  // Minocycline : « R » à la valeur d'ECOFF (2 mg/L). Céfidérocol : rendu à
+  // deux niveaux sur la valeur PK/PD de 2 mg/L. Daptomycine : « IE » chez
+  // l'EUCAST, 2 mg/L au CA-SFM. Moxifloxacine : rien chez l'EUCAST pour les
+  // anaérobies, 2 mg/L au CA-SFM.
+  acineto: ["TZP", "CAZ", "FEP", "MIN", "FDC"], steno: ["LVX", "MIN", "FDC"],
+  coryne: ["SXT"], ngono: ["GEN"], entero: ["FOX"],
+  enteroc: ["DAP"], bfragilis: ["MXF"], cperfringens: ["MXF"]
 };
 const CASFM_COUVRE_ESPECE = { "entero:FOX": ["ecoli"] };
 
@@ -1264,7 +1312,8 @@ const ZIT = {
 };
 const ZIT_CASFM = {
   pseudo: { COL: 4 },                // CA-SFM 2026, chapitre 5.2
-  staph:  { VA: 2 }                  // accompagne l'abaissement du seuil à 1 mg/L
+  staph:  { VA: 2 },                 // accompagne l'abaissement du seuil à 1 mg/L
+  enteroc: { DAP: 4 }                // le seuil de 2 mg/L coupe la population sauvage
 };
 
 function zitPour(bpOverride, group, k, ctx) {

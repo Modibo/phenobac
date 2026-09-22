@@ -126,6 +126,14 @@ résistants dès qu'une carbapénémase est confirmée. Quand une catégorie est
 modifiée, le compte-rendu porte **la catégorie rendue et la catégorie lue**,
 avec le motif : on ne masque jamais la mesure.
 
+Les molécules de recours que ces différences mettent en jeu sont au panel :
+**témocilline** et **céfidérocol** chez les entérobactéries multirésistantes,
+**daptomycine** chez les cocci à Gram positif, **minocycline** chez
+*Acinetobacter* et *S. maltophilia*, **moxifloxacine** chez les anaérobies et
+les germes respiratoires. Chaque seuil vient d'un référentiel : quand seul le
+CA-SFM en fixe un, l'éditeur marque le couple « hors EUCAST » sous l'autre
+référentiel.
+
 S'y ajoutent les **zones d'incertitude technique** (ZIT chez le CA-SFM, ATU chez
 l'EUCAST) : quatre couples pour lesquels la valeur mesurée tombe si près du
 seuil que la catégorie n'est plus reproductible. PhénoBac les signale — pastille

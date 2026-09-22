@@ -95,6 +95,10 @@ AGENTS = {
     'DA': r'^clindamycin', 'RD': r'^rifampicin', 'VA': r'^vancomycin',
     'TEC': r'^teicoplanin', 'LZD': r'^linezolid', 'DOX': r'^doxycycline',
     'MTZ': r'^metronidazole', 'CAF': r'^chloramphenicol',
+    'TEM': r'^temocillin', 'FDC': r'^cefiderocol', 'DAP': r'^daptomycin',
+    # « Minocycline (prophylaxis only) » chez le méningocoque n'est pas un
+    # seuil de catégorisation : le motif s'arrête au nom seul.
+    'MIN': r'^minocycline\b(?!\s*\()', 'MXF': r'^moxifloxacin',
 }
 
 

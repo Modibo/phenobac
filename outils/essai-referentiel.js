@@ -128,6 +128,33 @@ function zitDetectee(titre, entree, abx, attendu) {
        (ok ? "" : " (attendu " + (attendu ? "en ZIT" : "hors ZIT") + ")"));
 }
 
+dire("\nMolécules ajoutées — seuils et restrictions d'espèce");
+// Témocilline : l'EUCAST n'affiche qu'une valeur, qui sépare « sensible à
+// forte posologie » de « résistant ». Le CA-SFM autorise la posologie
+// standard dans les infections urinaires sans signe de gravité (p. 7).
+categorie("E. coli, témocilline 8 mg/L, EUCAST", mic("ecoli", { TEM: "8" }, {}, "eucast"), "TEM", "I");
+categorie("E. coli, témocilline 8 mg/L, CA-SFM systémique", mic("ecoli", { TEM: "8" }, {}, "casfm"), "TEM", "I");
+categorie("E. coli, témocilline 8 mg/L, CA-SFM urinaire", mic("ecoli", { TEM: "8" }, { urin: "Oui" }, "casfm"), "TEM", "S");
+// Céfidérocol : même valeur dans les deux référentiels chez les entérobactéries.
+categorie("E. coli, céfidérocol 2 mg/L", mic("ecoli", { FDC: "2" }, {}, "eucast"), "FDC", "S");
+categorie("P. aeruginosa, céfidérocol 4 mg/L", mic("paeru", { FDC: "4" }, {}, "eucast"), "FDC", "R");
+// Daptomycine : 1 mg/L chez le staphylocoque (EUCAST), 2 mg/L chez
+// l'entérocoque où l'EUCAST ne propose rien (CA-SFM, p. 12).
+categorie("S. aureus, daptomycine 1 mg/L", mic("saureus", { DAP: "1" }, {}, "eucast"), "DAP", "S");
+categorie("E. faecium, daptomycine 2 mg/L", mic("efaecium", { DAP: "2" }, {}, "casfm"), "DAP", "S");
+categorie("E. faecium, daptomycine 4 mg/L", mic("efaecium", { DAP: "4" }, {}, "casfm"), "DAP", "R");
+zitDetectee("E. faecium, daptomycine 4 mg/L, CA-SFM", mic("efaecium", { DAP: "4" }, {}, "casfm"), "DAP", true);
+// Minocycline : 0,5 mg/L chez le staphylocoque ; chez Acinetobacter et
+// S. maltophilia le CA-SFM retient l'ECOFF à 2 mg/L, sans catégorie S.
+categorie("S. aureus, minocycline 0,5 mg/L", mic("saureus", { MIN: "0,5" }, {}, "eucast"), "MIN", "S");
+categorie("Acinetobacter, minocycline 1 mg/L", mic("acineto", { MIN: "1" }, {}, "casfm"), "MIN", "I");
+categorie("Acinetobacter, minocycline 4 mg/L", mic("acineto", { MIN: "4" }, {}, "casfm"), "MIN", "R");
+// Moxifloxacine : valeurs EUCAST par espèce, et 2 mg/L chez les anaérobies
+// où l'EUCAST ne publie rien.
+categorie("Pneumocoque, moxifloxacine 0,5 mg/L", mic("pneumocoque", { MXF: "0,5" }, {}, "eucast"), "MXF", "S");
+categorie("H. influenzae, moxifloxacine 0,25 mg/L", mic("haemophilus", { MXF: "0,25" }, {}, "eucast"), "MXF", "R");
+categorie("B. fragilis, moxifloxacine 2 mg/L, CA-SFM", mic("bfragilis", { MXF: "2" }, {}, "casfm"), "MXF", "S");
+
 dire("\nZones d'incertitude technique communes aux deux référentiels");
 // EUCAST ATU 16 mg/L, CA-SFM ZIT 16 mg/L : même valeur, même effet.
 zitDetectee("Entérobactérie, pipéracilline-tazobactam 16 mg/L, EUCAST", mic("ecoli", { TZP: "16" }, {}, "eucast"), "TZP", true);
