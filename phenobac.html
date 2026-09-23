@@ -58,6 +58,7 @@
   header{
     position:sticky;top:0;z-index:50;
     background:rgba(255,255,255,.92);
+    -webkit-backdrop-filter:saturate(140%) blur(8px);
     backdrop-filter:saturate(140%) blur(8px);
     border-bottom:1px solid var(--line);
   }
@@ -239,7 +240,7 @@
     padding:2px 8px;display:inline-flex;align-items:center;gap:4px}
 
   /* modale d'activation */
-  .modal-ov{position:fixed;inset:0;background:rgba(15,33,41,.55);backdrop-filter:blur(3px);z-index:100;
+  .modal-ov{position:fixed;inset:0;background:rgba(15,33,41,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);z-index:100;
     display:none;align-items:center;justify-content:center;padding:20px}
   .modal-ov.open{display:flex}
   .modal{background:var(--surface);border-radius:8px;max-width:452px;width:100%;
@@ -2633,6 +2634,45 @@ function renderInterpret(){
 }
 
 /* construit le panneau d'interprétation à partir d'un objet A */
+/* ------------------------------------------------------------
+   Copier un texte — deux chemins.
+
+   navigator.clipboard n'existe qu'en contexte sécurisé (HTTPS ou
+   localhost) et sur les navigateurs récents. Sur un poste ancien, ou si le
+   site est un jour servi en http, l'appel lève une erreur et le bouton ne
+   fait rien — sans rien dire. On retombe donc sur une zone de texte
+   temporaire et document.execCommand, qui fonctionne partout, y compris
+   là où l'API moderne manque.
+   ------------------------------------------------------------ */
+function copierTexte(texte){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(texte);
+  }
+  return new Promise((ok, echec)=>{
+    try{
+      const z=document.createElement("textarea");
+      z.value=texte; z.setAttribute("readonly","");
+      // Hors écran mais focalisable : un display:none ne serait pas copiable.
+      z.style.position="fixed"; z.style.top="0"; z.style.opacity="0";
+      document.body.appendChild(z);
+      z.select(); z.setSelectionRange(0, z.value.length);
+      const fait=document.execCommand && document.execCommand("copy");
+      document.body.removeChild(z);
+      fait ? ok() : echec(new Error("copie refusée par le navigateur"));
+    }catch(err){ echec(err); }
+  });
+}
+
+// Dernier recours : sélectionner le texte à l'écran pour que l'utilisateur
+// n'ait plus qu'à faire Ctrl+C.
+function selectionner(el){
+  if(!el || !window.getSelection || !document.createRange) return;
+  try{
+    const r=document.createRange(); r.selectNodeContents(el);
+    const s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }catch(e){ /* sélection impossible : on n'insiste pas */ }
+}
+
 function renderInterpretView(A){
   let html = `<div class="verdict ${A.sev}">
       <div class="v-eyebrow"><span class="led ${A.sev==='crit'?'pulse':''}" style="background:currentColor"></span>Verdict phénotypique · ${SEV_LBL[A.sev]}</div>
@@ -2684,10 +2724,16 @@ function renderInterpretView(A){
 
   interpretEl.innerHTML=html;
   $("#copyBtn").onclick=e=>{
-    navigator.clipboard.writeText(A.comment).then(()=>{
-      e.target.textContent="Copié ✓"; e.target.classList.add("done");
-      setTimeout(()=>{e.target.textContent="Copier"; e.target.classList.remove("done");},1600);
-    });
+    const bouton=e.currentTarget;
+    const rendre=(txt,classe)=>{
+      bouton.textContent=txt; if(classe) bouton.classList.add(classe);
+      setTimeout(()=>{ bouton.textContent="Copier"; bouton.classList.remove("done"); },1600);
+    };
+    copierTexte(A.comment)
+      .then(()=> rendre("Copié ✓","done"))
+      // Le commentaire est ce que le biologiste reporte dans son SIL : si la
+      // copie échoue, il doit le savoir, pas croire qu'elle a réussi.
+      .catch(()=>{ rendre("Sélectionnez le texte"); selectionner($("#crTxt")); });
   };
   $("#exportBtn").onclick=()=> isPremium() ? exportPDF() : openUpgrade("L'export PDF du compte-rendu est une fonction Premium.");
 }
