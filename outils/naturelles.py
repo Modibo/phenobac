@@ -15,7 +15,11 @@ NATURELLES = {
  'pvulgaris':    ("1.14", {'AMX': "aminopénicillines", 'DOX': "tétracyclines", 'COL': "polymyxines"}),
  'paeru':        ("2.7",  {'AMX': "aminopénicillines", 'AMC': "aminopénicilline + inhibiteur", 'CTX': "céfotaxime / ceftriaxone", 'ETP': "ertapénème", 'CAF': "chloramphénicol", 'DOX': "tétracyclines"}),
  'acineto':      ("2.1",  {'AMX': "aminopénicillines", 'AMC': "aminopénicilline + inhibiteur", 'CTX': "céfotaxime / ceftriaxone", 'ETP': "ertapénème", 'FOS': "fosfomycine", 'DOX': "tétracyclines"}),
- 'steno':        ("2.8",  {'AMX': "aminopénicillines", 'AMC': "aminopénicilline + inhibiteur", 'TZP': "pipéracilline-tazobactam", 'CTX': "céfotaxime / ceftriaxone", 'ETP': "ertapénème", 'IPM': "imipénème", 'MEM': "méropénème", 'GEN': "aminosides", 'AMK': "aminosides", 'FOS': "fosfomycine", 'DOX': "tétracyclines"}),
+ 'steno':        ("2.8",  {'AMX': "aminopénicillines", 'AMC': "aminopénicilline + inhibiteur", 'TZP': "pipéracilline-tazobactam", 'CTX': "céfotaxime / ceftriaxone", 'ETP': "ertapénème", 'IPM': "imipénème", 'MEM': "méropénème", 'GEN': "aminosides", 'AMK': "aminosides", 'FOS': "fosfomycine"}),
+ # Doxycycline écartée : la règle 2.8 coche « tétracyclines », mais la note du
+ # document restreint — la sensibilité à la doxycycline, à la minocycline et à
+ # la tigécycline VARIE chez S. maltophilia. Seule la tétracycline est
+ # constamment inactive, et PhénoBac ne la teste pas.
  'burk':         ("2.3",  {'AMX': "aminopénicillines", 'AMC': "aminopénicilline + inhibiteur", 'TZP': "pipéracilline-tazobactam", 'CTX': "céfotaxime / ceftriaxone", 'ETP': "ertapénème", 'CIP': "ciprofloxacine", 'CAF': "chloramphénicol", 'GEN': "aminosides", 'AMK': "aminosides", 'FOS': "fosfomycine", 'COL': "polymyxines"}),
  'saureus':      ("4.5",  {'CAZ': "ceftazidime"}),
  'sepidermidis': ("4.5",  {'CAZ': "ceftazidime"}),

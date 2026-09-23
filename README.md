@@ -65,6 +65,7 @@ outils/pdfpos.py           lecture positionnelle d'un PDF (tableaux du CA-SFM)
 outils/comparer-eucast.py  confronte les seuils au tableau EUCAST officiel
 outils/comparer-zit.py     confronte les zones d'incertitude technique aux deux sources
 outils/verifier-tables.py  concordance des deux copies des tables (lancé par la CI)
+outils/verifier-naturelles.py  les résistances naturelles suivent le document EUCAST (idem)
 outils/essai-referentiel.js  changer de référentiel change bien le rendu (idem)
 outils/essai-debit.js      la limitation de débit se comporte comme annoncé
 outils/essai-banque.js     la banque d'entraînement concorde avec le moteur (idem)

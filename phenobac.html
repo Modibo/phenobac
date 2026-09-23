@@ -1969,7 +1969,7 @@ const ORG = {
       {t:"Alternatives",abx:["LVX","MIN","CAZ","FDC"]},
       {t:"Naturellement inactifs (rappel)",abx:["IPM","MEM","GEN","AMK"]}
     ],
-    intrinsic:{IPM:"Carbapénémase L1 naturelle.",MEM:"Carbapénémase L1 naturelle.",GEN:"Aminosides naturellement inactifs.",AMK:"Aminosides naturellement inactifs.", AMX:"Résistance naturelle attendue — aminopénicillines. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", AMC:"Résistance naturelle attendue — aminopénicilline + inhibiteur. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", TZP:"Résistance naturelle attendue — pipéracilline-tazobactam. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", CTX:"Résistance naturelle attendue — céfotaxime / ceftriaxone. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", ETP:"Résistance naturelle attendue — ertapénème. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", FOS:"Résistance naturelle attendue — fosfomycine. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", DOX:"Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 2.8."},
+    intrinsic:{IPM:"Carbapénémase L1 naturelle.",MEM:"Carbapénémase L1 naturelle.",GEN:"Aminosides naturellement inactifs.",AMK:"Aminosides naturellement inactifs.", AMX:"Résistance naturelle attendue — aminopénicillines. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", AMC:"Résistance naturelle attendue — aminopénicilline + inhibiteur. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", TZP:"Résistance naturelle attendue — pipéracilline-tazobactam. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", CTX:"Résistance naturelle attendue — céfotaxime / ceftriaxone. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", ETP:"Résistance naturelle attendue — ertapénème. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", FOS:"Résistance naturelle attendue — fosfomycine. EUCAST, phénotypes résistants attendus v1.2, règle 2.8.", },
     ctx:[],
   },
 
@@ -2123,7 +2123,7 @@ const ORG = {
       {t:"Macrolides / apparentés",abx:["E","DA"]},
       {t:"Autres familles",abx:["LVX","SXT","VA","LZD","MXF"]}
     ],
-    intrinsic:{CAZ:"Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN:"Résistance naturelle attendue — aminosides. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."},
+    intrinsic:{CAZ:"Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN:"Résistance naturelle attendue — aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."},
     ctx:[{id:"mening",q:"Prélèvement méningé (LCR) ? Les seuils β-lactamines sont plus stricts.",
           opts:["Oui","Non"]}],
   },
@@ -2135,7 +2135,7 @@ const ORG = {
       {t:"Macrolides / apparentés",abx:["E","DA"]},
       {t:"Autres familles",abx:["LVX","VA","LZD"]}
     ],
-    intrinsic:{CAZ:"Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN:"Résistance naturelle attendue — aminosides. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."},
+    intrinsic:{CAZ:"Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN:"Résistance naturelle attendue — aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."},
     ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
           opts:["Positif","Négatif","Non fait"],when:r=>isR(r.E)&&r.DA==="S"}],
   },
@@ -2147,7 +2147,7 @@ const ORG = {
       {t:"Macrolides / apparentés",abx:["E","DA"]},
       {t:"Autres familles",abx:["LVX","VA","LZD"]}
     ],
-    intrinsic:{CAZ:"Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN:"Résistance naturelle attendue — aminosides. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."},
+    intrinsic:{CAZ:"Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN:"Résistance naturelle attendue — aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."},
     ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
           opts:["Positif","Négatif","Non fait"],when:r=>isR(r.E)&&r.DA==="S"}],
   },
@@ -2159,7 +2159,7 @@ const ORG = {
       {t:"Macrolides / apparentés",abx:["E","DA"]},
       {t:"Autres familles",abx:["LVX","VA","LZD"]}
     ],
-    intrinsic:{CAZ:"Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN:"Résistance naturelle attendue — aminosides. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."},
+    intrinsic:{CAZ:"Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN:"Résistance naturelle attendue — aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."},
     ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
           opts:["Positif","Négatif","Non fait"],when:r=>isR(r.E)&&r.DA==="S"}],
   },
