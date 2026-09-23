@@ -340,6 +340,10 @@ function rendreR(A, r, codes, motif) {
     const v = r[k];
     if (v === undefined || v === null || v === "") return;  // non testé : on se tait
     if (v === "R") return;                                  // déjà résistant
+    // Une catégorie n'est jamais que S ou I à ce stade. Une valeur arbitraire
+    // n'a pas de sens clinique et n'a rien à faire dans un compte rendu : on
+    // ne la réinterprète pas et on ne la recopie pas.
+    if (v !== "S" && v !== "I") return;
     A.rendu = A.rendu || [];
     if (A.rendu.some(x => x.abx === k)) return;             // une seule fois
     A.rendu.push({ abx: k, brut: v, rendu: "R", motif: motif });
@@ -1356,7 +1360,11 @@ function runInterpretation(input) {
   const org = ORG[organism];
 
   // Référentiel demandé. Inconnu ou absent : EUCAST, qui est le socle commun.
-  _ref = REFERENTIELS[String(input.ref || "eucast")] ? String(input.ref) : "eucast";
+  // hasOwnProperty, et non un simple accès : « toString » ou « constructor »
+  // passeraient pour des entrées du registre alors qu'ils viennent du
+  // prototype, et le référentiel renvoyé n'aurait plus de sens.
+  const refDemande = String(input.ref || "eucast");
+  _ref = Object.prototype.hasOwnProperty.call(REFERENTIELS, refDemande) ? refDemande : "eucast";
 
   let results = {};
   _zit = [];
@@ -1368,7 +1376,10 @@ function runInterpretation(input) {
       // La ZIT porte sur une valeur mesurée : en mode S/I/R il n'y en a pas,
       // et c'est correct — sans CMI, il n'y a rien à situer.
       if (enZit(mic[k], input.bpOverride || {}, org.bpGroup, k, input.ctx || {})) {
-        _zit.push({ abx: k, mic: String(mic[k]), cat: cat || null,
+        // La CMI est reprise telle qu'elle a été saisie, parce qu'elle informe.
+        // Bornée, pour qu'une saisie aberrante ne gonfle pas chaque alerte ni
+        // le compte rendu.
+        _zit.push({ abx: k, mic: String(mic[k]).slice(0, 24), cat: cat || null,
                     valeur: zitPour(input.bpOverride || {}, org.bpGroup, k, input.ctx || {}) });
       }
     });

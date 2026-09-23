@@ -207,6 +207,33 @@ zitDetectee("Saisie en S/I/R", sir("ecoli", { TZP: "I" }, {}, "eucast"), "TZP", 
   dire((ok3 ? "  ok   " : "  ÉCHEC") + "  EUCAST : la dégradation est présentée comme permise");
 })();
 
+dire("\nCe qui sort du moteur ne doit pas pouvoir devenir du balisage");
+(function () {
+  // parseFloat s'arrête au premier caractère non numérique : « 16<img…> »
+  // vaut 16 et tombe donc dans la zone d'incertitude technique. La valeur
+  // saisie est reprise dans l'alerte — bornée, et échappée à l'affichage.
+  var charge = "<img src=x onerror=alert(1)>";
+  var A = E.runInterpretation(mic("ecoli", { TZP: "16" + charge }, {}, "eucast")).interpretation;
+  var reprise = (A.alerts || []).filter(function (x) { return x.txt.indexOf("<img") !== -1; });
+  var borne = reprise.every(function (x) { return x.txt.length < 400; });
+  borne ? OK++ : KO++;
+  dire((borne ? "  ok   " : "  ÉCHEC") + "  la CMI reprise dans l'alerte reste bornée");
+
+  // Une valeur qui n'est pas une catégorie n'est jamais réinterprétée ni
+  // recopiée : elle n'a pas de sens clinique et n'a rien à faire au rendu.
+  var b2 = E.runInterpretation(sir("ecoli",
+    { CTX: "R", CAZ: charge, AMX: "R" }, { syn: "Positif" }, "casfm")).interpretation;
+  var propre = !(b2.rendu || []).some(function (x) { return String(x.brut).indexOf("<") !== -1; });
+  propre ? OK++ : KO++;
+  dire((propre ? "  ok   " : "  ÉCHEC") + "  une valeur qui n'est pas S, I ou R n'est pas recopiée");
+
+  // Une clé héritée du prototype n'est pas une entrée du registre.
+  var r = E.runInterpretation(mic("saureus", { VA: "2" }, {}, "toString"));
+  var repli = r.referentiel && r.referentiel.cle === "eucast" && r.categories.VA === "S";
+  repli ? OK++ : KO++;
+  dire((repli ? "  ok   " : "  ÉCHEC") + "  « toString » comme référentiel retombe sur l'EUCAST");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " vérifications."
                 : OK + " vérifications, aucune divergence inattendue."));
 if (KO && typeof process === "object" && process.exit) process.exit(1);

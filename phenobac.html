@@ -2674,17 +2674,17 @@ function selectionner(el){
 }
 
 function renderInterpretView(A){
-  let html = `<div class="verdict ${A.sev}">
+  let html = `<div class="verdict ${esc(A.sev)}">
       <div class="v-eyebrow"><span class="led ${A.sev==='crit'?'pulse':''}" style="background:currentColor"></span>Verdict phénotypique · ${SEV_LBL[A.sev]}</div>
-      <div class="v-name">${A.name}</div>
-      <div class="v-mech">${A.mech}</div>
+      <div class="v-name">${esc(A.name)}</div>
+      <div class="v-mech">${esc(A.mech)}</div>
     </div>`;
 
   if(A.alerts && A.alerts.length){
     html+=`<div class="sect"><div class="sect-t">Alertes &amp; cohérence</div>`;
     A.alerts.forEach(a=>{
       const ic = a.lvl==="crit"?"!!":a.lvl==="warn"?"!":"i";
-      html+=`<div class="alert ${a.lvl}"><span class="ic">${ic}</span><span>${a.txt}</span></div>`;
+      html+=`<div class="alert ${esc(a.lvl)}"><span class="ic">${ic}</span><span>${esc(a.txt)}</span></div>`;
     });
     html+=`</div>`;
   }
@@ -2696,9 +2696,9 @@ function renderInterpretView(A){
     A.rendu.forEach(x=>{
       const nom = ABX[x.abx] ? ABX[x.abx].n : x.abx;
       html+=`<div class="lect">
-        <span class="lect-a">${nom}</span>
-        <span class="lect-c"><b class="lc lc-${x.brut}">${lettreCat(x.brut)}</b><span class="lect-fl">→</span><b class="lc lc-R">R</b></span>
-        <span class="lect-m">${x.motif}</span>
+        <span class="lect-a">${esc(nom)}</span>
+        <span class="lect-c"><b class="lc lc-${classeCat(x.brut)}">${esc(lettreCat(x.brut))}</b><span class="lect-fl">→</span><b class="lc lc-R">R</b></span>
+        <span class="lect-m">${esc(x.motif)}</span>
       </div>`;
     });
     html+=`</div>`;
@@ -2706,13 +2706,13 @@ function renderInterpretView(A){
 
   if(A.rules && A.rules.length){
     html+=`<div class="sect"><div class="sect-t">Règles expertes appliquées</div>`;
-    A.rules.forEach(rl=>{ html+=`<div class="rule"><span class="rk">${rl.k}</span><span>${rl.txt}</span></div>`; });
+    A.rules.forEach(rl=>{ html+=`<div class="rule"><span class="rk">${esc(rl.k)}</span><span>${esc(rl.txt)}</span></div>`; });
     html+=`</div>`;
   }
 
   html+=`<div class="sect"><div class="sect-t">Commentaire du compte-rendu</div>
       <div class="cr"><button class="copy" id="copyBtn">Copier</button>
-      <div class="cr-txt" id="crTxt">${A.comment}</div></div></div>`;
+      <div class="cr-txt" id="crTxt">${esc(A.comment)}</div></div></div>`;
 
   if(isPremium()){
     html+=`<button class="export-btn" id="exportBtn">
@@ -2810,7 +2810,15 @@ idEchEl.oninput = ()=>{ state.meta.idEch = idEchEl.value; };
 valideurEl.oninput = ()=>{ state.meta.valideur = valideurEl.value; };
 
 /* --- compte-rendu imprimable + export PDF --- */
-function esc(s){ return String(s==null?"":s).replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m])); }
+// Les guillemets comptent autant que les chevrons : une valeur placée dans un
+// attribut permettrait d'en sortir et d'ajouter un gestionnaire d'événement.
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,
+    m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+// Une catégorie n'est jamais que S, I ou R. Tout le reste est écarté avant
+// d'atteindre un nom de classe CSS.
+function classeCat(c){ return (c==="S"||c==="I"||c==="R") ? c : "none"; }
 
 function buildReport(A){
   const org=currentOrg(), g=bpGroup();
@@ -2835,7 +2843,7 @@ function buildReport(A){
       rows+=`<tr>
         <td>${esc(ABX[k].n)} <span class="rc">${esc(ABX[k].code)}</span></td>
         <td class="mic">${mic?esc(mic)+" mg/L":"—"}</td>
-        <td class="cat cat-${cle||"none"}">${cle?esc(lettreCat(cle)):"—"}</td>
+        <td class="cat cat-${classeCat(cle)}">${cle?esc(lettreCat(cle)):"—"}</td>
         <td class="catf">${catFull}</td>
       </tr>`;
     });
@@ -3573,8 +3581,15 @@ function importCases(e){
       if(!Array.isArray(data)) throw 0;
       let added=0;
       data.forEach(c=>{
+        // Un fichier de banque vient d'un tiers. On ne garde d'un cas que des
+        // catégories valides : une valeur arbitraire n'aurait aucun sens
+        // clinique, et traverserait l'application jusqu'à l'affichage.
         if(c && ORG[c.org] && c.res && c.answer && Array.isArray(c.options) && c.teach){
-          customCases.push({ org:c.org, res:c.res, ctx:c.ctx||{}, answer:c.answer,
+          const res={};
+          Object.keys(c.res).forEach(k=>{
+            if(ABX[k] && ["S","I","R"].indexOf(c.res[k]) !== -1) res[k]=c.res[k];
+          });
+          customCases.push({ org:c.org, res:res, ctx:c.ctx||{}, answer:c.answer,
             options:c.options, teach:c.teach, custom:true, id:"c"+Date.now()+"_"+(added++) });
         }
       });
