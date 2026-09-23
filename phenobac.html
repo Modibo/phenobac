@@ -3240,11 +3240,47 @@ const QUIZ_BANK = [
   {org:"campylobacter", res:{AZM:"S",E:"S",CIP:"R",DOX:"S"}, ctx:{},
    answer:"Campylobacter jejuni",
    options:["Campylobacter jejuni","Salmonella résistante aux fluoroquinolones","Vibrio cholerae","Souche sauvage sans particularité"],
-   teach:"La résistance aux fluoroquinolones est devenue banale chez Campylobacter : elles ne peuvent plus servir en probabiliste. L'azithromycine ou l'érythromycine sont le traitement de référence, lorsqu'un traitement est indiqué — la plupart des campylobactérioses guérissent seules."}
+   teach:"La résistance aux fluoroquinolones est devenue banale chez Campylobacter : elles ne peuvent plus servir en probabiliste. L'azithromycine ou l'érythromycine sont le traitement de référence, lorsqu'un traitement est indiqué — la plupart des campylobactérioses guérissent seules."},
+
+  /* Les cinq dernières espèces de l'application — toutes ont
+     désormais au moins un cas. */
+
+  {org:"shigella", res:{AMX:"R",AMC:"R",FOX:"S",CTX:"R",CAZ:"R",CIP:"R",SXT:"R",AZM:"S"}, ctx:{syn:"Positif"},
+   answer:"BLSE",
+   options:["Pénicillinase de bas niveau","BLSE","Céphalosporinase déréprimée (AmpC)","Souche sauvage"],
+   teach:"Contrairement à la plupart des gastro-entérites à Salmonella, la shigellose SE TRAITE : la contagiosité est extrême — une dizaine de bacilles suffisent. Une BLSE avec fluoroquinolone et cotrimoxazole perdus ne laisse ici que l'azithromycine, et impose un signalement.",
+   q2:{q:"Sous référentiel CA-SFM, comment rendez-vous le céfotaxime si un autre test le trouvait sensible ?",
+       options:["Sensible, comme mesuré","Résistant"], answer:"Résistant",
+       why:"Le CA-SFM est revenu en 2024 à la lecture interprétative des BLSE : pénicillines, C1G à C3G et aztréonam sont rendus résistants quel que soit le résultat in vitro. L'EUCAST, lui, les rend tels que testés."}},
+
+  {org:"slugdunensis", res:{FOX:"S",OXA:"S",PEN:"R",E:"S",DA:"S",GEN:"S",RD:"S",VA:"S"}, ctx:{},
+   answer:"Staphylococcus lugdunensis — pénicillinase",
+   options:["Contaminant cutané sans valeur","Staphylococcus lugdunensis — pénicillinase","SCN méticillino-résistant","SARM"],
+   teach:"S. lugdunensis est un staphylocoque à coagulase négative, mais il se comporte comme S. aureus : endocardites destructrices, abcès profonds. Isolé d'une hémoculture, il ne doit jamais être écarté comme contaminant. Ici la méticilline reste active — c'est l'oxacilline qui traite, pas le glycopeptide."},
+
+  {org:"cperfringens", res:{PEN:"S",AMX:"S",DA:"S",MTZ:"S"}, ctx:{},
+   answer:"Clostridium perfringens — sensible à la pénicilline",
+   options:["Clostridium perfringens — sensible à la pénicilline","Résistance acquise aux β-lactamines","Bacteroides fragilis","Souche multirésistante"],
+   teach:"Phénotype attendu. Dans une gangrène gazeuse, la pénicilline G ne suffit pas seule : on y associe la clindamycine, non pour son spectre mais pour son effet antitoxine — elle bloque la synthèse de la toxine alpha. Le geste chirurgical reste prioritaire sur l'antibiotique."},
+
+  {org:"cdifficile", res:{VA:"S",MTZ:"S"}, ctx:{},
+   answer:"Clostridioides difficile — pas d'antibiogramme de routine",
+   options:["Souche sauvage à traiter selon l'antibiogramme","Clostridioides difficile — pas d'antibiogramme de routine","Résistance acquise au métronidazole","Contaminant de selles"],
+   teach:"Le diagnostic repose sur les toxines, la GDH et la PCR — pas sur la culture avec antibiogramme, que le CA-SFM ne recommande pas en France sur des selles. Le traitement est la vancomycine ORALE ou la fidaxomicine, et le premier geste est d'arrêter l'antibiotique inducteur. Attention à l'hygiène : les spores résistent aux solutions hydro-alcooliques, il faut se laver les mains."},
+
+  {org:"vibrio", res:{DOX:"S",AZM:"S",CIP:"S",SXT:"R"}, ctx:{},
+   answer:"Vibrio cholerae",
+   options:["Vibrio cholerae","Campylobacter jejuni","Salmonella multirésistante","Shigella productrice de BLSE"],
+   teach:"L'antibiotique n'est qu'un adjuvant : c'est la réhydratation qui sauve, et elle ne se discute pas. La doxycycline en dose unique raccourcit la diarrhée et la durée du portage, ce qui compte en situation épidémique. Le cotrimoxazole résistant est banal et sans conséquence sur la prise en charge."}
 ];
 
 const quiz = { queue:[], idx:0, score:0, answered:false, phase:1, mode:"interp" };
-const QUIZ_LEN = 8;
+/* Longueur d'une séance. Les cas complets font exception : chacun enchaîne
+   une identification PUIS un antibiogramme, soit deux questions. En tirer
+   autant que des cas simples doublerait la durée de la séance ; on en tire
+   donc la moitié, pour un nombre de questions comparable. */
+const QUIZ_LEN = 20;
+const QUIZ_LEN_COMBO = QUIZ_LEN / 2;
 
 /* --- banque extensible : cas personnalisés + persistance locale --- */
 function loadCustom(){ try{ const s=localStorage.getItem("phenobac_cases"); return s?JSON.parse(s):[]; }catch(e){ return []; } }
@@ -3262,7 +3298,7 @@ function startQuiz(){
     const b = shuffle(identPool()).slice(0, Math.floor(QUIZ_LEN/2));
     pool = shuffle(a.concat(b));
   }
-  else if(quiz.mode==="combo"){ pool = comboPool(); len = 5; }
+  else if(quiz.mode==="combo"){ pool = comboPool(); len = QUIZ_LEN_COMBO; }
   else { pool = allCases(); }
   quiz.queue = shuffle(pool).slice(0, Math.min(len, pool.length));
   quiz.idx=0; quiz.score=0; quiz.answered=false; quiz.phase=1;
@@ -4307,11 +4343,12 @@ var PRESENTATIONS = {
     titre: "S'exercer sur des cas, jusqu'à ce que le phénotype saute aux yeux.",
     lead: `Quatre modes : <b>interprétation</b> d'un antibiogramme, <b>identification</b> d'une
            souche, <b>mixte</b>, ou <b>cas complet</b> — de la boîte au commentaire.
-           <b>Cinquante cas de référence</b> couvrant trente-deux espèces, chacun corrigé et
-           expliqué. La banque est <b>extensible</b> : créez les vôtres, importez ceux d'un
-           collègue, exportez-les pour une séance de formation.`,
-    reperes: ["50 cas de référence", "4 modes d'exercice", "Correction expliquée",
-              "Banque extensible", "Hors-ligne"],
+           <b>Cinquante-cinq cas de référence</b> couvrant les trente-sept espèces, chacun
+           corrigé et expliqué. Une séance en tire <b>vingt</b>. La banque est
+           <b>extensible</b> : créez les vôtres, importez ceux d'un collègue, exportez-les pour
+           une séance de formation.`,
+    reperes: ["55 cas, 37 espèces", "Séances de 20 cas", "4 modes d'exercice",
+              "Correction expliquée", "Banque extensible"],
     cta: "Commencer l'entraînement",
     cible: "quizView",
     guideTitre: "En trois gestes",
@@ -4319,7 +4356,8 @@ var PRESENTATIONS = {
       `<b>Choisissez le mode.</b>
        <span class="ge-ref">Interprétation</span>, <span class="ge-ref">Identification</span>,
        <span class="ge-ref">Mixte</span> ou <span class="ge-ref">Cas complet</span>. Le dernier
-       enchaîne identification puis antibiogramme sur la même souche.`,
+       enchaîne identification puis antibiogramme sur la même souche : la séance en tire dix,
+       soit vingt questions comme les autres modes.`,
       `<b>Répondez.</b>
        Un cas vous est présenté comme il le serait à la paillasse. Prenez le temps de nommer le
        mécanisme avant de regarder les propositions.`,
