@@ -456,6 +456,35 @@
   .bp-conv{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
     background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
     border-radius:100px;padding:1px 6px;margin-left:7px;white-space:nowrap;cursor:help}
+  /* Versement à la surveillance */
+  .surv-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:11px;margin:14px 0}
+  .surv-ch{display:flex;flex-direction:column;gap:4px}
+  .surv-ch span{font-family:'IBM Plex Sans';font-size:11px;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--ink-faint)}
+  .surv-ch input,.surv-ch select{font-family:'IBM Plex Sans';font-size:13px;padding:8px 9px;
+    border:1px solid var(--line-strong);border-radius:4px;background:#fff;color:var(--ink);width:100%}
+  .surv-ch input:focus,.surv-ch select:focus{outline:1.5px solid var(--teal);border-color:var(--teal)}
+  .surv-avis{font-family:'IBM Plex Sans';font-size:12.5px;line-height:1.55;margin:10px 0;
+    padding:10px 12px;border-radius:4px;background:var(--surface-2);color:var(--ink-soft)}
+  .surv-avis.ok{background:var(--s-bg);color:var(--s);border:1px solid var(--s-line)}
+  .surv-avis.ko{background:var(--r-bg);color:var(--r);border:1px solid var(--r-line)}
+  .surv-avis.hors{background:var(--i-bg);color:var(--i);border:1px solid var(--i-line)}
+  .surv-actions{display:flex;justify-content:flex-end;margin-top:4px}
+  /* Teal et non doré : le versement n'est pas une fonction payante. */
+  .surv-envoyer{font-family:'IBM Plex Sans';font-size:14px;font-weight:500;padding:11px 18px;
+    border-radius:var(--radius);background:var(--teal);color:#fff;border:1px solid var(--teal-deep);
+    cursor:pointer;white-space:nowrap}
+  .surv-envoyer:hover{background:var(--teal-deep)}
+  .surv-envoyer:disabled{opacity:.6;cursor:default}
+  .surv-envoyer:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .surv-note{font-family:'IBM Plex Sans';font-size:11.5px;line-height:1.55;
+    color:var(--ink-faint);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+  .surv-btn{margin-top:10px;width:100%;font-family:'IBM Plex Sans';font-size:13px;font-weight:500;
+    padding:10px 14px;border-radius:var(--radius);cursor:pointer;
+    background:#fff;color:var(--teal-profond);border:1px solid var(--filet-fort,var(--line-strong))}
+  .surv-btn:hover{background:var(--teal-wash);border-color:var(--teal)}
+  .surv-btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
   /* Lecture interprétative : brut → rendu, avec le motif. */
   .lect{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline;
     padding:8px 0;border-bottom:1px solid var(--line)}
@@ -1090,6 +1119,58 @@
     <span><b>Conception : Dr. Modibo Mouctar COULIBALY</b> — PharmD, CLMS, PhD · Maître de Recherche, Hôpital Sominé DOLO de Mopti</span>
   </div>
 </footer>
+
+<!-- Versement à la surveillance. Ce qui part est écrit noir sur blanc dans la
+     modale : personne ne doit découvrir après coup ce qui a été transmis. -->
+<div class="modal-ov" id="survModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Verser à la surveillance">
+    <div class="modal-top">
+      <div class="modal-eyebrow">Surveillance de la résistance</div>
+      <div class="modal-title">Verser cet isolat</div>
+      <button class="modal-close" id="survClose" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-b">
+      <div class="modal-lead" id="survLead"></div>
+
+      <div class="surv-grille">
+        <label class="surv-ch"><span>Code du laboratoire</span>
+          <input id="survLabo" type="text" placeholder="MLI-MOP" autocomplete="off"></label>
+        <label class="surv-ch"><span>Pays (ISO 3 lettres)</span>
+          <input id="survPays" type="text" maxlength="3" placeholder="MLI" autocomplete="off"></label>
+        <label class="surv-ch"><span>N° patient anonyme</span>
+          <input id="survPatient" type="text" placeholder="P-0142" autocomplete="off"></label>
+        <label class="surv-ch"><span>Date du prélèvement</span>
+          <input id="survDate" type="date"></label>
+        <label class="surv-ch"><span>Sexe</span>
+          <select id="survGenre">
+            <option value="UNK">Non renseigné</option>
+            <option value="M">Masculin</option>
+            <option value="F">Féminin</option>
+            <option value="O">Autre</option>
+          </select></label>
+        <label class="surv-ch"><span>Âge (années)</span>
+          <input id="survAge" type="number" min="0" max="120" placeholder="—"></label>
+        <label class="surv-ch"><span>Origine du patient</span>
+          <select id="survType">
+            <option value="UNK">Non renseignée</option>
+            <option value="INPAT">Hospitalisé</option>
+            <option value="OUTPAT">Consultation externe</option>
+          </select></label>
+      </div>
+
+      <div class="surv-avis" id="survAvis"></div>
+      <div class="surv-actions">
+        <button class="surv-envoyer" id="survEnvoyer">Verser à la surveillance</button>
+      </div>
+      <div class="surv-note">
+        Ne quittent jamais votre navigateur : le numéro d'échantillon du compte rendu
+        et le nom du valideur. Le numéro patient ci-dessus est un compteur
+        <b>anonyme</b> que vous choisissez — il permet seulement d'éviter de compter
+        deux fois la même personne, comme le demande le manuel de l'OMS.
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-ov" id="upgradeModal">
   <div class="modal" role="dialog" aria-modal="true" aria-label="Passer à Premium">
@@ -2715,6 +2796,10 @@ function renderInterpretView(A){
       <div class="cr"><button class="copy" id="copyBtn">Copier</button>
       <div class="cr-txt" id="crTxt">${esc(A.comment)}</div></div></div>`;
 
+  // Le versement est un geste délibéré, après lecture : il vient donc après
+  // le commentaire, jamais avant.
+  html+=`<button class="surv-btn" id="survBtn">↥ Verser cet isolat à la surveillance</button>`;
+
   if(isPremium()){
     html+=`<button class="export-btn" id="exportBtn">
         <span class="ex-ic">⎙</span> Exporter le compte-rendu (PDF)</button>`;
@@ -2737,6 +2822,7 @@ function renderInterpretView(A){
       .catch(()=>{ rendre("Sélectionnez le texte"); selectionner($("#crTxt")); });
   };
   $("#exportBtn").onclick=()=> isPremium() ? exportPDF() : openUpgrade("L'export PDF du compte-rendu est une fonction Premium.");
+  const sb = $("#survBtn"); if(sb) sb.onclick = ()=> ouvrirSurveillance(A);
 }
 
 /* --- chemin serveur (verrou dur) --- */
@@ -2803,6 +2889,120 @@ function setLive(A){
   if(A.sev==="crit") led.classList.add("pulse");
   lbl.textContent=A.name;
 }
+
+/* ============================================================
+   SURVEILLANCE DE LA RÉSISTANCE — versement volontaire.
+
+   Le moteur d'interprétation n'enregistre rien : cette fonction est le
+   SEUL chemin par lequel un résultat est conservé, et elle demande un
+   clic délibéré. Ce qui part est affiché avant l'envoi.
+
+   Les champs que GLASS exige et que l'application ne connaît pas — code
+   du laboratoire, pays, compteur patient, sexe, âge, origine — sont
+   demandés ici. Le code du laboratoire et le pays sont mémorisés : on ne
+   les ressaisit pas à chaque isolat.
+
+   Le numéro d'échantillon du compte rendu et le nom du valideur ne sont
+   JAMAIS transmis. Le compteur patient est anonyme et choisi par le
+   laboratoire ; il ne sert qu'à la déduplication que le manuel impose.
+   ============================================================ */
+const SURV_FN = API_BASE + "/.netlify/functions/surveillance";
+var survDernier = null;
+
+function survMemoire(cle, valeur){
+  try{
+    if(valeur === undefined) return localStorage.getItem("phenobac.surv." + cle) || "";
+    localStorage.setItem("phenobac.surv." + cle, valeur);
+  }catch(e){ /* stockage indisponible : la saisie reste valable pour la session */ }
+  return valeur || "";
+}
+
+// Les germes et les sites que l'OMS surveille. Hors de cette liste, l'isolat
+// est conservé localement mais n'entre pas dans l'export : autant le dire
+// avant l'envoi plutôt que de le laisser croire transmis.
+const SURV_GERMES = ["ecoli","kpneu","saureus","pneumocoque","salmonella","shigella",
+                     "acineto","paeru","haemophilus","ngonorrhoeae","nmeningitidis"];
+const SURV_SITES = ["Hémoculture","ECBU (urines)","LCR","Prélèvement respiratoire"];
+
+function ouvrirSurveillance(A){
+  survDernier = A || state.lastA;
+  const org = currentOrg();
+  const site = $("#specimen") ? $("#specimen").value : "";
+  const n = Object.values(state.results).filter(Boolean).length;
+
+  $("#survLabo").value = survMemoire("labo");
+  $("#survPays").value = survMemoire("pays") || "MLI";
+  const d = $("#survDate");
+  if(!d.value) d.value = new Date().toISOString().slice(0,10);
+
+  const dansGlass = SURV_GERMES.indexOf(state.org) !== -1 && SURV_SITES.indexOf(site) !== -1;
+  $("#survLead").innerHTML =
+    `<b>${org.label}</b> · ${site || "prélèvement non précisé"} · ${n} antibiotique${n>1?"s":""} renseigné${n>1?"s":""}`
+    + (survDernier && survDernier.name ? ` · phénotype : <b>${esc(survDernier.name)}</b>` : "");
+
+  const avis = $("#survAvis");
+  avis.className = "surv-avis" + (dansGlass ? "" : " hors");
+  avis.textContent = dansGlass
+    ? "Cet isolat entre dans le périmètre GLASS de l'OMS : il figurera dans l'export."
+    : "Cet isolat sera conservé dans votre registre local, mais hors export GLASS — l'OMS ne surveille que certains germes (E. coli, K. pneumoniae, S. aureus, pneumocoque, Salmonella, Shigella, Acinetobacter, P. aeruginosa, H. influenzae, gonocoque, méningocoque) et certains sites (sang, urine, LCR, respiratoire).";
+
+  $("#survModal").classList.add("open");
+}
+
+function fermerSurveillance(){ $("#survModal").classList.remove("open"); }
+
+async function verserSurveillance(){
+  const bouton = $("#survEnvoyer");
+  const avis = $("#survAvis");
+  const labo = $("#survLabo").value.trim();
+  if(!labo){
+    avis.className = "surv-avis ko";
+    avis.textContent = "Le code du laboratoire est nécessaire : sans lui, la donnée n'est rattachable à aucun site.";
+    $("#survLabo").focus(); return;
+  }
+  survMemoire("labo", labo);
+  survMemoire("pays", $("#survPays").value.trim().toUpperCase() || "MLI");
+
+  bouton.disabled = true; bouton.textContent = "Envoi…";
+  try{
+    const r = await fetch(SURV_FN, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ action:"verser", isolat:{
+        organism: state.org,
+        prelevement: $("#specimen") ? $("#specimen").value : "",
+        resultats: state.results,
+        phenotype: survDernier ? survDernier.name : "",
+        ctx: state.ctx,
+        referentiel: REF_ACTIF,
+        laboratoire: labo,
+        pays: $("#survPays").value.trim().toUpperCase() || "MLI",
+        patient: $("#survPatient").value.trim(),
+        genre: $("#survGenre").value,
+        age: $("#survAge").value,
+        typePatient: $("#survType").value,
+        date: $("#survDate").value
+      }})
+    });
+    const data = await r.json();
+    if(!r.ok){
+      avis.className = "surv-avis ko";
+      avis.textContent = data.message || "Le versement a été refusé.";
+    }else{
+      avis.className = "surv-avis " + (data.glass ? "ok" : "hors");
+      avis.textContent = data.message || "Isolat enregistré.";
+      $("#survPatient").value = "";
+      setTimeout(fermerSurveillance, 1800);
+    }
+  }catch(e){
+    avis.className = "surv-avis ko";
+    avis.textContent = "Serveur injoignable. Rien n'a été enregistré — réessayez plus tard.";
+  }
+  bouton.disabled = false; bouton.textContent = "Verser à la surveillance";
+}
+
+$("#survClose").onclick = fermerSurveillance;
+$("#survModal").onclick = e => { if(e.target.id === "survModal") fermerSurveillance(); };
+$("#survEnvoyer").onclick = verserSurveillance;
 
 /* --- identification (facultative) pour le compte-rendu --- */
 state.meta = { idEch:"", valideur:"" };

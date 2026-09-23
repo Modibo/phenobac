@@ -126,7 +126,27 @@ attendu "la catégorie en ZIT n'est pas dégradée" \
 attendu "référentiel inconnu → repli sur EUCAST" \
   "$(post $FN/premium-interpret '{"organism":"saureus","mode":"mic","mic":{"VA":"2"},"ctx":{},"ref":"n-importe-quoi"}' | grep -c '"VA":"S"')" "1"
 
-titre "7. Les accès d'administration sont fermés"
+titre "7. La surveillance : versement ouvert, export protégé"
+# L'interprétation n'enregistre rien ; le versement est le seul chemin par
+# lequel un résultat est conservé, et il demande un geste délibéré.
+attendu "versement d'un isolat accepté" \
+  "$(code -X POST $FN/surveillance -H 'Content-Type: application/json' -d '{"action":"verser","isolat":{"organism":"ecoli","prelevement":"Hémoculture","resultats":{"AMX":"R","CTX":"R"},"laboratoire":"VERIF","date":"2026-01-01","patient":"RECETTE"}}')" "200"
+attendu "versement sans code de laboratoire refusé" \
+  "$(code -X POST $FN/surveillance -H 'Content-Type: application/json' -d '{"action":"verser","isolat":{"organism":"ecoli","resultats":{"AMX":"R"},"date":"2026-01-01"}}')" "400"
+attendu "catégorie invalide refusée" \
+  "$(code -X POST $FN/surveillance -H 'Content-Type: application/json' -d '{"action":"verser","isolat":{"organism":"ecoli","resultats":{"AMX":"OUI"},"laboratoire":"VERIF","date":"2026-01-01"}}')" "400"
+attendu "export sans jeton refusé" \
+  "$(code -X POST $FN/surveillance -H 'Content-Type: application/json' -d '{"action":"exporter"}')" "401"
+if [ -n "$ADMIN" ]; then
+  printf "%s" "$(curl -s --max-time 10 -X POST "$FN/surveillance" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"action":"exporter"}')" \
+    | head -1 | grep -q "RecordId;RecordType" \
+    && vert "export au format GLASS" "colonnes conformes au manuel" \
+    || rouge "export au format GLASS" "colonnes inattendues"
+else
+  jaune "export GLASS non contrôlé" "PHENOBAC_ADMIN_TOKEN absent du .env"
+fi
+
+titre "8. Les accès d'administration sont fermés"
 attendu "issue-license sans jeton" "$(code -X POST $FN/issue-license -H 'Content-Type: application/json' -d '{"sub":"x","days":1}')" "401"
 attendu "stats sans jeton" "$(code -X POST $FN/stats -H 'Content-Type: application/json' -d '{}')" "401"
 attendu "revoke-license sans jeton" "$(code -X POST $FN/revoke-license -H 'Content-Type: application/json' -d '{"action":"list"}')" "401"
@@ -134,7 +154,7 @@ attendu "send-test-sms sans jeton" "$(code -X POST $FN/send-test-sms -H 'Content
 attendu "relances sans secret de cron" "$(code -X POST $FN/send-reminders -H 'Content-Type: application/json' -d '{"next_run":1}')" "401"
 attendu "webhook sans authentification" "$(code -X POST $FN/payment-webhook -H 'Content-Type: application/json' -d '{"status":"SUCCESS","amount":5000,"reference":"VERIF"}')" "401"
 
-titre "8. La chaîne de licence (conservée, mais ne conditionne plus l'accès)"
+titre "9. La chaîne de licence (conservée, mais ne conditionne plus l'accès)"
 REP="$(curl -s -m 15 -X POST "$FN/issue-license" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
        -d '{"sub":"verification-installation","days":1,"amount":0}' 2>/dev/null)"
 LIC="$(printf '%s' "$REP" | sed -n 's/.*"license":"\([^"]*\)".*/\1/p')"
@@ -175,7 +195,7 @@ else
   attendu "tableau de bord accessible avec le jeton" "$C_STATS" "200"
 fi
 
-titre "9. Exposition et cohabitation"
+titre "10. Exposition et cohabitation"
 if command -v ss >/dev/null 2>&1; then
   if ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\[?::\]?):$PORT$"; then
     rouge "écoute limitée à la loopback" "le port $PORT est ouvert sur toutes les interfaces"
@@ -199,7 +219,7 @@ else
   jaune "aucun serveur web de façade détecté" "normal si PhénoBac est seul sur la machine"
 fi
 
-titre "10. Ce qui reste à régler avant d'ouvrir au public"
+titre "11. Ce qui reste à régler avant d'ouvrir au public"
 [ -n "$SITE" ] && vert "SITE_URL renseigné" "$SITE" \
   || jaune "SITE_URL vide" "l'API accepte TOUTES les origines — à renseigner avant d'exposer"
 

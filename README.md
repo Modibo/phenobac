@@ -69,6 +69,7 @@ outils/verifier-naturelles.py  les résistances naturelles suivent le document E
 outils/essai-referentiel.js  changer de référentiel change bien le rendu (idem)
 outils/essai-debit.js      la limitation de débit se comporte comme annoncé
 outils/essai-banque.js     la banque d'entraînement concorde avec le moteur (idem)
+outils/essai-glass.js      l'export de surveillance suit le manuel GLASS (idem)
 REFERENTIEL-CASFM.md       les différences CA-SFM appliquées, page par page
 deploy/Caddyfile.phenobac  bloc à ajouter à un Caddyfile existant
 Dockerfile / docker-compose.yml
@@ -246,6 +247,47 @@ done; echo
 ```
 
 Les premières réponses sont des `200`, les dernières des `429`.
+
+## Surveillance de la résistance (GLASS)
+
+Le moteur d'interprétation **n'enregistre rien**. Le seul chemin par lequel un
+résultat est conservé est un **versement volontaire** : un bouton sous le
+commentaire, qui ouvre une fiche montrant ce qui partira avant de l'envoyer.
+
+Ce qui est transmis : espèce, antibiogramme, prélèvement, phénotype, code du
+laboratoire, date, et un **compteur patient anonyme** que le laboratoire
+choisit — il ne sert qu'à la déduplication que l'OMS impose. Le numéro
+d'échantillon du compte rendu et le nom du valideur ne quittent jamais le
+navigateur.
+
+L'export suit le **manuel GLASS-AMR de l'OMS**, jeu de variables individuelles
+(annexes 3 à 5). Trois conséquences à connaître :
+
+- GLASS ne surveille que **onze germes prioritaires** sur les trente-sept que
+  PhénoBac interprète, et **quatre sites** sur sept. Les autres isolats sont
+  conservés dans le registre local mais écartés de l'export : un fichier
+  portant un code hors liste serait rejeté.
+- La liste d'antibiotiques est également fermée. Vancomycine, clindamycine,
+  linézolide et doxycycline n'en font pas partie.
+- Deux variables — **ESBL** et **ResultCarbapenemases** — demandent
+  précisément ce que le moteur détermine. Là où la plupart des laboratoires
+  déclarent « inconnu », PhénoBac répond. C'est le seul endroit où
+  l'application apporte à la surveillance autre chose qu'une transcription.
+
+La déduplication suit la règle du manuel : **premier isolat** par patient, par
+espèce, par site et par année. Sans elle, un patient prélevé chaque semaine
+pèserait dix fois dans les taux et les fausserait vers le haut.
+
+Export, réservé au jeton d'administration :
+
+```bash
+curl -s -X POST https://votre-domaine/.netlify/functions/surveillance \
+  -H "Authorization: Bearer $PHENOBAC_ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"action":"exporter"}' -o phenobac-glass.csv
+```
+
+`{"action":"compter"}` donne les effectifs sans produire le fichier.
 
 ## Avertissement d'usage
 

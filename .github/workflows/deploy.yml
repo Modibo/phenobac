@@ -46,6 +46,11 @@ jobs:
       - name: La banque d'entraînement dit la même chose que le moteur
         run: node outils/essai-banque.js
 
+      # GLASS refuse un fichier portant un code hors liste : un export invalide
+      # ne serait pas « approximatif », il serait rejeté.
+      - name: L'export de surveillance est conforme au manuel GLASS
+        run: node outils/essai-glass.js
+
   deploy:
     name: Déploiement VPS
     needs: test

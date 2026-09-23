@@ -100,7 +100,8 @@ const FUNCTIONS = [
   "revoke-license",
   "stats",
   "send-reminders",
-  "send-test-sms"
+  "send-test-sms",
+  "surveillance"
 ];
 /* ------------------------------------------------------------
    Limitation de débit.
@@ -116,7 +117,7 @@ const FUNCTIONS = [
 const QUOTA_PUBLIC = Number(process.env.RATE_LIMIT_PUBLIC || 240);   // par minute et par IP
 const QUOTA_SENSIBLE = Number(process.env.RATE_LIMIT_SENSIBLE || 60);
 
-const OUVERT = ["premium-interpret", "verify-license", "claim-license"];
+const OUVERT = ["premium-interpret", "verify-license", "claim-license", "surveillance"];
 const limPublic = creerLimiteur({ limite: QUOTA_PUBLIC });
 const limSensible = creerLimiteur({ limite: QUOTA_SENSIBLE });
 
