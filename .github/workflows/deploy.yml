@@ -36,6 +36,11 @@ jobs:
       - name: La limitation de débit laisse passer l'usage normal
         run: node outils/essai-debit.js
 
+      # Un cas d'entraînement dont la réponse contredit le moteur enseignerait
+      # le contraire de ce que l'application rend.
+      - name: La banque d'entraînement dit la même chose que le moteur
+        run: node outils/essai-banque.js
+
   deploy:
     name: Déploiement VPS
     needs: test

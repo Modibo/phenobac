@@ -67,6 +67,7 @@ outils/comparer-zit.py     confronte les zones d'incertitude technique aux deux 
 outils/verifier-tables.py  concordance des deux copies des tables (lancé par la CI)
 outils/essai-referentiel.js  changer de référentiel change bien le rendu (idem)
 outils/essai-debit.js      la limitation de débit se comporte comme annoncé
+outils/essai-banque.js     la banque d'entraînement concorde avec le moteur (idem)
 REFERENTIEL-CASFM.md       les différences CA-SFM appliquées, page par page
 deploy/Caddyfile.phenobac  bloc à ajouter à un Caddyfile existant
 Dockerfile / docker-compose.yml

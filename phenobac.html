@@ -3016,7 +3016,231 @@ const QUIZ_BANK = [
   {org:"proteus", res:{AMX:"S",AMC:"S",CTX:"S",CAZ:"S",IPM:"I",MEM:"S",ETP:"S"}, ctx:{},
    answer:"Souche sauvage (imipénème naturellement diminué)",
    options:["Carbapénémase","Souche sauvage (imipénème naturellement diminué)","BLSE","AmpC"],
-   teach:"Chez Proteus, l'imipénème « I » isolé est naturel : ce n'est PAS une carbapénémase. Se fier au méropénème."}
+   teach:"Chez Proteus, l'imipénème « I » isolé est naturel : ce n'est PAS une carbapénémase. Se fier au méropénème."},
+
+  /* ==========================================================
+     Élargissement de la banque — couverture des espèces peu
+     représentées, des alertes de cohérence, et des différences
+     entre référentiels introduites avec le CA-SFM.
+     Chaque réponse a été confrontée au moteur : outils/essai-banque.js
+     échoue si la banque enseigne autre chose que ce que
+     l'application rend.
+     ========================================================== */
+
+  /* ---------- Entérobactéries ---------- */
+
+  {org:"koxytoca", res:{AMX:"R",AMC:"R",TZP:"R",FOX:"S",CTX:"S",CAZ:"S",FEP:"S",IPM:"S",CIP:"S",GEN:"S"}, ctx:{syn:"Négatif"},
+   answer:"Souche sauvage",
+   options:["Souche sauvage","Pénicillinase de bas niveau","BLSE","Céphalosporinase (AmpC)"],
+   teach:"Chez Klebsiella, la résistance aux aminopénicillines est NATURELLE (pénicillinase chromosomique K1) : elle ne signe aucun mécanisme acquis. Les C3G intactes confirment le phénotype sauvage."},
+
+  {org:"kaerogenes", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",IPM:"S",CIP:"S"}, ctx:{syn:"Négatif"},
+   answer:"Céphalosporinase déréprimée (AmpC hyperproduite)",
+   options:["BLSE","Céphalosporinase déréprimée (AmpC hyperproduite)","Carbapénémase","Souche sauvage"],
+   teach:"Céfoxitine R, pas de synergie au clavulanate, céfépime conservé : la céphalosporinase chromosomique est déréprimée. Le céfépime, stable vis-à-vis de l'AmpC, reste souvent la seule β-lactamine utilisable."},
+
+  {org:"serratia", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",IPM:"S",GEN:"S"}, ctx:{syn:"Négatif"},
+   answer:"Céphalosporinase déréprimée (AmpC hyperproduite)",
+   options:["Céphalosporinase déréprimée (AmpC hyperproduite)","BLSE","Pénicillinase de bas niveau","Carbapénémase"],
+   teach:"Même lecture que chez Enterobacter : Serratia porte une AmpC inductible, et sa dérépression touche les C1G à C3G ainsi que la céfoxitine."},
+
+  {org:"cfreundii", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"S",CAZ:"S",FEP:"S",IPM:"S",CIP:"S"}, ctx:{},
+   answer:"AmpC à bas niveau (phénotype de base)",
+   options:["AmpC à bas niveau (phénotype de base)","Céphalosporinase déréprimée (AmpC hyperproduite)","BLSE","Souche sauvage sans AmpC"],
+   teach:"C3G actives in vitro, mais l'AmpC inductible est là : sous traitement par C3G, des mutants déréprimés peuvent être sélectionnés et l'échec survenir en cours de traitement. C'est la raison pour laquelle on évite les C3G seules sur ce groupe."},
+
+  {org:"pvulgaris", res:{AMX:"R",AMC:"S",FOX:"S",CTX:"S",CAZ:"S",IPM:"I",MEM:"S",CIP:"S"}, ctx:{},
+   answer:"Pénicillinase de bas niveau",
+   options:["Pénicillinase de bas niveau","Carbapénémase","BLSE","Céphalosporinase déréprimée (AmpC)"],
+   teach:"L'imipénème « I » isolé n'est pas une carbapénémase : la sensibilité à l'imipénème est naturellement diminuée chez les Morganellaceae. C'est le méropénème qui fait foi. La résistance à l'amoxicilline, restaurée par le clavulanate, relève ici de la céphalosporinase K1."},
+
+  {org:"salmonella", res:{AMX:"S",AMC:"S",CTX:"S",CIP:"S",PEF:"R",SXT:"S"}, ctx:{},
+   answer:"Résistance de bas niveau aux fluoroquinolones",
+   options:["Souche sauvage","Résistance de bas niveau aux fluoroquinolones","Résistance de haut niveau aux fluoroquinolones","BLSE"],
+   teach:"La ciprofloxacine paraît sensible, mais le dépistage à la péfloxacine est résistant : il existe un premier niveau de résistance (qnr ou mutation de gyrA). Dans une fièvre typhoïde, la fluoroquinolone exposerait à l'échec malgré une CMI basse.",
+   q2:{q:"Comment rendez-vous la ciprofloxacine ?",
+       options:["Sensible, comme mesurée","Résistante","Sensible à forte posologie"], answer:"Résistante",
+       why:"Le dépistage péfloxacine prime : les fluoroquinolones sont rendues résistantes malgré l'apparence in vitro."}},
+
+  {org:"ecoli", res:{AMX:"R",AMC:"R",FOX:"S",CTX:"R",CAZ:"S",ETP:"R",IPM:"S",MEM:"S",COL:"S"}, ctx:{carba:"Oui — OXA-48"},
+   answer:"Suspicion de carbapénémase",
+   options:["BLSE","Suspicion de carbapénémase","Céphalosporinase déréprimée (AmpC)","Souche sauvage"],
+   teach:"Ertapénème R avec imipénème et méropénème apparemment sensibles : profil très évocateur d'une OXA-48, qui hydrolyse peu les carbapénèmes à large spectre. La confirmation est indispensable, et la souche doit être signalée.",
+   q2:{q:"La carbapénémase est confirmée OXA-48. Sous référentiel CA-SFM, comment rendez-vous l'imipénème, mesuré sensible ?",
+       options:["Sensible, comme mesuré","Résistant","Sensible à forte posologie"], answer:"Résistant",
+       why:"Depuis 2026, le CA-SFM rend les carbapénèmes résistants dès qu'une carbapénémase est confirmée, quelles que soient les CMI et quel que soit le type d'enzyme. L'EUCAST, lui, les rend tels que mesurés avec un commentaire."}},
+
+  {org:"ecoli", res:{AMX:"R",AMC:"I",FOX:"S",CTX:"R",CAZ:"R",FEP:"I",ETP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",TEM:"S"}, ctx:{syn:"Positif"},
+   answer:"BLSE",
+   options:["BLSE","Céphalosporinase déréprimée (AmpC)","Carbapénémase","Pénicillinase de bas niveau"],
+   teach:"Synergie positive et céfoxitine conservée : BLSE. La question du clinicien sera l'alternative aux carbapénèmes — c'est là que la témocilline et la céfoxitine reprennent de l'intérêt.",
+   q2:{q:"Dans une infection urinaire sans signe de gravité, la témocilline est mesurée à 8 mg/L. Sous CA-SFM, quelle catégorie ?",
+       options:["Sensible","Sensible à forte posologie","Résistante"], answer:"Sensible",
+       why:"Le CA-SFM donne deux seuils à la témocilline et autorise la posologie standard dans l'urine sans signe de gravité (S ≤ 8 mg/L). L'EUCAST n'affiche qu'un seuil, qui ne permet que « sensible à forte posologie »."}},
+
+  /* ---------- Bacilles à Gram négatif non fermentants ---------- */
+
+  {org:"paeru", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"R",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
+   answer:"Résistance aux carbapénèmes",
+   options:["Souche sauvage","Résistance aux carbapénèmes","Carbapénémase confirmée","BLSE"],
+   teach:"Imipénème R alors que le méropénème et les autres β-lactamines restent actifs : profil d'imperméabilité par perte de la porine OprD, bien plus fréquent qu'une carbapénémase. Une carbapénémase toucherait l'ensemble des β-lactamines."},
+
+  {org:"paeru", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
+   answer:"Pseudomonas aeruginosa sauvage",
+   options:["Pseudomonas aeruginosa sauvage","Résistance aux carbapénèmes","Céphalosporinase déréprimée","Toto-résistant (XDR)"],
+   teach:"Aucun mécanisme acquis. Attention toutefois au rendu : proposer un carbapénème quand une β-lactamine de spectre plus étroit reste active est un mésusage documenté.",
+   q2:{q:"Sous référentiel CA-SFM, que faire du méropénème sur ce compte rendu ?",
+       options:["Le rendre sensible","Le masquer tant qu'une β-lactamine plus étroite reste active","Le rendre résistant"],
+       answer:"Le masquer tant qu'une β-lactamine plus étroite reste active",
+       why:"Le CA-SFM préconise une règle de masquage pour Pseudomonas : rendre le méropénème quand la pipéracilline-tazobactam ou la ceftazidime sont actives conduit à des prescriptions inappropriées de carbapénème."}},
+
+  {org:"paeru", res:{AMX:"S",TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
+   answer:"Une incohérence avec les résistances naturelles",
+   options:["Un phénotype sauvage sans particularité","Une incohérence avec les résistances naturelles","Une BLSE","Une carbapénémase"],
+   teach:"L'amoxicilline est rendue sensible sur un Pseudomonas : impossible. Le genre est naturellement résistant aux aminopénicillines. L'erreur vient de la saisie, de la lecture de la boîte ou de l'identification — pas de la souche. PhénoBac le signale avant le rendu."},
+
+  {org:"acineto", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",SXT:"S",COL:"S"}, ctx:{},
+   answer:"Acinetobacter baumannii sauvage",
+   options:["Acinetobacter baumannii sauvage","Suspicion de carbapénémase (OXA / métallo-)","Toto-résistant (XDR)","BLSE"],
+   teach:"Un Acinetobacter entièrement sensible existe, mais reste minoritaire à l'hôpital. Rappel : le genre est naturellement résistant à l'ertapénème, aux aminopénicillines, au céfotaxime et à la fosfomycine — ne jamais les rendre sensibles."},
+
+  {org:"steno", res:{SXT:"S",LVX:"S",MIN:"S",CAZ:"R",IPM:"R",MEM:"R",GEN:"R",AMK:"R"}, ctx:{},
+   answer:"Stenotrophomonas maltophilia — multirésistance naturelle",
+   options:["Stenotrophomonas maltophilia — multirésistance naturelle","Carbapénémase acquise","Toto-résistant (XDR)","Céphalosporinase déréprimée"],
+   teach:"Ce n'est pas une multirésistance acquise : S. maltophilia porte deux β-lactamases chromosomiques, dont une métallo-carbapénémase (L1), et résiste naturellement aux aminosides. Les carbapénèmes ne doivent jamais être rendus sensibles, même s'ils le paraissent. Le cotrimoxazole est la référence."},
+
+  {org:"burk", res:{SXT:"S",CAZ:"S",MEM:"S",MIN:"S",GEN:"R",AMK:"R",COL:"R"}, ctx:{},
+   answer:"Burkholderia cepacia — multirésistance naturelle",
+   options:["Burkholderia cepacia — multirésistance naturelle","Toto-résistant (XDR)","Carbapénémase acquise","Souche sauvage sans particularité"],
+   teach:"Aminosides et polymyxines sont naturellement inactifs : les rendre sensibles serait une faute. Le cotrimoxazole, la ceftazidime et le méropénème restent les options habituelles.",
+   q2:{q:"Sous CA-SFM 2026, quel statut ont les concentrations critiques de ce genre ?",
+       options:["Inchangées depuis 2025","Supprimées : seule la microdilution s'interprète, face aux valeurs PK/PD","Alignées sur l'EUCAST"],
+       answer:"Supprimées : seule la microdilution s'interprète, face aux valeurs PK/PD",
+       why:"Le CA-SFM a supprimé en 2026 le chapitre Burkholderia cepacia et ses valeurs critiques cliniques, faute de corrélation entre les données in vitro et l'efficacité clinique. Une fiche pratique le remplace."}},
+
+  /* ---------- Staphylocoques ---------- */
+
+  {org:"saureus", res:{FOX:"R",PEN:"R",E:"R",DA:"R",GEN:"R",SXT:"S",RD:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{},
+   answer:"SARM",
+   options:["SASM producteur de pénicillinase","SARM","MLSb inductible","VISA"],
+   teach:"Céfoxitine résistante : la méticillino-résistance est acquise (mecA/mecC) et TOUTES les β-lactamines sont rendues résistantes, y compris celles qui paraîtraient actives. Glycopeptides et linézolide restent les recours."},
+
+  {org:"sepidermidis", res:{FOX:"R",OXA:"R",PEN:"R",E:"R",DA:"R",GEN:"R",SXT:"S",RD:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{},
+   answer:"SCN méticillino-résistant",
+   options:["SCN méticillino-sensible","SCN méticillino-résistant","SARM","Contaminant sans valeur"],
+   teach:"La méticillino-résistance est la règle chez S. epidermidis hospitalier. Sur matériel étranger — cathéter, prothèse — la souche n'est pas un contaminant : elle est le problème, et la β-lactamine est perdue."},
+
+  {org:"shaemolyticus", res:{FOX:"R",OXA:"R",PEN:"R",E:"R",DA:"R",GEN:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{dtest:"Non fait"},
+   answer:"SCN méticillino-résistant",
+   options:["SCN méticillino-résistant","MLSb inductible","SASM producteur de pénicillinase","Souche sauvage"],
+   teach:"Méticillino-résistance, et par ailleurs érythromycine et clindamycine toutes deux résistantes : c'est un MLSb constitutif, sans D-test nécessaire. S. haemolyticus est le staphylocoque à coagulase négative le plus souvent multirésistant."},
+
+  {org:"ssaprophyticus", res:{FOX:"S",OXA:"S",PEN:"S",E:"S",DA:"S",GEN:"S",SXT:"S",VA:"S"}, ctx:{},
+   answer:"Staphylococcus saprophyticus — méticillino-sensible",
+   options:["Staphylococcus saprophyticus — méticillino-sensible","SCN méticillino-résistant","SASM producteur de pénicillinase","Contaminant urinaire"],
+   teach:"Chez la femme jeune, S. saprophyticus est un uropathogène vrai, pas un contaminant. Rappel : il est naturellement résistant à la fosfomycine — un piège, puisque c'est un traitement usuel de la cystite.",
+   q2:{q:"Sous CA-SFM, un dépistage négatif au disque d'ampicilline suffit-il à rendre l'amoxicilline sensible ?",
+       options:["Oui, c'est l'objet du dépistage","Non : il faut aussi vérifier que la souche est méticillino-sensible"],
+       answer:"Non : il faut aussi vérifier que la souche est méticillino-sensible",
+       why:"Le CA-SFM signale que des S. saprophyticus peuvent être méticillino-résistants alors même que le dépistage à l'ampicilline est négatif. Les deux vérifications sont nécessaires."}},
+
+  /* ---------- Streptocoques et entérocoques ---------- */
+
+  {org:"spyogenes", res:{PEN:"S",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
+   answer:"Streptococcus pyogenes — sensible à la pénicilline",
+   options:["Streptococcus pyogenes — sensible à la pénicilline","MLSb constitutif","PSDP","Souche de sensibilité diminuée"],
+   teach:"Aucune résistance à la pénicilline n'a jamais été décrite chez S. pyogenes : la pénicilline G reste le traitement de référence. C'est le macrolide, en cas d'allergie, qu'il faut vérifier."},
+
+  {org:"spyogenes", res:{PEN:"S",AMX:"S",CTX:"S",E:"R",DA:"R",VA:"S"}, ctx:{dtest:"Négatif"},
+   answer:"MLSb constitutif",
+   options:["MLSb inductible","MLSb constitutif","Résistance isolée aux macrolides","Souche sauvage"],
+   teach:"Érythromycine et clindamycine résistantes d'emblée, D-test négatif : la résistance est constitutive. Les deux familles sont perdues — ce qui compte chez l'allergique à la pénicilline."},
+
+  {org:"sagalactiae", res:{PEN:"S",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
+   answer:"Streptococcus agalactiae — sensible à la pénicilline",
+   options:["Streptococcus agalactiae — sensible à la pénicilline","MLSb constitutif","PSDP","Résistance acquise à l'amoxicilline"],
+   teach:"Le streptocoque B reste sensible à la pénicilline. L'enjeu du dépistage chez la femme enceinte est le macrolide, à vérifier en cas d'allergie, car la prophylaxie per-partum repose alors sur lui.",
+   q2:{q:"L'EUCAST et le CA-SFM retiennent-ils le même seuil de pénicilline G pour les streptocoques A, C et G ?",
+       options:["Oui, 0,03 mg/L pour les deux","Non : 0,03 mg/L pour l'EUCAST, 0,06 mg/L pour le CA-SFM"],
+       answer:"Non : 0,03 mg/L pour l'EUCAST, 0,06 mg/L pour le CA-SFM",
+       why:"Le CA-SFM retient 0,06 mg/L pour les groupes A, C et G, car la plupart des automates ne mesurent pas en dessous de cette valeur. Le groupe B est à 0,125 mg/L dans les deux référentiels."}},
+
+  {org:"sviridans", res:{PEN:"I",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
+   answer:"Sensibilité diminuée aux β-lactamines (PLP)",
+   options:["Souche sauvage","Sensibilité diminuée aux β-lactamines (PLP)","MLSb constitutif","Carbapénémase"],
+   teach:"Chez les streptocoques du groupe viridans, la sensibilité diminuée à la pénicilline vient de protéines de liaison à la pénicilline modifiées, non d'une β-lactamase : le clavulanate n'y change rien. En endocardite, cela modifie le schéma thérapeutique et impose l'association à un aminoside."},
+
+  {org:"pneumocoque", res:{OXA:"R",PEN:"I",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S",LZD:"S"}, ctx:{mening:"Oui"},
+   answer:"PSDP — sensibilité diminuée aux β-lactamines",
+   options:["Souche sauvage","PSDP — sensibilité diminuée aux β-lactamines","MLSb constitutif","Résistance acquise aux glycopeptides"],
+   teach:"Le disque d'oxacilline ne fait que dépister : c'est la CMI qui catégorise, molécule par molécule. En contexte méningé, les seuils sont plus stricts — la diffusion dans le liquide céphalo-rachidien est mauvaise — et PhénoBac les applique dès que le prélèvement est déclaré LCR."},
+
+  {org:"efaecium", res:{AMP:"R",VA:"S",TEC:"S",HLG:"S",LZD:"S",CIP:"R"}, ctx:{},
+   answer:"Entérocoque de phénotype sauvage",
+   options:["Entérocoque de phénotype sauvage","ERV — résistance aux glycopeptides","Haut niveau de résistance aux aminosides","BLSE"],
+   teach:"Chez E. faecium, la résistance à l'ampicilline est la règle et non l'exception — contrairement à E. faecalis, où elle doit alerter. Les glycopeptides restent actifs ici : la souche n'est pas un ERV."},
+
+  {org:"efaecalis", res:{AMP:"S",VA:"S",TEC:"S",HLG:"S",LZD:"S",DAP:"S"}, ctx:{},
+   answer:"Entérocoque de phénotype sauvage",
+   options:["Entérocoque de phénotype sauvage","ERV — résistance aux glycopeptides","Haut niveau de résistance aux aminosides","Sensibilité diminuée à la daptomycine"],
+   teach:"Phénotype attendu d'E. faecalis : ampicilline active, pas de haut niveau de résistance à la gentamicine, donc synergie β-lactamine + aminoside conservée — ce qui compte en endocardite.",
+   q2:{q:"La daptomycine est mesurée à 4 mg/L. Sous CA-SFM, que signale PhénoBac ?",
+       options:["Rien de particulier","Une zone d'incertitude technique","Une résistance confirmée"],
+       answer:"Une zone d'incertitude technique",
+       why:"Le CA-SFM place une ZIT à 4 mg/L pour la daptomycine chez l'entérocoque : le seuil de 2 mg/L coupe partiellement la population sauvage. La catégorie n'est pas dégradée d'office — c'est au biologiste de décider de la conduite."}},
+
+  /* ---------- Bactéries exigeantes ---------- */
+
+  {org:"haemophilus", res:{AMP:"R",AMX:"R",AMC:"S",CTX:"S",SXT:"S",CAF:"S",CIP:"S",AZM:"S"}, ctx:{blac:"Positif"},
+   answer:"BLPAR (β-lactamase +)",
+   options:["Souche sauvage","BLPAR (β-lactamase +)","BLNAR (PLP3 modifiée)","BLPACR"],
+   teach:"β-lactamase positive, et l'association au clavulanate restaure l'activité : c'est le mécanisme le plus fréquent chez H. influenzae. Amoxicilline-clavulanate et C3G restent actives."},
+
+  {org:"haemophilus", res:{AMP:"R",AMX:"R",AMC:"R",CTX:"S",SXT:"S",CAF:"S",CIP:"S"}, ctx:{blac:"Négatif"},
+   answer:"BLNAR (PLP3 modifiée)",
+   options:["BLPAR (β-lactamase +)","BLNAR (PLP3 modifiée)","Souche sauvage","Carbapénémase"],
+   teach:"Aminopénicillines résistantes SANS β-lactamase : la cible elle-même est modifiée (PLP3). Le clavulanate n'y peut rien, et la sensibilité aux céphalosporines peut être diminuée. Dans une forme invasive, la C3G s'impose après vérification de sa CMI."},
+
+  {org:"nmeningitidis", res:{PEN:"S",AMX:"S",CTX:"S",RD:"S",CIP:"S",CAF:"S"}, ctx:{},
+   answer:"Neisseria meningitidis — sensible à la pénicilline",
+   options:["Neisseria meningitidis — sensible à la pénicilline","Sensibilité diminuée à la pénicilline","Producteur de pénicillinase","Résistance à la rifampicine"],
+   teach:"Phénotype attendu. Vérifier aussi la rifampicine et la ciprofloxacine : ce sont elles qui serviront à la prophylaxie des sujets contacts, et leur résistance, bien que rare, existe.",
+   q2:{q:"Sous CA-SFM, que faut-il faire avant de rendre la pénicilline G sensible ?",
+       options:["Rien de plus","Rechercher une β-lactamase par test chromogénique"],
+       answer:"Rechercher une β-lactamase par test chromogénique",
+       why:"Le CA-SFM le recommande — l'EUCAST non. Les méningocoques producteurs de pénicillinase sont rares, mais réémergent : des cas récents sont décrits en France, au Japon et aux États-Unis."}},
+
+  {org:"ngonorrhoeae", res:{PEN:"R",CTX:"S",AZM:"S",CIP:"R"}, ctx:{blac:"Positif"},
+   answer:"PPNG (β-lactamase +)",
+   options:["Souche sauvage","PPNG (β-lactamase +)","Résistance à la ceftriaxone","Sensibilité diminuée aux macrolides"],
+   teach:"Pénicillinase plasmidique : pénicilline et amoxicilline sont perdues. La ceftriaxone reste le traitement de référence. La résistance associée aux fluoroquinolones est fréquente — elles ne peuvent pas servir en probabiliste."},
+
+  {org:"moraxella", res:{AMX:"R",AMC:"S",CTX:"S",SXT:"S",AZM:"S",CIP:"S"}, ctx:{blac:"Positif"},
+   answer:"β-lactamase (BRO) +",
+   options:["Souche sauvage","β-lactamase (BRO) +","BLNAR","Résistance acquise aux macrolides"],
+   teach:"Plus de neuf Moraxella catarrhalis sur dix produisent une β-lactamase BRO. L'amoxicilline seule est donc inutilisable, mais l'association au clavulanate, les céphalosporines et les macrolides restent actifs."},
+
+  /* ---------- Bacilles à Gram positif, anaérobies, bactéries courbes ---------- */
+
+  {org:"listeria", res:{AMP:"S",AMX:"S",CTX:"S",GEN:"S",SXT:"S"}, ctx:{},
+   answer:"Une incohérence avec les résistances naturelles",
+   options:["Un phénotype sauvage sans particularité","Une incohérence avec les résistances naturelles","Une résistance acquise aux céphalosporines","Une sensibilité diminuée à l'amoxicilline"],
+   teach:"Le céfotaxime est rendu sensible sur une Listeria : c'est impossible, et c'est le piège classique de la méningite. Les céphalosporines sont naturellement inactives sur ce genre — une méningite listérienne traitée par C3G seule est un échec annoncé. La référence est l'amoxicilline, associée à la gentamicine."},
+
+  {org:"coryne", res:{PEN:"R",AMX:"R",E:"R",GEN:"S",VA:"S",LZD:"S"}, ctx:{},
+   answer:"Corynebacterium multirésistant probable (groupe JK)",
+   options:["Contaminant cutané","Corynebacterium multirésistant probable (groupe JK)","Souche sauvage","Diphtérie"],
+   teach:"Un Corynebacterium résistant aux β-lactamines et aux macrolides évoque le groupe JK (C. jeikeium), pathogène opportuniste sur matériel et chez le neutropénique — pas un simple contaminant. La vancomycine est constamment active et reste la référence."},
+
+  {org:"bfragilis", res:{PEN:"R",AMC:"S",TZP:"S",IPM:"R",MEM:"R",DA:"R",MTZ:"S"}, ctx:{},
+   answer:"Bacteroides fragilis",
+   options:["Bacteroides fragilis","Clostridium perfringens","Souche sauvage sans particularité","Carbapénémase d'entérobactérie"],
+   teach:"Sensibilité diminuée aux carbapénèmes chez un B. fragilis : une carbapénémase (gène cfiA) est possible et doit être confirmée. La clindamycine résistante est fréquente dans ce groupe : elle ne peut pas servir en probabiliste. Le métronidazole reste la référence."},
+
+  {org:"campylobacter", res:{AZM:"S",E:"S",CIP:"R",DOX:"S"}, ctx:{},
+   answer:"Campylobacter jejuni",
+   options:["Campylobacter jejuni","Salmonella résistante aux fluoroquinolones","Vibrio cholerae","Souche sauvage sans particularité"],
+   teach:"La résistance aux fluoroquinolones est devenue banale chez Campylobacter : elles ne peuvent plus servir en probabiliste. L'azithromycine ou l'érythromycine sont le traitement de référence, lorsqu'un traitement est indiqué — la plupart des campylobactérioses guérissent seules."}
 ];
 
 const quiz = { queue:[], idx:0, score:0, answered:false, phase:1, mode:"interp" };
@@ -4082,12 +4306,12 @@ var PRESENTATIONS = {
     eyebrow: "Entraînement guidé",
     titre: "S'exercer sur des cas, jusqu'à ce que le phénotype saute aux yeux.",
     lead: `Quatre modes : <b>interprétation</b> d'un antibiogramme, <b>identification</b> d'une
-           souche, <b>mixte</b>, ou <b>cas complet</b> — de la boîte au commentaire. Chaque
-           réponse est corrigée et expliquée, et le score suit votre progression. La banque de
-           cas est <b>extensible</b> : créez les vôtres, importez ceux d'un collègue, exportez
-           les vôtres pour une séance de formation.`,
-    reperes: ["4 modes d'exercice", "Correction expliquée", "Banque de cas extensible",
-              "Score et progression", "Hors-ligne"],
+           souche, <b>mixte</b>, ou <b>cas complet</b> — de la boîte au commentaire.
+           <b>Cinquante cas de référence</b> couvrant trente-deux espèces, chacun corrigé et
+           expliqué. La banque est <b>extensible</b> : créez les vôtres, importez ceux d'un
+           collègue, exportez-les pour une séance de formation.`,
+    reperes: ["50 cas de référence", "4 modes d'exercice", "Correction expliquée",
+              "Banque extensible", "Hors-ligne"],
     cta: "Commencer l'entraînement",
     cible: "quizView",
     guideTitre: "En trois gestes",
@@ -4100,8 +4324,9 @@ var PRESENTATIONS = {
        Un cas vous est présenté comme il le serait à la paillasse. Prenez le temps de nommer le
        mécanisme avant de regarder les propositions.`,
       `<b>Lisez la correction.</b>
-       La bonne réponse est justifiée : mécanisme, règles appliquées, pièges. C'est là que
-       l'exercice sert — plus que dans le score.`
+       La bonne réponse est justifiée : mécanisme, règles appliquées, pièges. Sur une douzaine
+       de cas, une <b>seconde question</b> suit — c'est souvent là que se joue la différence
+       entre EUCAST et CA-SFM. C'est là que l'exercice sert, plus que dans le score.`
     ],
     astuce: `<b>Pour former une équipe :</b> créez vos propres cas à partir de souches réellement
        isolées chez vous — le moteur en déduit la réponse attendue —, puis exportez la banque et
