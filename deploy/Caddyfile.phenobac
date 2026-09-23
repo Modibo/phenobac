@@ -26,8 +26,15 @@ phenobac.votre-domaine.ml {
 	reverse_proxy phenobac:8080
 
 	header {
-		# L'application est servie en HTTPS uniquement.
+		# L'application est servie en HTTPS uniquement. Cet en-tête reste ici :
+		# il concerne le transport, que seul Caddy connaît.
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Les autres en-têtes de sécurité — politique de sécurité du contenu,
+		# X-Frame-Options, Permissions-Policy — sont posés par l'application
+		# elle-même (server.js). Ce Caddyfile sert plusieurs sites : mieux vaut
+		# que chacun porte les siens plutôt qu'une édition maladroite les
+		# retire à tous. Les deux lignes ci-dessous sont conservées par
+		# sécurité, au cas où l'application serait servie autrement.
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		# Le service worker doit pouvoir se mettre à jour : pas de cache figé

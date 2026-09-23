@@ -54,12 +54,36 @@ titre "1. Le service répond"
 attendu "sonde de santé" "$(code $BASE/healthz)" "200"
 attendu "application servie" "$(code $BASE/)" "200"
 
-titre "2. Rien de sensible n'est servi"
+titre "2. Les en-têtes de sécurité sont posés"
+# Ils sont émis par l'application, non par le Caddyfile : celui-ci sert
+# plusieurs sites, et une erreur d'édition les mettrait tous à terre.
+ENTETES="$(curl -sI --max-time 8 "$BASE/" | tr -d '\r')"
+entete(){ printf "%s" "$ENTETES" | grep -qi "^$1:" && vert "$2" "$(printf "%s" "$ENTETES" | grep -i "^$1:" | cut -c1-58)" || rouge "$2" "en-tête absent"; }
+entete "content-security-policy" "politique de sécurité du contenu"
+entete "x-frame-options"         "mise en cadre refusée"
+entete "x-content-type-options"  "reniflage de type refusé"
+entete "referrer-policy"         "politique de référent"
+entete "permissions-policy"      "permissions du navigateur closes"
+# Une politique qui laisserait sortir vers n'importe quel hôte ne servirait
+# à rien : c'est connect-src qui borne l'exfiltration.
+printf "%s" "$ENTETES" | grep -qi "connect-src 'self'" \
+  && vert "aucune sortie vers un autre hôte" "connect-src 'self'" \
+  || rouge "aucune sortie vers un autre hôte" "connect-src absent ou permissif"
+
+titre "3. La limitation de débit est active"
+# On ne sature pas le quota ici : la recette a d'autres contrôles à passer.
+# L'en-tête de décompte suffit à prouver que le limiteur est branché.
+REST="$(curl -si --max-time 8 -X POST "$FN/premium-interpret" -H 'Content-Type: application/json' \
+  -d '{"organism":"ecoli","mode":"sir","results":{"AMX":"R"},"ctx":{}}' | tr -d '\r' | sed -n 's/^[Rr]ate[Ll]imit-[Rr]emaining: //p')"
+[ -n "$REST" ] && vert "quota décompté par IP" "$REST requêtes restantes cette minute" \
+               || rouge "quota décompté par IP" "en-tête RateLimit-Remaining absent"
+
+titre "4. Rien de sensible n'est servi"
 for f in admin.html dashboard.html .env server.js package.json; do
   attendu "$f absent du web" "$(code $BASE/$f)" "404"
 done
 
-titre "3. Tout est gratuit et ouvert"
+titre "5. Tout est gratuit et ouvert"
 # PhénoBac est gratuit : aucune fonction n'est verrouillée. Ces contrôles
 # vérifiaient l'inverse à l'époque du modèle payant.
 attendu "E. coli en S/I/R, sans licence" \
@@ -73,7 +97,7 @@ attendu "S. epidermidis en CMI, sans licence" \
 attendu "ancienne clé de démonstration refusée" \
   "$(post $FN/verify-license '{"license":"PHENO-PRO-2026"}' | grep -c '"valid":false')" "1"
 
-titre "4. Les deux référentiels sont servis, et ils ne rendent pas la même chose"
+titre "6. Les deux référentiels sont servis, et ils ne rendent pas la même chose"
 # Deux référentiels qui produiraient le même résultat seraient un mensonge
 # d'interface. On prend le cas le plus net : vancomycine à 2 mg/L sur
 # S. aureus — sensible pour l'EUCAST, résistante pour le CA-SFM (p. 11).
@@ -102,7 +126,7 @@ attendu "la catégorie en ZIT n'est pas dégradée" \
 attendu "référentiel inconnu → repli sur EUCAST" \
   "$(post $FN/premium-interpret '{"organism":"saureus","mode":"mic","mic":{"VA":"2"},"ctx":{},"ref":"n-importe-quoi"}' | grep -c '"VA":"S"')" "1"
 
-titre "5. Les accès d'administration sont fermés"
+titre "7. Les accès d'administration sont fermés"
 attendu "issue-license sans jeton" "$(code -X POST $FN/issue-license -H 'Content-Type: application/json' -d '{"sub":"x","days":1}')" "401"
 attendu "stats sans jeton" "$(code -X POST $FN/stats -H 'Content-Type: application/json' -d '{}')" "401"
 attendu "revoke-license sans jeton" "$(code -X POST $FN/revoke-license -H 'Content-Type: application/json' -d '{"action":"list"}')" "401"
@@ -110,7 +134,7 @@ attendu "send-test-sms sans jeton" "$(code -X POST $FN/send-test-sms -H 'Content
 attendu "relances sans secret de cron" "$(code -X POST $FN/send-reminders -H 'Content-Type: application/json' -d '{"next_run":1}')" "401"
 attendu "webhook sans authentification" "$(code -X POST $FN/payment-webhook -H 'Content-Type: application/json' -d '{"status":"SUCCESS","amount":5000,"reference":"VERIF"}')" "401"
 
-titre "6. La chaîne de licence (conservée, mais ne conditionne plus l'accès)"
+titre "8. La chaîne de licence (conservée, mais ne conditionne plus l'accès)"
 REP="$(curl -s -m 15 -X POST "$FN/issue-license" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
        -d '{"sub":"verification-installation","days":1,"amount":0}' 2>/dev/null)"
 LIC="$(printf '%s' "$REP" | sed -n 's/.*"license":"\([^"]*\)".*/\1/p')"
@@ -151,7 +175,7 @@ else
   attendu "tableau de bord accessible avec le jeton" "$C_STATS" "200"
 fi
 
-titre "7. Exposition et cohabitation"
+titre "9. Exposition et cohabitation"
 if command -v ss >/dev/null 2>&1; then
   if ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\[?::\]?):$PORT$"; then
     rouge "écoute limitée à la loopback" "le port $PORT est ouvert sur toutes les interfaces"
@@ -175,7 +199,7 @@ else
   jaune "aucun serveur web de façade détecté" "normal si PhénoBac est seul sur la machine"
 fi
 
-titre "8. Ce qui reste à régler avant d'ouvrir au public"
+titre "10. Ce qui reste à régler avant d'ouvrir au public"
 [ -n "$SITE" ] && vert "SITE_URL renseigné" "$SITE" \
   || jaune "SITE_URL vide" "l'API accepte TOUTES les origines — à renseigner avant d'exposer"
 

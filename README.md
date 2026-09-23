@@ -66,6 +66,7 @@ outils/comparer-eucast.py  confronte les seuils au tableau EUCAST officiel
 outils/comparer-zit.py     confronte les zones d'incertitude technique aux deux sources
 outils/verifier-tables.py  concordance des deux copies des tables (lancé par la CI)
 outils/essai-referentiel.js  changer de référentiel change bien le rendu (idem)
+outils/essai-debit.js      la limitation de débit se comporte comme annoncé
 REFERENTIEL-CASFM.md       les différences CA-SFM appliquées, page par page
 deploy/Caddyfile.phenobac  bloc à ajouter à un Caddyfile existant
 Dockerfile / docker-compose.yml
@@ -204,6 +205,45 @@ vérifier l'identification, la saisie, ou les deux.
 
 Le panel effectif est **calculé**, jamais recopié dans les 37 germes : déclarer
 une résistance naturelle suffit à la faire apparaître à la saisie.
+
+## Sécurité
+
+Ce que l'installation pose d'elle-même, sans réglage :
+
+- **En-têtes** émis par `server.js` — politique de sécurité du contenu,
+  `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`.
+  Ils sont dans l'application et non dans le Caddyfile, qui sert plusieurs
+  sites : une erreur d'édition les retirerait à tous.
+- **Limitation de débit** par IP : 240 requêtes/minute sur les endpoints
+  ouverts, 60 sur les endpoints sensibles et le webhook. Réglable par
+  `RATE_LIMIT_PUBLIC` et `RATE_LIMIT_SENSIBLE`. Le dépassement renvoie 429
+  avec `Retry-After`.
+- **Aucune donnée patient ne quitte le navigateur.** La requête
+  d'interprétation ne porte que l'espèce, les résultats, le contexte et le
+  référentiel. Le numéro d'échantillon et le nom du valideur restent côté
+  client et ne servent qu'au compte-rendu, fabriqué localement.
+- `admin.html` et `dashboard.html` ne sont jamais copiés dans `public/`.
+
+Une limite à connaître : les scripts de l'application sont **en ligne dans la
+page**, si bien que la politique de sécurité du contenu doit conserver
+`script-src 'unsafe-inline'`. Elle n'empêche donc pas une injection de
+s'exécuter — ce sont `connect-src 'self'`, `img-src` et `form-action 'none'`
+qui la privent de tout canal de sortie. Pour bloquer l'exécution elle-même,
+il faudrait extraire les scripts dans un fichier séparé et passer à
+`script-src 'self'` : un changement de structure, pas un réglage.
+
+Pour éprouver la limitation en conditions réelles, après déploiement :
+
+```bash
+for i in $(seq 1 260); do
+  curl -s -o /dev/null -w "%{http_code} " -X POST \
+    https://votre-domaine/.netlify/functions/premium-interpret \
+    -H 'Content-Type: application/json' \
+    -d '{"organism":"ecoli","mode":"sir","results":{"AMX":"R"},"ctx":{}}'
+done; echo
+```
+
+Les premières réponses sont des `200`, les dernières des `429`.
 
 ## Avertissement d'usage
 

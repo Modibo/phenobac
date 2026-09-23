@@ -31,6 +31,11 @@ jobs:
       - name: Le choix du référentiel change bien le rendu
         run: node outils/essai-referentiel.js
 
+      # Un limiteur trop serré casserait l'interprétation sans qu'on le voie :
+      # l'utilisateur croirait à une panne réseau.
+      - name: La limitation de débit laisse passer l'usage normal
+        run: node outils/essai-debit.js
+
   deploy:
     name: Déploiement VPS
     needs: test
