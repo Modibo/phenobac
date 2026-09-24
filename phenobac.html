@@ -3437,13 +3437,18 @@ const QUIZ_BANK = [
    teach:"Un Corynebacterium résistant aux β-lactamines et aux macrolides évoque le groupe JK (C. jeikeium), pathogène opportuniste sur matériel et chez le neutropénique — pas un simple contaminant. La vancomycine est constamment active et reste la référence."},
 
   {org:"bfragilis", res:{PEN:"R",AMC:"S",TZP:"S",IPM:"R",MEM:"R",DA:"R",MTZ:"S"}, ctx:{},
-   answer:"Bacteroides fragilis",
-   options:["Bacteroides fragilis","Clostridium perfringens","Souche sauvage sans particularité","Carbapénémase d'entérobactérie"],
+   q:"Que suggère cette sensibilité diminuée aux carbapénèmes ?",
+   answer:"Une carbapénémase (cfiA), à confirmer",
+   options:["Une carbapénémase (cfiA), à confirmer","Une résistance naturelle du genre",
+            "Une erreur de lecture : B. fragilis est toujours sensible aux carbapénèmes",
+            "Une contamination par une entérobactérie"],
    teach:"Sensibilité diminuée aux carbapénèmes chez un B. fragilis : une carbapénémase (gène cfiA) est possible et doit être confirmée. La clindamycine résistante est fréquente dans ce groupe : elle ne peut pas servir en probabiliste. Le métronidazole reste la référence."},
 
   {org:"campylobacter", res:{AZM:"S",E:"S",CIP:"R",DOX:"S"}, ctx:{},
-   answer:"Campylobacter jejuni",
-   options:["Campylobacter jejuni","Salmonella résistante aux fluoroquinolones","Vibrio cholerae","Souche sauvage sans particularité"],
+   q:"Quel traitement de référence retenez-vous ?",
+   answer:"Azithromycine ou érythromycine",
+   options:["Azithromycine ou érythromycine","Ciprofloxacine à forte posologie",
+            "Doxycycline en première intention","Amoxicilline-clavulanate"],
    teach:"La résistance aux fluoroquinolones est devenue banale chez Campylobacter : elles ne peuvent plus servir en probabiliste. L'azithromycine ou l'érythromycine sont le traitement de référence, lorsqu'un traitement est indiqué — la plupart des campylobactérioses guérissent seules."},
 
   /* Les cinq dernières espèces de l'application — toutes ont
@@ -3473,8 +3478,9 @@ const QUIZ_BANK = [
    teach:"Le diagnostic repose sur les toxines, la GDH et la PCR — pas sur la culture avec antibiogramme, que le CA-SFM ne recommande pas en France sur des selles. Le traitement est la vancomycine ORALE ou la fidaxomicine, et le premier geste est d'arrêter l'antibiotique inducteur. Attention à l'hygiène : les spores résistent aux solutions hydro-alcooliques, il faut se laver les mains."},
 
   {org:"vibrio", res:{DOX:"S",AZM:"S",CIP:"S",SXT:"R"}, ctx:{},
-   answer:"Vibrio cholerae",
-   options:["Vibrio cholerae","Campylobacter jejuni","Salmonella multirésistante","Shigella productrice de BLSE"],
+   q:"Quelle molécule reste la référence, malgré ce cotrimoxazole résistant ?",
+   answer:"Doxycycline",
+   options:["Doxycycline","Cotrimoxazole à forte posologie","Ciprofloxacine","Amoxicilline"],
    teach:"L'antibiotique n'est qu'un adjuvant : c'est la réhydratation qui sauve, et elle ne se discute pas. La doxycycline en dose unique raccourcit la diarrhée et la durée du portage, ce qui compte en situation épidémique. Le cotrimoxazole résistant est banal et sans conséquence sur la prise en charge."}
 ];
 
@@ -3645,7 +3651,8 @@ function renderQuiz(){
   }
 
   const isQ2 = quiz.phase===2 && c.q2;
-  const question = isQ2 ? c.q2.q : "Quel phénotype de résistance reconnaissez-vous ?";
+  const question = isQ2 ? c.q2.q
+    : (c.q || "Quel phénotype de résistance reconnaissez-vous ?");
   const opts = isQ2 ? c.q2.options : shuffleStable(c.options, c);
   const marks="ABCD";
 

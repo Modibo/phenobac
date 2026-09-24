@@ -25,7 +25,7 @@
    À lancer depuis la racine du dépôt.
    ============================================================ */
 
-var E, QUIZ_BANK, OK = 0, KO = 0;
+var E, QUIZ_BANK, LIBELLES, OK = 0, KO = 0;
 
 function dire(s) { (typeof console === "object" ? console.log : print)(s); }
 
@@ -60,6 +60,13 @@ function lire(chemin) {
     else if (page[k] === "]") { prof--; if (prof === 0) { fin = k; break; } }
   }
   QUIZ_BANK = (new Function("return " + page.slice(j, fin + 1)))();
+
+  // Libellés d'espèce : la carte du quiz les affiche AU-DESSUS de la question.
+  var o = page.indexOf("const ORG = {");
+  var bloc = page.slice(o, page.indexOf("\nfunction panelComplet", o));
+  var re = /\n  (\w+):\{\s*label:"([^"]+)"/g, m;
+  LIBELLES = {};
+  while ((m = re.exec(bloc))) LIBELLES[m[1]] = m[2];
 })();
 
 /* ---------- comparaison indulgente aux accords ---------- */
@@ -94,6 +101,18 @@ QUIZ_BANK.forEach(function (c, i) {
     KO++; dire("  ÉCHEC  cas " + n + " : une proposition est en double");
   } else if (c.q2 && c.q2.options.indexOf(c.q2.answer) === -1) {
     KO++; dire("  ÉCHEC  cas " + n + " : la réponse de la question de suivi est absente de ses propositions");
+  } else {
+    OK++;
+  }
+
+  // La carte affiche le nom de l'espèce juste au-dessus de la question. Si la
+  // réponse EST ce nom, l'exercice se résout en lisant l'énoncé : le stagiaire
+  // coche juste sans avoir rien interprété. Le cas doit alors porter sa propre
+  // question, par le champ « q ».
+  var affiche = (LIBELLES[c.org] || "").trim();
+  if (affiche && affiche === String(c.answer).trim()) {
+    KO++; dire("  ÉCHEC  cas " + n + " (" + c.org + ") : la réponse « " + c.answer +
+               " » est le nom affiché dans l'énoncé — ajoutez un champ « q »");
   } else {
     OK++;
   }
