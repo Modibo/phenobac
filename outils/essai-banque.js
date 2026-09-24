@@ -25,7 +25,7 @@
    À lancer depuis la racine du dépôt.
    ============================================================ */
 
-var E, QUIZ_BANK, LIBELLES, OK = 0, KO = 0;
+var E, QUIZ_BANK, LIBELLES, CTX_LIBELLE, OK = 0, KO = 0;
 
 function dire(s) { (typeof console === "object" ? console.log : print)(s); }
 
@@ -60,6 +60,12 @@ function lire(chemin) {
     else if (page[k] === "]") { prof--; if (prof === 0) { fin = k; break; } }
   }
   QUIZ_BANK = (new Function("return " + page.slice(j, fin + 1)))();
+
+  // Libellés des tests complémentaires : la carte les affiche en pastilles.
+  // Sans eux, une clé de contexte s'afficherait sous son nom de code.
+  var L = page.indexOf("const CTX_LIBELLE = {");
+  CTX_LIBELLE = (new Function("return " + page.slice(page.indexOf("{", L),
+                              page.indexOf("};", L) + 1)))();
 
   // Libellés d'espèce : la carte du quiz les affiche AU-DESSUS de la question.
   var o = page.indexOf("const ORG = {");
@@ -137,6 +143,63 @@ QUIZ_BANK.forEach(function (c, i) {
   dire("  ÉCHEC  cas " + n + " (" + c.org + ") : réponse et moteur divergent");
   dire("         banque : " + c.answer);
   dire("         moteur : " + A.name);
+});
+
+/* ------------------------------------------------------------
+   Le cas est-il RÉSOLUBLE ?
+
+   Un cas dont la réponse énonce le résultat d'un test complémentaire —
+   « BLPAR (β-lactamase +) », « BLNAR », « carbapénémase confirmée » — n'est
+   résoluble que si ce résultat figure sur la carte. Quatre cas demandaient
+   de séparer une souche productrice de β-lactamase d'une souche à PLP
+   modifiée sans montrer la nitrocéfine : on ne pouvait y répondre qu'au
+   hasard, et rien ne le signalait.
+
+   Le contrôle porte sur l'ÉNONCÉ de la réponse, pas sur le mécanisme : une
+   « suspicion de carbapénémase » se lit sur l'antibiogramme et n'exige
+   aucune confirmation — c'est justement ce que le mot « suspicion » dit.
+   ------------------------------------------------------------ */
+dire("\nLes tests complémentaires sont-ils montrés ?");
+var EXIGE = [
+  { motif: /β-lactamase\s*[+\-−]|\bBLPAR\b|\bBLNAR\b|\bPPNG\b|\bBRO\b/i,
+    cle: "blac", quoi: "le test à la β-lactamase (nitrocéfine)" },
+  { motif: /carbapénémase\s+confirmée/i,
+    cle: "carba", quoi: "la confirmation de carbapénémase" },
+  { motif: /\bBLSE\b/i, cle: "syn", quoi: "la synergie C3G + ac. clavulanique" },
+  { motif: /MLS|inductible|constitutif/i, cle: "dtest", quoi: "le D-test" }
+];
+
+function verifierResoluble(c, n, reponse, ctx) {
+  ctx = ctx || {};
+  var manque = [];
+  EXIGE.forEach(function (e) {
+    if (!e.motif.test(String(reponse))) return;
+    var v = ctx[e.cle];
+    if (v === undefined || v === null || v === "" || v === "Non fait")
+      manque.push(e.quoi);
+  });
+  if (manque.length) {
+    KO++;
+    dire("  ÉCHEC  cas " + n + " (" + c.org + ") : la réponse « " + reponse
+         + " » suppose " + manque.join(" et ") + ", que la carte ne montre pas");
+  } else { OK++; }
+
+  // Et chaque clé de contexte doit avoir un libellé lisible, sinon la
+  // pastille afficherait un nom de code.
+  Object.keys(ctx).forEach(function (k) {
+    if (k === "mening" || k === "urin" || CTX_LIBELLE[k]) { OK++; return; }
+    KO++;
+    dire("  ÉCHEC  cas " + n + " (" + c.org + ") : contexte « " + k
+         + " » sans libellé — la pastille afficherait le nom de code");
+  });
+}
+
+QUIZ_BANK.forEach(function (c, i) {
+  var n = i + 1;
+  if (c.kind === "ident") return;                       // pas d'antibiogramme
+  if (c.kind === "combo") return verifierResoluble(c.interp, n, c.interp.answer, c.interp.ctx);
+  verifierResoluble(c, n, c.answer, c.ctx);
+  if (c.q2) verifierResoluble(c, n, c.q2.answer, c.ctx);
 });
 
 dire("\n" + QUIZ_BANK.length + " cas dans la banque — " + exacts + " sur le titre du phénotype, "

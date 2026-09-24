@@ -4038,7 +4038,8 @@ const QUIZ_BANK = [
        options:["Sensible","Résistant","Intermédiaire"], answer:"Résistant",
        why:"Harmonisation BLSE : pénicillines, C1G à C3G et aztréonam sont rendus R quel que soit l'in vitro."}},
 
-  {org:"kpneu", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",ETP:"R",IPM:"R",MEM:"I",COL:"S"}, ctx:{},
+  {org:"kpneu", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",ETP:"R",IPM:"R",MEM:"I",COL:"S"},
+   ctx:{carba:"Oui — KPC"},
    answer:"Carbapénémase",
    options:["BLSE","Céphalosporinase (AmpC)","Carbapénémase","Souche sauvage"],
    teach:"Sensibilité diminuée aux carbapénèmes : suspicion de carbapénémase, signalement et confirmation."},
@@ -4086,7 +4087,8 @@ const QUIZ_BANK = [
    options:["Phénotype sauvage","Multirésistant (MDR)","Toto-résistant (XDR)","Carbapénémase isolée"],
    teach:"Seule la colistine reste active : profil toto-résistant (XDR), avis spécialisé indispensable."},
 
-  {org:"acineto", res:{TZP:"R",CAZ:"R",FEP:"R",IPM:"R",MEM:"R",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
+  {org:"acineto", res:{TZP:"R",CAZ:"R",FEP:"R",IPM:"R",MEM:"R",CIP:"S",GEN:"S",AMK:"S",COL:"S"},
+   ctx:{carba:"Oui — OXA-23"},
    answer:"Carbapénémase (oxacillinase)",
    options:["Phénotype sauvage","Multirésistant (MDR)","Carbapénémase (oxacillinase)","BLSE"],
    teach:"Résistance aux carbapénèmes chez Acinetobacter : oxacillinase (OXA-23…) le plus souvent."},
@@ -4135,7 +4137,8 @@ const QUIZ_BANK = [
    options:["Céphalosporinase déréprimée (AmpC hyperproduite)","BLSE","Pénicillinase de bas niveau","Carbapénémase"],
    teach:"Même lecture que chez Enterobacter : Serratia porte une AmpC inductible, et sa dérépression touche les C1G à C3G ainsi que la céfoxitine."},
 
-  {org:"cfreundii", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"S",CAZ:"S",FEP:"S",IPM:"S",CIP:"S"}, ctx:{},
+  {org:"cfreundii", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"S",CAZ:"S",FEP:"S",IPM:"S",CIP:"S"},
+   ctx:{syn:"Négatif"},
    answer:"AmpC à bas niveau (phénotype de base)",
    options:["AmpC à bas niveau (phénotype de base)","Céphalosporinase déréprimée (AmpC hyperproduite)","BLSE","Souche sauvage sans AmpC"],
    teach:"C3G actives in vitro, mais l'AmpC inductible est là : sous traitement par C3G, des mutants déréprimés peuvent être sélectionnés et l'échec survenir en cours de traitement. C'est la raison pour laquelle on évite les C3G seules sur ce groupe."},
@@ -4468,11 +4471,51 @@ function answerQuizIdent(selected){
   $("#qNext").onclick=()=>{ quiz.idx++; quiz.phase=1; renderQuiz(); };
 }
 
+/* Libellés courts des tests complémentaires, pour la carte d'entraînement.
+   La question posée dans l'onglet Interprétation est trop longue pour une
+   pastille ; elle sert de repli quand la clé n'est pas listée ici. */
+const CTX_LIBELLE = {
+  syn:    "Synergie C3G + ac. clavulanique",
+  dtest:  "D-test (érythromycine → clindamycine)",
+  blac:   "β-lactamase (nitrocéfine)",
+  carba:  "Confirmation de carbapénémase",
+  hlg:    "Gentamicine haut niveau"
+};
+
+/* Ce que le stagiaire doit avoir sous les yeux pour raisonner.
+
+   L'ancienne version énumérait trois clés à la main — synergie, D-test,
+   contexte méningé — et laissait tomber les autres EN SILENCE. La
+   nitrocéfine y est restée invisible : quatre cas demandaient de distinguer
+   une souche productrice de β-lactamase d'une souche à PLP modifiée sans
+   montrer le test qui les sépare. Ces cas étaient insolubles autrement qu'au
+   hasard.
+
+   On parcourt donc le contexte du cas, et non une liste figée : une clé
+   ajoutée demain s'affichera d'elle-même. */
 function ctxBadges(org,c){
   const out=[];
-  if(c.syn) out.push("Synergie clavulanate : "+c.syn.toLowerCase());
-  if(c.dtest) out.push("D-test : "+c.dtest.toLowerCase());
-  if(c.mening) out.push(c.mening==="Oui"?"Contexte méningé (LCR)":"Hors contexte méningé");
+  // « Non fait » est une information, pas une absence : elle dit au stagiaire
+  // que le test existe et qu'il devra s'en passer. La taire reviendrait à lui
+  // laisser croire qu'on a oublié de le lui montrer.
+  Object.keys(c||{}).forEach(k=>{
+    const v = c[k];
+    if(v===undefined || v===null || v==="") return;
+    if(k==="mening"){ out.push(v==="Oui" ? "Prélèvement : LCR" : "Hors contexte méningé"); return; }
+    if(k==="urin"){ out.push(v==="Oui" ? "Infection urinaire sans signe de gravité"
+                                       : "Hors infection urinaire simple"); return; }
+    let nom = CTX_LIBELLE[k];
+    if(!nom){
+      const q = ((org && org.ctx) || []).find(x=>x.id===k);
+      nom = q ? String(q.q).split(/[(?]/)[0].trim() : k;
+    }
+    // Ne mettre en minuscules qu'un mot simple : « Oui — KPC » et
+    // « Oui — OXA-48 » perdraient leur sigle, qui est justement ce que le
+    // biologiste reconnaît.
+    const brut = String(v);
+    const val = /^[A-ZÀ-Ý][a-zà-ÿ\s]*$/.test(brut) ? brut.toLowerCase() : brut;
+    out.push(nom + " : " + val);
+  });
   return out;
 }
 
