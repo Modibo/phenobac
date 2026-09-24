@@ -176,6 +176,24 @@ cat("« ≤ 30 » ne conclut pas", "ecoli", "AMP", "<=30", null);
   verif(muet, "… et aucune alerte pour un antibiotique non mesuré");
 })();
 
+/* ---------- 7 bis. les lignes « X sauf Y » ---------- */
+dire("\nLignes de l'EUCAST formulées « sauf un autre genre »");
+// « Trimethoprim-sulfamethoxazole, Enterobacterales except Serratia spp. »
+// NOMME Serratia pour l'exclure : la ligne parle donc bien d'E. coli. Un
+// filtre naïf l'écartait, et le cotrimoxazole disparaissait de la table sans
+// que rien ne le signale — l'absence d'un seuil ne lève aucune erreur.
+cat("E. coli, cotrimoxazole", "ecoli", "SXT", "20", "S");
+cat("E. coli, cotrimoxazole", "ecoli", "SXT", "12", "R");
+// Serratia garde sa propre ligne, qui n'a pas de catégorie sensible.
+cat("Serratia, cotrimoxazole — grande zone", "serratia", "SXT", "25", "I");
+cat("Serratia, cotrimoxazole — petite zone", "serratia", "SXT", "10", "R");
+// Même formulation pour l'imipénème, « sauf Morganellaceae ».
+cat("E. coli, imipénème", "ecoli", "IPM", "25", "S");
+cat("E. coli, imipénème", "ecoli", "IPM", "15", "R");
+// … et les Morganellaceae gardent la leur, sans catégorie sensible : leur
+// CMI d'imipénème est naturellement élevée.
+cat("P. mirabilis, imipénème — grande zone", "proteus", "IPM", "28", "I");
+
 /* ---------- 8. l'amoxicilline se lit sur le disque d'ampicilline ---------- */
 dire("\nAmoxicilline : le témoin ampicilline");
 // L'EUCAST écrit « Note » en face de l'amoxicilline et fait lire le disque

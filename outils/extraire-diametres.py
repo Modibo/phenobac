@@ -122,8 +122,20 @@ def extraire(chemin, meningite=False, atu=False):
                 retenues = propres
             else:
                 autres = [m for g, m in ESPECES.items() if g != groupe and g in CE.GROUPES]
-                retenues = [c for c in cands
-                            if not any(re.search(m, c['_nom']) for m in autres)]
+
+                # « Enterobacterales except Serratia spp. » NOMME Serratia pour
+                # l'exclure : la ligne parle donc bien de mon groupe. Sans ce
+                # garde, elle était écartée, et le cotrimoxazole disparaissait
+                # de la table des entérobactéries sans que rien ne le signale.
+                def cite_une_autre(nom):
+                    for m in autres:
+                        for occ in re.finditer(m, nom):
+                            avant = nom[max(0, occ.start() - 12):occ.start()]
+                            if not re.search(r'except\s*$', avant, re.I):
+                                return True
+                    return False
+
+                retenues = [c for c in cands if not cite_une_autre(c['_nom'])]
 
             # Conventions déjà retenues pour les CMI : la voie intraveineuse et
             # l'infection systémique font référence, un antibiogramme étant
