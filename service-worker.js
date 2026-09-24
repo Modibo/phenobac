@@ -12,7 +12,7 @@
 // ni correctif d'interprétation, ni nouvelle espèce. C'est inacceptable pour un
 // produit payant : ne revenez pas à cette stratégie.
 
-const VERSION = "v16";                 // à incrémenter à chaque livraison
+const VERSION = "v17";                 // à incrémenter à chaque livraison
 const CACHE = "phenobac-" + VERSION;
 
 const SHELL = [
@@ -52,7 +52,12 @@ function revalidate(req, key) {
     c.match(cle).then((ancien) =>
       fetch(req).then((resp) => {
         if (resp && resp.status === 200 && (resp.type === "basic" || resp.type === "default")) {
-          const marque = (r) => r.headers.get("etag") || r.headers.get("last-modified") || "";
+          // Un serveur qui n'envoie ni etag ni last-modified rendrait toute
+          // comparaison vide : « inchangé » pour l'éternité, et la barre de
+          // mise à jour ne s'afficherait jamais. La taille du corps est un
+          // repère grossier, mais il vaut mieux que pas de repère du tout.
+          const marque = (r) => r.headers.get("etag") || r.headers.get("last-modified")
+                             || r.headers.get("content-length") || "";
           const change = !!ancien && marque(ancien) !== marque(resp);
           c.put(cle, resp.clone()).catch(() => {});
           if (change) prevenirOnglets();
