@@ -150,6 +150,42 @@ et l'ensemble des β-lactamines chez le **méningocoque** (p. 110) portent la
 mention « Note » en face des colonnes de diamètres. Le refus de PhénoBac y
 vaut donc sous les deux référentiels.
 
+### Contrôle de qualité au disque (`CQ`)
+
+Traduire un diamètre en catégorie ne vaut que si le diamètre est juste. Un lot
+de disques altéré, une gélose trop épaisse, un inoculum trop dense déplacent
+**toutes** les zones ensemble : les catégories restent plausibles, et elles
+sont fausses. La souche de référence est le seul garde-fou, et c'est pourquoi
+cette table accompagne la saisie en millimètres plutôt que de l'attendre.
+
+95 cibles sur sept souches, reprises du **chapitre 1.4** du communiqué :
+*E. coli* ATCC 25922, *P. aeruginosa* ATCC 27853, *S. aureus* ATCC 29213,
+*E. faecalis* ATCC 29212, *S. pneumoniae* ATCC 49619, *H. influenzae*
+ATCC 49766 et *C. jejuni* ATCC 33560. Les souches des points 1.4.10 et
+suivants ne sont pas reprises : elles contrôlent la **détection d'un
+mécanisme** de résistance, ce qui est un autre exercice.
+
+`outils/verifier-cq.py` en contrôle trois choses, dont deux sans le PDF :
+
+1. la table du client est identique à ce que `extraire-cq.py` relit du
+   communiqué ;
+2. chaque **charge de disque** annoncée au contrôle de qualité est celle des
+   tables de seuils, extraites d'une tout autre source — le classeur de
+   l'EUCAST. **69 charges concordent** entre deux documents indépendants ;
+   c'est la meilleure preuve de lecture correcte dont on dispose ici ;
+3. toute molécule catégorisable au disque devrait être contrôlable. Quatre
+   couples ne le sont pas, chacun vérifié dans le document :
+
+| Couple | Pourquoi |
+|---|---|
+| *P. aeruginosa* / ceftazidime, pipéracilline-tazobactam | le communiqué ne donne que la CMI ; pas de colonnes de diamètre |
+| *E. faecalis* / pipéracilline-tazobactam | absent de la table |
+| *S. pneumoniae* / cotrimoxazole | colonnes arrivées dans le désordre à l'extraction (« 22-26 18 » au lieu de « 22 18-26 ») — un trou signalé vaut mieux qu'une cible devinée |
+
+C'est ce troisième contrôle qui a rattrapé la gentamicine et le méropénème,
+tombés de la table parce que le PDF coupe parfois un intervalle au milieu
+(« 22- 23 ») : rien d'autre ne l'aurait signalé.
+
 ### Lecture interprétative — la différence de fond
 
 C'est ici que les deux référentiels divergent le plus visiblement, et c'est ce
