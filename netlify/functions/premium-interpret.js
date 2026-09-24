@@ -331,6 +331,7 @@ let _activeId = null;
 let _zit = [];
 let _sansDisque = [];
 let _depistage = null;
+let _depistageEchoue = [];
 
 /* ------------------------------------------------------------
    Lecture interprétative — rendre R ce qui a été lu S ou SFP.
@@ -463,6 +464,19 @@ function finalize(A, r) {
     if (_depistage.sev && A.sev === "wild") A.sev = _depistage.sev;
   }
   reglesCasfm(A, r);
+
+  if (_depistageEchoue.length) {
+    _depistageEchoue.forEach(d => {
+      A.alerts.push({ lvl: "warn", txt:
+        `${ABXNAME[d.abx] || d.abx} : ${d.mm} mm, en dessous du seuil de dépistage (${d.seuil} mm). ` +
+        `Le CA-SFM n'autorise pas à conclure « résistant » au disque pour ce couple — la résistance aux ` +
+        `β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème ` +
+        `technique. Déterminer la CMI avant de priver le malade de son traitement de référence.` });
+    });
+    A.rules.push({ k: "≈", txt:
+      "CA-SFM : le disque de pénicilline G ne sert ici qu'à reconnaître les souches sensibles. " +
+      "En dessous du seuil, il faut une CMI — le disque ne tranche pas." });
+  }
 
   /* Diamètres mesurés que le moteur n'a pas traduits. Les taire reviendrait
      à présenter comme « non testé » un antibiotique que le laboratoire a bel
@@ -1286,10 +1300,19 @@ const BP_MENINGE = {
    outils/verifier-tables.py échoue si ces tables divergent du client.
    ============================================================ */
 const BP_CASFM = {
-  staph:    { VA: { S: 1, R: 1 } },            // p. 11 — EUCAST 2 mg/L
+  // p. 11 — vancomycine : EUCAST 2 mg/L.
+  staph:    { VA: { S: 1, R: 1 }, SXT: { S: 0.5, R: 2 } },
   strepacg: { PEN: { S: 0.06, R: 0.06 } },     // p. 12 — EUCAST 0,03 mg/L
   acineto:  { SXT: { S: 0.5, R: 2 } },         // p. 6  — SFP conservée jusqu'à 2
-  coryne:   { SXT: { S: 2, R: 2 } },           // p. 18 — CLSI M45
+  // Le document des différences n'annonce que le seuil « R » (« breakpoint
+  // R commun à 2 mg/L », p. 18). Le tableau du communiqué complet, lui,
+  // donne les deux : S ≤ 1 et R > 2. Retenir 2 des deux côtés rendait
+  // « sensible » une souche à 2 mg/L que le CA-SFM classe intermédiaire.
+  coryne:   { SXT: { S: 1, R: 2 } },           // communiqué complet, p. 101
+  // p. 78 — bande intermédiaire jusqu'à 2 mg/L, absente de l'EUCAST, qui
+  // coupe à 0,5. Sans cette ligne, une souche à 2 mg/L était rendue
+  // résistante sous un référentiel qui la dit intermédiaire.
+  scn:      { SXT: { S: 0.5, R: 2 } },
   ngono:    { GEN: { S: 16, R: 16 } }          // p. 14 — ECOFF ; EUCAST écarte
 };
 // p. 6 — infection urinaire sans signe de gravité : le CA-SFM refuse
@@ -1488,13 +1511,106 @@ const ZIT_ZONE = {
   serratia:{ AMC:[19,20], CIP:[22,24], FDC:[21,23], TZP:[19,19] },
 };
 
-/* Le CA-SFM publie ses propres diamètres, que PhénoBac ne reprend pas :
-   seules ses différences de CMI sont documentées dans ce dépôt. Là où il
-   s'écarte de l'EUCAST sur un couple, appliquer quand même le diamètre
-   EUCAST rendrait une catégorie qui n'est celle d'aucun des deux
-   référentiels. Le moteur préfère ne rien rendre et le dire. */
+/* ============================================================
+   DIAMÈTRES — DIFFÉRENCES DU CA-SFM 2026.
+
+   Même principe que pour les CMI : PhénoBac ne recopie pas le CA-SFM, il
+   n'enregistre que ce par quoi il S'ÉCARTE de l'EUCAST. Tout couple absent
+   de ces tables garde son diamètre EUCAST.
+
+   Source : « Recommandations CA-SFM / EUCAST », version 2026, chapitre 5.
+   Les pages citées sont les pages IMPRIMÉES du communiqué.
+   outils/lire-casfm.py permet d'y retourner ligne par ligne.
+
+   Un couple qui figure ici alors que l'EUCAST ne le chiffre pas n'est pas
+   une invention : c'est le CA-SFM qui le couvre (minocycline sur
+   Acinetobacter, moxifloxacine sur les anaérobies, céfoxitine sur E. coli).
+   ============================================================ */
+const DZ_CASFM = {
+  // p. 64 — l'EUCAST ne rend ces trois-là ni « S » ni « I » faute de seuil ;
+  // le CA-SFM les chiffre, sans catégorie sensible à posologie standard.
+  acineto: { SXT: { S: 16, R: 14 }, CAZ: { S: null, R: 18 },
+             FEP: { S: null, R: 18 }, MIN: { S: null, R: 18 },
+             TZP: { S: null, R: 21 } },        // p. 63 — disque 100-10 µg, et non 30-6
+  steno:   { MIN: { S: null, R: 21 } },        // p. 67
+  coryne:  { SXT: { S: 19, R: 16 } },          // p. 101
+  // p. 49 — le CA-SFM donne à l'amoxicilline son PROPRE disque, à 20 µg,
+  // là où l'EUCAST fait lire celui de l'ampicilline (10 µg, 14 mm).
+  entero:     { AMX: { S: 19, R: 19 }, FOX: { S: 18, R: 18 } },   // p. 50 — céfoxitine : E. coli seulement
+  salmonella: { AMX: { S: 19, R: 19 } },
+  morganella: { AMX: { S: 19, R: 19 } },
+  serratia:   { AMX: { S: 19, R: 19 } },
+  // p. 78 — bande intermédiaire là où l'EUCAST n'en a pas (24/24).
+  staph: { SXT: { S: 24, R: 19 } },
+  scn:   { SXT: { S: 24, R: 19 } },
+  // p. 127 — l'EUCAST ne chiffre pas la moxifloxacine chez les anaérobies.
+  bfragilis:    { MXF: { S: 21, R: 21 } },
+  cperfringens: { MXF: { S: 21, R: 21 } }
+};
+
+/* p. 55, 48, 78 et 64 — infection urinaire sans signe de gravité. */
+const DZ_CASFM_URIN = {
+  entero:     { SXT: { S: 14, R: 14 }, TEM: { S: 20, R: 17 } },
+  salmonella: { SXT: { S: 14, R: 14 } },
+  morganella: { SXT: { S: 14, R: 14 }, TEM: { S: 20, R: 17 } },
+  serratia:   { SXT: { S: 14, R: 14 } },
+  staph:      { SXT: { S: 19, R: 19 } },
+  scn:        { SXT: { S: 19, R: 19 } },
+  acineto:    { SXT: { S: 14, R: 14 } }
+};
+
+/* Charges propres au CA-SFM. Celle de la pipéracilline-tazobactam sur
+   Acinetobacter — 100-10 µg au lieu de 30-6 — est l'exemple même de ce
+   qu'un diamètre ne dit pas tout seul. */
+const DISQUE_CASFM = {
+  acineto: { TZP: "100-10", CAZ: "30", FEP: "30", MIN: "30", SXT: "1.25-23.75" },
+  steno:   { MIN: "30" },
+  coryne:  { SXT: "1.25-23.75" },
+  entero:  { AMX: "20", FOX: "30", TEM: "30" },
+  salmonella: { AMX: "20" }, morganella: { AMX: "20", TEM: "30" }, serratia: { AMX: "20" },
+  staph: { SXT: "1.25-23.75" }, scn: { SXT: "1.25-23.75" },
+  bfragilis: { MXF: "5" }, cperfringens: { MXF: "5" }
+};
+
+/* p. 127 — zone d'incertitude propre au CA-SFM, au disque. */
+const ZIT_ZONE_CASFM = {
+  bfragilis:    { MXF: [18, 20] },
+  cperfringens: { MXF: [18, 20] }
+};
+
+/* Couples que le CA-SFM ne chiffre que pour certaines espèces : hors
+   d'elles, il n'y a pas de seuil, et en emprunter un serait une faute. */
+const DZ_CASFM_ESPECE = { "entero:FOX": ["ecoli"] };
+
+/* p. 90 — Streptocoques A, C et G : le disque de pénicilline G ne sert qu'à
+   DÉPISTER les souches sensibles. « Si le diamètre est < 23 mm, utiliser une
+   méthode [de CMI] » : le CA-SFM refuse donc de rendre « résistant » sur le
+   disque, là où l'EUCAST l'autorise. La résistance aux β-lactamines étant
+   exceptionnelle dans ce groupe, un petit diamètre est d'abord un problème
+   technique — et le rendre « R » ferait perdre au malade son traitement de
+   référence sur une mesure douteuse. */
+const DEPISTAGE_CASFM = { strepacg: { PEN: 23 } };
+
+/* Là où le CA-SFM s'écarte de l'EUCAST en CMI, appliquer quand même le
+   diamètre EUCAST rendrait une catégorie qui n'est celle d'aucun des deux
+   référentiels. Deux cas, un seul refus :
+
+     - le diamètre CA-SFM est connu (DZ_CASFM / DZ_CASFM_URIN) : on l'emploie ;
+     - il ne l'est pas alors que la CMI diverge : on ne rend rien, et on dit
+       pourquoi.
+
+   Un couple sur lequel les deux référentiels s'accordent en CMI garde son
+   diamètre EUCAST sans autre forme de procès. */
+function dzCasfm(group, k, ctx) {
+  const c = ctx || {};
+  if (c.urin === "Oui" && DZ_CASFM_URIN[group] && DZ_CASFM_URIN[group][k])
+    return DZ_CASFM_URIN[group][k];
+  return (DZ_CASFM[group] && DZ_CASFM[group][k]) || null;
+}
+
 function dzCasfmDivergent(group, k, ctx) {
   const c = ctx || {};
+  if (dzCasfm(group, k, c)) return false;          // le CA-SFM chiffre ce couple
   if (c.mening === "Oui" && BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return true;
   if (c.urin === "Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]) return true;
   return !!(BP_CASFM[group] && BP_CASFM[group][k]);
@@ -1520,9 +1636,25 @@ function getDZ(dzOverride, group, k, ctx) {
   const o = dzOverride && dzOverride[group + ":" + k];
   if (o && o.S !== undefined && o.R !== undefined) return o;   // saisie de l'utilisateur : prioritaire
   const c = ctx || {};
-  const temoin = DZ_TEMOIN[group] && DZ_TEMOIN[group][k];
+  // Le témoin ampicilline est une règle de l'EUCAST. Le CA-SFM donnant à
+  // l'amoxicilline son propre disque, l'emprunt n'a plus lieu d'être.
+  const temoin = !estCasfm() && DZ_TEMOIN[group] && DZ_TEMOIN[group][k];
   if (temoin) return getDZ(dzOverride, group, temoin, c);
-  if (estCasfm() && dzCasfmDivergent(group, k, c)) return null;
+  if (estCasfm()) {
+    // Restriction d'espèce : le CA-SFM ne chiffre la céfoxitine que pour
+    // E. coli. L'appliquer à Klebsiella donnerait un chiffre juste au
+    // mauvais endroit — le défaut le plus difficile à repérer.
+    // Un dépistage n'est pas un seuil à deux bords : il se traite à part,
+    // dans la boucle de traduction, pour ne pas rendre « R » ce que le
+    // CA-SFM refuse de trancher au disque.
+    if (DEPISTAGE_CASFM[group] && DEPISTAGE_CASFM[group][k]) return null;
+    const limite = DZ_CASFM_ESPECE[group + ":" + k];
+    if (!limite || (_activeId && limite.indexOf(_activeId) !== -1)) {
+      const d = dzCasfm(group, k, c);
+      if (d) return d;
+    }
+    if (dzCasfmDivergent(group, k, c)) return null;
+  }
   if (c.mening === "Oui") {
     // Si le couple a un seuil méningé en CMI mais aucun au disque, c'est
     // que l'EUCAST l'interdit : ne pas retomber sur le seuil ordinaire.
@@ -1536,6 +1668,11 @@ function getDZ(dzOverride, group, k, ctx) {
 // La charge du disque, en tenant compte du témoin (l'amoxicilline se lit
 // sur le disque d'ampicilline).
 function disquePour(group, k) {
+  // En CA-SFM, l'amoxicilline a son propre disque : la charge annoncée doit
+  // changer avec le référentiel, sans quoi on mesurerait sur 20 µg en
+  // lisant un seuil établi pour 10.
+  if (estCasfm() && DISQUE_CASFM[group] && DISQUE_CASFM[group][k])
+    return { charge: DISQUE_CASFM[group][k], temoin: null };
   const temoin = (DZ_TEMOIN[group] && DZ_TEMOIN[group][k]) || k;
   const d = DISQUE[group] && DISQUE[group][temoin];
   return d ? { charge: d, temoin: temoin === k ? null : temoin } : null;
@@ -1648,9 +1785,21 @@ function depistagePneumo(group, dia, results) {
   return A;
 }
 
+/* Dépistages au disque qui ne rendent qu'un seul côté de la catégorie.
+   Le pneumocoque en a un (oxacilline) ; le CA-SFM en ajoute un pour la
+   pénicilline G chez les streptocoques A, C et G. Le principe est le même :
+   une grande zone conclut, une petite ne conclut pas et renvoie à la CMI. */
+function depistageSeuil(group, k) {
+  if (estCasfm() && DEPISTAGE_CASFM[group] && DEPISTAGE_CASFM[group][k])
+    return DEPISTAGE_CASFM[group][k];
+  return null;
+}
+
 function zitZonePour(dzOverride, group, k, ctx) {
   if (dzOverride && dzOverride[group + ":" + k]) return null;  // seuils saisis : la ZIT publiée ne s'y rapporte plus
   if (ctx && ctx.mening === "Oui") return null;                // lignes LCR : pas de ZIT publiée
+  if (estCasfm() && ZIT_ZONE_CASFM[group] && ZIT_ZONE_CASFM[group][k])
+    return ZIT_ZONE_CASFM[group][k];
   const z = ZIT_ZONE[group] && ZIT_ZONE[group][k];
   return z || null;
 }
@@ -1676,10 +1825,14 @@ function runInterpretation(input) {
   const refDemande = String(input.ref || "eucast");
   _ref = Object.prototype.hasOwnProperty.call(REFERENTIELS, refDemande) ? refDemande : "eucast";
 
+  // Fixé avant la traduction des mesures, et non plus seulement avant le
+  // calcul : la restriction d'espèce des diamètres CA-SFM en dépend.
+  _activeId = organism;
   let results = {};
   _zit = [];
   _sansDisque = [];
   _depistage = null;
+  _depistageEchoue = [];
   if (input.mode === "mic") {
     const mic = input.mic || {};
     Object.keys(mic).forEach(k => {
@@ -1700,12 +1853,21 @@ function runInterpretation(input) {
     _sansDisque = [];
     Object.keys(dia).forEach(k => {
       if (String(dia[k] === undefined ? "" : dia[k]).trim() === "") return;
+      const seuilDep = depistageSeuil(org.bpGroup, k);
       const dz = getDZ(input.bpOverride || {}, org.bpGroup, k, input.ctx || {});
-      const cat = catFromDiam(dia[k], dz);
+      let cat = catFromDiam(dia[k], dz);
+      if (seuilDep) {
+        const p = parseDiam(dia[k]);
+        // Au-dessus du seuil, le dépistage conclut « sensible ». En dessous,
+        // il ne conclut pas : c'est un dépistage, pas une catégorisation.
+        cat = (p && p.op === "=" && p.v >= seuilDep) ? "S" : null;
+        if (p && p.op === "=" && p.v < seuilDep) _depistageEchoue.push({ abx: k, mm: p.v, seuil: seuilDep });
+      }
       if (cat) results[k] = cat;
       // Un diamètre saisi que le moteur ne peut pas traduire ne doit PAS
       // disparaître en silence : le biologiste croirait l'antibiotique non
       // testé, alors qu'il l'a mesuré. On le lui dit, avec la raison.
+      else if (seuilDep) { /* expliqué par l'alerte de dépistage */ }
       else if (!(org.bpGroup === "pneumo" && k === "OXA"))   // dépistage, pas un résultat à rendre
         _sansDisque.push({ abx: k, valeur: String(dia[k]).slice(0, 12),
                            raison: raisonSansDisque(org.bpGroup, k, input.ctx || {}) });

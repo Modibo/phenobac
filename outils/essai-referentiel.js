@@ -63,6 +63,23 @@ function reporte(titre, entree, abx, attendu) {
 var mic = function (org, m, ctx, ref) { return { organism: org, mode: "mic", mic: m, ctx: ctx || {}, ref: ref }; };
 var sir = function (org, r, ctx, ref) { return { organism: org, mode: "sir", results: r, ctx: ctx || {}, ref: ref }; };
 
+dire("\nSeuils relevés dans le communiqué complet");
+// Le document des DIFFÉRENCES n'annonce pour les corynébactéries que le seuil
+// « R », « commun à 2 mg/L ». Le tableau du communiqué donne les deux : S ≤ 1
+// et R > 2. Retenir 2 des deux côtés rendait sensible une souche que le
+// CA-SFM classe intermédiaire — l'erreur va dans le mauvais sens.
+categorie("Corynebacterium, cotrimoxazole 2 mg/L, CA-SFM",
+          mic("coryne", { SXT: "2" }, {}, "casfm"), "SXT", "I");
+categorie("Corynebacterium, cotrimoxazole 1 mg/L, CA-SFM",
+          mic("coryne", { SXT: "1" }, {}, "casfm"), "SXT", "S");
+// Staphylocoques : bande intermédiaire jusqu'à 2 mg/L, absente de l'EUCAST.
+categorie("S. aureus, cotrimoxazole 2 mg/L, EUCAST",
+          mic("saureus", { SXT: "2" }, {}, "eucast"), "SXT", "R");
+categorie("S. aureus, cotrimoxazole 2 mg/L, CA-SFM",
+          mic("saureus", { SXT: "2" }, {}, "casfm"), "SXT", "I");
+categorie("SCN, cotrimoxazole 2 mg/L, CA-SFM",
+          mic("sepidermidis", { SXT: "2" }, {}, "casfm"), "SXT", "I");
+
 dire("\nSeuils déplacés par le CA-SFM");
 // p. 11 — vancomycine / S. aureus : 2 mg/L (EUCAST) contre 1 mg/L.
 categorie("S. aureus, vancomycine 2 mg/L, EUCAST", mic("saureus", { VA: "2" }, {}, "eucast"), "VA", "S");

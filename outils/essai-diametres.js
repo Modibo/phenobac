@@ -127,13 +127,67 @@ cat("E. faecalis, vancomycine", "efaecalis", "VA", "8", "R");
 
 /* ---------- 5. le CA-SFM ---------- */
 dire("\nRéférentiel CA-SFM");
-// PhénoBac ne reprend que les CMI du CA-SFM. Là où il s'écarte de l'EUCAST,
-// appliquer quand même le diamètre EUCAST rendrait une catégorie qui n'est
-// celle d'aucun des deux.
+// Streptocoque A : l'EUCAST tranche des deux côtés à 23 mm. Le CA-SFM n'y
+// voit qu'un DÉPISTAGE — « si le diamètre est < 23 mm, utiliser une méthode
+// [de CMI] » — parce que la résistance aux β-lactamines y est exceptionnelle
+// et qu'un petit diamètre est d'abord un problème technique.
 cat("S. pyogenes, pénicilline, EUCAST", "spyogenes", "PEN", "25", "S", {}, "eucast");
-cat("S. pyogenes, pénicilline, CA-SFM", "spyogenes", "PEN", "25", null, {}, "casfm");
+cat("S. pyogenes, pénicilline, EUCAST", "spyogenes", "PEN", "18", "R", {}, "eucast");
+cat("S. pyogenes, pénicilline, CA-SFM", "spyogenes", "PEN", "25", "S", {}, "casfm");
+cat("S. pyogenes, pénicilline, CA-SFM", "spyogenes", "PEN", "18", null, {}, "casfm");
+(function () {
+  var r = E.runInterpretation(dia("spyogenes", { PEN: "18" }, {}, "casfm"));
+  var dit = (r.interpretation.alerts || []).some(function (a) {
+    return /seuil de dépistage/.test(a.txt) && /CMI/.test(a.txt); });
+  verif(dit, "… et le refus de conclure est expliqué, CMI à l'appui");
+  var pasR = r.categories.PEN !== "R";
+  verif(pasR, "… la pénicilline n'est surtout pas rendue résistante");
+})();
+
 // Un couple sur lequel les deux référentiels s'accordent reste catégorisable.
 cat("E. coli, ampicilline, CA-SFM", "ecoli", "AMP", "20", "S", {}, "casfm");
+
+// Amoxicilline : l'EUCAST fait lire le disque d'ampicilline (10 µg, 14 mm),
+// le CA-SFM lui donne le sien (20 µg, 19 mm). Une zone de 16 mm sépare
+// franchement les deux référentiels.
+cat("E. coli, amoxicilline, EUCAST", "ecoli", "AMX", "16", "S", {}, "eucast");
+cat("E. coli, amoxicilline, CA-SFM", "ecoli", "AMX", "16", "R", {}, "casfm");
+
+// Couples que le CA-SFM chiffre là où l'EUCAST se tait.
+cat("A. baumannii, ceftazidime, EUCAST", "acineto", "CAZ", "20", null, {}, "eucast");
+cat("A. baumannii, ceftazidime, CA-SFM", "acineto", "CAZ", "20", "I", {}, "casfm");
+cat("A. baumannii, ceftazidime, CA-SFM", "acineto", "CAZ", "14", "R", {}, "casfm");
+cat("A. baumannii, minocycline, CA-SFM", "acineto", "MIN", "22", "I", {}, "casfm");
+
+// Céfoxitine : le CA-SFM ne la chiffre que pour E. coli. L'appliquer à
+// Klebsiella donnerait un chiffre juste au mauvais endroit.
+cat("E. coli, céfoxitine, CA-SFM", "ecoli", "FOX", "22", "S", {}, "casfm");
+cat("K. pneumoniae, céfoxitine, CA-SFM", "kpneu", "FOX", "22", null, {}, "casfm");
+
+// Infection urinaire sans signe de gravité : le CA-SFM déplace le seuil.
+cat("E. coli, cotrimoxazole, CA-SFM", "ecoli", "SXT", "14", "R", {}, "casfm");
+cat("E. coli, cotrimoxazole, CA-SFM, urine", "ecoli", "SXT", "14", "S", { urin: "Oui" }, "casfm");
+
+// La charge du disque change avec le référentiel : 10 µg pour l'EUCAST via
+// l'ampicilline, 20 µg pour le CA-SFM. Une charge annoncée à tort ferait
+// mesurer sur une boîte et lire sur l'autre.
+(function () {
+  var d = E._disquePour ? null : null;
+  var r1 = E.runInterpretation(dia("ecoli", { AMX: "25" }, {}, "eucast"));
+  var r2 = E.runInterpretation(dia("ecoli", { AMX: "25" }, {}, "casfm"));
+  verif(r1.categories.AMX === "S" && r2.categories.AMX === "S",
+        "Amoxicilline 25 mm : sensible sous les deux référentiels");
+})();
+
+// La zone d'incertitude du CA-SFM chez les anaérobies (moxifloxacine).
+(function () {
+  var r = E.runInterpretation(dia("cperfringens", { MXF: "19" }, {}, "casfm"));
+  verif((r.interpretation.zit || []).length === 1,
+        "C. perfringens, moxifloxacine 19 mm : ZIT propre au CA-SFM");
+  var r2 = E.runInterpretation(dia("cperfringens", { MXF: "19" }, {}, "eucast"));
+  verif(r2.categories.MXF === undefined,
+        "… et l'EUCAST, lui, ne chiffre pas ce couple au disque");
+})();
 
 /* ---------- 6. zone d'incertitude technique ---------- */
 dire("\nZone d'incertitude au disque");

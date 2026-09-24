@@ -149,7 +149,9 @@ def main():
                            # concordance ; le sens est éprouvé par
                            # outils/essai-diametres.js.
                            ('const DZ =', 'diamètres critiques'),
-                           ('const DZ_MENINGE =', 'diamètres, contexte méningé')):
+                           ('const DZ_MENINGE =', 'diamètres, contexte méningé'),
+                           ('const DZ_CASFM =', 'diamètres CA-SFM'),
+                           ('const DZ_CASFM_URIN =', 'diamètres CA-SFM, urine')):
         ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
         if ba is None and bb is None:
             continue
@@ -185,7 +187,8 @@ def main():
                     ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
 
     for nom, etiquette in (('const DZ_TEMOIN =', 'témoins de diamètre'),
-                           ('const DISQUE =', 'charges de disque')):
+                           ('const DISQUE =', 'charges de disque'),
+                           ('const DISQUE_CASFM =', 'charges de disque CA-SFM')):
         ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
         if (ba is None) != (bb is None):
             ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
@@ -203,17 +206,36 @@ def main():
 
     # Les zones d'incertitude au disque sont des INTERVALLES : [19, 20]. Ni la
     # forme {S, R} ni la valeur unique ne les lisent.
-    ba, bb = bloc_bp(cli, 'const ZIT_ZONE ='), bloc_bp(srv, 'const ZIT_ZONE =')
-    if (ba is None) != (bb is None):
-        ecarts.append("ZIT au disque : table présente d'un seul côté")
-    elif ba is not None:
+    for nom, etiquette in (('const ZIT_ZONE =', 'ZIT au disque'),
+                           ('const ZIT_ZONE_CASFM =', 'ZIT au disque, CA-SFM')):
+        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
+        if (ba is None) != (bb is None):
+            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
+        if ba is None:
+            continue
         a, b = intervalles(ba), intervalles(bb)
-        totaux['ZIT au disque'] = sum(len(v) for v in b.values())
+        totaux[etiquette] = sum(len(v) for v in b.values())
         for g in sorted(set(a) | set(b)):
             for code in sorted(set(a.get(g, {})) | set(b.get(g, {}))):
                 va, vb = a.get(g, {}).get(code), b.get(g, {}).get(code)
                 if va != vb:
-                    ecarts.append("ZIT au disque, %s/%s : client %s, serveur %s" % (g, code, va, vb))
+                    ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
+
+    # Les deux tables qui restreignent : l'espèce pour la céfoxitine, le seuil
+    # de dépistage pour la pénicilline. Une divergence y serait invisible à
+    # l'usage courant et décisive quand elle joue.
+    for nom, etiquette in (('const DZ_CASFM_ESPECE =', 'restriction d\'espèce'),
+                           ('const DEPISTAGE_CASFM =', 'dépistages CA-SFM')):
+        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
+        if (ba is None) != (bb is None):
+            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
+        if ba is None:
+            continue
+        na = re.sub(r'\s+', '', re.sub(r'//[^\n]*', '', ba))
+        nb = re.sub(r'\s+', '', re.sub(r'//[^\n]*', '', bb))
+        totaux[etiquette] = na.count(':') - na.count('::')
+        if na != nb:
+            ecarts.append("%s : client %s, serveur %s" % (etiquette, na[:80], nb[:80]))
 
     ra, rb = referentiels(cli), referentiels(srv)
     if ra and rb:

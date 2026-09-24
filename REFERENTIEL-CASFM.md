@@ -67,7 +67,8 @@ Sans Node sur la machine, le second tourne aussi sous JavaScriptCore :
 | *S. aureus* / vancomycine | S ≤ 2 | **S ≤ 1** | 11 | Les cibles PK/PD ne sont pas atteignables à 2 mg/L, et le risque d'échec y est documenté cliniquement. Ne concerne **pas** les staphylocoques à coagulase négative. |
 | Streptocoques A, C, G / pénicilline G | S ≤ 0,03 | **S ≤ 0,06** | 12 | Éviter de catégoriser « R » des souches à 0,06 mg/L, alors que la plupart des automates ne mesurent pas en dessous. |
 | *Acinetobacter* / cotrimoxazole | S ≤ 0,5 · R > 0,5 | **S ≤ 0,5 · R > 2** | 6 | Conserver un rendu « sensible à forte posologie » entre 1 et 2 mg/L, faute d'alternatives thérapeutiques dans ce genre. |
-| *Corynebacterium* (hors *C. diphtheriae*) / cotrimoxazole | aucun | **S ≤ 2** | 18 | Valeur adaptée du CLSI M45, seuil « R » commun à 2 mg/L. |
+| *Corynebacterium* (hors *C. diphtheriae*) / cotrimoxazole | aucun | **S ≤ 1 · R > 2** | 101 | Valeur adaptée du CLSI M45. Le document des *différences* (p. 18) n'annonce que le seuil « R », « commun à 2 mg/L » ; le tableau du communiqué complet donne les deux. PhénoBac avait d'abord retenu 2 des deux côtés, ce qui rendait « sensible » une souche à 2 mg/L que le CA-SFM classe intermédiaire. |
+| Staphylocoques / cotrimoxazole | S ≤ 0,5 · R > 0,5 | **S ≤ 0,5 · R > 2** | 78 | Bande intermédiaire là où l'EUCAST n'en a pas. Sans cette ligne, une souche à 2 mg/L était rendue résistante sous un référentiel qui la dit intermédiaire. |
 | *N. gonorrhoeae* / gentamicine | écartée (« report resistant without prior testing ») | **S ≤ 16** | 14 | La gentamicine est une alternative des recommandations françaises en cas d'allergie ou de résistance à la ceftriaxone. Seuil fondé sur l'ECOFF. |
 
 ### Seuils dépendants du site (`BP_CASFM_URIN`, `BP_MENINGE_CASFM`)
@@ -97,6 +98,57 @@ qui leur donne des valeurs.
 | *Corynebacterium* | cotrimoxazole | 18 | CLSI M45 |
 | *N. gonorrhoeae* | gentamicine | 14 | ECOFF |
 | *E. coli* seulement | céfoxitine | 7 | L'EUCAST la réserve au dépistage des AmpC ; la molécule sert en France d'alternative aux carbapénèmes contre les souches BLSE |
+
+### Diamètres critiques (`DZ_CASFM`, `DZ_CASFM_URIN`, `DISQUE_CASFM`)
+
+Même principe que pour les CMI : seules les **différences** sont enregistrées.
+Tout couple absent de ces tables garde son diamètre EUCAST. Les pages citées
+sont celles du **communiqué complet**, chapitre 5 ; `outils/lire-casfm.py`
+permet d'y retourner ligne par ligne.
+
+| Couple | EUCAST v16.1 | CA-SFM 2026 | Page | Ce qui change en pratique |
+|---|---|---|---|---|
+| Entérobactéries / **amoxicilline** | pas de disque propre : lire celui de l'ampicilline (10 µg, S ≥ 14) | **disque 20 µg, S ≥ 19 · R < 19** | 49 | Le disque n'est pas le même. Une zone de 16 mm est sensible à l'EUCAST, résistante au CA-SFM — et mesurer sur 20 µg en lisant un seuil établi pour 10 serait une faute silencieuse. |
+| *E. coli* / céfoxitine | aucun | **disque 30 µg, S ≥ 18 · R < 18** | 50 | Le CA-SFM ne chiffre ce couple que pour *E. coli* ; PhénoBac refuse de l'appliquer à *Klebsiella*. |
+| *Acinetobacter* / ceftazidime, céfépime, minocycline | aucun | **pas de catégorie S · R < 18** | 64-65 | Trois molécules qui ne pouvaient pas être rendues au disque le deviennent. |
+| *Acinetobacter* / pipéracilline-tazobactam | aucun | **disque 100-10 µg, pas de catégorie S · R < 21** | 63 | La charge n'est pas celle des autres genres (30-6 µg). |
+| *Acinetobacter* / cotrimoxazole | S ≥ 16 · R < 16 | **S ≥ 16 · R < 14** | 64 | Bande intermédiaire, cohérente avec l'écart de CMI. |
+| *S. maltophilia* / minocycline | aucun | **pas de catégorie S · R < 21** | 67 | |
+| *Corynebacterium* / cotrimoxazole | aucun | **S ≥ 19 · R < 16** | 101 | |
+| Staphylocoques / cotrimoxazole | S ≥ 24 · R < 24 | **S ≥ 24 · R < 19** | 78 | |
+| Anaérobies / moxifloxacine | aucun | **disque 5 µg, S ≥ 21 · R < 21, ZIT 18-20 mm** | 127 | Seule ZIT au disque propre au CA-SFM. |
+
+Site du prélèvement (`DZ_CASFM_URIN`), infection urinaire sans signe de gravité :
+
+| Couple | CA-SFM | Page |
+|---|---|---|
+| Entérobactéries / cotrimoxazole | S ≥ 14 · R < 14 (au lieu de 15/15) | 55 |
+| Entérobactéries / témocilline | S ≥ 20 · R < 17 (au lieu de « pas de catégorie S ») | 48 |
+| Staphylocoques / cotrimoxazole | S ≥ 19 · R < 19 | 78 |
+| *Acinetobacter* / cotrimoxazole | S ≥ 14 · R < 14 | 64 |
+
+#### Un dépistage n'est pas une catégorisation (`DEPISTAGE_CASFM`)
+
+Pour les **streptocoques A, C et G**, le CA-SFM écrit (p. 90) que le disque de
+pénicilline G « permet uniquement la détection des souches sensibles
+(diamètre ≥ 23 mm) : si le diamètre est < 23 mm, utiliser une méthode » de
+CMI. L'EUCAST, lui, tranche des deux côtés au même seuil.
+
+PhénoBac suit donc le CA-SFM : au-dessus de 23 mm il rend « sensible », en
+dessous il **ne rend rien** et réclame une CMI. La raison est clinique et non
+formelle — la résistance aux β-lactamines est exceptionnelle dans ce groupe,
+un petit diamètre y est d'abord un problème technique, et rendre « R » ferait
+perdre au malade son traitement de référence sur une mesure douteuse.
+
+#### Ce que le CA-SFM ne permet pas non plus au disque
+
+Vérifié dans le communiqué, et identique à l'EUCAST : la **vancomycine** sur
+staphylocoque (p. 76, microdilution obligatoire), la **daptomycine** sur
+entérocoque (p. 84), le **céfidérocol** et la **lévofloxacine** sur
+*S. maltophilia* (p. 66-67), l'**amoxicilline** chez les anaérobies (p. 126)
+et l'ensemble des β-lactamines chez le **méningocoque** (p. 110) portent la
+mention « Note » en face des colonnes de diamètres. Le refus de PhénoBac y
+vaut donc sous les deux référentiels.
 
 ### Lecture interprétative — la différence de fond
 
