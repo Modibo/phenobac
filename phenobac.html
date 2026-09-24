@@ -1010,9 +1010,9 @@
         <span class="eyebrow"><span class="num">02</span>Antibiogramme</span>
         <div style="margin-left:auto" class="toolbar">
           <div class="mode-seg" id="modeSeg">
+            <button data-m="diam">Diamètre mm</button>
             <button data-m="sir">S / I / R</button>
             <button data-m="mic">CMI mg/L</button>
-            <button data-m="diam">Diamètre mm</button>
           </div>
           <button class="btn" id="reset">Réinitialiser</button>
         </div>
@@ -1091,8 +1091,8 @@
         phénotype de résistance derrière un antibiogramme, signale les incohérences avec les
         résistances naturelles attendues, et rédige le commentaire du compte-rendu. Il applique
         au choix l'<b>EUCAST</b> ou le <b>CA-SFM</b>, qui ne rendent pas toujours la même chose.
-        L'antibiogramme se saisit en <b>S/I/R</b>, en <b>CMI</b> ou directement en
-        <b>millimètres</b> — la méthode des disques, celle des laboratoires sans automate.
+        L'antibiogramme se saisit directement en <b>millimètres</b> — la méthode des disques,
+        celle des laboratoires sans automate —, ou en <b>S/I/R</b>, ou en <b>CMI</b>.
         Toutes les espèces, la saisie en diamètres, l'export et l'entraînement sont accessibles
         à tous.
       </p>
@@ -2789,7 +2789,22 @@ const ORG = {
 /* ============================================================
    État + rendu de l'interface
    ============================================================ */
-let state = { org:"ecoli", mode:"sir", results:{}, mic:{}, diam:{}, ctx:{}, bpOverride:{}, lastA:null };
+/* Mode de saisie par défaut : le DIAMÈTRE. C'est la méthode des
+   laboratoires sans automate, ceux pour lesquels cet outil a été écrit ;
+   leur demander une catégorie S/I/R, c'est leur demander de faire eux-mêmes
+   la conversion que l'application existe pour leur épargner.
+
+   Le choix est mémorisé : un laboratoire qui travaille en S/I/R ou en CMI le
+   règle une fois, et le retrouve. Sans cette mémoire, changer le défaut
+   n'aurait fait que déplacer la gêne sur d'autres. */
+const MODE_DEFAUT = "diam";
+var MODE_INITIAL = MODE_DEFAUT;
+try {
+  const m = localStorage.getItem("phenobac.mode");
+  if (m === "sir" || m === "mic" || m === "diam") MODE_INITIAL = m;
+} catch (e) { /* sans mémoire, on repart du mode par défaut */ }
+
+let state = { org:"ecoli", mode:MODE_INITIAL, results:{}, mic:{}, diam:{}, ctx:{}, bpOverride:{}, lastA:null };
 
 /* ============================================================
    Modèle freemium — prix et périmètre, à ajuster librement.
@@ -5222,7 +5237,9 @@ function applyPlan(){
     state.org="ecoli"; state.results={}; state.mic={}; state.diam={}; state.ctx={};
     speciesSel.value="ecoli";
   }
-  if(!isPremium() && state.mode==="mic"){ state.mode="sir"; }
+  // La CMI demande une licence ; le diamètre, non. Un repli vers « S/I/R »
+  // renverrait l'utilisateur à la conversion manuelle sans raison.
+  if(!isPremium() && state.mode==="mic"){ state.mode=MODE_DEFAUT; }
   renderAll();
   renderBankManager();
   if($("#offresView").style.display!=="none") renderOffres();
@@ -5248,6 +5265,7 @@ modeSeg.querySelectorAll("button").forEach(b=>{
     if(b.dataset.m==="mic" && !isPremium()){ openUpgrade("La saisie par CMI (avec seuils paramétrables) est une fonction Premium."); return; }
     if(state.mode===b.dataset.m) return;
     state.mode=b.dataset.m;
+    try{ localStorage.setItem("phenobac.mode", state.mode); }catch(e){ /* sans mémoire, tant pis */ }
     recomputeMesure();
     renderAll();
   };
@@ -5372,11 +5390,12 @@ var PRESENTATIONS = {
        <span class="ge-ref">Identification</span> vous y conduit par les caractères biochimiques.`,
       `<b>Choisissez le référentiel, puis saisissez.</b>
        Encadré <span class="ge-ref">02 Antibiogramme</span> : <span class="ge-ref">EUCAST</span>
-       ou <span class="ge-ref">CA-SFM</span>, puis <b>S</b>, <b>I</b> ou <b>R</b> pour chaque
-       antibiotique. Deux autres modes évitent de faire la conversion vous-même :
-       <span class="ge-ref">CMI mg/L</span> et <span class="ge-ref">Diamètre mm</span>, qui prend
-       les zones lues au pied à coulisse. La <b>charge du disque</b> est rappelée sous chaque
-       molécule : le seuil ne vaut que pour elle.`,
+       ou <span class="ge-ref">CA-SFM</span>, puis saisissez.
+       L'application s'ouvre sur <span class="ge-ref">Diamètre mm</span> : entrez les zones lues
+       au pied à coulisse, la catégorie se calcule. La <b>charge du disque</b> est rappelée sous
+       chaque molécule — le seuil ne vaut que pour elle. Les boutons
+       <span class="ge-ref">S / I / R</span> et <span class="ge-ref">CMI mg/L</span> changent de
+       mode, et <b>votre choix est retenu</b> pour les fois suivantes.`,
       `<b>Lisez le phénotype.</b>
        Encadré <span class="ge-ref">03 Interprétation</span> : le mécanisme est nommé, avec son
        niveau de risque. Une <b>alerte de cohérence</b> apparaît si un résultat contredit les
