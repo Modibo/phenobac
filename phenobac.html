@@ -95,11 +95,13 @@
 
   /* onglets de vue */
   .tabs{display:inline-flex;border:1px solid var(--line-strong);border-radius:100px;overflow:hidden;background:#fff}
-  .tabs button{font-family:'IBM Plex Sans';font-size:12.5px;font-weight:500;padding:7px 15px;border:none;
+  .tabs button{font-family:'IBM Plex Sans';font-size:14px;font-weight:500;padding:9px 19px;border:none;
     background:transparent;color:var(--ink-soft);cursor:pointer;transition:.12s;white-space:nowrap}
+  .tabs button:hover{background:var(--teal-wash);color:var(--teal-deep)}
+  .tabs button:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
   .tabs button.on{background:var(--teal);color:#fff}
   @media(max-width:560px){
-    .tabs button{padding:7px 11px;font-size:12px}
+    .tabs button{padding:8px 13px;font-size:13px}
     .live-chip{display:none}
   }
 
@@ -273,7 +275,7 @@
   .modal-err{font-size:12.5px;color:var(--r);margin-top:9px;min-height:16px}
 
   /* page Offres */
-  .ident-wrap{max-width:900px;margin:26px auto 0;padding:0 20px}
+  .ident-wrap{max-width:760px;margin:26px auto 0;padding:0 20px}
   .id-choice{display:flex;gap:8px;flex-wrap:wrap}
   .id-choice .c{font-family:'IBM Plex Mono';font-size:13px;padding:9px 16px;border-radius:100px;background:#fff;
     border:1px solid #c2d0d4;color:#4b6169;cursor:pointer}
@@ -306,9 +308,9 @@
   .offres-hero{text-align:center;margin-bottom:26px}
   .offres-hero .oh-eyebrow{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--gold-deep);font-weight:500}
-  .offres-hero h1{font-family:'IBM Plex Mono';font-weight:600;font-size:29px;line-height:1.18;letter-spacing:-.6px;
-    color:var(--ink);margin:12px auto;max-width:600px}
-  .offres-hero p{font-size:15px;color:var(--ink-soft);max-width:540px;margin:0 auto;line-height:1.55}
+  .offres-hero h1{font-weight:600;font-size:clamp(22px,3vw,30px);line-height:1.2;letter-spacing:-.012em;
+    color:var(--ink);margin:12px auto;max-width:24ch;text-wrap:balance}
+  .offres-hero p{font-size:15.5px;color:var(--ink-soft);max-width:52ch;margin:0 auto;line-height:1.68}
   .oh-tagline{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.22em;text-transform:uppercase;
     color:var(--teal-deep);margin-top:14px}
   .plans{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
@@ -662,10 +664,11 @@
   }
 
   footer{max-width:1160px;margin:24px auto 0;padding:0 20px}
-  .disclaimer{font-size:12px;color:var(--ink-faint);line-height:1.6;background:var(--surface);
-    border:1px solid var(--line);border-left:3px solid var(--i);border-radius:var(--radius);padding:13px 16px}
-  .credit{margin-top:12px;font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-faint);
-    display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .disclaimer{font-size:13px;color:var(--ink-soft);line-height:1.7;background:var(--surface);
+    border:1px solid var(--line);border-left:3px solid var(--i);border-radius:var(--radius);
+    padding:16px 18px;max-width:74ch}
+  .credit{margin-top:14px;font-family:'IBM Plex Mono';font-size:11.5px;line-height:1.6;
+    color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 18px}
   .credit b{color:var(--ink-soft);font-weight:500}
   a{color:var(--teal-deep)}
 
@@ -785,18 +788,18 @@
   .apropos{ max-width:760px; margin:26px auto 0; display:flex; flex-direction:column; gap:22px; }
   .ap-bloc{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
-    box-shadow:var(--shadow); padding:20px 22px;
+    box-shadow:var(--shadow); padding:24px 26px;
   }
   .ap-bloc h2{
-    font-size:15px; font-weight:600; color:var(--ink); margin-bottom:9px; letter-spacing:-.005em;
+    font-size:17px; font-weight:600; color:var(--ink); margin-bottom:12px; letter-spacing:-.01em;
   }
-  .ap-bloc p{ font-size:14px; line-height:1.62; color:var(--ink-soft); }
+  .ap-bloc p{ font-size:15px; line-height:1.68; color:var(--ink-soft); max-width:56ch; }
   .ap-bloc p + p{ margin-top:9px; }
   .ap-bloc b{ color:var(--ink); font-weight:600; }
   .ap-liste{ list-style:none; display:flex; flex-direction:column; gap:10px; }
   .ap-liste li{
-    font-size:14px; line-height:1.55; color:var(--ink-soft);
-    padding-left:16px; position:relative;
+    font-size:15px; line-height:1.62; color:var(--ink-soft);
+    padding-left:16px; position:relative; max-width:58ch;
   }
   .ap-liste li::before{
     content:""; position:absolute; left:0; top:.62em; width:6px; height:6px;
@@ -1003,6 +1006,21 @@
   </aside>
 </main>
 
+<div class="ident-wrap" id="identView" style="display:none">
+  <div class="card">
+    <div class="card-h"><span class="eyebrow"><span class="num">01</span>Coloration de Gram &amp; morphologie</span></div>
+    <div class="card-b" id="idGram"></div>
+  </div>
+  <div class="card" id="idTestsCard" style="display:none">
+    <div class="card-h"><span class="eyebrow"><span class="num">02</span>Tests biochimiques</span></div>
+    <div class="card-b" id="idTests"></div>
+  </div>
+  <div class="card" id="idResultCard" style="display:none">
+    <div class="card-h"><span class="eyebrow"><span class="num">03</span>Identification présumée</span></div>
+    <div class="card-b" id="idResults"></div>
+  </div>
+</div>
+
 <div class="quiz-wrap" id="quizView" style="display:none">
   <div class="card quiz-card">
     <div class="quiz-top">
@@ -1198,20 +1216,6 @@
   </div>
 </div>
 
-<div class="ident-wrap" id="identView" style="display:none">
-  <div class="card">
-    <div class="card-h"><span class="eyebrow"><span class="num">01</span>Coloration de Gram &amp; morphologie</span></div>
-    <div class="card-b" id="idGram"></div>
-  </div>
-  <div class="card" id="idTestsCard" style="display:none">
-    <div class="card-h"><span class="eyebrow"><span class="num">02</span>Tests biochimiques</span></div>
-    <div class="card-b" id="idTests"></div>
-  </div>
-  <div class="card" id="idResultCard" style="display:none">
-    <div class="card-h"><span class="eyebrow"><span class="num">03</span>Identification présumée</span></div>
-    <div class="card-b" id="idResults"></div>
-  </div>
-</div>
 
 <div class="maj-bar" id="majBar" role="status" aria-live="polite">
   <span class="maj-txt"><b>Nouvelle version disponible.</b> Elle peut contenir des seuils corrigés.</span>
@@ -4350,8 +4354,6 @@ $("#activateBtn").onclick=activate;
 $("#licenseInput").addEventListener("keydown",e=>{ if(e.key==="Enter") activate(); });
 $("#upgradeModal").addEventListener("click",e=>{ if(e.target.id==="upgradeModal") closeUpgrade(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeUpgrade(); });
-
-
 
 
 function renderModeToggle(){
