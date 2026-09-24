@@ -477,6 +477,28 @@
   .cq-in{font-family:'IBM Plex Mono';font-size:13px;width:66px;text-align:right;padding:6px 8px;
     border:1px solid var(--line-strong);border-radius:4px;background:#fff;color:var(--ink)}
   .cq-in:focus{outline:1.5px solid var(--teal);border-color:var(--teal)}
+  .cq-barre{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .cq-avis:empty{display:none}
+  .surv-ch textarea{font-family:'IBM Plex Sans';font-size:13px;padding:8px 9px;
+    border:1px solid var(--line-strong);border-radius:4px;background:#fff;color:var(--ink);
+    width:100%;resize:vertical;line-height:1.5}
+  .surv-ch textarea:focus{outline:1.5px solid var(--teal);border-color:var(--teal)}
+  .cq-histo{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+  .cq-histo-t{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-faint);margin-bottom:9px}
+  .cq-ligne{position:relative;padding:9px 74px 9px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+  .cq-ligne:last-child{border-bottom:none}
+  /* Le séparateur est porté par la marge, pas par un « · » dans le texte :
+     un point médian se retrouve seul en tête de ligne au moment du retour. */
+  .cq-ligne-h{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;line-height:1.5}
+  .cq-ligne-h .cq-souche{color:var(--ink-soft)}
+  .cq-ligne-d{color:var(--ink-faint);font-size:11.5px;line-height:1.55;margin-top:3px}
+  .cq-ligne-a{color:var(--ink-soft);font-size:11.5px;line-height:1.55;margin-top:3px;
+    padding-left:9px;border-left:2px solid var(--line-strong)}
+  .cq-sup{position:absolute;top:9px;right:0;font-family:'IBM Plex Mono';font-size:10px;
+    letter-spacing:.04em;background:none;border:1px solid var(--line);border-radius:100px;
+    padding:2px 9px;color:var(--ink-faint);cursor:pointer}
+  .cq-sup:hover{border-color:var(--r-line);color:var(--r)}
   /* Versement à la surveillance */
   .surv-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:11px;margin:14px 0}
   .surv-ch{display:flex;flex-direction:column;gap:4px}
@@ -1097,6 +1119,7 @@
           <li><b>La lecture interprétative, visible.</b> Quand une catégorie est modifiée — BLSE, carbapénémase confirmée —, le compte-rendu porte <i>la catégorie rendue et celle qui a été lue</i>, avec le motif. Le résultat de paillasse n'est jamais effacé.</li>
           <li><b>Les incohérences.</b> Un résultat contraire aux résistances naturelles attendues de l'espèce est signalé avant le rendu.</li>
           <li><b>La lecture au disque, en millimètres.</b> Entrez les diamètres mesurés : la catégorie se calcule, avec la charge du disque rappelée sous chaque molécule — « 23 mm » ne veut rien dire sans elle. Là où le référentiel ne reconnaît pas la méthode des disques — colistine, vancomycine sur staphylocoque —, l'application refuse de conclure et le dit, plutôt que de laisser croire l'antibiotique non testé.</li>
+          <li><b>Un registre de contrôle de qualité.</b> Les diamètres obtenus sur souche de référence sont confrontés aux cibles du CA-SFM, enregistrés avec leur date, le lot de disques et la conduite tenue en cas d'écart, et exportables en CSV. L'application refuse d'enregistrer une non-conformité sans conduite tenue.</li>
           <li><b>Les dépistages, à leur place.</b> Sur le pneumocoque, les β-lactamines ne se lisent pas au disque : c'est le disque d'oxacilline 1 µg qui répond. Sur les streptocoques A, C et G, le CA-SFM n'autorise qu'à reconnaître les souches sensibles. Dans les deux cas, PhénoBac applique la règle et ne rend jamais « résistant » sur un simple dépistage.</li>
           <li><b>Les zones d'incertitude technique.</b> Quand la valeur mesurée tombe là où la catégorie n'est plus reproductible, PhénoBac le dit et rappelle la conduite à tenir — sans jamais dégrader la catégorie de lui-même.</li>
           <li><b>Les molécules de recours.</b> Témocilline, céfidérocol, daptomycine, minocycline, moxifloxacine, à côté du panel usuel.</li>
@@ -1940,7 +1963,51 @@ const CQ = {
    diamètres relevés. Volontairement hors de « state » : un contrôle de
    qualité n'est pas un antibiogramme de patient, et ne doit rien lui
    emprunter — surtout pas son espèce ni ses résultats. */
-var CQ_ETAT = { souche: "ecoli25922", mesures: {} };
+var CQ_ETAT = { souche: "ecoli25922", mesures: {}, date: "", lot: "", operateur: "", action: "" };
+
+/* ============================================================
+   REGISTRE DE CONTRÔLE DE QUALITÉ
+
+   Un contrôle de qualité qui ne laisse pas de trace ne sert qu'une fois.
+   Les référentiels d'accréditation demandent de CONSERVER les résultats,
+   datés, avec le lot de disques et la conduite tenue quand une valeur sort
+   des limites — c'est justement là qu'un registre a de la valeur.
+
+   Le registre vit dans le navigateur. Ce choix mérite d'être énoncé
+   franchement : il n'exige ni compte ni réseau, et rien ne quitte le poste
+   — mais le stockage d'un navigateur N'EST PAS UNE ARCHIVE. Vider le cache
+   l'efface, un autre poste ne le voit pas. L'export CSV est le vrai
+   document à conserver, et l'interface le dit plutôt que de le laisser
+   découvrir.
+   ============================================================ */
+const CQ_CLE = "phenobac.cq";
+// Au-delà, les plus anciens sortent. Un an de contrôles quotidiens tient
+// largement dessous, et le quota du navigateur n'est pas extensible.
+const CQ_MAX = 400;
+
+function cqRegistre(){
+  try{ return JSON.parse(localStorage.getItem(CQ_CLE) || "[]"); }
+  catch(e){ return []; }
+}
+
+function cqEcrire(liste){
+  try{
+    localStorage.setItem(CQ_CLE, JSON.stringify(liste.slice(-CQ_MAX)));
+    return true;
+  }catch(e){
+    // Quota dépassé ou stockage refusé : le dire, plutôt que de laisser
+    // croire l'enregistrement fait.
+    return false;
+  }
+}
+
+/* Date du jour au format AAAA-MM-JJ, en heure locale — toUTCString
+   basculerait d'un jour pour un contrôle fait en fin de journée. */
+function cqAujourdhui(){
+  const d = new Date();
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
 
 /* Verdict d'une mesure : dans les limites, ou non. Un « — » n'est pas un
    échec, c'est une absence de mesure. */
@@ -3107,7 +3174,28 @@ function renderCQ(){
   });
   sel.onchange = ()=>{ CQ_ETAT.souche = sel.value; CQ_ETAT.mesures = {}; renderCQ();
     const d = document.querySelector(".cq-panneau"); if(d) d.setAttribute("open",""); };
-  ch.appendChild(sel); body.appendChild(ch);
+  ch.appendChild(sel);
+
+  // Ce qu'un registre doit porter à côté des chiffres : quand, avec quel lot
+  // de disques, et qui a lu. Sans cela, un écart ne se rattache à rien.
+  const grille = document.createElement("div"); grille.className = "surv-grille";
+  grille.style.margin = "0 0 12px";
+  grille.appendChild(ch);
+  const champ = (cle, libelle, type, gabarit)=>{
+    const d = document.createElement("div"); d.className = "surv-ch";
+    d.innerHTML = `<span>${libelle}</span>`;
+    const i = document.createElement("input");
+    i.type = type || "text"; i.id = "cq-champ-" + cle;
+    if(gabarit) i.placeholder = gabarit;
+    i.value = CQ_ETAT[cle] || (cle === "date" ? cqAujourdhui() : "");
+    if(cle === "date" && !CQ_ETAT.date) CQ_ETAT.date = i.value;
+    i.oninput = ()=>{ CQ_ETAT[cle] = i.value; };
+    d.appendChild(i); grille.appendChild(d);
+  };
+  champ("date", "Date du contrôle", "date");
+  champ("lot", "Lot de disques", "text", "n° de lot");
+  champ("operateur", "Lu par", "text", "initiales");
+  body.appendChild(grille);
 
   const bilan = document.createElement("div"); bilan.className = "cq-bilan";
   const majBilan = ()=>{
@@ -3160,8 +3248,165 @@ function renderCQ(){
 
   majBilan();
   body.appendChild(bilan);
+
+  // La conduite tenue : c'est elle qui fait la différence entre un écart
+  // constaté et un écart traité. Elle n'apparaît que si elle a lieu d'être.
+  const conduite = document.createElement("div"); conduite.className = "surv-ch";
+  conduite.style.margin = "10px 0 0";
+  conduite.innerHTML = `<span>Conduite tenue (exigée si une mesure sort des limites)</span>`;
+  const ta = document.createElement("textarea");
+  ta.id = "cq-action"; ta.rows = 2;
+  ta.placeholder = "Lot de disques écarté, contrôle repris le lendemain avec le lot n°…";
+  ta.value = CQ_ETAT.action || "";
+  ta.oninput = ()=>{ CQ_ETAT.action = ta.value; };
+  conduite.appendChild(ta); body.appendChild(conduite);
+
+  const barre = document.createElement("div"); barre.className = "cq-barre";
+  const bEnr = document.createElement("button"); bEnr.className = "bp-reset";
+  bEnr.textContent = "Enregistrer ce contrôle"; bEnr.onclick = cqEnregistrer;
+  const bExp = document.createElement("button"); bExp.className = "bp-reset";
+  bExp.textContent = "Exporter le registre (CSV)"; bExp.onclick = cqExporter;
+  barre.appendChild(bEnr); barre.appendChild(bExp);
+  body.appendChild(barre);
+
+  // Vide, il ne doit pas occuper de place : la règle « .cq-avis:empty » s'en
+  // charge. Un observateur par rendu, lui, survivrait à chaque redessin.
+  const avis = document.createElement("div"); avis.className = "cq-bilan cq-avis";
+  body.appendChild(avis);
+
+  body.appendChild(cqHistorique());
   det.appendChild(body);
   abxGrid.parentNode.insertBefore(det, abxGrid.nextSibling);
+}
+
+/* Historique. Le plus récent en haut : c'est celui qu'on relit. */
+function cqHistorique(){
+  const reg = cqRegistre();
+  const bloc = document.createElement("div"); bloc.className = "cq-histo";
+  if(!reg.length){
+    bloc.innerHTML = `<div class="bp-note" style="margin:14px 0 0">Aucun contrôle enregistré pour l'instant.
+      Le registre reste dans ce navigateur : il n'est envoyé nulle part, mais il ne survivrait pas
+      à un vidage du cache ni à un changement de poste. <b>C'est le fichier exporté qui fait registre.</b></div>`;
+    return bloc;
+  }
+  const horsTotal = reg.reduce((n,e)=>n + e.lignes.filter(l=>l.verdict==="hors").length, 0);
+  let html = `<div class="cq-histo-t">Registre — ${reg.length} contrôle${reg.length>1?"s":""}`
+           + (horsTotal ? `, ${horsTotal} mesure${horsTotal>1?"s":""} hors limites` : "")
+           + `</div>`;
+  reg.slice().reverse().forEach((e, rang)=>{
+    const i = reg.length - 1 - rang;
+    const hors = e.lignes.filter(l=>l.verdict==="hors");
+    html += `<div class="cq-ligne">
+      <div class="cq-ligne-h">
+        <b>${esc(e.date)}</b><span class="cq-souche">${esc(e.espece)} ${esc(e.reference)}</span>
+        <span class="cq-verdict ${hors.length?"hors":"ok"}">${hors.length ? hors.length + " hors" : "conforme"}</span>
+      </div>
+      <div class="cq-ligne-d">${e.lignes.length} mesure${e.lignes.length>1?"s":""}`
+      + (e.lot ? ` · lot ${esc(e.lot)}` : "")
+      + (e.operateur ? ` · lu par ${esc(e.operateur)}` : "")
+      + (hors.length ? ` · ${esc(hors.map(l=>(ABX[l.abx]?ABX[l.abx].n:l.abx) + " " + l.mesure + " mm").join(", "))}` : "")
+      + `</div>`
+      + (e.action ? `<div class="cq-ligne-a">Conduite tenue : ${esc(e.action)}</div>` : "")
+      + `<button class="cq-sup" data-i="${i}" title="Supprimer cette ligne du registre">supprimer</button>
+    </div>`;
+  });
+  bloc.innerHTML = html;
+  bloc.querySelectorAll(".cq-sup").forEach(b=>{
+    b.onclick = ()=>cqSupprimer(Number(b.dataset.i));
+  });
+  return bloc;
+}
+
+/* Enregistrement d'un contrôle. Ce qui est conservé est ce qu'un registre
+   doit porter : la date, la souche, le lot de disques, qui a lu, chaque
+   mesure avec sa cible et son verdict — et, quand une valeur sort des
+   limites, la conduite tenue. Une non-conformité sans conduite tenue est
+   une non-conformité qu'on a seulement constatée. */
+function cqEnregistrer(){
+  const s = CQ[CQ_ETAT.souche]; if(!s) return;
+  const lignes = [];
+  Object.keys(s.abx).forEach(k=>{
+    const v = cqVerdict(s.abx[k], CQ_ETAT.mesures[k]);
+    if(!v) return;                       // rien mesuré : rien à consigner
+    const c = s.abx[k];
+    lignes.push({ abx:k, charge:c.c, mesure:String(CQ_ETAT.mesures[k]).trim(),
+                  cible:c.v, min:c.min, max:c.max, verdict:v });
+  });
+  if(!lignes.length) return cqAvis("Aucune mesure à enregistrer.", "hors");
+
+  const hors = lignes.filter(l=>l.verdict==="hors").length;
+  if(hors && !String(CQ_ETAT.action).trim())
+    return cqAvis(hors + " mesure" + (hors>1?"s":"") + " hors limites : indiquez la conduite tenue avant d'enregistrer. "
+                + "Un écart constaté sans suite ne vaut pas mieux que pas de contrôle.", "hors");
+
+  const reg = cqRegistre();
+  reg.push({
+    date: CQ_ETAT.date || cqAujourdhui(),
+    horodatage: new Date().toISOString(),
+    souche: CQ_ETAT.souche, espece: s.espece, reference: s.souche,
+    lot: String(CQ_ETAT.lot||"").slice(0,40),
+    operateur: String(CQ_ETAT.operateur||"").slice(0,40),
+    action: String(CQ_ETAT.action||"").slice(0,300),
+    lignes: lignes
+  });
+  if(!cqEcrire(reg))
+    return cqAvis("Le navigateur a refusé d'enregistrer (stockage plein ou désactivé). "
+                + "Exportez le registre avant d'aller plus loin.", "hors");
+
+  CQ_ETAT.mesures = {}; CQ_ETAT.action = "";
+  renderCQ();
+  const d = document.querySelector(".cq-panneau"); if(d) d.setAttribute("open","");
+  cqAvis("Contrôle enregistré : " + lignes.length + " mesure" + (lignes.length>1?"s":"")
+       + (hors ? ", dont " + hors + " hors limites." : ", toutes dans les limites.")
+       + " Pensez à exporter le registre : le stockage du navigateur n'est pas une archive.", hors?"hors":"ok");
+}
+
+function cqAvis(texte, classe){
+  const e = document.querySelector(".cq-avis"); if(!e) return;
+  e.textContent = texte;
+  e.className = "cq-bilan cq-avis " + (classe||"");
+}
+
+/* Export du registre. Point-virgule et BOM : les tableurs francophones
+   ouvrent ainsi le fichier sans assistant d'importation, et les accents
+   s'affichent. Une ligne par MESURE — c'est le grain auquel on relit un
+   registre quand on cherche quelle molécule a dérivé, et quand. */
+function cqExporter(){
+  const reg = cqRegistre();
+  if(!reg.length) return cqAvis("Registre vide : rien à exporter.", "hors");
+  const col = ["Date","Horodatage","Souche","Référence","LotDisques","Opérateur",
+               "Antibiotique","Code","ChargeDisque","MesureMm","CibleMm","MinMm","MaxMm",
+               "Verdict","ConduiteTenue"];
+  const ech = v => {
+    const s = String(v===undefined||v===null ? "" : v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const corps = [];
+  reg.forEach(e=>e.lignes.forEach(l=>{
+    corps.push([e.date, e.horodatage, e.espece, e.reference, e.lot, e.operateur,
+                (ABX[l.abx]?ABX[l.abx].n:l.abx), l.abx, l.charge, l.mesure,
+                l.cible, l.min, l.max,
+                l.verdict==="ok" ? "conforme" : "hors limites",
+                l.verdict==="hors" ? e.action : ""].map(ech).join(";"));
+  }));
+  const csv = "\ufeff" + col.join(";") + "\n" + corps.join("\n") + "\n";
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "phenobac-controle-qualite-" + cqAujourdhui() + ".csv";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  cqAvis(corps.length + " mesure" + (corps.length>1?"s":"") + " exportée"
+       + (corps.length>1?"s":"") + " sur " + reg.length + " contrôle"
+       + (reg.length>1?"s":"") + ". Conservez ce fichier : c'est lui, le registre.", "ok");
+}
+
+function cqSupprimer(i){
+  const reg = cqRegistre();
+  const e = reg[i]; if(!e) return;
+  if(!confirm("Supprimer le contrôle du " + e.date + " sur " + e.espece + " ?\n\n"
+            + "Un registre de contrôle de qualité se conserve : ne supprimez que ce qui a été saisi par erreur.")) return;
+  reg.splice(i,1); cqEcrire(reg); renderCQ();
+  const d = document.querySelector(".cq-panneau"); if(d) d.setAttribute("open","");
 }
 
 /* Rappel affiché sous l'antibiogramme en mode diamètre. Trois choses que

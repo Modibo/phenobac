@@ -182,6 +182,30 @@ mécanisme** de résistance, ce qui est un autre exercice.
 | *E. faecalis* / pipéracilline-tazobactam | absent de la table |
 | *S. pneumoniae* / cotrimoxazole | colonnes arrivées dans le désordre à l'extraction (« 22-26 18 » au lieu de « 22 18-26 ») — un trou signalé vaut mieux qu'une cible devinée |
 
+#### Le registre
+
+Un contrôle qui ne laisse pas de trace ne sert qu'une fois. Chaque contrôle
+enregistré porte la **date**, la souche, le **lot de disques**, qui a lu,
+chaque mesure avec sa cible et son verdict — et, quand une valeur sort des
+limites, la **conduite tenue**. L'application refuse d'enregistrer un écart
+sans conduite tenue : un écart constaté sans suite ne vaut pas mieux que pas
+de contrôle.
+
+Le registre vit dans le **navigateur** (`localStorage`, clé `phenobac.cq`,
+400 contrôles au plus). Ce choix mérite d'être énoncé franchement : il
+n'exige ni compte ni réseau, et rien ne quitte le poste — mais le stockage
+d'un navigateur **n'est pas une archive**. Vider le cache l'efface, un autre
+poste ne le voit pas. L'**export CSV** est le document à conserver, et
+l'interface le répète à chaque enregistrement plutôt que de le laisser
+découvrir.
+
+Le CSV porte une ligne par **mesure** — c'est le grain auquel on relit un
+registre quand on cherche quelle molécule a dérivé, et quand : `Date`,
+`Horodatage`, `Souche`, `Référence`, `LotDisques`, `Opérateur`,
+`Antibiotique`, `Code`, `ChargeDisque`, `MesureMm`, `CibleMm`, `MinMm`,
+`MaxMm`, `Verdict`, `ConduiteTenue`. Point-virgule et BOM, comme l'export
+GLASS : les tableurs francophones l'ouvrent sans assistant d'importation.
+
 C'est ce troisième contrôle qui a rattrapé la gentamicine et le méropénème,
 tombés de la table parce que le PDF coupe parfois un intervalle au milieu
 (« 22- 23 ») : rien d'autre ne l'aurait signalé.
