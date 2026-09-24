@@ -66,6 +66,38 @@ def valeurs_simples(bloc):
     return table
 
 
+def valeurs_texte(bloc):
+    """{groupe: {code: "texte"}} — pour les tables dont la valeur est une
+    chaîne : la charge du disque (« 30 », « 1 unit », « 1.25-23.75 ») et le
+    témoin de l'amoxicilline. Le lecteur numérique les rendait vides, donc
+    toujours concordantes — un garde-fou qui ne garde rien."""
+    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
+    bloc = re.sub(r'//[^\n]*', ' ', bloc)
+    table = {}
+    for mg in re.finditer(r'(\w+)\s*:\s*\{([^{}]*)\}', bloc):
+        entrees = {}
+        for ma in re.finditer(r'(\w+)\s*:\s*"([^"]*)"', mg.group(2)):
+            entrees[ma.group(1)] = ma.group(2)
+        if entrees:
+            table[mg.group(1)] = entrees
+    return table
+
+
+def intervalles(bloc):
+    """{groupe: {code: (lo, hi)}} — pour les zones d'incertitude au disque,
+    qui sont des intervalles de millimètres et non une valeur unique."""
+    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
+    bloc = re.sub(r'//[^\n]*', ' ', bloc)
+    table = {}
+    for mg in re.finditer(r'(\w+)\s*:\s*\{((?:[^{}\[\]]|\[[^\[\]]*\])*)\}', bloc):
+        entrees = {}
+        for ma in re.finditer(r'(\w+)\s*:\s*\[\s*(\d+)\s*,\s*(\d+)\s*\]', mg.group(2)):
+            entrees[ma.group(1)] = (int(ma.group(2)), int(ma.group(3)))
+        if entrees:
+            table[mg.group(1)] = entrees
+    return table
+
+
 def referentiels(chemin):
     """{cle: {nom, version, etat, ...}} pour chaque entrée du registre."""
     s = open(chemin, encoding='utf-8').read()
@@ -111,7 +143,13 @@ def main():
                            ('const BP_MENINGE =', 'seuils méningés'),
                            ('const BP_CASFM =', 'différences CA-SFM'),
                            ('const BP_CASFM_URIN =', 'CA-SFM, infection urinaire'),
-                           ('const BP_MENINGE_CASFM =', 'CA-SFM, contexte méningé')):
+                           ('const BP_MENINGE_CASFM =', 'CA-SFM, contexte méningé'),
+                           # Les diamètres ont la même forme {S, R} que les CMI,
+                           # mais le sens inverse. La forme suffit au contrôle de
+                           # concordance ; le sens est éprouvé par
+                           # outils/essai-diametres.js.
+                           ('const DZ =', 'diamètres critiques'),
+                           ('const DZ_MENINGE =', 'diamètres, contexte méningé')):
         ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
         if ba is None and bb is None:
             continue
@@ -145,6 +183,37 @@ def main():
                 va, vb = a.get(g, {}).get(code), b.get(g, {}).get(code)
                 if va != vb:
                     ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
+
+    for nom, etiquette in (('const DZ_TEMOIN =', 'témoins de diamètre'),
+                           ('const DISQUE =', 'charges de disque')):
+        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
+        if (ba is None) != (bb is None):
+            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
+        if ba is None:
+            continue
+        a, b = valeurs_texte(ba), valeurs_texte(bb)
+        totaux[etiquette] = sum(len(v) for v in b.values())
+        if not totaux[etiquette]:
+            ecarts.append("%s : table lue vide — le contrôle ne garantit plus rien" % etiquette)
+        for g in sorted(set(a) | set(b)):
+            for code in sorted(set(a.get(g, {})) | set(b.get(g, {}))):
+                va, vb = a.get(g, {}).get(code), b.get(g, {}).get(code)
+                if va != vb:
+                    ecarts.append("%s, %s/%s : client %r, serveur %r" % (etiquette, g, code, va, vb))
+
+    # Les zones d'incertitude au disque sont des INTERVALLES : [19, 20]. Ni la
+    # forme {S, R} ni la valeur unique ne les lisent.
+    ba, bb = bloc_bp(cli, 'const ZIT_ZONE ='), bloc_bp(srv, 'const ZIT_ZONE =')
+    if (ba is None) != (bb is None):
+        ecarts.append("ZIT au disque : table présente d'un seul côté")
+    elif ba is not None:
+        a, b = intervalles(ba), intervalles(bb)
+        totaux['ZIT au disque'] = sum(len(v) for v in b.values())
+        for g in sorted(set(a) | set(b)):
+            for code in sorted(set(a.get(g, {})) | set(b.get(g, {}))):
+                va, vb = a.get(g, {}).get(code), b.get(g, {}).get(code)
+                if va != vb:
+                    ecarts.append("ZIT au disque, %s/%s : client %s, serveur %s" % (g, code, va, vb))
 
     ra, rb = referentiels(cli), referentiels(srv)
     if ra and rb:

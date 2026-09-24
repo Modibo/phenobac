@@ -971,6 +971,7 @@
           <div class="mode-seg" id="modeSeg">
             <button data-m="sir">S / I / R</button>
             <button data-m="mic">CMI mg/L</button>
+            <button data-m="diam">Diamètre mm</button>
           </div>
           <button class="btn" id="reset">Réinitialiser</button>
         </div>
@@ -1896,6 +1897,232 @@ function getBP(group,k){
   return (BP[group] && BP[group][k]) || null;
 }
 
+/* ============================================================
+   DIAMÈTRES CRITIQUES (méthode des disques), EUCAST v16.1.
+
+   Un laboratoire sans automate lit son antibiogramme au pied à
+   coulisse. Lui demander une catégorie S/I/R, c'est lui demander de
+   faire lui-même la conversion — précisément l'étape que cet outil
+   existe pour lui épargner.
+
+   DEUX PIÈGES, et ils sont graves :
+
+   1. LE SENS EST INVERSÉ. En CMI, « petit » veut dire sensible ; au
+      disque, c'est « grand ». Un seuil lu à l'envers rendrait
+      résistante toute souche sensible, sans qu'aucune erreur ne soit
+      visible nulle part.
+
+   2. LA CHARGE DU DISQUE FAIT PARTIE DU SEUIL. « 23 mm » ne veut rien
+      dire sans savoir si le disque portait 10 ou 30 µg. La charge est
+      donc conservée à côté de la valeur, et affichée à la saisie.
+
+   S:null reprend la convention de la table des CMI : l'EUCAST ne
+   prévoit AUCUNE catégorie « sensible » à posologie standard pour ce
+   couple (il écrit un seuil de 50 mm, qu'aucune boîte ne produit).
+
+   Un couple ABSENT de cette table n'est pas un oubli : l'EUCAST ne
+   reconnaît pas la méthode des disques pour lui — colistine, et
+   vancomycine sur staphylocoque, en sont les exemples classiques. Le
+   moteur refuse alors de catégoriser et réclame une CMI.
+
+   Produit par outils/extraire-diametres.py ; outils/verifier-tables.py
+   échoue si ces valeurs divergent du tableau officiel.
+   ============================================================ */
+const DZ = {
+  acineto:{ AMK:{S:19,R:19}, CIP:{S:null,R:21}, GEN:{S:17,R:17}, IPM:{S:24,R:21}, LVX:{S:23,R:20}, MEM:{S:21,R:15}, SXT:{S:16,R:16} },
+  campylo:{ CIP:{S:null,R:26}, E:{S:20,R:20} },
+  coryne:{ CIP:{S:null,R:25}, DA:{S:20,R:20}, LZD:{S:25,R:25}, MXF:{S:25,R:25}, PEN:{S:null,R:12}, RD:{S:30,R:30}, VA:{S:17,R:17} },
+  cperfringens:{ AMC:{S:23,R:23}, AMP:{S:23,R:23}, DA:{S:19,R:19}, ETP:{S:24,R:24}, IPM:{S:25,R:25}, MEM:{S:25,R:25}, MTZ:{S:16,R:16}, PEN:{S:15,R:15}, TZP:{S:24,R:24}, VA:{S:12,R:12} },
+  entero:{ AMC:{S:19,R:19}, AMK:{S:18,R:18}, AMP:{S:14,R:14}, CAZ:{S:22,R:19}, CIP:{S:25,R:22}, CTX:{S:20,R:17}, ETP:{S:23,R:23}, FDC:{S:23,R:23}, FEP:{S:27,R:24}, GEN:{S:17,R:17}, LVX:{S:23,R:19}, MEM:{S:22,R:16}, TEM:{S:null,R:17}, TZP:{S:20,R:20} },
+  enteroc:{ AMP:{S:10,R:10}, CIP:{S:15,R:15}, IPM:{S:null,R:21}, LVX:{S:15,R:15}, LZD:{S:20,R:20}, TEC:{S:16,R:16}, TZP:{S:null,R:18}, VA:{S:12,R:12} },
+  haemo:{ AMC:{S:15,R:15}, AMP:{S:18,R:18}, CAF:{S:28,R:28}, CIP:{S:32,R:32}, CTX:{S:27,R:27}, ETP:{S:23,R:23}, FEP:{S:28,R:28}, IPM:{S:20,R:20}, LVX:{S:30,R:30}, MEM:{S:20,R:20}, MIN:{S:24,R:24}, MXF:{S:28,R:28}, RD:{S:18,R:18}, SXT:{S:23,R:23}, TZP:{S:27,R:27} },
+  listeria:{ AMP:{S:16,R:16}, E:{S:25,R:25}, MEM:{S:26,R:26}, PEN:{S:13,R:13}, SXT:{S:29,R:29} },
+  moraxella:{ AMC:{S:19,R:19}, CIP:{S:31,R:31}, CTX:{S:20,R:17}, E:{S:23,R:23}, ETP:{S:29,R:29}, FEP:{S:20,R:20}, IPM:{S:29,R:29}, LVX:{S:29,R:29}, MEM:{S:33,R:33}, MIN:{S:25,R:25}, MXF:{S:26,R:26}, SXT:{S:15,R:15} },
+  morganella:{ AMC:{S:19,R:19}, AMK:{S:18,R:18}, AMP:{S:14,R:14}, CAZ:{S:22,R:19}, CIP:{S:25,R:22}, CTX:{S:20,R:17}, ETP:{S:23,R:23}, FDC:{S:23,R:23}, FEP:{S:27,R:24}, GEN:{S:17,R:17}, IPM:{S:null,R:19}, LVX:{S:23,R:19}, MEM:{S:22,R:16}, TEM:{S:null,R:17}, TZP:{S:20,R:20} },
+  pneumo:{ AMP:{S:22,R:19}, DA:{S:19,R:19}, E:{S:22,R:22}, LVX:{S:null,R:16}, LZD:{S:22,R:22}, MIN:{S:24,R:24}, MXF:{S:22,R:22}, RD:{S:22,R:22}, SXT:{S:15,R:15}, TEC:{S:17,R:17}, VA:{S:16,R:16} },
+  pseudo:{ AMK:{S:15,R:15}, CAZ:{S:null,R:17}, CIP:{S:null,R:26}, FDC:{S:22,R:22}, FEP:{S:null,R:21}, IPM:{S:null,R:20}, LVX:{S:null,R:18}, MEM:{S:20,R:14}, TZP:{S:null,R:18} },
+  salmonella:{ AMC:{S:19,R:19}, AMK:{S:18,R:18}, AMP:{S:14,R:14}, CAZ:{S:22,R:19}, CTX:{S:20,R:17}, ETP:{S:23,R:23}, FDC:{S:23,R:23}, FEP:{S:27,R:24}, GEN:{S:17,R:17}, LVX:{S:23,R:19}, MEM:{S:22,R:16}, TEM:{S:null,R:17}, TZP:{S:20,R:20} },
+  scn:{ AMK:{S:15,R:15}, AMP:{S:18,R:18}, CIP:{S:null,R:22}, DA:{S:22,R:22}, E:{S:21,R:21}, GEN:{S:22,R:22}, LVX:{S:null,R:24}, LZD:{S:21,R:21}, MIN:{S:23,R:23}, MXF:{S:28,R:28}, PEN:{S:26,R:26}, RD:{S:30,R:30}, SXT:{S:24,R:24} },
+  serratia:{ AMC:{S:19,R:19}, AMK:{S:18,R:18}, AMP:{S:14,R:14}, CAZ:{S:22,R:19}, CIP:{S:25,R:22}, CTX:{S:20,R:17}, ETP:{S:23,R:23}, FDC:{S:23,R:23}, FEP:{S:27,R:24}, GEN:{S:17,R:17}, LVX:{S:23,R:19}, MEM:{S:22,R:16}, MXF:{S:22,R:22}, SXT:{S:null,R:15}, TEM:{S:null,R:17}, TZP:{S:20,R:20} },
+  staph:{ AMK:{S:15,R:15}, AMP:{S:18,R:18}, CIP:{S:null,R:17}, DA:{S:22,R:22}, E:{S:21,R:21}, GEN:{S:18,R:18}, LVX:{S:null,R:22}, LZD:{S:21,R:21}, MIN:{S:23,R:23}, MXF:{S:25,R:25}, PEN:{S:26,R:26}, RD:{S:26,R:26}, SXT:{S:24,R:24} },
+  steno:{ SXT:{S:null,R:16} },
+  strepacg:{ DA:{S:17,R:17}, E:{S:21,R:21}, LVX:{S:null,R:17}, LZD:{S:19,R:19}, MIN:{S:23,R:23}, MXF:{S:19,R:19}, PEN:{S:23,R:23}, RD:{S:21,R:21}, SXT:{S:16,R:16}, TEC:{S:15,R:15}, VA:{S:13,R:13} },
+  strepb:{ DA:{S:17,R:17}, E:{S:21,R:21}, LVX:{S:null,R:17}, LZD:{S:19,R:19}, MIN:{S:23,R:23}, MXF:{S:19,R:19}, PEN:{S:18,R:18}, RD:{S:21,R:21}, SXT:{S:16,R:16}, TEC:{S:15,R:15}, VA:{S:13,R:13} },
+  vibrio:{ AZM:{S:16,R:16}, CAZ:{S:22,R:22}, CIP:{S:23,R:23}, CTX:{S:21,R:21}, LVX:{S:23,R:23}, MEM:{S:24,R:24}, SXT:{S:21,R:21}, TZP:{S:26,R:26} },
+  viridans:{ AMP:{S:21,R:15}, CTX:{S:23,R:23}, DA:{S:19,R:19}, FEP:{S:25,R:25}, PEN:{S:21,R:12}, TEC:{S:16,R:16}, VA:{S:15,R:15} },
+};
+
+/* Charge du disque, en µg (« 1 unit » pour la pénicilline G). */
+const DISQUE = {
+  acineto:{ AMK:"30", CIP:"5", GEN:"10", IPM:"10", LVX:"5", MEM:"10", SXT:"1.25-23.75" },
+  campylo:{ CIP:"5", E:"15" },
+  coryne:{ CIP:"5", DA:"2", LZD:"10", MXF:"5", PEN:"1 unit", RD:"5", VA:"5" },
+  cperfringens:{ AMC:"2-1", AMP:"2", DA:"2", ETP:"10", IPM:"10", MEM:"10", MTZ:"5", PEN:"1 unit", TZP:"30-6", VA:"5" },
+  entero:{ AMC:"20-10", AMK:"30", AMP:"10", CAZ:"10", CIP:"5", CTX:"5", ETP:"10", FDC:"30", FEP:"30", GEN:"10", LVX:"5", MEM:"10", TEM:"30", TZP:"30-6" },
+  enteroc:{ AMP:"2", CIP:"5", IPM:"10", LVX:"5", LZD:"10", TEC:"30", TZP:"30-6", VA:"5" },
+  haemo:{ AMC:"2-1", AMP:"2", CAF:"30", CIP:"5", CTX:"5", ETP:"10", FEP:"30", IPM:"10", LVX:"5", MEM:"10", MIN:"30", MXF:"5", RD:"5", SXT:"1.25-23.75", TZP:"30-6" },
+  listeria:{ AMP:"2", E:"15", MEM:"10", PEN:"1 unit", SXT:"1.25-23.75" },
+  moraxella:{ AMC:"2-1", CIP:"5", CTX:"5", E:"15", ETP:"10", FEP:"30", IPM:"10", LVX:"5", MEM:"10", MIN:"30", MXF:"5", SXT:"1.25-23.75" },
+  morganella:{ AMC:"20-10", AMK:"30", AMP:"10", CAZ:"10", CIP:"5", CTX:"5", ETP:"10", FDC:"30", FEP:"30", GEN:"10", IPM:"10", LVX:"5", MEM:"10", TEM:"30", TZP:"30-6" },
+  pneumo:{ AMP:"2", DA:"2", E:"15", LVX:"5", LZD:"10", MIN:"30", MXF:"5", RD:"5", SXT:"1.25-23.75", TEC:"30", VA:"5" },
+  pseudo:{ AMK:"30", CAZ:"10", CIP:"5", FDC:"30", FEP:"30", IPM:"10", LVX:"5", MEM:"10", TZP:"30-6" },
+  salmonella:{ AMC:"20-10", AMK:"30", AMP:"10", CAZ:"10", CTX:"5", ETP:"10", FDC:"30", FEP:"30", GEN:"10", LVX:"5", MEM:"10", TEM:"30", TZP:"30-6" },
+  scn:{ AMK:"30", AMP:"2", CIP:"5", DA:"2", E:"15", GEN:"10", LVX:"5", LZD:"10", MIN:"30", MXF:"5", PEN:"1 unit", RD:"5", SXT:"1.25-23.75" },
+  serratia:{ AMC:"20-10", AMK:"30", AMP:"10", CAZ:"10", CIP:"5", CTX:"5", ETP:"10", FDC:"30", FEP:"30", GEN:"10", LVX:"5", MEM:"10", MXF:"5", SXT:"1.25-23.75", TEM:"30", TZP:"30-6" },
+  staph:{ AMK:"30", AMP:"2", CIP:"5", DA:"2", E:"15", GEN:"10", LVX:"5", LZD:"10", MIN:"30", MXF:"5", PEN:"1 unit", RD:"5", SXT:"1.25-23.75" },
+  steno:{ SXT:"1.25-23.75" },
+  strepacg:{ DA:"2", E:"15", LVX:"5", LZD:"10", MIN:"30", MXF:"5", PEN:"1 unit", RD:"5", SXT:"1.25-23.75", TEC:"30", VA:"5" },
+  strepb:{ DA:"2", E:"15", LVX:"5", LZD:"10", MIN:"30", MXF:"5", PEN:"1 unit", RD:"5", SXT:"1.25-23.75", TEC:"30", VA:"5" },
+  vibrio:{ AZM:"15", CAZ:"10", CIP:"5", CTX:"5", LVX:"5", MEM:"10", SXT:"1.25-23.75", TZP:"30-6" },
+  viridans:{ AMP:"2", CTX:"5", DA:"2", FEP:"30", PEN:"1 unit", TEC:"30", VA:"5" },
+};
+
+/* LCR. L'EUCAST ne chiffre au disque qu'une poignée de couples ; pour le
+   pneumocoque et pour Haemophilus il renvoie à la CMI. Le moteur doit
+   alors REFUSER de catégoriser plutôt qu'appliquer le seuil ordinaire,
+   qui serait trop permissif pour une méningite. */
+const DZ_MENINGE = {
+  acineto:{ MEM:{S:21,R:21} },
+  entero:{ CTX:{S:20,R:20}, MEM:{S:22,R:22} },
+  morganella:{ CTX:{S:20,R:20}, MEM:{S:22,R:22} },
+  pseudo:{ MEM:{S:20,R:20} },
+  salmonella:{ CTX:{S:20,R:20}, MEM:{S:22,R:22} },
+  serratia:{ CTX:{S:20,R:20}, MEM:{S:22,R:22} },
+};
+
+/* Zone d'incertitude technique, au disque. Contrairement à la CMI, c'est
+   un INTERVALLE de millimètres : entre ces deux bornes la lecture n'est
+   pas reproductible. Noter que l'amoxicilline-acide clavulanique y figure
+   alors qu'elle n'a pas de ZIT en CMI — l'incertitude est propre à la
+   méthode, pas à la molécule. */
+const ZIT_ZONE = {
+  entero:{ AMC:[19,20], CIP:[22,24], FDC:[21,23], TZP:[19,19] },
+  haemo:{ CTX:[25,27], FEP:[28,33], IPM:[6,19], TZP:[26,28] },
+  morganella:{ AMC:[19,20], CIP:[22,24], FDC:[21,23], TZP:[19,19] },
+  pseudo:{ FDC:[20,21], FEP:[19,23], TZP:[18,19] },
+  salmonella:{ AMC:[19,20], FDC:[21,23], TZP:[19,19] },
+  serratia:{ AMC:[19,20], CIP:[22,24], FDC:[21,23], TZP:[19,19] },
+};
+
+/* L'EUCAST n'attribue pas de diamètre propre à l'amoxicilline : ses lignes
+   portent « Note », et le disque d'ampicilline sert de témoin. Cette
+   substitution ne vaut QUE chez les entérobactéries, où les deux molécules
+   partagent déjà le même seuil de CMI (8 mg/L). Ailleurs — Haemophilus,
+   Listeria, Moraxella, corynébactéries — les CMI diffèrent, et emprunter le
+   diamètre de l'ampicilline rendrait une catégorie fausse.
+
+   Nuance conservée ici pour mémoire : pour l'amoxicilline ORALE d'origine
+   urinaire, l'EUCAST fait rendre « I » et non « S » à partir d'une
+   ampicilline sensible. PhénoBac rend l'amoxicilline générale, comme pour
+   les CMI. */
+const DZ_TEMOIN = {
+  entero:     { AMX: "AMP" }, salmonella: { AMX: "AMP" },
+  morganella: { AMX: "AMP" }, serratia:   { AMX: "AMP" }
+};
+
+const OXA_PNEUMO = 20;
+
+/* Le CA-SFM publie ses propres diamètres, que PhénoBac ne reprend pas :
+   seules ses différences de CMI sont documentées dans ce dépôt. Là où il
+   s'écarte de l'EUCAST, appliquer quand même le diamètre EUCAST rendrait une
+   catégorie qui n'est celle d'aucun des deux référentiels. */
+function dzCasfmDivergent(group, k){
+  const c = state.ctx || {};
+  if(c.mening === "Oui" && BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return true;
+  if(c.urin === "Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]) return true;
+  return !!(BP_CASFM[group] && BP_CASFM[group][k]);
+}
+
+function getDZ(group, k){
+  const o = state.bpOverride[group + ":" + k];
+  if(o && o.S !== undefined && o.R !== undefined) return o;
+  const temoin = DZ_TEMOIN[group] && DZ_TEMOIN[group][k];
+  if(temoin) return getDZ(group, temoin);
+  const c = state.ctx || {};
+  if(estCasfm() && dzCasfmDivergent(group, k)) return null;
+  if(c.mening === "Oui"){
+    if(DZ_MENINGE[group] && DZ_MENINGE[group][k]) return DZ_MENINGE[group][k];
+    // Seuil méningé en CMI mais aucun au disque : l'EUCAST l'interdit.
+    // Ne pas retomber sur le seuil ordinaire, trop permissif pour un LCR.
+    if(BP_MENINGE[group] && BP_MENINGE[group][k]) return null;
+  }
+  return (DZ[group] && DZ[group][k]) || null;
+}
+
+// La charge du disque, en tenant compte du témoin (l'amoxicilline se lit
+// sur le disque d'ampicilline).
+function disquePour(group, k) {
+  const temoin = (DZ_TEMOIN[group] && DZ_TEMOIN[group][k]) || k;
+  const d = DISQUE[group] && DISQUE[group][temoin];
+  return d ? { charge: d, temoin: temoin === k ? null : temoin } : null;
+}
+
+function parseDiam(str) {
+  if (str === undefined || str === null) return null;
+  let s = String(str).trim().replace(",", ".").replace(/\s+/g, "").replace(/mm$/i, "");
+  if (!s) return null;
+  let op = "=";
+  if (/^(<=|≤)/.test(s)) { op = "<="; s = s.replace(/^(<=|≤)/, ""); }
+  else if (/^(>=|≥)/.test(s)) { op = ">="; s = s.replace(/^(>=|≥)/, ""); }
+  else if (/^>/.test(s)) { op = ">"; s = s.replace(/^>/, ""); }
+  else if (/^</.test(s)) { op = "<"; s = s.replace(/^</, ""); }
+  let v = parseFloat(s);
+  if (isNaN(v) || v < 0 || v > 60) return null;      // au-delà, ce n'est plus une boîte de 90 mm
+  if (v > 0 && v < 6) return null;                   // impossible : le disque mesure déjà 6 mm
+  if (v === 0) v = 6;                                // « pas de zone » se note 0 ou 6
+  return { op, v };
+}
+
+function catFromDiam(str, dz) {
+  if (!dz) return null;
+  const p = parseDiam(str); if (!p) return null;
+  const { op, v } = p, { S, R } = dz;
+
+  // Un opérateur ne donne qu'une borne. « ≥ 25 » conclut si 25 suffit déjà
+  // à être sensible ; sinon la mesure peut être n'importe où au-dessus et
+  // l'on ne conclut pas. Mieux vaut ne rien rendre que deviner.
+  if (op === ">=" || op === ">") return (S !== null && S !== undefined && v >= S) ? "S" : null;
+  if (op === "<=" || op === "<")  return (v < R) ? "R" : null;
+
+  // Sens inversé par rapport à la CMI : grand diamètre = sensible.
+  if (S === null || S === undefined) return v < R ? "R" : "I";
+  if (v >= S) return "S";
+  if (v < R) return "R";
+  return "I";
+}
+
+// Pourquoi ce diamètre n'a pas pu être traduit. Un refus sans motif
+// laisserait croire à une panne ; chacun de ces trois cas est au contraire
+// une décision du référentiel, et le biologiste doit savoir laquelle.
+function raisonSansDisque(group, k, ctx) {
+  const c = ctx || {};
+  if (estCasfm() && dzCasfmDivergent(group, k, c))
+    return "le CA-SFM retient un seuil différent de l'EUCAST pour ce couple, et PhénoBac ne reprend que ses seuils de CMI — saisir une CMI, ou repasser en EUCAST";
+  if (c.mening === "Oui" && !(DZ_MENINGE[group] && DZ_MENINGE[group][k])
+      && BP_MENINGE[group] && BP_MENINGE[group][k])
+    return "l'EUCAST ne chiffre pas ce couple au disque dans le LCR et renvoie à la CMI — le seuil ordinaire serait trop permissif pour une méningite";
+  if (!(DZ[group] && DZ[group][k]))
+    return horsEucast(group, k)
+      ? "l'EUCAST ne chiffre ce couple ni en CMI ni au disque ; PhénoBac ne dispose que d'une convention de laboratoire, applicable à une CMI — saisir une CMI"
+      : "l'EUCAST ne reconnaît pas la méthode des disques pour ce couple — une CMI est nécessaire";
+  return "valeur illisible : un diamètre s'écrit en millimètres, entre 6 (pas de zone) et 60";
+}
+
+function zitZonePour(group, k) {
+  if (state.bpOverride && state.bpOverride[group + ":" + k]) return null;  // seuils saisis : la ZIT publiée ne s'y rapporte plus
+  if (state.ctx && state.ctx.mening === "Oui") return null;                // lignes LCR : pas de ZIT publiée
+  const z = ZIT_ZONE[group] && ZIT_ZONE[group][k];
+  return z || null;
+}
+
+function enZitZone(str, group, k) {
+  const z = zitZonePour(group, k);
+  if (!z) return false;
+  const p = parseDiam(str);
+  if (!p || p.op !== "=") return false;   // une borne ne situe pas dans l'intervalle
+  return p.v >= z[0] && p.v <= z[1];
+}
+
 /* Ce seuil s'écarte-t-il de la valeur EUCAST parce que le CA-SFM est actif ?
    Sert uniquement à l'afficher : le biologiste doit voir d'où vient le chiffre. */
 function ecartCasfm(group,k){
@@ -2328,7 +2555,7 @@ const ORG = {
 /* ============================================================
    État + rendu de l'interface
    ============================================================ */
-let state = { org:"ecoli", mode:"sir", results:{}, mic:{}, ctx:{}, bpOverride:{}, lastA:null };
+let state = { org:"ecoli", mode:"sir", results:{}, mic:{}, diam:{}, ctx:{}, bpOverride:{}, lastA:null };
 
 /* ============================================================
    Modèle freemium — prix et périmètre, à ajuster librement.
@@ -2402,6 +2629,9 @@ const modeSeg = $("#modeSeg");
 function bpGroup(){ return BPGROUP[state.org]; }
 
 /* recalcule les catégories S/I/R à partir des CMI saisies */
+/* Une mesure — CMI ou diamètre — se retraduit entièrement à chaque frappe :
+   changer une valeur peut déplacer la catégorie de plusieurs antibiotiques
+   à la fois (le dépistage du pneumocoque en est l'exemple). */
 function recomputeFromMic(){
   const org=currentOrg(), g=bpGroup();
   state.results={};
@@ -2409,6 +2639,49 @@ function recomputeFromMic(){
     const c=catFromMic(state.mic[k], getBP(g,k));
     if(c) state.results[k]=c;
   }));
+}
+
+function recomputeFromDiam(){
+  const org=currentOrg(), g=bpGroup();
+  state.results={};
+  panelComplet(org).forEach(grp=>grp.abx.forEach(k=>{
+    const c=catFromDiam(state.diam[k], getDZ(g,k));
+    if(c) state.results[k]=c;
+  }));
+  depistagePneumo(g);
+}
+
+/* Pneumocoque : le dépistage à l'oxacilline 1 µg. Sans lui, un laboratoire
+   qui lit son pneumocoque au disque n'obtiendrait RIEN sur les β-lactamines
+   — la question la plus importante pour cette espèce. L'EUCAST écrit « Note »
+   en face de la pénicilline G, de l'amoxicilline et du céfotaxime, et renvoie
+   au dépistage : zone ≥ 20 mm, on peut les rendre sensibles sans autre test ;
+   zone < 20 mm, il faut une CMI. Un dépistage positif n'est PAS une
+   résistance, et rien n'est rendu « R » sur cette seule base. */
+function depistagePneumo(g){
+  if(g!=="pneumo") return null;
+  const p=parseDiam(state.diam.OXA);
+  if(!p || p.op!=="=") return null;
+  if(p.v>=OXA_PNEUMO){
+    ["PEN","AMX","CTX"].forEach(k=>{ if(state.results[k]===undefined) state.results[k]="S"; });
+    return {ok:true, mm:p.v};
+  }
+  return {ok:false, mm:p.v};
+}
+
+/* La mesure en cours, quelle que soit l'unité. */
+function estMesure(){ return state.mode==="mic" || state.mode==="diam"; }
+/* Une valeur a-t-elle été mesurée pour cet antibiotique, quelle que soit
+   l'unité ? Sert aux questions de contexte, qui ne doivent se poser que si
+   la réponse peut changer une catégorie. */
+function mesureSaisie(k){
+  if(state.mode==="mic") return !!state.mic[k];
+  if(state.mode==="diam") return !!state.diam[k];
+  return false;
+}
+function recomputeMesure(){
+  if(state.mode==="mic") recomputeFromMic();
+  else if(state.mode==="diam") recomputeFromDiam();
 }
 
 /* remplir le sélecteur d'espèces (groupé, verrou Premium) */
@@ -2459,7 +2732,7 @@ const PRESETS = [
   PRESETS.forEach(p=>{
     const b=document.createElement("button"); b.className="preset"; b.textContent=p.name;
     b.onclick=()=>{ state.org=p.org; state.mode="sir"; state.results={...p.res};
-      state.mic={}; state.ctx={...p.ctx};
+      state.mic={}; state.diam={}; state.ctx={...p.ctx};
       speciesSel.value=p.org; renderAll(); };
     wrap.appendChild(b);
   });
@@ -2507,7 +2780,7 @@ function renderAbx(){
       const nameHtml = `<div class="abx-name"><span class="n">${ABX[k].n}</span>`+
         `<span class="code">${ABX[k].code}</span>`+
         (intr?`<span class="intr" title="${intr}">R naturelle</span>`:"")+
-        (state.mode==="mic"?`<div class="bp-hint">${bpHint(g,k)}</div>`:"")+`</div>`;
+        (estMesure()?`<div class="bp-hint">${state.mode==="mic"?bpHint(g,k):dzHint(g,k)}</div>`:"")+`</div>`;
       row.innerHTML=nameHtml;
 
       if(state.mode==="sir"){
@@ -2524,12 +2797,21 @@ function renderAbx(){
         });
         row.appendChild(seg);
       } else {
+        // CMI et diamètre partagent le même gabarit : un champ, une unité, un
+        // marqueur de ZIT, une pastille de catégorie. Seules changent l'unité
+        // et la fonction qui traduit la mesure.
+        const mm = state.mode==="diam";
+        const valeurs = mm ? state.diam : state.mic;
+        const unite = mm ? "mm" : "mg/L";
+        const traduire = v => mm ? catFromDiam(v, getDZ(g,k)) : catFromMic(v, getBP(g,k));
+        const douteux = v => mm ? enZitZone(v, g, k) : enZit(v, g, k);
+
         const wrap=document.createElement("div"); wrap.className="mic-wrap";
         const inp=document.createElement("input");
         inp.className="mic-input"; inp.type="text"; inp.inputMode="decimal";
-        inp.placeholder="—"; inp.value=state.mic[k]||""; inp.id="mic-"+k;
-        inp.setAttribute("aria-label","CMI "+ABX[k].n+" en mg/L");
-        const unit=document.createElement("span"); unit.className="mic-unit"; unit.textContent="mg/L";
+        inp.placeholder="—"; inp.value=valeurs[k]||""; inp.id="mic-"+k;
+        inp.setAttribute("aria-label", (mm?"Diamètre d'inhibition ":"CMI ")+ABX[k].n+" en "+unite);
+        const unit=document.createElement("span"); unit.className="mic-unit"; unit.textContent=unite;
         const chip=document.createElement("div"); chip.id="chip-"+k;
         // Marqueur d'incertitude technique : il ne remplace pas la catégorie,
         // il dit qu'à cette valeur la catégorie n'est pas reproductible.
@@ -2537,12 +2819,17 @@ function renderAbx(){
         zc.title="Zone d'incertitude technique : à cette valeur, la catégorisation est peu reproductible. Ni l'EUCAST ni le CA-SFM n'en font une catégorie ; PhénoBac ne modifie rien de lui-même.";
         const majChips=(c)=>{
           chip.className="cat-chip "+(c||"none"); chip.textContent=c?lettreCat(c):"—";
-          zc.hidden = !enZit(state.mic[k], g, k);
+          zc.hidden = !douteux(valeurs[k]);
         };
-        majChips(catFromMic(state.mic[k], getBP(g,k)));
+        majChips(traduire(valeurs[k]));
         inp.oninput=()=>{
-          state.mic[k]=inp.value;
-          recomputeFromMic();
+          valeurs[k]=inp.value;
+          recomputeMesure();
+          // Le dépistage du pneumocoque déplace d'autres lignes que la sienne :
+          // en mode diamètre, on redessine tout plutôt que la seule pastille.
+          if(mm && g==="pneumo"){ renderAbx(); renderCtx(); renderInterpret();
+            const r=document.getElementById("mic-"+k); if(r){ r.focus(); r.setSelectionRange(r.value.length, r.value.length); }
+            return; }
           majChips(state.results[k]);
           renderCtx(); renderInterpret();
         };
@@ -2557,6 +2844,7 @@ function renderAbx(){
   const existingBp=document.querySelector(".bp-editor");
   if(existingBp && state.mode!=="mic") existingBp.remove();
   if(state.mode==="mic") renderBpEditor();
+  if(state.mode==="diam") renderDiamNote();
 }
 
 /* libellé de seuil pour l'aide sous chaque antibiotique */
@@ -2571,6 +2859,60 @@ function bpHint(group,k){
   return z===null ? base : base + ` · ZIT ${fmt(z)}`;
 }
 function fmt(x){ return (Math.round(x*1000)/1000).toString(); }
+
+/* Aide sous chaque antibiotique, en mode diamètre. Le sens est inversé par
+   rapport aux CMI (S ≥, R <) et la charge du disque en fait partie : sans
+   elle, « 23 mm » ne veut rien dire. */
+function dzHint(group,k){
+  const dz=getDZ(group,k);
+  if(!dz){
+    if(group==="pneumo" && k==="OXA") return `dépistage des β-lactamines · disque 1 µg · négatif si ≥ ${OXA_PNEUMO} mm`;
+    // Ces trois-là ne sont pas « sans seuil » : elles se déduisent du
+    // dépistage, et dire le contraire enverrait chercher une CMI pour rien.
+    if(group==="pneumo" && ["PEN","AMX","CTX"].includes(k))
+      return `se déduit du dépistage à l'oxacilline 1 µg (ci-dessus)`;
+    if(estCasfm() && dzCasfmDivergent(group,k)) return "le CA-SFM déplace ce seuil · saisir en CMI";
+    const c=state.ctx||{};
+    if(c.mening==="Oui" && BP_MENINGE[group] && BP_MENINGE[group][k])
+      return "pas de seuil au disque dans le LCR · saisir en CMI";
+    return "pas de seuil au disque · saisir en CMI";
+  }
+  const d=disquePour(group,k);
+  const charge = d ? " · disque " + (d.charge==="1 unit" ? "1 UI" : d.charge+" µg") : "";
+  const temoin = d && d.temoin ? " (" + (ABX[d.temoin] ? ABX[d.temoin].n.toLowerCase() : d.temoin) + ")" : "";
+  const base = (dz.S===null || dz.S===undefined)
+    ? `pas de catégorie S · R < ${dz.R} mm`
+    : (dz.S===dz.R ? `seuil : S ≥ ${dz.S} · R < ${dz.R} mm`
+                   : `seuils : S ≥ ${dz.S} · R < ${dz.R} mm`);
+  const z = zitZonePour(group,k);
+  const zit = z ? ` · ZIT ${z[0]===z[1] ? z[0] : z[0]+"–"+z[1]} mm` : "";
+  return base + charge + temoin + zit;
+}
+
+/* Rappel affiché sous l'antibiogramme en mode diamètre. Trois choses que
+   l'on ne peut pas deviner en regardant la boîte : d'où viennent les seuils,
+   ce qui rend une mesure invalide, et que la charge du disque compte. */
+function renderDiamNote(){
+  const prev=document.querySelector(".diam-note"); if(prev) prev.remove();
+  const g=bpGroup();
+  const det=document.createElement("details"); det.className="bp-editor diam-note";
+  det.innerHTML=`<summary><span class="caret">▸</span>Diamètres critiques (mm) — méthode des disques</summary>`;
+  const body=document.createElement("div"); body.className="bp-body";
+  const casfm = estCasfm()
+    ? ` <b>Vous travaillez en CA-SFM</b> : PhénoBac ne reprend que ses différences de CMI, pas ses diamètres. Les couples où le CA-SFM déplace le seuil ne sont pas catégorisés au disque — ils sont signalés et renvoient à la CMI.`
+    : "";
+  body.innerHTML =
+    `<div class="bp-note">Seuils de l'<b>EUCAST v16.1</b>, méthode des disques sur Mueller-Hinton. ` +
+    `Le sens est <b>inversé</b> par rapport aux CMI : une <b>grande</b> zone est sensible. ` +
+    `La <b>charge du disque</b> fait partie du seuil — elle est rappelée sous chaque molécule, et une charge différente rend le seuil inapplicable. ` +
+    `Une zone se mesure bord à bord, boîte retournée sur fond sombre, à 16–20 h de culture ; « pas de zone » se note <b>6</b> (le diamètre du disque) ou <b>0</b>. ` +
+    `Un couple sans seuil au disque n'est pas un oubli de PhénoBac : l'EUCAST ne reconnaît pas la méthode pour lui — c'est le cas de la colistine, et de la vancomycine sur staphylocoque.${casfm}</div>`;
+  if(g==="pneumo"){
+    body.innerHTML += `<div class="bp-note">Pneumocoque : les β-lactamines ne se lisent pas au disque. Renseignez l'<b>oxacilline 1 µg</b> — zone ≥ ${OXA_PNEUMO} mm, l'EUCAST permet de rendre sensibles la pénicilline G, l'amoxicilline et le céfotaxime sans autre test ; zone &lt; ${OXA_PNEUMO} mm, une CMI de pénicilline G est nécessaire. Un dépistage positif n'est pas une résistance.</div>`;
+  }
+  det.appendChild(body);
+  abxGrid.parentNode.insertBefore(det, abxGrid.nextSibling);
+}
 
 /* éditeur des concentrations critiques (mode CMI) */
 function renderBpEditor(){
@@ -2643,7 +2985,7 @@ function questionMeninge(){
     id:"mening",
     q:"Prélèvement méningé (LCR) ? Les seuils y sont plus stricts.",
     opts:["Oui","Non"],
-    when:r=>codes.some(k=>r[k]!==undefined || (state.mode==="mic" && state.mic[k]))
+    when:r=>codes.some(k=>r[k]!==undefined || mesureSaisie(k))
   };
 }
 
@@ -2664,7 +3006,7 @@ function questionUrinaire(){
     q:"Infection urinaire sans signe de gravité ? Le CA-SFM y retient un seuil de cotrimoxazole plus élevé.",
     opts:["Oui","Non"],
     when:r=>state.ctx.mening!=="Oui" &&
-            codes.some(k=>r[k]!==undefined || (state.mode==="mic" && state.mic[k]))
+            codes.some(k=>r[k]!==undefined || mesureSaisie(k))
   };
 }
 
@@ -2852,16 +3194,16 @@ async function interpretRemote(payload){
 
 async function renderInterpretRemote(){
   const myReq = ++_reqSeq;
-  const mic = state.mode==="mic";
   try{
-    // En mode CMI, c'est le SERVEUR qui catégorise (S/I/R à partir des mg/L) :
-    // la conversion locale n'est qu'un affichage optimiste, jamais l'autorité.
-    // Le mode CMI étant vendu comme Premium, il exige une licence valide.
-    // Le référentiel voyage avec la demande : c'est le moteur qui fait foi,
-    // il doit donc savoir sous quel référentiel il est interrogé.
-    const res = await interpretRemote(mic
-      ? { organism:state.org, mode:"mic", mic:state.mic, bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF }
-      : { organism:state.org, mode:"sir", results:state.results, ctx:state.ctx, ref:REF_ACTIF });
+    // Dès qu'une MESURE est saisie — mg/L ou mm — c'est le SERVEUR qui
+    // catégorise : la conversion locale n'est qu'un affichage optimiste,
+    // jamais l'autorité. Le référentiel voyage avec la demande, le moteur
+    // devant savoir sous lequel il est interrogé.
+    const envoi =
+      state.mode==="mic"  ? { organism:state.org, mode:"mic",  mic:state.mic,   bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF } :
+      state.mode==="diam" ? { organism:state.org, mode:"diam", diam:state.diam, bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF } :
+                            { organism:state.org, mode:"sir",  results:state.results, ctx:state.ctx, ref:REF_ACTIF };
+    const res = await interpretRemote(envoi);
     if(myReq!==_reqSeq) return; // réponse obsolète, ignorée
 
     if(res.locked){
@@ -3036,8 +3378,12 @@ function buildReport(A){
   panelComplet(org).forEach(grp=>{
     grp.abx.forEach(k=>{
       const cat=state.results[k];
-      const mic=(state.mode==="mic")?(state.mic[k]||""):"";
-      if(!cat && !mic) return;
+      // La mesure figure au compte rendu avec son unité : un diamètre rendu
+      // « 19 mg/L » serait une faute grave, et invisible à la relecture.
+      const mesure = state.mode==="mic"  ? (state.mic[k]||"")
+                   : state.mode==="diam" ? (state.diam[k]||"") : "";
+      const unite  = state.mode==="diam" ? " mm" : " mg/L";
+      if(!cat && !mesure) return;
       // Si la lecture interprétative a modifié la catégorie, c'est celle-ci
       // qui est rendue — la catégorie lue est rappelée juste à côté.
       const chg = (A.rendu||[]).find(x=>x.abx===k);
@@ -3047,7 +3393,7 @@ function buildReport(A){
         : libelleCat(cat);
       rows+=`<tr>
         <td>${esc(ABX[k].n)} <span class="rc">${esc(ABX[k].code)}</span></td>
-        <td class="mic">${mic?esc(mic)+" mg/L":"—"}</td>
+        <td class="mic">${mesure?esc(mesure)+unite:"—"}</td>
         <td class="cat cat-${classeCat(cle)}">${cle?esc(lettreCat(cle)):"—"}</td>
         <td class="catf">${catFull}</td>
       </tr>`;
@@ -3064,7 +3410,9 @@ function buildReport(A){
   const alerts = A.alerts.map(a=>`<li class="al-${a.lvl}">${esc(a.txt)}</li>`).join("");
   const rules  = A.rules.length? A.rules.map(r=>`<li><b>${esc(r.k)}</b> ${esc(r.txt)}</li>`).join("") : "";
   const sevLbl = SEV_LBL[A.sev];
-  const modeLbl = state.mode==="mic" ? "CMI (mg/L) → catégorisation automatique" : "Catégoriel (S / I / R)";
+  const modeLbl = state.mode==="mic"  ? "CMI (mg/L) → catégorisation automatique"
+                : state.mode==="diam" ? "Diamètres (mm), méthode des disques → catégorisation automatique"
+                : "Catégoriel (S / I / R)";
 
   document.getElementById("report").innerHTML = `
     <div class="rp-head">
@@ -4214,7 +4562,7 @@ function renderIdent(){
 
 function useForAntibiogram(id){
   if(!isPremium() && !FREE_SPECIES.includes(id)){ openUpgrade("Cette espèce fait partie de PhénoBac Premium."); return; }
-  state.org=id; state.results={}; state.mic={}; state.ctx={};
+  state.org=id; state.results={}; state.mic={}; state.diam={}; state.ctx={};
   renderSpeciesOptions(); renderAll(); setView("work");
 }
 
@@ -4347,7 +4695,7 @@ function applyPlan(){
   renderSpeciesOptions();
   // si un germe Premium était sélectionné et qu'on repasse en gratuit, revenir à E. coli
   if(!isPremium() && !FREE_SPECIES.includes(state.org)){
-    state.org="ecoli"; state.results={}; state.mic={}; state.ctx={};
+    state.org="ecoli"; state.results={}; state.mic={}; state.diam={}; state.ctx={};
     speciesSel.value="ecoli";
   }
   if(!isPremium() && state.mode==="mic"){ state.mode="sir"; }
@@ -4371,10 +4719,12 @@ function renderModeToggle(){
 }
 modeSeg.querySelectorAll("button").forEach(b=>{
   b.onclick=()=>{
+    // La saisie en millimètres n'est pas réservée : c'est la méthode des
+    // laboratoires sans automate, ceux pour qui cet outil a été écrit.
     if(b.dataset.m==="mic" && !isPremium()){ openUpgrade("La saisie par CMI (avec seuils paramétrables) est une fonction Premium."); return; }
     if(state.mode===b.dataset.m) return;
     state.mode=b.dataset.m;
-    if(state.mode==="mic") recomputeFromMic();
+    recomputeMesure();
     renderAll();
   };
 });
@@ -4396,9 +4746,9 @@ if(refSeg){
       if(REF_ACTIF===b.dataset.r) return;
       REF_ACTIF=b.dataset.r;
       try{ localStorage.setItem("phenobac.ref", REF_ACTIF); }catch(e){ /* sans mémoire, tant pis */ }
-      // Changer de référentiel change les seuils : en mode CMI, les
-      // catégories doivent être recalculées, pas conservées.
-      if(state.mode==="mic") recomputeFromMic();
+      // Changer de référentiel change les seuils : toute mesure saisie doit
+      // être retraduite, pas conservée telle quelle.
+      recomputeMesure();
       renderAll(); majMentionsReferentiel();
     };
   });
@@ -4414,9 +4764,9 @@ speciesSel.onchange=()=>{
     openUpgrade("Cette espèce fait partie de PhénoBac Premium.");
     return;
   }
-  state.org=sel; state.results={}; state.mic={}; state.ctx={}; renderAll();
+  state.org=sel; state.results={}; state.mic={}; state.diam={}; state.ctx={}; renderAll();
 };
-$("#reset").onclick=()=>{ state.results={}; state.mic={}; state.ctx={}; renderAll(); };
+$("#reset").onclick=()=>{ state.results={}; state.mic={}; state.diam={}; state.ctx={}; renderAll(); };
 
 /* ============================================================
    Présentation d'accueil : visible à la première visite, puis
