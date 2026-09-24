@@ -90,18 +90,42 @@ exports.handler = async (event) => {
   if (action === "exporter" || action === "compter") {
     if (!adminOk(event)) return reponse(CORS, 401, { error: "unauthorized" });
 
+    // Période de collecte. Une date illisible est REFUSÉE, jamais ignorée :
+    // un filtre silencieusement inopérant exporterait précisément ce qu'on
+    // cherchait à écarter, et l'erreur ne se verrait qu'après transmission.
+    const JOUR = /^\d{4}-\d{2}-\d{2}$/;
+    const depuis = body.depuis === undefined || body.depuis === null ? "" : String(body.depuis).trim();
+    const jusqu  = body.jusqu_a === undefined || body.jusqu_a === null ? "" : String(body.jusqu_a).trim();
+    if ((depuis && !JOUR.test(depuis)) || (jusqu && !JOUR.test(jusqu)))
+      return reponse(CORS, 400, { error: "invalide",
+        message: "dates attendues au format AAAA-MM-JJ (« depuis », « jusqu_a »)" });
+    if (depuis && jusqu && depuis > jusqu)
+      return reponse(CORS, 400, { error: "invalide",
+        message: "« depuis » est postérieur à « jusqu_a »" });
+
     const res = await store.list().catch(() => ({ blobs: [] }));
-    const isolats = [];
+    const tous = [];
     for (const b of (res.blobs || [])) {
       const rec = await store.get(b.key, { type: "json" }).catch(() => null);
-      if (rec && typeof rec === "object") isolats.push(rec);
+      if (rec && typeof rec === "object") tous.push(rec);
     }
 
+    // Le filtre s'applique AVANT la déduplication : un isolat écarté parce
+    // qu'il précède la période ne doit plus masquer celui du même patient à
+    // l'intérieur de la période.
+    const isolats = G.filtrerPeriode(tous, depuis, jusqu);
+
     if (action === "compter") {
-      const retenus = G.dedupliquer(isolats).filter(i => G.enregistrements(i).length);
+      const dedup = G.dedupliquer(isolats);
+      const retenus = dedup.filter(i => G.enregistrements(i).length);
       return reponse(CORS, 200, {
-        ok: true, total: isolats.length,
-        apresDeduplication: G.dedupliquer(isolats).length,
+        ok: true,
+        // Le registre entier ET la période : sans les deux, on ne verrait pas
+        // ce que le filtre écarte, et on le croirait sans effet.
+        totalRegistre: tous.length,
+        periode: (depuis || jusqu) ? { depuis: depuis || null, jusqu_a: jusqu || null } : null,
+        total: isolats.length,
+        apresDeduplication: dedup.length,
         dansGlass: retenus.length
       });
     }
@@ -112,11 +136,16 @@ exports.handler = async (event) => {
     const lignes = [];
     gardes.forEach(i => { G.enregistrements(i).forEach(l => lignes.push(l)); });
 
+    // Le nom du fichier porte la période : deux exports côte à côte dans un
+    // dossier doivent se distinguer sans qu'on ait à les ouvrir.
+    const suffixe = (depuis || jusqu)
+      ? "-" + (depuis || "debut") + "_" + (jusqu || "fin")
+      : "";
     return {
       statusCode: 200,
       headers: Object.assign({}, CORS, {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="phenobac-glass.csv"'
+        "Content-Disposition": 'attachment; filename="phenobac-glass' + suffixe + '.csv"'
       }),
       body: G.versCsv(lignes)
     };

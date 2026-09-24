@@ -289,6 +289,35 @@ curl -s -X POST https://votre-domaine/.netlify/functions/surveillance \
 
 `{"action":"compter"}` donne les effectifs sans produire le fichier.
 
+### Période de collecte
+
+Un registre garde tout ce qu'on lui a versé, **essais de mise en route
+compris**. Deux dates facultatives restreignent l'export à la période où la
+collecte réelle a commencé :
+
+```bash
+curl -s -X POST https://votre-domaine/.netlify/functions/surveillance \
+  -H "Authorization: Bearer $PHENOBAC_ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"action":"exporter","depuis":"2026-10-01"}' -o phenobac-glass.csv
+```
+
+`depuis` et `jusqu_a` s'écrivent en **AAAA-MM-JJ**, bornes incluses, et
+fonctionnent aussi avec `compter` — lequel renvoie alors `totalRegistre` à
+côté de `total`, pour qu'on voie ce que le filtre écarte au lieu de le croire
+sans effet. Une date d'un autre format est **refusée** (400) : un filtre
+silencieusement inopérant exporterait précisément ce qu'on cherchait à
+écarter, et l'erreur ne se verrait qu'après transmission à l'OMS.
+
+Le filtre s'applique **avant** la déduplication, et l'ordre n'est pas
+indifférent : un isolat écarté parce qu'il précède la période ne doit plus
+masquer celui du même patient à l'intérieur. Dans l'ordre inverse, exclure un
+essai reviendrait à exclure aussi le vrai isolat qui le suit —
+`outils/essai-glass.js` contrôle ce point précis.
+
+Le nom du fichier porte la période, pour que deux exports côte à côte se
+distinguent sans qu'on ait à les ouvrir.
+
 ## Avertissement d'usage
 
 PhénoBac propose une interprétation d'orientation fondée sur les phénotypes

@@ -188,6 +188,34 @@ function versCsv(lignes) {
   return "﻿" + COLONNES.join(";") + "\n" + corps.join("\n") + (corps.length ? "\n" : "");
 }
 
+/* ---------- Période de collecte ----------
+   Un registre garde tout ce qu'on lui a versé, essais de mise en route
+   compris. L'export doit donc pouvoir ne porter que sur la période où la
+   collecte réelle a commencé, sans quoi les premiers essais partiraient
+   mêlés aux vrais isolats et fausseraient les taux dès la première
+   transmission.
+
+   Le filtre s'applique AVANT la déduplication, et c'est important : un
+   isolat écarté parce qu'il précède la période ne doit plus masquer celui
+   du même patient à l'intérieur. Sinon, exclure un essai reviendrait à
+   exclure aussi le vrai isolat qui le suit.
+
+   Les dates sont au format AAAA-MM-JJ, où la comparaison de chaînes suit
+   l'ordre chronologique : aucune conversion n'est nécessaire, et aucun
+   fuseau horaire ne vient s'en mêler. */
+function dansPeriode(isolat, depuis, jusqu) {
+  const d = String((isolat && isolat.date) || "").slice(0, 10);
+  if (!d) return false;              // sans date, on ne peut le situer nulle part
+  if (depuis && d < depuis) return false;
+  if (jusqu && d > jusqu) return false;
+  return true;
+}
+
+function filtrerPeriode(isolats, depuis, jusqu) {
+  if (!depuis && !jusqu) return isolats.slice();
+  return isolats.filter(i => dansPeriode(i, depuis, jusqu));
+}
+
 /* ---------- Déduplication ----------
    GLASS ne retient que le PREMIER isolat d'une espèce par patient, par
    prélèvement et par période. Sans cela, un patient hospitalisé longtemps
@@ -210,5 +238,6 @@ function dedupliquer(isolats) {
 
 module.exports = {
   PATHOGENE, PRELEVEMENT, ANTIBIOTIQUE, COLONNES,
-  trancheAge, marqueurs, enregistrements, versCsv, dedupliquer
+  trancheAge, marqueurs, enregistrements, versCsv, dedupliquer,
+  dansPeriode, filtrerPeriode
 };

@@ -130,7 +130,136 @@ verif("autant de lignes que d'enregistrements", csv.trim().split("\n").length ==
 var piege = G.versCsv([{ RecordId: 'a;b', SIR: 'S' }]);
 verif("une valeur contenant un point-virgule est protégée", piege.indexOf('"a;b"') !== -1);
 
-dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
-                : OK + " contrôles, l'export est conforme au manuel GLASS."));
-if (KO && typeof process === "object" && process.exit) process.exit(1);
-if (KO) throw new Error(KO + " échec(s)");
+/* ---------- la période de collecte ---------- */
+dire("\nLa période de collecte écarte les essais de mise en route");
+
+var reg = [
+  { patient: "P9", organism: "ecoli", prelevement: "Hémoculture", date: "2026-07-01",
+    laboratoire: "LAB", resultats: { CIP: "R" } },                    // essai
+  { patient: "P9", organism: "ecoli", prelevement: "Hémoculture", date: "2026-10-05",
+    laboratoire: "LAB", resultats: { CIP: "S" } },                    // vrai isolat
+  { patient: "P8", organism: "kpneu", prelevement: "ECBU (urines)", date: "2026-11-20",
+    laboratoire: "LAB", resultats: { GEN: "R" } }
+];
+
+verif("sans période, le registre entier est repris",
+      G.filtrerPeriode(reg, "", "").length === 3);
+verif("« depuis » écarte ce qui précède",
+      G.filtrerPeriode(reg, "2026-10-01", "").length === 2);
+verif("« jusqu_a » écarte ce qui suit",
+      G.filtrerPeriode(reg, "", "2026-10-31").length === 2);
+verif("les deux bornes délimitent un intervalle",
+      G.filtrerPeriode(reg, "2026-10-01", "2026-10-31").length === 1);
+verif("les bornes sont incluses",
+      G.filtrerPeriode(reg, "2026-10-05", "2026-10-05").length === 1);
+verif("un isolat sans date ne peut être situé, donc reste hors de toute période",
+      G.filtrerPeriode([{ patient: "P7", date: "" }], "2026-01-01", "").length === 0);
+
+// Le point décisif : le filtre passe AVANT la déduplication. Sinon l'essai
+// de juillet, gardé comme « premier isolat » du patient P9, masquerait le
+// vrai isolat d'octobre — et l'exclure reviendrait à exclure les deux.
+(function () {
+  var dansPeriode = G.filtrerPeriode(reg, "2026-10-01", "");
+  var gardes = G.dedupliquer(dansPeriode);
+  var p9 = gardes.filter(function (g) { return g.patient === "P9"; });
+  verif("l'isolat d'octobre est retenu une fois l'essai de juillet écarté",
+        p9.length === 1 && p9[0].date === "2026-10-05");
+
+  // L'ordre inverse — dédupliquer puis filtrer — perdrait ce patient.
+  var inverse = G.filtrerPeriode(G.dedupliquer(reg), "2026-10-01", "");
+  verif("… alors que l'ordre inverse le perdrait (c'est pourquoi l'ordre compte)",
+        inverse.filter(function (g) { return g.patient === "P9"; }).length === 0);
+})();
+
+/* ---------- le point d'entrée refuse une date illisible ---------- */
+/* Un filtre de période qui accepterait « 2026-9-1 » puis l'ignorerait
+   exporterait le registre entier en laissant croire au contraire. Le refus
+   est donc contrôlé ici, sur le vrai gestionnaire, magasin simulé. */
+dire("\nUne date illisible est refusée, jamais ignorée");
+var enCours = [];
+(function () {
+  var registre = [
+    { cle: "a", patient: "P1", organism: "ecoli", prelevement: "Hémoculture",
+      date: "2026-07-01", laboratoire: "LAB", resultats: { CIP: "R" } },
+    { cle: "b", patient: "P2", organism: "ecoli", prelevement: "Hémoculture",
+      date: "2026-10-05", laboratoire: "LAB", resultats: { CIP: "S" } }
+  ];
+  var faux = function (n) {
+    if (n.indexOf("store") !== -1) return { getStore: function () { return {
+      list: function () { return Promise.resolve({ blobs: registre.map(function (r) { return { key: r.cle }; }) }); },
+      get:  function (k) { return Promise.resolve(registre.filter(function (r) { return r.cle === k; })[0] || null); },
+      setJSON: function () { return Promise.resolve(); }
+    }; } };
+    if (n.indexOf("http") !== -1) return {
+      cors: function () { return {}; },
+      adminOk: function () { return true; }
+    };
+    if (n.indexOf("glass") !== -1) return G;
+    return {};
+  };
+  var mod = { exports: {} };
+  var src = (typeof readFile === "function") ? readFile("netlify/functions/surveillance.js")
+                                             : require("fs").readFileSync("netlify/functions/surveillance.js", "utf8");
+  (new Function("module", "exports", "require", src))(mod, mod.exports, faux);
+  var H = mod.exports.handler;
+
+  var appel = function (corps) {
+    return H({ httpMethod: "POST", headers: {}, body: JSON.stringify(corps) });
+  };
+  // Ces contrôles sont ASYNCHRONES. Sans les rassembler, le bilan final
+  // s'imprimerait avant qu'ils aient répondu, et un échec passerait sans
+  // faire échouer le banc — un garde-fou qui ne peut pas échouer n'en est
+  // pas un.
+  var attendre = function (p, suite) { enCours.push(p.then(suite)); };
+
+  attendre(appel({ action: "compter", depuis: "2026-9-1" }), function (r) {
+    verif("« 2026-9-1 » est refusé (mois et jour non complétés)", r.statusCode === 400);
+  });
+  attendre(appel({ action: "compter", depuis: "01/10/2026" }), function (r) {
+    verif("une date à la française est refusée", r.statusCode === 400);
+  });
+  attendre(appel({ action: "compter", depuis: "2026-11-01", jusqu_a: "2026-10-01" }), function (r) {
+    verif("une période à l'envers est refusée", r.statusCode === 400);
+  });
+  attendre(appel({ action: "compter", depuis: "2026-10-01" }), function (r) {
+    var c = JSON.parse(r.body);
+    verif("une période valide passe, et le registre entier reste annoncé",
+          r.statusCode === 200 && c.total === 1 && c.totalRegistre === 2);
+  });
+  attendre(appel({ action: "compter" }), function (r) {
+    var c = JSON.parse(r.body);
+    verif("sans période, le compte porte sur tout le registre",
+          c.total === 2 && c.periode === null);
+  });
+  attendre(appel({ action: "exporter", depuis: "2026-10-01" }), function (r) {
+    verif("le nom du fichier porte la période",
+          r.headers["Content-Disposition"].indexOf("2026-10-01_fin") !== -1);
+    verif("l'export ne porte que la période demandée",
+          r.body.trim().split("\n").length === 2);
+  });
+})();
+
+function bilan() {
+  dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
+                  : OK + " contrôles, l'export est conforme au manuel GLASS."));
+  if (KO && typeof process === "object" && process.exit) process.exit(1);
+  if (KO) throw new Error(KO + " échec(s)");
+}
+
+// Conclure DANS une promesse ne suffit pas : sous jsc, un « throw » à
+// l'intérieur d'un .then() ne change pas le code de sortie, et le banc
+// rendrait « tout va bien » avec des échecs affichés au-dessus. On vide
+// donc la file des microtâches, puis on conclut au niveau supérieur, seul
+// endroit où une exception compte. Node, lui, n'a pas drainMicrotasks
+// mais honore process.exit dans une promesse.
+var fin = function (e) {
+  if (e) { KO++; dire("  ÉCHEC  le gestionnaire a levé une exception : " + e); }
+  bilan();
+};
+if (typeof drainMicrotasks === "function") {
+  Promise.all(enCours).catch(function (e) { KO++; dire("  ÉCHEC  " + e); });
+  drainMicrotasks();
+  fin();
+} else {
+  Promise.all(enCours).then(function () { fin(); }, fin);
+}
