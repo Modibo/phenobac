@@ -3734,12 +3734,38 @@ function scheduleRemote(){
 
 async function interpretRemote(payload){
   let lic=""; try{ lic=localStorage.getItem("phenobac_license")||""; }catch(e){}
-  const r = await fetch(PREMIUM_FN, {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ license:lic, ...payload })
-  });
+
+  /* L'échec de transport se reconnaît ICI, à la source, et nulle part
+     ailleurs. Plus loin, on ne peut plus le distinguer d'un défaut de
+     programmation : « fetch » rejette avec une TypeError — « Failed to
+     fetch » sous Chrome, « Load failed » sous Safari, « NetworkError »
+     sous Firefox —, exactement le type qu'une variable oubliée produit.
+     Trier sur le type revenait donc à traiter toute panne de réseau comme
+     un défaut de l'application ; trier sur le message serait pire encore,
+     puisqu'il change avec le navigateur et la langue. On marque donc
+     l'erreur au moment où l'on sait ce qu'elle est. */
+  let r;
+  try{
+    r = await fetch(PREMIUM_FN, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ license:lic, ...payload })
+    });
+  }catch(e){
+    const err = new Error((e && e.message) || "connexion impossible");
+    err.reseau = true;
+    throw err;
+  }
   if(r.status===402){ return { locked:true }; }
-  const data = await r.json();
+
+  // Une réponse illisible n'est pas davantage un défaut du client : c'est le
+  // serveur ou l'intermédiaire qui n'a pas rendu ce qui était attendu.
+  let data;
+  try{ data = await r.json(); }
+  catch(e){
+    const err = new Error("réponse illisible du serveur (HTTP " + r.status + ")");
+    err.reseau = true;
+    throw err;
+  }
   return { interpretation:data.interpretation, categories:data.categories };
 }
 
@@ -3785,18 +3811,22 @@ async function renderInterpretRemote(){
        l'interprétation ne marchait plus pour aucune espèce, et le message
        accusait la connexion.
 
-       On sépare donc les deux. Une TypeError ou une ReferenceError ne vient
-       jamais du réseau : c'est un défaut de l'application, il est dit comme
-       tel et reporté dans la console, où il se voit. */
-    const bogue = (e instanceof TypeError) || (e instanceof ReferenceError);
-    if(bogue){
+       La séparation se fait sur la MARQUE posée par interpretRemote au
+       moment de l'échec, et non sur le type de l'exception : « fetch »
+       rejette lui aussi avec une TypeError, si bien qu'un tri par type
+       aurait rangé toute panne de réseau parmi les défauts de
+       l'application. */
+    if(!(e && e.reseau)){
       try{ console.error("PhénoBac — défaut interne pendant l'interprétation :", e); }catch(_){}
       interpretEl.innerHTML=`<div class="interp-note"><b>Défaut interne de l'application.</b> `
         + `L'interprétation n'a pas abouti pour une raison qui ne vient pas du réseau. `
         + `Signalez-le : ${esc(String(e && e.message || e))}</div>`;
       return;
     }
-    interpretEl.innerHTML=`<div class="interp-note"><b>Interprétation indisponible.</b> Le moteur d'interprétation est sur le serveur : une connexion est nécessaire. Vérifiez votre réseau et réessayez.</div>`;
+    const detail = (e && e.message) ? ` <span style="opacity:.7">(${esc(String(e.message))})</span>` : "";
+    interpretEl.innerHTML=`<div class="interp-note"><b>Interprétation indisponible.</b> `
+      + `Le moteur d'interprétation est sur le serveur : une connexion est nécessaire. `
+      + `Vérifiez votre réseau et réessayez.${detail}</div>`;
   }
 }
 
