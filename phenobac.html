@@ -2819,7 +2819,19 @@ const PRICING = {
   annual: "48 000 FCFA / an — 2 mois offerts",
   buyUrl: ""   // lien de paiement (mobile money / carte). Vide : instructions seules.
 };
-const FREE_SPECIES = ["ecoli","saureus"]; // germes interprétés sans licence (côté serveur)
+/* Espèces interprétées sans licence. `null` = toutes, et c'est l'état
+   retenu : le moteur serveur les accorde déjà toutes (FREE_SPECIES = null
+   dans premium-interpret.js). Le client était donc plus restrictif que le
+   serveur — il refusait une interprétation que le serveur aurait rendue.
+
+   Interpréter un Acinetobacter ou un pneumocoque n'est pas un service
+   accessoire : c'est le cœur de ce que l'application sait faire, et le
+   laboratoire qui en a le plus besoin est rarement celui qui peut payer.
+
+   La vérification de licence reste dans le code, ici comme au serveur : elle
+   resservira si des fonctions payantes sont ajoutées. */
+const FREE_SPECIES = null;
+const especeLibre = (id) => FREE_SPECIES === null || FREE_SPECIES.includes(id);
 
 // Verrou dur : le moteur d'interprétation vit uniquement dans la fonction serveur.
 // Toute interprétation (gratuite ou Premium) est calculée à distance.
@@ -2950,7 +2962,7 @@ function renderSpeciesOptions(){
     const og=document.createElement("optgroup"); og.label=g;
     groups[g].forEach(id=>{
       const o=document.createElement("option"); o.value=id;
-      const locked = !isPremium() && !FREE_SPECIES.includes(id);
+      const locked = !isPremium() && !especeLibre(id);
       o.textContent=ORG[id].label + (locked?"  🔒 Premium":"");
       og.appendChild(o);
     });
@@ -3733,6 +3745,9 @@ async function interpretRemote(payload){
 
 async function renderInterpretRemote(){
   const myReq = ++_reqSeq;
+  // Une MESURE est-elle en jeu — mg/L ou mm ? Le serveur catégorise dans les
+  // deux cas, et c'est sa réponse qui fait foi à l'affichage.
+  const mesure = estMesure();
   try{
     // Dès qu'une MESURE est saisie — mg/L ou mm — c'est le SERVEUR qui
     // catégorise : la conversion locale n'est qu'un affichage optimiste,
@@ -3748,20 +3763,40 @@ async function renderInterpretRemote(){
     if(res.locked){
       setLive(null); state.lastA=null;
       interpretEl.innerHTML=`<div class="interp-note"><b>Interprétation Premium requise.</b> Votre licence n'est pas valide ou a expiré.</div>`;
-      openUpgrade(mic
+      openUpgrade(state.mode === "mic"
         ? "La saisie par CMI est une fonction Premium : une licence valide est requise."
         : "Votre licence Premium n'est pas valide ou a expiré.");
       return;
     }
-    // Catégories faisant foi (mode CMI) : on aligne l'affichage sur le serveur.
-    if(mic && res.categories){ state.results = res.categories; renderAbx(); }
+    // Catégories faisant foi : dès qu'une mesure est saisie, c'est le serveur
+    // qui traduit, et l'affichage s'aligne sur lui. La traduction locale n'est
+    // qu'un aperçu immédiat, jamais l'autorité.
+    if(mesure && res.categories){ state.results = res.categories; renderAbx(); }
     const A = res.interpretation;
     setLive(A); state.lastA=A;
     renderInterpretView(A);
   }catch(e){
     if(myReq!==_reqSeq) return;
     setLive(null); state.lastA=null;
-    interpretEl.innerHTML=`<div class="interp-note"><b>Interprétation indisponible.</b> Les espèces Premium nécessitent une connexion. Vérifiez votre réseau et réessayez.</div>`;
+
+    /* Ce catch enveloppait TOUT, réseau comme défauts de programmation, et
+       les annonçait sous le même message. Une variable oubliée lors d'une
+       refonte y a survécu en se faisant passer pour une panne de réseau :
+       l'interprétation ne marchait plus pour aucune espèce, et le message
+       accusait la connexion.
+
+       On sépare donc les deux. Une TypeError ou une ReferenceError ne vient
+       jamais du réseau : c'est un défaut de l'application, il est dit comme
+       tel et reporté dans la console, où il se voit. */
+    const bogue = (e instanceof TypeError) || (e instanceof ReferenceError);
+    if(bogue){
+      try{ console.error("PhénoBac — défaut interne pendant l'interprétation :", e); }catch(_){}
+      interpretEl.innerHTML=`<div class="interp-note"><b>Défaut interne de l'application.</b> `
+        + `L'interprétation n'a pas abouti pour une raison qui ne vient pas du réseau. `
+        + `Signalez-le : ${esc(String(e && e.message || e))}</div>`;
+      return;
+    }
+    interpretEl.innerHTML=`<div class="interp-note"><b>Interprétation indisponible.</b> Le moteur d'interprétation est sur le serveur : une connexion est nécessaire. Vérifiez votre réseau et réessayez.</div>`;
   }
 }
 
@@ -5143,7 +5178,7 @@ function renderIdent(){
 }
 
 function useForAntibiogram(id){
-  if(!isPremium() && !FREE_SPECIES.includes(id)){ openUpgrade("Cette espèce fait partie de PhénoBac Premium."); return; }
+  if(!isPremium() && !especeLibre(id)){ openUpgrade("Cette espèce fait partie de PhénoBac Premium."); return; }
   state.org=id; state.results={}; state.mic={}; state.diam={}; state.ctx={};
   renderSpeciesOptions(); renderAll(); setView("work");
 }
@@ -5275,8 +5310,9 @@ function setPlan(p){
 function applyPlan(){
   renderPlanChip();
   renderSpeciesOptions();
-  // si un germe Premium était sélectionné et qu'on repasse en gratuit, revenir à E. coli
-  if(!isPremium() && !FREE_SPECIES.includes(state.org)){
+  // Si une espèce réservée était sélectionnée et qu'on repasse en gratuit,
+  // revenir à E. coli. Sans liste réservée, ce repli ne se déclenche plus.
+  if(!isPremium() && !especeLibre(state.org)){
     state.org="ecoli"; state.results={}; state.mic={}; state.diam={}; state.ctx={};
     speciesSel.value="ecoli";
   }
@@ -5343,7 +5379,7 @@ function renderAll(){ renderRefToggle(); renderModeToggle(); renderAbx(); render
 
 speciesSel.onchange=()=>{
   const sel=speciesSel.value;
-  if(!isPremium() && !FREE_SPECIES.includes(sel)){
+  if(!isPremium() && !especeLibre(sel)){
     speciesSel.value=state.org;               // revenir au germe précédent
     openUpgrade("Cette espèce fait partie de PhénoBac Premium.");
     return;
