@@ -12,11 +12,14 @@
 // ni correctif d'interprétation, ni nouvelle espèce. C'est inacceptable pour un
 // produit payant : ne revenez pas à cette stratégie.
 
-const VERSION = "v19";                 // à incrémenter à chaque livraison
+const VERSION = "v20";                 // à incrémenter à chaque livraison
 const CACHE = "phenobac-" + VERSION;
 
 const SHELL = [
-  "/", "/phenobac.html", "/manifest.webmanifest",
+  // moteur.js EN PREMIER dans l'intention sinon dans l'ordre : sans lui en
+  // cache, l'application s'ouvrirait hors ligne sans pouvoir interpréter,
+  // c'est-à-dire sans faire ce pour quoi elle existe.
+  "/", "/phenobac.html", "/moteur.js", "/manifest.webmanifest",
   "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png"
 ];
 

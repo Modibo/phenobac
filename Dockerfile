@@ -11,6 +11,10 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 # 2) code applicatif (on ne copie que le nécessaire ; voir .dockerignore)
 COPY server.js ./
+# Le raisonnement, chargé par la fonction serveur (require("../../moteur"))
+# ET servi au navigateur depuis public/. Sans cette ligne, l'image démarre et
+# l'API tombe au premier appel.
+COPY moteur.js ./
 COPY netlify ./netlify
 COPY public ./public
 

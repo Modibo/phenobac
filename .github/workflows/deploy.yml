@@ -18,6 +18,7 @@ jobs:
       - name: node --check sur le serveur et les fonctions
         run: |
           node --check server.js
+          node --check moteur.js
           for f in netlify/functions/*.js netlify/functions/lib/*.js; do
             echo "check $f"; node --check "$f";
           done

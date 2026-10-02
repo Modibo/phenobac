@@ -98,7 +98,7 @@ def valeurs_des_tables(s):
 
 
 def main():
-    srv = os.path.join(RACINE, 'netlify', 'functions', 'premium-interpret.js')
+    srv = os.path.join(RACINE, 'moteur.js')
     cli = os.path.join(RACINE, 'phenobac.html')
     ref = transcription()
     a = declarations(srv, 'burk')

@@ -36,19 +36,15 @@ function lire(chemin) {
 }
 
 (function charger() {
-  var faux = function (n) {
-    if (n === "crypto") return {
-      createHmac: function () { return { update: function () { return this; }, digest: function () { return ""; } }; },
-      timingSafeEqual: function () { return false; }
-    };
-    if (n.indexOf("revocation") !== -1) return { isRevoked: function () { return false; } };
-    if (n.indexOf("http") !== -1) return { cors: function () { return {}; } };
-    return {};
-  };
-  var mod = { exports: {} };
-  (new Function("module", "exports", "process", "require",
-    lire("netlify/functions/premium-interpret.js")))(mod, mod.exports, { env: {} }, faux);
-  E = mod.exports._engine;
+  // Le moteur vit dans moteur.js, chargé aussi par le navigateur : le banc
+  // éprouve l'objet que le laboratoire exécute, sans simuler Node.
+  if (typeof require === "function" && typeof module === "object" && module.exports) {
+    E = require("../moteur");
+  } else {
+    var mod = { exports: {} };
+    (new Function("module", "exports", lire("moteur.js")))(mod, mod.exports);
+    E = mod.exports;
+  }
 
   // La banque vit dans la page : on en extrait le littéral plutôt que d'en
   // tenir une copie, qui divergerait au premier ajout de cas.

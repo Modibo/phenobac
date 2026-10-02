@@ -248,6 +248,39 @@ done; echo
 
 Les premières réponses sont des `200`, les dernières des `429`.
 
+## Où vit le raisonnement
+
+`moteur.js` porte l'intégralité du raisonnement phénotypique, et **rien
+d'autre** : ni licence, ni réseau, ni secret, ni écriture. Il est chargé par
+les deux côtés.
+
+| | charge `moteur.js` | rôle |
+|---|---|---|
+| `phenobac.html` | `<script src="moteur.js">` | interprète **sur le poste**, sans réseau |
+| `netlify/functions/premium-interpret.js` | `require("../../moteur")` | expose le même calcul en API |
+
+Il n'existe donc qu'un exemplaire du raisonnement, et les deux chemins ne
+peuvent pas diverger. La fonction serveur est passée de 1 934 à 95 lignes et
+ne contient plus aucune règle d'interprétation.
+
+**Pourquoi le moteur a quitté le serveur.** Il y était tenu par un « verrou
+dur » : hors du navigateur, on ne pouvait pas l'extraire sans licence. C'était
+cohérent tant que PhénoBac était payant. Il ne l'est plus, et le verrou ne
+protégeait donc plus rien — il continuait en revanche d'empêcher un
+laboratoire sans connexion stable d'interpréter son antibiogramme, c'est-à-dire
+exactement ce que l'application existe pour faire.
+
+**Cloisonnement.** `moteur.js` est enfermé dans sa propre fonction et n'expose
+que `PhenoBacMoteur`. Ce n'est pas une précaution de principe : la page et le
+moteur déclarent 44 noms identiques, et deux `const has` au même niveau font
+échouer le script **entier** de la page. `outils/verifier-tables.py` échoue si
+ce cloisonnement disparaît.
+
+**Déploiement.** `moteur.js` doit être copié à deux endroits — à la racine pour
+`require`, et dans `public/` pour le navigateur. `install-caddy.sh` et le
+`Dockerfile` s'en chargent ; le service worker le met en cache, sans quoi
+l'application s'ouvrirait hors ligne sans pouvoir interpréter.
+
 ## Surveillance de la résistance (GLASS)
 
 Le moteur d'interprétation **n'enregistre rien**. Le seul chemin par lequel un

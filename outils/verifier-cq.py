@@ -88,7 +88,7 @@ def main():
                     ecarts.append("%s/%s : code %s, communiqué %s" % (s, code, a.get(code), b.get(code)))
 
     # ---- 2. les charges, confrontées aux tables de seuils ----
-    srv = os.path.join(RACINE, 'netlify', 'functions', 'premium-interpret.js')
+    srv = os.path.join(RACINE, 'moteur.js')
     DISQUE = VT.valeurs_texte(VT.bloc_bp(srv, 'const DISQUE ='))
     accord, hors = 0, 0
     for souche, (groupe, abx) in sorted(table.items()):

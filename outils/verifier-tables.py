@@ -3,7 +3,8 @@
 verifier-tables.py — les deux tables de concentrations critiques concordent-elles ?
 
 Les seuils existent en double : dans phenobac.html (affichage, saisie CMI) et
-dans netlify/functions/premium-interpret.js (moteur, qui fait foi). Rien
+dans moteur.js (le raisonnement, qui fait foi, chargé par le navigateur ET
+par la fonction serveur). Rien
 n'empêche de corriger l'un en oubliant l'autre — l'application afficherait
 alors une catégorie et le compte-rendu en porterait une autre.
 
@@ -127,10 +128,39 @@ def referentiels(chemin):
     return out
 
 
+def noms_declares(code):
+    """Noms déclarés au premier niveau d'un bout de JavaScript."""
+    code = re.sub(r'/\*.*?\*/', ' ', code, flags=re.S)
+    code = re.sub(r'//[^\n]*', ' ', code)
+    return set(re.findall(r'^(?:const|let|var|function)\s+(\w+)', code, re.M))
+
+
+def cloisonnement(racine):
+    """moteur.js ne doit exposer QUE « PhenoBacMoteur ».
+
+    La page et le moteur déclarent des noms identiques — « has », « isR »,
+    « finalize »… Tant que le moteur est enfermé dans sa propre fonction,
+    cela ne porte pas à conséquence. S'il en sortait, deux « const has » au
+    même niveau feraient échouer le script ENTIER de la page, pas seulement
+    la ligne fautive : l'application s'ouvrirait sans rien faire. C'est
+    arrivé ; d'où ce contrôle."""
+    src = open(os.path.join(racine, 'moteur.js'), encoding='utf-8').read()
+    ecarts = []
+
+    if '(function (racine) {' not in src or '})(typeof self !== "undefined" ? self : this);' not in src:
+        ecarts.append("moteur.js n'est plus enfermé dans sa propre portée — "
+                      "ses déclarations atterriraient dans celle de la page")
+
+    page = open(os.path.join(racine, 'phenobac.html'), encoding='utf-8').read()
+    inline = "\n".join(re.findall(r'<script>(.*?)</script>', page, re.S))
+    communs = noms_declares(src) & noms_declares(inline)
+    return ecarts, sorted(communs)
+
+
 def main():
     racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cli = os.path.join(racine, 'phenobac.html')
-    srv = os.path.join(racine, 'netlify', 'functions', 'premium-interpret.js')
+    srv = os.path.join(racine, 'moteur.js')
 
     ecarts = []
     totaux = {}
@@ -237,6 +267,9 @@ def main():
         if na != nb:
             ecarts.append("%s : client %s, serveur %s" % (etiquette, na[:80], nb[:80]))
 
+    ec, communs = cloisonnement(racine)
+    ecarts.extend(ec)
+
     ra, rb = referentiels(cli), referentiels(srv)
     if ra and rb:
         for nom_ref in sorted(set(ra) | set(rb)):
@@ -258,6 +291,8 @@ def main():
         print("\nLe moteur serveur fait foi. Alignez phenobac.html sur lui.")
         return 1
 
+    print("moteur.js reste cloisonné : il n'expose que « PhenoBacMoteur »%s."
+          % (" (%d noms seraient en collision sans cela)" % len(communs) if communs else ""))
     print("Tables concordantes : " + ", ".join("%s %d" % (k, v) for k, v in totaux.items()) + ".")
     for cle in ('eucast', 'casfm'):
         d = (rb or {}).get(cle)

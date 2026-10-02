@@ -1274,6 +1274,10 @@
 
 <div class="report" id="report" aria-hidden="true"></div>
 
+<!-- Le raisonnement phénotypique. Chargé avant le script de la page, et
+     identique à celui que sert l'API : un seul exemplaire existe. C'est lui
+     qui permet d'interpréter sans réseau, une fois l'application installée. -->
+<script src="moteur.js"></script>
 <script>
 /* ============================================================
    PhénoBac — moteur de lecture interprétative
@@ -3729,7 +3733,9 @@ let _remoteTimer = null;
 function scheduleRemote(){
   interpretEl.innerHTML=`<div class="interp-loading"><span class="spin"></span>Interprétation en cours…</div>`;
   clearTimeout(_remoteTimer);
-  _remoteTimer=setTimeout(renderInterpretRemote, 300);
+  // 300 ms ménageaient le réseau ; le calcul étant désormais local et
+  // instantané, ce délai n'a plus qu'à absorber la frappe.
+  _remoteTimer=setTimeout(renderInterpretRemote, 90);
 }
 
 async function interpretRemote(payload){
@@ -3769,10 +3775,19 @@ async function interpretRemote(payload){
   return { interpretation:data.interpretation, categories:data.categories };
 }
 
+/* L'interprétation a lieu ICI, sur le poste.
+
+   Le moteur (moteur.js) est chargé avec la page : il n'y a donc ni attente,
+   ni dépendance au réseau, et l'application reste utilisable là où la
+   connexion ne l'est pas — ce pour quoi elle a été écrite.
+
+   Le serveur n'a pas disparu : il exécute le MÊME fichier et sert de repli
+   si le moteur n'a pas pu être chargé. Les deux ne peuvent pas diverger,
+   puisqu'il n'existe qu'un exemplaire du raisonnement. */
 async function renderInterpretRemote(){
   const myReq = ++_reqSeq;
-  // Une MESURE est-elle en jeu — mg/L ou mm ? Le serveur catégorise dans les
-  // deux cas, et c'est sa réponse qui fait foi à l'affichage.
+  // Une MESURE est-elle en jeu — mg/L ou mm ? Les catégories calculées par le
+  // moteur font foi à l'affichage dans les deux cas.
   const mesure = estMesure();
   try{
     // Dès qu'une MESURE est saisie — mg/L ou mm — c'est le SERVEUR qui
@@ -3783,7 +3798,17 @@ async function renderInterpretRemote(){
       state.mode==="mic"  ? { organism:state.org, mode:"mic",  mic:state.mic,   bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF } :
       state.mode==="diam" ? { organism:state.org, mode:"diam", diam:state.diam, bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF } :
                             { organism:state.org, mode:"sir",  results:state.results, ctx:state.ctx, ref:REF_ACTIF };
-    const res = await interpretRemote(envoi);
+    const moteur = (typeof self !== "undefined") && self.PhenoBacMoteur;
+    let res;
+    if(moteur && moteur.runInterpretation){
+      const out = moteur.runInterpretation(envoi);
+      if(out.error) throw new Error("espèce inconnue du moteur : " + envoi.organism);
+      res = { interpretation: out.interpretation, categories: out.categories };
+    } else {
+      // moteur.js absent du cache ou bloqué : on interroge le serveur, qui
+      // exécute le même fichier. Le résultat est le même, le délai non.
+      res = await interpretRemote(envoi);
+    }
     if(myReq!==_reqSeq) return; // réponse obsolète, ignorée
 
     if(res.locked){

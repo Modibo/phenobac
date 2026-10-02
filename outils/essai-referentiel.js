@@ -17,25 +17,17 @@
 
 var E, KO = 0, OK = 0;
 
-/* ---------- chargement du moteur, avec ou sans Node ---------- */
+/* ---------- chargement du moteur ----------
+   Le raisonnement vit dans moteur.js, que le navigateur charge aussi : le
+   banc éprouve donc exactement l'objet que le laboratoire exécute. Ce fichier
+   n'a aucune dépendance — ni require, ni process — d'où ce chargement direct,
+   là où il fallait auparavant simuler l'environnement de Node. */
 if (typeof require === "function" && typeof module === "object" && module.exports) {
-  E = require("../netlify/functions/premium-interpret")._engine;
+  E = require("../moteur");
 } else {
-  // jsc : ni require ni process. On fournit le strict nécessaire ; rien de
-  // ce qui est simulé ici n'intervient dans le calcul des catégories.
   var mod = { exports: {} };
-  var faux = function (n) {
-    if (n === "crypto") return {
-      createHmac: function () { return { update: function () { return this; }, digest: function () { return ""; } }; },
-      timingSafeEqual: function () { return false; }
-    };
-    if (n.indexOf("revocation") !== -1) return { isRevoked: function () { return false; } };
-    if (n.indexOf("http") !== -1) return { cors: function () { return {}; } };
-    return {};
-  };
-  var src = readFile("netlify/functions/premium-interpret.js");
-  (new Function("module", "exports", "process", "require", src))(mod, mod.exports, { env: {} }, faux);
-  E = mod.exports._engine;
+  (new Function("module", "exports", readFile("moteur.js")))(mod, mod.exports);
+  E = mod.exports;
 }
 
 function dire(s) { (typeof console === "object" ? console.log : print)(s); }

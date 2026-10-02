@@ -55,6 +55,9 @@ log "PhénoBac écoutera sur 127.0.0.1:$PORT (loopback uniquement)."
 log "Préparation de public/…"
 mkdir -p public
 cp -f phenobac.html public/
+# Le moteur d'interprétation est servi au navigateur : sans lui, la page se
+# charge et n'interprète rien.
+cp -f moteur.js public/
 [ -f success.html ] && cp -f success.html public/ || true
 cp -f manifest.webmanifest service-worker.js public/ 2>/dev/null || true
 cp -f icon-192.png icon-512.png icon-maskable-512.png apple-touch-icon.png public/ 2>/dev/null || true
