@@ -136,6 +136,52 @@
   .quiz-modes button{flex:0 0 auto;white-space:nowrap;font-family:'IBM Plex Mono';font-size:12px;padding:7px 14px;
     border-radius:100px;border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);cursor:pointer}
   .quiz-modes button.on{background:var(--teal);border-color:var(--teal);color:#fff}
+  .quiz-sep{flex:0 0 auto;width:1px;align-self:stretch;background:var(--line);margin:2px 4px}
+  /* L'examen n'est pas un mode de tirage de plus : il change ce qui est rendu
+     à l'écran. Il porte donc la couleur d'alerte douce, pas le turquoise des
+     modes, pour qu'on voie d'un coup d'œil qu'on est en épreuve. */
+  .exam-btn.on{background:var(--i);border-color:var(--i);color:#fff}
+
+  /* Historique des séances */
+  .quiz-histo{border-bottom:1px solid var(--line);background:var(--surface-2)}
+  .quiz-histo summary{cursor:pointer;padding:11px 18px;font-family:'IBM Plex Mono';font-size:10.5px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--teal-deep);list-style:none;
+    display:flex;align-items:center;gap:8px}
+  .quiz-histo summary::-webkit-details-marker{display:none}
+  .quiz-histo .caret{transition:.15s;display:inline-block}
+  .quiz-histo[open] .caret{transform:rotate(90deg)}
+  .quiz-histo-body{padding:0 18px 14px}
+  .qh-l{display:grid;grid-template-columns:auto 1fr auto;gap:3px 12px;align-items:baseline;
+    padding:7px 0;border-top:1px solid var(--line);font-size:12.5px}
+  .qh-d{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--ink-faint);white-space:nowrap}
+  .qh-q{color:var(--ink-soft)}
+  .qh-s{font-family:'IBM Plex Mono';font-weight:600;color:var(--teal-deep);white-space:nowrap}
+  .qh-ex{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--i-deep,#8a5b00);background:var(--i-bg);border:1px solid var(--i-line);
+    border-radius:100px;padding:1px 7px;margin-left:7px}
+
+  /* Copie d'épreuve rendue à la fin de l'examen */
+  .corr{text-align:left;margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+  .corr-h{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--teal-deep);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  .corr-h span{color:var(--ink-faint);letter-spacing:.02em;text-transform:none;font-size:11.5px}
+  .corr-c{border:1px solid var(--line);border-left:3px solid var(--line-strong);
+    border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+  .corr-c.ok{border-left-color:var(--s)}
+  .corr-c.no{border-left-color:var(--r)}
+  .corr-t{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:5px}
+  .corr-n{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-faint)}
+  .corr-sp{font-weight:600;font-size:14px;color:var(--ink)}
+  .corr-v{margin-left:auto;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;border-radius:100px;padding:1px 8px}
+  .corr-c.ok .corr-v{color:#0a5c39;background:var(--s-bg);border:1px solid var(--s-line)}
+  .corr-c.no .corr-v{color:#8a1f14;background:var(--r-bg);border:1px solid #f0c4bd}
+  .corr-q{font-size:13px;color:var(--ink-soft);margin-bottom:7px}
+  .corr-l{display:flex;gap:10px;font-size:12.5px;line-height:1.5;margin-top:2px}
+  .corr-l span{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-faint);flex:0 0 118px;padding-top:2px}
+  .corr-l b{color:var(--ink);font-weight:600}
+  .corr-pq{margin-top:9px}
   .q-cat.pos{background:#e2f4ea;color:#0a5c39;border:1px solid #bfe4cf}
   .q-cat.neg{background:#fbe6e3;color:#8a1f14;border:1px solid #f0c4bd}
 
@@ -169,6 +215,9 @@
   .q-opt.wrong{border-color:var(--r);background:var(--r-bg);color:#8a1f14}
   .q-opt.wrong .mk{color:var(--r)}
   .q-opt.muted{opacity:.55}
+  /* En épreuve : la réponse donnée est marquée, sans dire si elle est juste. */
+  .q-opt.choisie{border-color:var(--ink-faint);background:var(--surface-2);font-weight:600}
+  .q-opt.choisie .mk{color:var(--ink)}
 
   .q-feedback{margin-top:16px;border-radius:var(--radius);border:1px solid;padding:14px 15px;line-height:1.55}
   .q-feedback.ok{background:var(--s-bg);border-color:var(--s-line)}
@@ -1315,7 +1364,11 @@
       <button data-mode="ident">Identification</button>
       <button data-mode="mixte">Mixte</button>
       <button data-mode="combo">Cas complet</button>
+      <span class="quiz-sep" aria-hidden="true"></span>
+      <button id="quizExamen" class="exam-btn" aria-pressed="false"
+        title="Aucune correction pendant l'épreuve : tout est rendu à la fin.">Mode examen</button>
     </div>
+    <div id="quizHisto"></div>
     <div id="bankManage"></div>
     <div class="quiz-progress"><span id="quizBar"></span></div>
     <div class="card-b" id="quizBody"></div>
@@ -5290,8 +5343,75 @@ function quizNoter(niveau, score, total, examen){
   }catch(e){ /* sans mémoire, la séance reste valable */ }
 }
 
+/* ---------- Historique des séances ----------
+   La progression par niveau ne garde que le meilleur résultat : elle dit où
+   l'on en est, pas comment on y est arrivé. Un formateur qui suit un
+   stagiaire a besoin de la suite des séances, datées — c'est elle qui montre
+   une progression, un plateau ou un recul. */
+const QUIZ_HISTO = "phenobac.quiz.histo";
+const QUIZ_HISTO_MAX = 200;
+function quizHistorique(){
+  try{ const h = JSON.parse(localStorage.getItem(QUIZ_HISTO) || "[]");
+       return Array.isArray(h) ? h : []; }
+  catch(e){ return []; }
+}
+function quizArchiver(e){
+  try{
+    const h = quizHistorique(); h.unshift(e);
+    localStorage.setItem(QUIZ_HISTO, JSON.stringify(h.slice(0, QUIZ_HISTO_MAX)));
+  }catch(e){ /* sans mémoire, la séance reste valable */ }
+}
+
+const MODE_NOM = { interp:"Interprétation", ident:"Identification",
+                   mixte:"Mixte", combo:"Cas complet" };
+
 const quiz = { queue:[], idx:0, score:0, answered:false, phase:1, mode:"interp",
                niveau:"", examen:false, reponses:[] };
+
+/* ---------- Mode examen ----------
+   En entraînement, la correction tombe à chaque réponse : c'est elle qui fait
+   apprendre. En épreuve, elle ne peut pas tomber avant la fin — sinon on ne
+   mesure plus ce que le candidat sait, mais ce qu'il vient de lire deux
+   questions plus tôt. Les réponses sont donc consignées au fil de la séance
+   et rendues d'un bloc, cas par cas, à la fin.
+
+   Ce qui change par rapport à l'entraînement, et rien d'autre :
+     — aucune option n'est dite juste ou fausse pendant l'épreuve ;
+     — le score courant disparaît de l'en-tête (il révélerait chaque réponse) ;
+     — la correction détaillée est rendue en fin d'épreuve ;
+     — le résultat est consigné à part, sous la clé « niveau:examen ».
+   Le tirage des cas, lui, est identique : une épreuve n'est pas plus dure,
+   elle est seulement aveugle. */
+function examenConsigner(e){ quiz.reponses.push(e); }
+
+/* Verrouille les options sans rien révéler : la réponse donnée est marquée,
+   les autres s'estompent, aucune n'est désignée. */
+function examenMarquer(donnee){
+  $("#quizBody").querySelectorAll(".q-opt").forEach(b=>{
+    b.disabled = true;
+    b.classList.add(b.dataset.opt === donnee ? "choisie" : "muted");
+  });
+}
+
+function examenSuite(suite, dernier){
+  $("#qFeedback").innerHTML =
+    `<div class="q-feedback exam">
+      <div class="q-fb-verdict"><span class="dot" style="background:var(--ink-faint)"></span>Réponse enregistrée</div>
+      <div class="q-fb-comment">La correction de toute l'épreuve est rendue à la fin.</div>
+      <div class="q-actions"><button class="q-next" id="qNext">${dernier?"Terminer l'épreuve":"Question suivante →"}</button></div>
+    </div>`;
+  $("#qNext").onclick = suite;
+}
+
+/* Un pas d'épreuve : consigner, verrouiller, enchaîner. Les quatre formes de
+   question (identification, phénotype, question de rendu, cas complet) y
+   passent toutes — une seule place où la règle « ne rien révéler » tient. */
+function examenPas(e, suite, dernier){
+  if(e.bonne) quiz.score++;
+  examenConsigner(e);
+  examenMarquer(e.donnee);
+  examenSuite(suite, dernier);
+}
 /* Longueur d'une séance. Les cas complets font exception : chacun enchaîne
    une identification PUIS un antibiogramme, soit deux questions. En tirer
    autant que des cas simples doublerait la durée de la séance ; on en tire
@@ -5321,7 +5441,7 @@ function startQuiz(){
   // réglage par défaut, pour qui veut s'exercer sans se classer.
   if(quiz.niveau) pool = pool.filter(c => casDuNiveau(quiz.niveau).indexOf(c) !== -1);
   quiz.queue = shuffle(pool).slice(0, Math.min(len, pool.length));
-  quiz.idx=0; quiz.score=0; quiz.answered=false; quiz.phase=1;
+  quiz.idx=0; quiz.score=0; quiz.answered=false; quiz.phase=1; quiz.reponses=[];
   renderQuiz();
 }
 
@@ -5329,7 +5449,15 @@ function startQuiz(){
 function comboPool(){
   return allCases().filter(c=>IDDB[c.org]).map(c=>({ kind:"combo", org:c.org, ident:makeIdentCase(c.org), interp:c }));
 }
-function quizMaxScore(){ return quiz.queue.reduce((s,c)=>s+(c.kind==="combo"?2:1),0); }
+/* Le total possible, question par question — et non cas par cas. Un cas
+   complet en pose deux (identifier, puis interpréter) ; un cas porteur d'une
+   question de rendu aussi. Ces secondes questions comptaient un point au
+   numérateur sans rien ajouter au dénominateur : une série de vingt cas dont
+   trois portaient une question de rendu pouvait se solder par 23/20, et par
+   un pourcentage supérieur à cent. */
+function quizMaxScore(){
+  return quiz.queue.reduce((s,c)=> s + (c.kind==="combo" || c.q2 ? 2 : 1), 0);
+}
 function colorOpts(correct,selected){
   $("#quizBody").querySelectorAll(".q-opt").forEach(b=>{
     b.disabled=true; const val=b.dataset.opt;
@@ -5372,6 +5500,11 @@ function renderIdentCase(c){
 function answerQuizIdent(selected){
   const c=quiz.queue[quiz.idx];
   const correct=c.answer, good=selected===correct;
+  const dernier = quiz.idx>=quiz.queue.length-1;
+  if(quiz.examen) return examenPas(
+    { titre:"Identification", question:"Quelle espèce identifiez-vous ?",
+      donnee:selected, attendue:correct, bonne:good, teach:c.teach },
+    ()=>{ quiz.idx++; quiz.phase=1; renderQuiz(); }, dernier);
   $("#quizBody").querySelectorAll(".q-opt").forEach(b=>{
     b.disabled=true;
     const val=b.dataset.opt;
@@ -5463,7 +5596,11 @@ function renderQuiz(){
   if(quiz.idx>=quiz.queue.length){ return renderQuizResult(); }
 
   const c=quiz.queue[quiz.idx];
-  stats.innerHTML=`Cas <b>${quiz.idx+1}</b> / ${quiz.queue.length} &nbsp;·&nbsp; Score <b>${quiz.score}</b>`;
+  /* Pendant une épreuve, le score courant trahirait chaque réponse : il
+     suffirait de le regarder changer. On n'affiche que l'avancement. */
+  stats.innerHTML = quiz.examen
+    ? `Cas <b>${quiz.idx+1}</b> / ${quiz.queue.length} &nbsp;·&nbsp; <b>Épreuve</b>`
+    : `Cas <b>${quiz.idx+1}</b> / ${quiz.queue.length} &nbsp;·&nbsp; Score <b>${quiz.score}</b>`;
   bar.style.width = (quiz.idx/quiz.queue.length*100)+"%";
 
   if(c.kind==="ident"){
@@ -5530,6 +5667,23 @@ function answerQuiz(selected, isQ2){
   const c=quiz.queue[quiz.idx];
   const correct = isQ2 ? c.q2.answer : c.answer;
   const good = selected===correct;
+  const titre = (typeof ORG!=="undefined" && ORG[c.org] && ORG[c.org].label) ? ORG[c.org].label : c.org;
+
+  if(quiz.examen){
+    const encoreQ2 = c.q2 && !isQ2;
+    return examenPas(
+      { titre:titre,
+        question: isQ2 ? c.q2.q : (c.q || "Quel phénotype de résistance reconnaissez-vous ?"),
+        donnee:selected, attendue:correct, bonne:good,
+        teach: isQ2 ? c.q2.why : c.teach,
+        /* Le détail du raisonnement se demande à la correction, cas par cas :
+           le chercher ici, pour vingt cas, ferait vingt appels dont dix-neuf
+           ne seraient jamais lus. */
+        cas: isQ2 ? null : { org:c.org, res:c.res, ctx:c.ctx } },
+      encoreQ2 ? ()=>{ quiz.phase=2; renderQuiz(); }
+               : ()=>{ quiz.idx++; quiz.phase=1; renderQuiz(); },
+      !encoreQ2 && quiz.idx>=quiz.queue.length-1);
+  }
 
   // désactiver et colorer les options
   const btns=$("#quizBody").querySelectorAll(".q-opt");
@@ -5571,10 +5725,11 @@ function answerQuiz(selected, isQ2){
   if(!isQ2) fetchQuizDetail(c);
 }
 
-async function fetchQuizDetail(c){
+async function fetchQuizDetail(c, cible){
+  const ou = cible || "#qDetail";
   try{
     const res = await interpretRemote({ organism:c.org, mode:"sir", results:c.res, ctx:c.ctx });
-    const el=$("#qDetail"); if(!el) return;
+    const el=$(ou); if(!el) return;
     el.className="";
     if(res.locked){
       el.innerHTML=`<div class="q-fb-comment">Détail du raisonnement réservé à Premium — la bonne réponse et le point clé restent visibles.</div>`;
@@ -5586,13 +5741,62 @@ async function fetchQuizDetail(c){
     if(keyAlerts.length) html+=`<ul class="q-fb-alerts">`+keyAlerts.map(a=>`<li>${esc(a.txt)}</li>`).join("")+`</ul>`;
     el.innerHTML=html;
   }catch(e){
-    const el=$("#qDetail"); if(el){ el.className=""; el.innerHTML=`<div class="q-fb-comment">Correction détaillée indisponible hors connexion.</div>`; }
+    const el=$(ou); if(el){ el.className=""; el.innerHTML=`<div class="q-fb-comment">Correction détaillée indisponible hors connexion.</div>`; }
   }
+}
+
+/* ---------- Copie rendue ----------
+   Une épreuve sans copie n'apprend rien : on sait qu'on a eu quatorze, pas
+   lesquelles. On rend donc, question par question, ce qui a été répondu, ce
+   qui était attendu, et le point à retenir. Le raisonnement complet du moteur
+   se demande cas par cas : vingt appels d'un coup, dont la plupart ne seraient
+   pas lus, ne servent personne. */
+function renderCorrection(){
+  const r = quiz.reponses;
+  if(!r.length) return "";
+  const rates = r.filter(x=>!x.bonne).length;
+  let h = `<div class="corr">
+    <div class="corr-h">Correction détaillée
+      <span>${r.length} question${r.length>1?"s":""} · ${rates} manquée${rates>1?"s":""}</span></div>`;
+  r.forEach((e,i)=>{
+    h += `<div class="corr-c ${e.bonne?"ok":"no"}">
+      <div class="corr-t">
+        <span class="corr-n">${i+1}</span>
+        <span class="corr-sp">${esc(e.titre)}</span>
+        <span class="corr-v">${e.bonne?"juste":"manquée"}</span>
+      </div>
+      <div class="corr-q">${esc(e.question)}</div>
+      <div class="corr-l"><span>Votre réponse</span><b>${esc(e.donnee)}</b></div>
+      ${e.bonne ? "" : `<div class="corr-l"><span>Réponse attendue</span><b>${esc(e.attendue)}</b></div>`}
+      ${e.teach ? `<div class="q-teach"><b>À retenir</b>${esc(e.teach)}</div>` : ""}
+      ${e.cas ? `<div class="corr-pq"><button class="q-restart" data-pq="${i}">Pourquoi ?</button><div id="corrD${i}"></div></div>` : ""}
+    </div>`;
+  });
+  return h + `</div>`;
+}
+
+function brancherCorrection(){
+  const host = $("#quizBody"); if(!host) return;
+  host.querySelectorAll("[data-pq]").forEach(b=>{
+    b.onclick = ()=>{
+      const i = +b.dataset.pq, el = $("#corrD"+i);
+      if(!el) return;
+      b.remove();
+      el.className = "interp-loading";
+      el.innerHTML = `<span class="spin"></span>Raisonnement…`;
+      fetchQuizDetail(quiz.reponses[i].cas, "#corrD"+i);
+    };
+  });
 }
 
 function answerComboIdent(selected){
   const c=quiz.queue[quiz.idx], ic=c.ident;
   const correct=ic.answer, good=selected===correct;
+  if(quiz.examen) return examenPas(
+    { titre:"Cas complet · identification",
+      question:"Étape 1 · identification — Quelle espèce reconnaissez-vous ?",
+      donnee:selected, attendue:correct, bonne:good, teach:ic.teach },
+    ()=>{ quiz.phase=2; renderQuiz(); }, false);
   colorOpts(correct,selected);
   if(good) quiz.score++;
   $("#qFeedback").innerHTML =
@@ -5607,6 +5811,16 @@ function answerComboIdent(selected){
 
 function answerComboInterp(pc, selected){
   const correct=pc.answer, good=selected===correct;
+  if(quiz.examen){
+    const titre = (typeof ORG!=="undefined" && ORG[pc.org] && ORG[pc.org].label) ? ORG[pc.org].label : pc.org;
+    return examenPas(
+      { titre:"Cas complet · " + titre,
+        question:"Étape 2 · antibiogramme — Quel phénotype reconnaissez-vous ?",
+        donnee:selected, attendue:correct, bonne:good, teach:pc.teach,
+        cas:{ org:pc.org, res:pc.res, ctx:pc.ctx } },
+      ()=>{ quiz.idx++; quiz.phase=1; renderQuiz(); },
+      quiz.idx>=quiz.queue.length-1);
+  }
   colorOpts(correct,selected);
   if(good) quiz.score++;
   const last = quiz.idx>=quiz.queue.length-1;
@@ -5622,29 +5836,37 @@ function answerComboInterp(pc, selected){
 }
 
 function renderQuizResult(){
-  const n=quizMaxScore(), s=quiz.score, pct=Math.round(s/n*100);
+  const n=quizMaxScore(), s=quiz.score, pct=n ? Math.round(s/n*100) : 0;
   // Le résultat est consigné : c'est lui qui s'affichera sur le niveau la
-  // prochaine fois, et qui dit si l'on progresse.
-  if(quiz.niveau) { quizNoter(quiz.niveau, s, n, false); renderNiveaux(); }
+  // prochaine fois, et qui dit si l'on progresse. Une épreuve se range sous
+  // sa propre clé : la comparer à un entraînement, où la correction tombe à
+  // chaque réponse, ne voudrait rien dire.
+  if(quiz.niveau) { quizNoter(quiz.niveau, s, n, quiz.examen); renderNiveaux(); }
+  // La séance entre à l'historique, qu'elle soit épreuve ou entraînement.
+  quizArchiver({ quand:new Date().toISOString(), mode:quiz.mode, niveau:quiz.niveau,
+                 examen:!!quiz.examen, score:s, total:n });
+  renderQuizHisto();
   let grade, msg;
   if(pct>=90){grade="Excellent";msg="Maîtrise des phénotypes de résistance. Prêt pour la validation.";}
   else if(pct>=70){grade="Bien";msg="Bonne reconnaissance. Revoyez les cas manqués pour consolider les règles expertes.";}
   else if(pct>=50){grade="À consolider";msg="Les bases sont là. Reprenez les mécanismes BLSE / AmpC / carbapénémase et les résistances naturelles.";}
   else {grade="À travailler";msg="Reprenez calmement chaque phénotype ; utilisez l'onglet Interprétation pour explorer les profils.";}
 
-  $("#quizStats").innerHTML=`Terminé`;
+  $("#quizStats").innerHTML = quiz.examen ? `Épreuve terminée` : `Terminé`;
   $("#quizBar").style.width="100%";
   $("#quizBody").innerHTML=`<div class="q-result">
       <div class="score">${s}<small> / ${n}</small></div>
       <div class="grade">${grade} · ${pct}%</div>
       <div class="msg">${msg}</div>
       <div class="q-actions" style="justify-content:center">
-        <button class="q-next" id="qRestart">Nouvelle série</button>
+        <button class="q-next" id="qRestart">${quiz.examen?"Nouvelle épreuve":"Nouvelle série"}</button>
         <button class="q-restart" id="qToWork">Aller à l'interprétation</button>
       </div>
+      ${quiz.examen ? renderCorrection() : ""}
     </div>`;
   $("#qRestart").onclick=startQuiz;
   $("#qToWork").onclick=()=>setView("work");
+  if(quiz.examen) brancherCorrection();
 }
 
 /* ------------------------------------------------------------
@@ -6125,13 +6347,90 @@ function renderNiveaux(){
 }
 renderNiveaux();
 
-$("#quizModes").querySelectorAll("button").forEach(b=>{
+/* L'historique, replié. Il n'intéresse pas à chaque séance, mais il doit être
+   là quand on veut savoir où en est un stagiaire. Tout reste sur le poste :
+   aucune de ces lignes ne part sur un serveur. */
+function renderQuizHisto(){
+  const host = $("#quizHisto"); if(!host) return;
+  const h = quizHistorique();
+  if(!h.length){ host.innerHTML = ""; return; }
+  const lignes = h.slice(0, 15).map(e=>{
+    const d = new Date(e.quand);
+    const quand = isNaN(d) ? String(e.quand).slice(0,10)
+      : d.toLocaleDateString("fr-FR") + " " + d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"});
+    const niv = e.niveau ? (NIVEAU_NOM[e.niveau] || e.niveau) : "Tous les cas";
+    return `<div class="qh-l">
+        <span class="qh-d">${esc(quand)}</span>
+        <span class="qh-q">${esc(MODE_NOM[e.mode] || e.mode)} · ${esc(niv)}${e.examen?`<span class="qh-ex">examen</span>`:""}</span>
+        <span class="qh-s">${e.score}/${e.total}</span>
+      </div>`;
+  }).join("");
+  host.innerHTML = `
+    <details class="quiz-histo">
+      <summary><span class="caret">▸</span><span>Historique des séances — ${h.length}</span></summary>
+      <div class="quiz-histo-body">
+        ${lignes}
+        ${h.length>15 ? `<div class="qh-l"><span class="qh-d"></span><span class="qh-q">… ${h.length-15} séance${h.length-15>1?"s":""} plus ancienne${h.length-15>1?"s":""}, dans l'export</span><span></span></div>` : ""}
+        <div class="q-actions">
+          <button class="q-restart" id="qhExport">Exporter en CSV</button>
+          <button class="q-restart" id="qhVider">Effacer l'historique</button>
+        </div>
+      </div>
+    </details>`;
+  const ex = $("#qhExport"); if(ex) ex.onclick = quizExporterHisto;
+  const vd = $("#qhVider");
+  if(vd) vd.onclick = ()=>{
+    if(!confirm("Effacer définitivement l'historique des séances ? L'export CSV, lui, est conservé où vous l'avez enregistré.")) return;
+    try{ localStorage.removeItem(QUIZ_HISTO); }catch(e){}
+    renderQuizHisto();
+  };
+}
+
+/* Même convention que le registre de contrôle qualité : point-virgule et BOM,
+   pour que les tableurs francophones ouvrent le fichier sans assistant et
+   sans casser les accents. */
+function quizExporterHisto(){
+  const h = quizHistorique();
+  if(!h.length) return;
+  const col = ["Horodatage","Date","Mode","Niveau","Epreuve","Score","Total","Pourcentage"];
+  const ech = v => {
+    const s = String(v===undefined||v===null ? "" : v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const corps = h.map(e=>[
+    e.quand, String(e.quand).slice(0,10),
+    MODE_NOM[e.mode] || e.mode,
+    e.niveau ? (NIVEAU_NOM[e.niveau] || e.niveau) : "tous",
+    e.examen ? "oui" : "non",
+    e.score, e.total, e.total ? Math.round(e.score/e.total*100) : ""
+  ].map(ech).join(";"));
+  const csv = "\ufeff" + col.join(";") + "\n" + corps.join("\n") + "\n";
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "phenobac-entrainement-" + new Date().toISOString().slice(0,10) + ".csv";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+renderQuizHisto();
+
+$("#quizModes").querySelectorAll("button[data-mode]").forEach(b=>{
   b.onclick=()=>{
     quiz.mode=b.dataset.mode;
-    $("#quizModes").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b));
+    $("#quizModes").querySelectorAll("button[data-mode]").forEach(x=>x.classList.toggle("on", x===b));
     startQuiz();
   };
 });
+
+/* Basculer en épreuve recommence la séance : passer en examen au douzième cas
+   d'un entraînement donnerait une copie à moitié corrigée, et un score qui ne
+   mesure rien. */
+const _btnExamen = $("#quizExamen");
+if(_btnExamen) _btnExamen.onclick = ()=>{
+  quiz.examen = !quiz.examen;
+  _btnExamen.classList.toggle("on", quiz.examen);
+  _btnExamen.setAttribute("aria-pressed", quiz.examen ? "true" : "false");
+  startQuiz();
+};
 
 /* ============================================================
    Plan : pastille, page Offres, modale d'activation
