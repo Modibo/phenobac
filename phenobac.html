@@ -884,8 +884,7 @@
   .disclaimer{font-size:13px;color:var(--ink-soft);line-height:1.7;background:var(--surface);
     border:1px solid var(--line);border-left:3px solid var(--i);border-radius:var(--radius);
     padding:16px 18px}
-  @media(min-width:1000px){ .disclaimer{columns:2;column-gap:34px} }
-  @media(min-width:1500px){ .disclaimer{columns:3} }
+  @media(min-width:1000px){ .disclaimer{columns:2;column-gap:40px} }
   .credit{margin-top:14px;font-family:'IBM Plex Mono';font-size:11.5px;line-height:1.6;
     color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 18px}
   .credit b{color:var(--ink-soft);font-weight:500}
@@ -1004,12 +1003,20 @@
   .brand-open:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
 
   /* Page « À propos » : texte de positionnement, plus de grille tarifaire. */
-  /* Les sections se rangent côte à côte quand l'écran le permet : elles
-     occupent alors toute la largeur sans qu'aucune ligne ne s'étire. */
-  .apropos{ max-width:none; margin:26px auto 0; display:grid; gap:22px;
-    /* « min(380px, 100%) » et non « 380px » : sur un téléphone de 375 px, un
-       minimum fixe plus large que l'écran fait déborder la page entière. */
-    grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr)); align-items:start; }
+  /* CHAQUE SECTION PREND TOUTE LA LARGEUR ; c'est SON TEXTE qui se met en
+     colonnes.
+
+     Deux tentatives ont échoué avant celle-ci, pour la même raison : les
+     quatre sections ont des tailles très inégales — « Ce qu'il apporte » en
+     vaut trois à elle seule. Les répartir côte à côte, en grille puis en
+     flux, laissait de grands vides sous les courtes et donnait cet air
+     éparpillé.
+
+     Empilées et pleine largeur, elles n'ont plus de vide entre elles ; et le
+     texte réparti en colonnes à l'intérieur de chacune remplit la largeur
+     sans qu'aucune ligne ne s'allonge. */
+  .apropos{ max-width:none; margin:26px auto 0; display:flex;
+    flex-direction:column; gap:22px; }
   .ap-bloc{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
     box-shadow:var(--shadow); padding:24px 26px;
@@ -1020,10 +1027,23 @@
   .ap-bloc p{ font-size:15px; line-height:1.68; color:var(--ink-soft); max-width:56ch; }
   .ap-bloc p + p{ margin-top:9px; }
   .ap-bloc b{ color:var(--ink); font-weight:600; }
-  .ap-liste{ list-style:none; display:flex; flex-direction:column; gap:10px; }
+  /* La liste et les paragraphes coulent en colonnes : c'est là que la largeur
+     se remplit. Un point de la liste ne doit pas être coupé en deux par un
+     saut de colonne — on le lirait en deux endroits. */
+  .ap-liste{ list-style:none; display:block; }
+  @media(min-width:900px){ .ap-liste{ columns:2; column-gap:34px } }
+  @media(min-width:1340px){ .ap-liste{ columns:3 } }
+  /* Deux colonnes pour les paragraphes, trois pour la liste : un paragraphe
+     court découpé en trois donne des lignes de quatre mots, qui se lisent
+     plus mal qu'une seule colonne. La liste, elle, est assez longue pour
+     que trois colonnes la servent. */
+  .ap-bloc > p{ margin:0 }
+  @media(min-width:900px){ .ap-bloc > p{ columns:2; column-gap:40px } }
   .ap-liste li{
     font-size:15px; line-height:1.62; color:var(--ink-soft);
-    padding-left:16px; position:relative; max-width:58ch;
+    padding-left:16px; position:relative;
+    break-inside:avoid; -webkit-column-break-inside:avoid;
+    margin-bottom:10px;
   }
   .ap-liste li::before{
     content:""; position:absolute; left:0; top:.62em; width:6px; height:6px;
