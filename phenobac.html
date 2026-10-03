@@ -458,6 +458,25 @@
   .bp-conv{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
     background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
     border-radius:100px;padding:1px 6px;margin-left:7px;white-space:nowrap;cursor:help}
+  /* Consultation des règles */
+  .ref-q{font-family:'IBM Plex Sans';font-size:13px;padding:7px 11px;border-radius:var(--radius);
+    border:1px solid var(--line-strong);background:#fff;color:var(--ink);min-width:170px}
+  .ref-q:focus{outline:1.5px solid var(--teal);border-color:var(--teal)}
+  .ref-filtres{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:12px}
+  .ref-seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:100px;
+    overflow:hidden;background:#fff}
+  .ref-seg button{font-family:'IBM Plex Mono';font-size:11px;padding:6px 12px;border:none;
+    background:transparent;color:var(--ink-faint);cursor:pointer}
+  .ref-seg button.on{background:var(--teal);color:#fff}
+  #refGroupe{font-family:'IBM Plex Sans';font-size:13px;padding:6px 9px;border-radius:4px;
+    border:1px solid var(--line-strong);background:#fff;color:var(--ink)}
+  .ref-compte{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--ink-faint);margin:10px 0 6px}
+  .ref-off{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--s);background:var(--s-bg);border:1px solid var(--s-line);border-radius:100px;padding:1px 7px}
+  #refTable .tbl-cumul table{min-width:760px}
+  #refTable td{white-space:nowrap}
+  #refTable td:nth-child(2){white-space:normal}
   /* Niveaux d'entraînement */
   .quiz-niveaux{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px}
   .quiz-niveaux button{font-family:'IBM Plex Sans';font-size:12.5px;font-weight:500;
@@ -1049,6 +1068,7 @@
       <button data-view="quiz">Entraînement</button>
       <button data-view="cq">Contrôle qualité</button>
       <button data-view="surv">Surveillance</button>
+      <button data-view="ref">Référentiels</button>
       <button data-view="offres">À propos</button>
     </div>
     <div class="live-chip" id="liveChip">
@@ -1184,6 +1204,26 @@
   <div class="card" id="idResultCard" style="display:none">
     <div class="card-h"><span class="eyebrow"><span class="num">03</span>Identification présumée</span></div>
     <div class="card-b" id="idResults"></div>
+  </div>
+</div>
+
+<!-- § 22 — consulter les seuils SANS interpréter. Un biologiste qui veut
+     vérifier une valeur n'a pas à saisir un antibiogramme pour l'obtenir, et
+     les règles étant devenues des données, les montrer ne coûte rien. -->
+<div class="surv-wrap" id="refView" style="display:none">
+  <div class="card">
+    <div class="card-h">
+      <span class="eyebrow"><span class="num">R</span>Règles appliquées</span>
+      <div style="margin-left:auto" class="toolbar">
+        <input class="ref-q" id="refQ" type="search" placeholder="antibiotique, groupe…" aria-label="Filtrer les règles">
+        <button class="btn" id="refExport">Exporter (CSV)</button>
+      </div>
+    </div>
+    <div class="card-b">
+      <div class="ref-filtres" id="refFiltres"></div>
+      <div id="refSource"></div>
+      <div id="refTable"></div>
+    </div>
   </div>
 </div>
 
@@ -4286,6 +4326,119 @@ async function verserSurveillance(){
   bouton.disabled = false; bouton.textContent = "Verser à la surveillance";
 }
 
+/* ============================================================
+   CONSULTER LES RÈGLES — § 22
+
+   Un biologiste qui veut vérifier un seuil n'a pas à saisir un antibiogramme
+   pour l'obtenir. Les règles étant devenues des données, les montrer ne coûte
+   rien — et c'est aussi la réponse la plus directe au § 17 : la règle, sa
+   source, sa version et son statut, consultables sans détour.
+
+   Une règle par ligne, telle qu'elle est écrite dans la base. Pas de
+   recomposition, pas de synthèse : ce qui s'affiche est ce que le moteur
+   applique.
+   ============================================================ */
+var REF_VUE = { ref: "", groupe: "", q: "" };
+
+function refRegles(){
+  const B = self.PhenoBacBase;
+  if(!B) return [];
+  const q = REF_VUE.q.trim().toLowerCase();
+  return B.regles.filter(r=>{
+    if(REF_VUE.ref && r.ref !== REF_VUE.ref) return false;
+    if(REF_VUE.groupe && r.groupe !== REF_VUE.groupe) return false;
+    if(!q) return true;
+    const nom = (ABX[r.abx] ? ABX[r.abx].n : r.abx).toLowerCase();
+    return nom.indexOf(q) !== -1 || r.abx.toLowerCase().indexOf(q) !== -1
+        || r.groupe.toLowerCase().indexOf(q) !== -1;
+  });
+}
+
+function refSeuilTexte(r){
+  const u = r.meth === "cmi" ? " mg/L" : " mm";
+  if(r.S === undefined && r.R === undefined){
+    if(r.temoin) return "se lit sur le disque de " + (ABX[r.temoin] ? ABX[r.temoin].n.toLowerCase() : r.temoin);
+    if(r.dep !== undefined) return "dépistage : sensible si ≥ " + r.dep + " mm";
+    return "—";
+  }
+  // « null » en S n'est pas une valeur manquante : c'est un refus du comité.
+  const s = (r.S === null) ? "pas de catégorie S"
+          : (r.meth === "cmi" ? "S ≤ " + fmt(r.S) : "S ≥ " + r.S);
+  const rr = (r.meth === "cmi" ? "R > " + fmt(r.R) : "R < " + r.R);
+  return s + " · " + rr + u;
+}
+
+function renderReferentiels(){
+  const B = self.PhenoBacBase;
+  if(!B){ $("#refTable").innerHTML = `<div class="placeholder">Base de règles non chargée.</div>`; return; }
+
+  /* --- filtres --- */
+  const groupes = [...new Set(B.regles.map(r=>r.groupe))].sort();
+  let f = `<div class="ref-seg">` +
+    [["", "Les deux référentiels"], ["eucast", "EUCAST"], ["casfm", "CA-SFM"]]
+      .map(([v,l])=>`<button data-rf="${v}" class="${REF_VUE.ref===v?"on":""}">${l}</button>`).join("")
+    + `</div>`;
+  f += `<select id="refGroupe" aria-label="Groupe bactérien"><option value="">Tous les groupes</option>`
+    + groupes.map(g=>`<option value="${esc(g)}"${REF_VUE.groupe===g?" selected":""}>${esc(g)}</option>`).join("")
+    + `</select>`;
+  $("#refFiltres").innerHTML = f;
+  $("#refFiltres").querySelectorAll("[data-rf]").forEach(b=>{
+    b.onclick = ()=>{ REF_VUE.ref = b.dataset.rf; renderReferentiels(); };
+  });
+  $("#refGroupe").onchange = e=>{ REF_VUE.groupe = e.target.value; renderReferentiels(); };
+
+  /* --- provenance : d'où viennent ces chiffres --- */
+  const src = B.SOURCES;
+  $("#refSource").innerHTML = `<div class="bp-note">`
+    + Object.keys(src).map(k=>`<b>${esc(src[k].nom)} ${esc(src[k].version)}</b> — ${esc(src[k].document)},
+        publié le ${esc(src[k].publie)}`).join("<br>")
+    + `<br>Base de connaissances <b>${esc(B.BASE_VERSION)}</b>, ${B.regles.length} règles.
+       Le CA-SFM n'est pas un second jeu complet : tout couple absent de ses lignes garde sa valeur EUCAST.</div>`;
+
+  /* --- le tableau --- */
+  const rr = refRegles();
+  if(!rr.length){ $("#refTable").innerHTML = `<div class="placeholder">Aucune règle ne correspond.</div>`; return; }
+  let h = `<div class="ref-compte">${rr.length} règle${rr.length>1?"s":""} affichée${rr.length>1?"s":""}</div>`;
+  h += `<div class="tbl-cumul"><table><thead><tr>
+      <th>Groupe</th><th>Antibiotique</th><th>Méthode</th><th>Site</th>
+      <th>Seuils</th><th>Charge</th><th>ZIT</th><th>Statut</th></tr></thead><tbody>`;
+  rr.forEach(r=>{
+    const zit = r.zit === undefined ? "—"
+      : (Array.isArray(r.zit) ? (r.zit[0]===r.zit[1] ? r.zit[0]+" mm" : r.zit[0]+"–"+r.zit[1]+" mm")
+                              : fmt(r.zit)+" mg/L");
+    const statut = r.conv ? `<span class="bp-conv">convention</span>`
+                 : r.espece ? `<span class="bp-ecart">${esc(r.espece.join(", "))} seulement</span>`
+                 : `<span class="ref-off">officiel</span>`;
+    h += `<tr><td>${esc(r.groupe)}</td><td>${esc(ABX[r.abx]?ABX[r.abx].n:r.abx)}
+        <span class="rc">${esc(r.abx)}</span></td>
+        <td>${r.meth === "cmi" ? "CMI" : "disque"}</td>
+        <td>${r.site === "standard" ? "—" : esc(r.site)}</td>
+        <td>${esc(refSeuilTexte(r))}</td>
+        <td>${r.charge ? esc(r.charge === "1 unit" ? "1 UI" : r.charge + " µg") : "—"}</td>
+        <td>${esc(zit)}</td><td>${statut}</td></tr>`;
+  });
+  $("#refTable").innerHTML = h + `</tbody></table></div>`;
+}
+
+function refExporter(){
+  const rr = refRegles();
+  if(!rr.length) return;
+  const col = ["Referentiel","Groupe","Antibiotique","Code","Methode","Site","S","R","Charge","ZIT","Statut"];
+  const ech = v => { const s = String(v===undefined||v===null?"":v);
+    return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const lignes = rr.map(r=>[r.ref, r.groupe, (ABX[r.abx]?ABX[r.abx].n:r.abx), r.abx,
+    r.meth, r.site, r.S === null ? "pas de catégorie S" : r.S, r.R, r.charge,
+    Array.isArray(r.zit) ? r.zit.join("-") : r.zit,
+    r.conv ? "convention de laboratoire" : "officiel"].map(ech).join(";"));
+  const B = self.PhenoBacBase;
+  const csv = "\ufeff" + col.join(";") + "\n" + lignes.join("\n") + "\n";
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "phenobac-regles-" + (B ? B.BASE_VERSION : "base") + ".csv";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
 /* ---------- Antibiogramme cumulatif ----------
    Pour chaque espèce, le pourcentage de souches sensibles à chaque
    antibiotique. C'est le chiffre sur lequel un clinicien choisit un
@@ -4496,6 +4649,13 @@ $("#survClose").onclick = fermerSurveillance;
 $("#survModal").onclick = e => { if(e.target.id === "survModal") fermerSurveillance(); };
 $("#survEnvoyer").onclick = verserSurveillance;
 if($("#survExport")) $("#survExport").onclick = survExporter;
+if($("#refExport")) $("#refExport").onclick = refExporter;
+if($("#refQ")) $("#refQ").oninput = e => {
+  // Le filtre se rejoue à chaque frappe : la table est en mémoire, il n'y a
+  // rien à attendre.
+  REF_VUE.q = e.target.value; renderReferentiels();
+  const c = $("#refQ"); if(c) c.focus();
+};
 if($("#survTransmettre")) $("#survTransmettre").onclick = survTransmettreEnAttente;
 
 /* --- identification (facultative) pour le compte-rendu --- */
@@ -5889,6 +6049,7 @@ function setView(v){
   $("#identView").style.display = v==="ident" ? "" : "none";
   $("#quizView").style.display = v==="quiz" ? "" : "none";
   $("#cqView").style.display = v==="cq" ? "" : "none";
+  $("#refView").style.display = v==="ref" ? "" : "none";
   $("#survView").style.display = v==="surv" ? "" : "none";
   $("#offresView").style.display = v==="offres" ? "" : "none";
   $("#liveChip").style.visibility = v==="work" ? "visible" : "hidden";
@@ -5896,6 +6057,7 @@ function setView(v){
   if(v==="ident") renderIdent();
   if(v==="quiz" && quiz.queue.length===0) startQuiz();
   if(v==="cq") renderCQ();
+  if(v==="ref") renderReferentiels();
   if(v==="surv") renderSurveillanceLocale();
   if(v==="offres") renderOffres();
 }
@@ -6158,6 +6320,37 @@ $("#introClose").onclick = ()=> fermerIntro(false);
    propos, et les deux côte à côte feraient doublon.
    ============================================================ */
 var PRESENTATIONS = {
+
+  ref: {
+    eyebrow: "Les règles, consultables",
+    titre: "Vérifier un seuil sans saisir un antibiogramme.",
+    lead: `Les <b>578 règles</b> que le moteur applique, une par ligne, telles qu'elles sont
+           écrites : seuils de CMI et de diamètre, charge du disque, zone d'incertitude, site du
+           prélèvement, et le <b>statut</b> — valeur officielle du comité, ou convention de
+           laboratoire que le référentiel ne fixe pas.`,
+    reperes: ["578 règles", "EUCAST 16.1 et CA-SFM 2026", "Officiel ou convention",
+              "Filtrage par groupe", "Export CSV"],
+    cta: "Consulter les règles",
+    cible: "refView",
+    guideTitre: "Ce que vous y lirez",
+    etapes: [
+      `<b>Ce qui s'affiche est ce que le moteur applique.</b>
+       Pas de recomposition ni de synthèse : la table est la base de connaissances elle-même.
+       Si une valeur vous surprend, c'est bien celle qui a servi.`,
+      `<b>Le CA-SFM n'est pas un second jeu complet.</b>
+       Il n'enregistre que ses <b>différences</b> avec l'EUCAST — 45 règles. Tout couple absent de
+       ses lignes garde sa valeur EUCAST : c'est ainsi que son comité le publie.`,
+      `<b>« Convention » n'est pas « officiel ».</b>
+       Un couple marqué convention est un couple pour lequel le référentiel ne fixe rien ;
+       la valeur employée est une convention de laboratoire, et doit être calée sur la vôtre.`,
+      `<b>« Pas de catégorie S » n'est pas une valeur manquante.</b>
+       C'est une décision du comité : aucune catégorie sensible n'est accordée à posologie
+       standard. La souche est au mieux sensible à forte exposition.`
+    ],
+    astuce: `<b>Les trois versions figurent en tête</b> — document, version et date de publication
+       de chaque référentiel, et version de la base. Ce sont celles que porte chaque compte rendu,
+       et qui permettent de reproduire un rendu ancien.`
+  },
 
   cq: {
     eyebrow: "Contrôle de qualité de l'antibiogramme",

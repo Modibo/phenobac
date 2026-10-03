@@ -344,6 +344,18 @@ Seize phénotypes portent une grille à ce jour. Le banc annonce la couverture
 à chaque exécution, et nomme les espèces qui n'en ont pas : elle se complète
 sans qu'on ait à s'en souvenir.
 
+## Consulter les règles
+
+Un onglet **Référentiels** montre les 578 règles telles qu'elles sont écrites,
+une par ligne : seuils de CMI et de diamètre, charge du disque, zone
+d'incertitude, site, et le **statut** — valeur officielle du comité, ou
+convention de laboratoire que le référentiel ne fixe pas. Filtrage par
+référentiel et par groupe, recherche par antibiotique, export CSV.
+
+Ce qui s'affiche **est** ce que le moteur applique : pas de recomposition ni
+de synthèse, la table est la base de connaissances elle-même. Un biologiste
+qui veut vérifier un seuil n'a plus à saisir un antibiogramme pour l'obtenir.
+
 ## Reproduire un rendu ancien
 
 Un laboratoire qui a rendu « sensible » en mars et « résistant » en octobre
