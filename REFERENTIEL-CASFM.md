@@ -182,6 +182,35 @@ mécanisme** de résistance, ce qui est un autre exercice.
 | *E. faecalis* / pipéracilline-tazobactam | absent de la table |
 | *S. pneumoniae* / cotrimoxazole | colonnes arrivées dans le désordre à l'extraction (« 22-26 18 » au lieu de « 22 18-26 ») — un trou signalé vaut mieux qu'une cible devinée |
 
+#### Détection de dérive
+
+Un registre qui enregistre sans prévenir ne sert qu'après coup. Une mesure peut
+rester **dans** les limites et dériver quand même : sept contrôles successifs
+qui s'éloignent de la cible annoncent le lot de disques qui faiblit, des
+semaines avant la première non-conformité.
+
+Deux règles, et seulement deux — celles de Westgard qui **ne dépendent pas de
+l'écart-type**, puisqu'elles comparent des rangs et non des distances :
+
+| | |
+|---|---|
+| **décalage** | dix mesures consécutives du même côté de la cible |
+| **tendance** | sept mesures consécutives qui montent, ou qui descendent |
+
+Les règles en multiples d'écart-type (1-3s, 2-2s…) ne sont pas reprises : les
+transposer à un intervalle de ± 3 mm demanderait de supposer une distribution
+qu'on n'a pas mesurée, et une alerte fondée sur une supposition apprend à
+ignorer les alertes.
+
+**Un changement de lot coupe la série.** Un nouveau lot de disques est un autre
+système : y chercher la continuité du précédent produirait des dérives
+imaginaires et masquerait les vraies. Le trait vertical sur la carte marque le
+changement — sans lui, on chercherait une cause là où il n'y en a pas.
+
+La **carte de Levey-Jennings** rend tout cela visible : cible en trait plein,
+limites acceptables en pointillé, un point par contrôle. Une suite de nombres
+ne montre pas une dérive ; un tracé, si.
+
 #### Le registre
 
 Un contrôle qui ne laisse pas de trace ne sert qu'une fois. Chaque contrôle

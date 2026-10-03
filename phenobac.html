@@ -458,6 +458,27 @@
   .bp-conv{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
     background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
     border-radius:100px;padding:1px 6px;margin-left:7px;white-space:nowrap;cursor:help}
+  /* Carte de contrôle de Levey-Jennings */
+  .lj{width:100%;height:auto;max-width:460px;display:block;margin:4px 0 2px}
+  .lj-bande{fill:var(--s-bg);opacity:.5}
+  .lj-lim{stroke:var(--line-strong);stroke-width:1;stroke-dasharray:3 3}
+  .lj-cible{stroke:var(--teal);stroke-width:1.2}
+  .lj-lot{stroke:var(--i);stroke-width:1;stroke-dasharray:2 3;opacity:.8}
+  .lj-trait{fill:none;stroke:var(--ink-soft);stroke-width:1.3}
+  .lj-pt{fill:var(--surface);stroke:var(--ink-soft);stroke-width:1.4}
+  .lj-pt.hors{fill:var(--r);stroke:var(--r)}
+  .lj-ax{font-family:'IBM Plex Mono';font-size:8.5px;fill:var(--ink-faint)}
+  .cq-derive{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.55;
+    background:var(--i-bg);border:1px solid var(--i-line);border-radius:4px;padding:9px 11px;margin:6px 0}
+  .cq-derive .r{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+    background:var(--i);color:#fff;border-radius:100px;padding:2px 8px;flex:none}
+  .cq-suivi{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+  .cq-suivi-t{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-faint);margin-bottom:9px}
+  .cq-mois{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .cq-mois span{font-family:'IBM Plex Mono';font-size:11px;border:1px solid var(--line);
+    border-radius:4px;padding:3px 9px;background:var(--surface-2)}
+  .cq-mois b{color:var(--ink)}
   /* Surveillance locale — chiffres, antibiogramme cumulatif, évolution */
   .surv-wrap{max-width:var(--maxw,1180px);margin:0 auto;padding:0 20px 40px}
   .surv-chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
@@ -2249,7 +2270,8 @@ const CQ = {
    diamètres relevés. Volontairement hors de « state » : un contrôle de
    qualité n'est pas un antibiogramme de patient, et ne doit rien lui
    emprunter — surtout pas son espèce ni ses résultats. */
-var CQ_ETAT = { souche: "ecoli25922", mesures: {}, date: "", lot: "", operateur: "", action: "" };
+var CQ_ETAT = { souche: "ecoli25922", mesures: {}, date: "", lot: "", lotMilieu: "",
+                incubateur: "", operateur: "", action: "" };
 
 /* ============================================================
    REGISTRE DE CONTRÔLE DE QUALITÉ
@@ -2293,6 +2315,132 @@ function cqAujourdhui(){
   const d = new Date();
   const p = n => String(n).padStart(2, "0");
   return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
+
+/* ============================================================
+   DÉTECTION DE DÉRIVE — § 12
+
+   Un registre qui enregistre sans prévenir ne sert qu'après coup. Une mesure
+   peut rester DANS les limites et dériver quand même : sept contrôles
+   successifs qui s'éloignent de la cible annoncent le lot de disques qui
+   faiblit, des semaines avant la première non-conformité.
+
+   DEUX RÈGLES, et seulement deux. Ce sont celles de Westgard qui ne dépendent
+   PAS de l'écart-type — elles comparent des rangs, pas des distances — et
+   s'appliquent donc telles quelles à un diamètre, où l'on ne dispose que
+   d'une cible et de limites acceptables :
+
+     décalage   dix mesures consécutives du même côté de la cible
+     tendance   sept mesures consécutives qui montent, ou qui descendent
+
+   Les règles en multiples d'écart-type (1-3s, 2-2s…) ne sont pas reprises :
+   les transposer à un intervalle de ± 3 mm demanderait de supposer une
+   distribution qu'on n'a pas mesurée, et une alerte fondée sur une
+   supposition apprend à ignorer les alertes.
+
+   UN CHANGEMENT DE LOT COUPE LA SÉRIE. Un nouveau lot de disques est un autre
+   système : y chercher la continuité du précédent produirait des dérives
+   imaginaires, et masquerait les vraies.
+   ============================================================ */
+const CQ_DECALAGE = 10;
+const CQ_TENDANCE = 7;
+
+/* Les mesures d'un couple souche × antibiotique, dans l'ordre, découpées par
+   lot de disques. */
+function cqSerie(souche, abx){
+  const out = [];
+  survRegistreCQ().forEach(e=>{
+    if(e.souche !== souche) return;
+    (e.lignes || []).forEach(l=>{
+      if(l.abx !== abx) return;
+      const v = parseFloat(String(l.mesure).replace(",", "."));
+      if(isNaN(v)) return;
+      out.push({ date: e.date, lot: e.lot || "", v: v,
+                 cible: l.cible, min: l.min, max: l.max, verdict: l.verdict });
+    });
+  });
+  return out.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+}
+
+function survRegistreCQ(){ return cqRegistre(); }
+
+/* Le dernier segment de série, c'est-à-dire depuis le dernier changement de
+   lot : c'est sur lui seul qu'une dérive a un sens. */
+function cqDernierLot(serie){
+  if(!serie.length) return [];
+  const lot = serie[serie.length-1].lot;
+  let i = serie.length - 1;
+  while(i > 0 && serie[i-1].lot === lot) i--;
+  return serie.slice(i);
+}
+
+function cqDerive(serie){
+  const s = cqDernierLot(serie);
+  const avis = [];
+  if(s.length >= CQ_DECALAGE){
+    const q = s.slice(-CQ_DECALAGE);
+    const au_dessus = q.every(x=>x.v > x.cible);
+    const en_dessous = q.every(x=>x.v < x.cible);
+    if(au_dessus || en_dessous)
+      avis.push({ regle: "décalage",
+        txt: `${CQ_DECALAGE} mesures consécutives ${au_dessus?"au-dessus":"en dessous"} de la cible. `
+           + `Les valeurs restent peut-être dans les limites, mais le système s'est déplacé : `
+           + `vérifier le lot de disques, l'épaisseur de la gélose et l'étalonnage de la lecture.` });
+  }
+  if(s.length >= CQ_TENDANCE){
+    const q = s.slice(-CQ_TENDANCE);
+    let monte = true, descend = true;
+    for(let i=1;i<q.length;i++){
+      if(!(q[i].v > q[i-1].v)) monte = false;
+      if(!(q[i].v < q[i-1].v)) descend = false;
+    }
+    if(monte || descend)
+      avis.push({ regle: "tendance",
+        txt: `${CQ_TENDANCE} mesures consécutives qui ${monte?"augmentent":"diminuent"}. `
+           + `Une dérive régulière précède la non-conformité de plusieurs semaines — `
+           + `c'est le moment d'agir, pas après.` });
+  }
+  return avis;
+}
+
+/* Carte de Levey-Jennings. Une suite de nombres ne montre pas une dérive ;
+   un tracé, si. La cible en trait plein, les limites acceptables en pointillé,
+   un point par contrôle, et un trait vertical à chaque changement de lot —
+   c'est lui qui explique les sauts, et sans lui on chercherait une cause là
+   où il n'y en a pas. */
+function cqCarte(serie, abx){
+  if(serie.length < 2) return "";
+  const L = 440, H = 120, mg = { g: 34, d: 10, h: 12, b: 20 };
+  const c = serie[0];
+  // L'échelle couvre les limites ET les points qui en sortent : un point hors
+  // cadre serait un point hors contrôle qu'on ne verrait pas.
+  const vals = serie.map(x=>x.v);
+  const bas = Math.min(c.min, ...vals) - 1, haut = Math.max(c.max, ...vals) + 1;
+  const X = i => mg.g + (L - mg.g - mg.d) * (serie.length === 1 ? .5 : i / (serie.length - 1));
+  const Y = v => mg.h + (H - mg.h - mg.b) * (1 - (v - bas) / (haut - bas));
+
+  let g = `<svg viewBox="0 0 ${L} ${H}" class="lj" role="img" aria-label="Carte de contrôle, ${esc(ABX[abx]?ABX[abx].n:abx)}">`;
+  // bande acceptable
+  g += `<rect x="${mg.g}" y="${Y(c.max)}" width="${L-mg.g-mg.d}" height="${Math.max(0,Y(c.min)-Y(c.max))}" class="lj-bande"/>`;
+  [[c.min,"lj-lim"],[c.max,"lj-lim"],[c.cible,"lj-cible"]].forEach(([v,cl])=>{
+    g += `<line x1="${mg.g}" y1="${Y(v)}" x2="${L-mg.d}" y2="${Y(v)}" class="${cl}"/>`;
+    g += `<text x="${mg.g-5}" y="${Y(v)+3.5}" class="lj-ax" text-anchor="end">${v}</text>`;
+  });
+  // changements de lot
+  serie.forEach((p,i)=>{
+    if(i===0 || p.lot === serie[i-1].lot) return;
+    g += `<line x1="${X(i)-((X(1)-X(0))/2||4)}" y1="${mg.h}" x2="${X(i)-((X(1)-X(0))/2||4)}" y2="${H-mg.b}" class="lj-lot"/>`;
+  });
+  // le tracé
+  g += `<polyline class="lj-trait" points="${serie.map((p,i)=>X(i)+","+Y(p.v)).join(" ")}"/>`;
+  serie.forEach((p,i)=>{
+    g += `<circle cx="${X(i)}" cy="${Y(p.v)}" r="3.2" class="lj-pt ${p.verdict==="hors"?"hors":""}">`
+       + `<title>${esc(p.date)} — ${p.v} mm${p.lot?" — lot "+esc(p.lot):""}</title></circle>`;
+  });
+  g += `<text x="${mg.g}" y="${H-5}" class="lj-ax">${esc(serie[0].date)}</text>`;
+  g += `<text x="${L-mg.d}" y="${H-5}" class="lj-ax" text-anchor="end">${esc(serie[serie.length-1].date)}</text>`;
+  g += `</svg>`;
+  return g;
 }
 
 /* Verdict d'une mesure : dans les limites, ou non. Un « — » n'est pas un
@@ -2999,6 +3147,10 @@ function renderCQ(){
   };
   champ("date", "Date du contrôle", "date");
   champ("lot", "Lot de disques", "text", "n° de lot");
+  // § 12 : un écart s'explique aussi par la gélose ou par l'étuve. Sans ces
+  // champs, la conduite tenue cite une cause que le registre ne porte pas.
+  champ("lotMilieu", "Lot de gélose", "text", "n° de lot");
+  champ("incubateur", "Étuve", "text", "repère");
   champ("operateur", "Lu par", "text", "initiales");
   body.appendChild(grille);
 
@@ -3079,9 +3231,60 @@ function renderCQ(){
   const avis = document.createElement("div"); avis.className = "cq-bilan cq-avis";
   body.appendChild(avis);
 
+  body.appendChild(cqSuivi(s));
   body.appendChild(cqHistorique());
   det.appendChild(body);
   abxGrid.parentNode.insertBefore(det, abxGrid.nextSibling);
+}
+
+/* Suivi dans le temps : cartes de contrôle, dérives, conformité par mois.
+   C'est la partie qui ALERTE, là où l'historique se contente de conserver. */
+function cqSuivi(s){
+  const bloc = document.createElement("div"); bloc.className = "cq-suivi";
+  const reg = cqRegistre().filter(e=>e.souche === CQ_ETAT.souche);
+  if(reg.length < 2){
+    bloc.innerHTML = `<div class="cq-suivi-t">Suivi dans le temps</div>
+      <div class="bp-note" style="margin:0">Une carte de contrôle demande au moins deux contrôles
+      sur la même souche. ${reg.length ? "Il y en a un." : "Il n'y en a pas encore."} Les dérives,
+      elles, se cherchent sur dix mesures : c'est le prix d'une alerte qui ne se trompe pas.</div>`;
+    return bloc;
+  }
+
+  let h = `<div class="cq-suivi-t">Suivi dans le temps — ${esc(s.espece)} ${esc(s.souche)}</div>`;
+
+  // conformité par mois
+  const mois = {};
+  reg.forEach(e=>{
+    const m = String(e.date||"").slice(0,7) || "?";
+    const o = mois[m] || (mois[m] = { n:0, hors:0 });
+    o.n++; if((e.lignes||[]).some(l=>l.verdict==="hors")) o.hors++;
+  });
+  const cles = Object.keys(mois).sort();
+  h += `<div class="cq-mois">` + cles.map(m=>{
+    const o = mois[m], pc = Math.round((o.n - o.hors) / o.n * 100);
+    return `<span>${esc(m)} · <b>${o.n}</b> contrôle${o.n>1?"s":""} · ${pc} % conformes</span>`;
+  }).join("") + `</div>`;
+
+  // une carte par antibiotique suivi, et les dérives
+  const codes = Object.keys(s.abx).filter(k=>cqSerie(CQ_ETAT.souche, k).length >= 2);
+  codes.sort((a,b)=>(ABX[a]?ABX[a].n:a).localeCompare(ABX[b]?ABX[b].n:b));
+  if(!codes.length){
+    h += `<div class="bp-note" style="margin-top:10px">Aucun antibiotique n'a encore deux mesures :
+      les cartes apparaîtront d'elles-mêmes.</div>`;
+  }
+  codes.forEach(k=>{
+    const serie = cqSerie(CQ_ETAT.souche, k);
+    const derives = cqDerive(serie);
+    h += `<div class="surv-esp"><div class="surv-esp-t">${esc(ABX[k]?ABX[k].n:k)}
+      <span class="surv-n">${serie.length} mesure${serie.length>1?"s":""}</span></div>`;
+    h += cqCarte(serie, k);
+    derives.forEach(d=>{
+      h += `<div class="cq-derive"><span class="r">${esc(d.regle)}</span><span>${esc(d.txt)}</span></div>`;
+    });
+    h += `</div>`;
+  });
+  bloc.innerHTML = h;
+  return bloc;
 }
 
 /* Historique. Le plus récent en haut : c'est celui qu'on relit. */
@@ -3150,6 +3353,8 @@ function cqEnregistrer(){
     horodatage: new Date().toISOString(),
     souche: CQ_ETAT.souche, espece: s.espece, reference: s.souche,
     lot: String(CQ_ETAT.lot||"").slice(0,40),
+    lotMilieu: String(CQ_ETAT.lotMilieu||"").slice(0,40),
+    incubateur: String(CQ_ETAT.incubateur||"").slice(0,40),
     operateur: String(CQ_ETAT.operateur||"").slice(0,40),
     action: String(CQ_ETAT.action||"").slice(0,300),
     lignes: lignes
@@ -3179,7 +3384,7 @@ function cqAvis(texte, classe){
 function cqExporter(){
   const reg = cqRegistre();
   if(!reg.length) return cqAvis("Registre vide : rien à exporter.", "hors");
-  const col = ["Date","Horodatage","Souche","Référence","LotDisques","Opérateur",
+  const col = ["Date","Horodatage","Souche","Référence","LotDisques","LotGelose","Etuve","Opérateur",
                "Antibiotique","Code","ChargeDisque","MesureMm","CibleMm","MinMm","MaxMm",
                "Verdict","ConduiteTenue"];
   const ech = v => {
@@ -3188,7 +3393,7 @@ function cqExporter(){
   };
   const corps = [];
   reg.forEach(e=>e.lignes.forEach(l=>{
-    corps.push([e.date, e.horodatage, e.espece, e.reference, e.lot, e.operateur,
+    corps.push([e.date, e.horodatage, e.espece, e.reference, e.lot, e.lotMilieu || "", e.incubateur || "", e.operateur,
                 (ABX[l.abx]?ABX[l.abx].n:l.abx), l.abx, l.charge, l.mesure,
                 l.cible, l.min, l.max,
                 l.verdict==="ok" ? "conforme" : "hors limites",
