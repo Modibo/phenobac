@@ -458,6 +458,17 @@
   .bp-conv{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
     background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
     border-radius:100px;padding:1px 6px;margin-left:7px;white-space:nowrap;cursor:help}
+  /* Refus de conclure, et niveaux d'alerte nommés */
+  .nonsecur{border:1.5px solid var(--r-line);background:var(--r-bg);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:14px}
+  .ns-t{font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--r);font-weight:600;margin-bottom:7px}
+  .ns-c{font-size:13px;line-height:1.6;color:var(--ink);margin-bottom:5px}
+  .ns-c:last-child{margin-bottom:0}
+  .alert.stop{background:var(--r-bg);border-color:var(--r-line)}
+  .alert.stop .ic{background:var(--r);color:#fff}
+  .al-niv{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+    opacity:.75;margin-right:5px}
   /* Pourquoi ce phénotype — arguments, discordances, confiance */
   .niv{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
     border-radius:100px;padding:2px 8px;margin-left:8px;border:1px solid var(--line);vertical-align:middle}
@@ -3316,7 +3327,15 @@ function selectionner(el){
 }
 
 function renderInterpretView(A){
-  let html = `<div class="verdict ${esc(A.sev)}">
+  /* § 25 — l'absence de conclusion vaut mieux qu'une conclusion fausse. Quand
+     l'espèce est probablement erronée, le bandeau passe DEVANT le verdict :
+     on ne lit pas un phénotype avant d'avoir lu qu'il ne tient peut-être pas. */
+  let html = A.nonSecurise
+    ? `<div class="nonsecur"><div class="ns-t">⊘ Interprétation automatique non sécurisée</div>
+         <div class="ns-c">${esc(A.nonSecurise)}</div>
+         <div class="ns-c"><b>Vérification biologique requise avant tout rendu.</b></div></div>`
+    : "";
+  html += `<div class="verdict ${esc(A.sev)}">
       <div class="v-eyebrow"><span class="led ${A.sev==='crit'?'pulse':''}" style="background:currentColor"></span>Verdict phénotypique · ${SEV_LBL[A.sev]}</div>
       <div class="v-name">${esc(A.name)}</div>
       <div class="v-mech">${esc(A.mech)}</div>
@@ -3357,8 +3376,13 @@ function renderInterpretView(A){
   if(A.alerts && A.alerts.length){
     html+=`<div class="sect"><div class="sect-t">Alertes &amp; cohérence</div>`;
     A.alerts.forEach(a=>{
-      const ic = a.lvl==="crit"?"!!":a.lvl==="warn"?"!":"i";
-      html+=`<div class="alert ${esc(a.lvl)}"><span class="ic">${ic}</span><span>${esc(a.txt)}</span></div>`;
+      // Quatre niveaux, nommés : une alerte sans degré se lit comme toutes
+      // les autres, et l'on finit par n'en lire aucune.
+      const NIV = { stop:["⊘","Interprétation impossible"], crit:["!!","Alerte majeure"],
+                    warn:["!","À vérifier"], info:["i","Information"] };
+      const n = NIV[a.lvl] || NIV.info;
+      html+=`<div class="alert ${esc(a.lvl)}"><span class="ic">${n[0]}</span>`
+          + `<span><b class="al-niv">${n[1]}</b> ${esc(a.txt)}</span></div>`;
     });
     html+=`</div>`;
   }

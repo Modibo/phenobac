@@ -248,6 +248,39 @@ done; echo
 
 Les premières réponses sont des `200`, les dernières des `429`.
 
+## Contrôles de cohérence
+
+Quatre niveaux, nommés à l'écran — **information**, **à vérifier**, **alerte
+majeure**, **interprétation impossible**. Une alerte sans degré se lit comme
+toutes les autres, et l'on finit par n'en lire aucune.
+
+Ce qui est vérifié :
+
+- **un inhibiteur ne peut pas rendre l'association moins active** que la
+  molécule seule. Amoxicilline sensible et amoxicilline-clavulanate résistante
+  est une impossibilité mécanistique — sauf chez *Enterobacter*, *Klebsiella
+  aerogenes*, *Serratia* et *Citrobacter freundii*, où le clavulanate **induit**
+  la céphalosporinase. Le même profil y est donc *expliqué*, pas reproché ;
+- **céfoxitine et oxacilline en désaccord** : elles dépistent la même
+  résistance, la céfoxitine fait référence, et une confirmation s'impose ;
+- **plusieurs résistances naturelles contredites** : une seule est une erreur
+  de saisie, plusieurs ensemble évoquent une identification erronée.
+  L'interprétation est alors déclarée **non sécurisée**, et le bandeau passe
+  devant le verdict — § 25 : l'absence de conclusion vaut mieux qu'une
+  conclusion fausse.
+
+**Une alerte ne modifie jamais une donnée brute.** La lecture interprétative,
+elle, en modifie — mais elle est déclarée, montrée à côté du résultat lu, et
+motivée. C'est l'inverse d'un silence. Le banc le vérifie.
+
+Ce qui n'est **pas** fait, et qu'il vaut mieux dire : la pureté de la culture
+et la validité du milieu ne se déduisent pas d'un antibiogramme. Les inventer
+aurait produit des alertes sans fondement, ce qui apprend aux utilisateurs à
+les ignorer — le pire résultat possible pour une alerte.
+
+`outils/essai-coherence.js` éprouve chaque contrôle **dans les deux sens** :
+un cas qui doit l'allumer, un cas voisin qui ne doit pas.
+
 ## Pourquoi ce phénotype
 
 Le moteur ne rend plus seulement une conclusion : il rend le chemin qui y

@@ -50,6 +50,11 @@ jobs:
       - name: La banque d'entraînement dit la même chose que le moteur
         run: node outils/essai-banque.js
 
+      # Une alerte qui se déclenche à tort apprend à ignorer les alertes :
+      # chaque contrôle est éprouvé dans les deux sens.
+      - name: Les alertes de cohérence se déclenchent quand il faut, et seulement alors
+        run: node outils/essai-coherence.js
+
       # Le sens des seuils de diamètre est INVERSÉ par rapport aux CMI. Une
       # inversion ne lèverait aucune exception : elle rendrait résistante
       # toute souche sensible, et ne se verrait qu'au lit du malade.

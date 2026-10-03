@@ -411,6 +411,94 @@ function parce(A, r, grille) {
   return A;
 }
 
+/* ============================================================
+   CONTRÔLES DE COHÉRENCE
+
+   § 9 du cahier des charges. Le moteur n'en faisait qu'un : signaler une
+   molécule rendue « S » alors qu'une résistance naturelle est attendue. Les
+   suivants s'ajoutent, et aucun n'est inventé — chacun repose soit sur une
+   impossibilité mécanistique, soit sur une absence de seuil, soit sur un
+   désaccord entre deux mesures qui devraient s'accorder.
+
+   Ce qui N'EST PAS fait, et qu'il vaut mieux dire : la pureté de la culture
+   et la validité du milieu ne se déduisent pas d'un antibiogramme. Les
+   inventer aurait produit des alertes sans fondement, ce qui apprend aux
+   utilisateurs à les ignorer — le pire résultat possible pour une alerte.
+
+   QUATRE NIVEAUX, comme le demande le § 9 :
+
+     info     information, aucune action attendue
+     warn     à vérifier avant de rendre
+     crit     alerte majeure
+     stop     interprétation impossible en l'état
+
+   Et une règle absolue : une alerte ne modifie JAMAIS une donnée brute. La
+   lecture interprétative, elle, en modifie — mais elle est déclarée, montrée
+   à côté du résultat lu, et motivée. C'est l'inverse d'un silence.
+   ============================================================ */
+
+// Espèces dont la céphalosporinase est INDUCTIBLE. Le clavulanate l'induit,
+// si bien qu'une amoxicilline-acide clavulanique peut y paraître moins active
+// que l'amoxicilline seule. Ailleurs, ce serait une impossibilité.
+const AMPC_INDUCTIBLE = ["enterobacter"];
+
+/* Un inhibiteur ne retire qu'un obstacle : l'association ne peut pas être
+   moins active que la molécule seule. Sauf chez les espèces ci-dessus, où
+   l'inhibiteur induit l'enzyme — et c'est alors un résultat attendu, pas une
+   erreur. */
+const COUPLES_INHIBITEUR = [
+  ["AMX", "AMC", "l'acide clavulanique ne retire qu'un obstacle"],
+  ["AMP", "AMC", "l'acide clavulanique ne retire qu'un obstacle"]
+];
+
+function coherence(A, r, org, c) {
+  const ajoute = (lvl, txt) => A.alerts.push({ lvl: lvl, txt: txt });
+
+  /* --- 1. L'association moins active que la molécule seule --- */
+  const inductible = org && AMPC_INDUCTIBLE.indexOf(org.engine) !== -1;
+  COUPLES_INHIBITEUR.forEach(function (x) {
+    const seule = x[0], assoc = x[1];
+    if (r[seule] !== "S" || !isRI(r[assoc])) return;
+    if (inductible) {
+      ajoute("info", `${ABXNAME[seule]} sensible et ${ABXNAME[assoc]} non : chez cette espèce, `
+        + `l'acide clavulanique INDUIT la céphalosporinase. Le résultat est attendu et n'est pas une erreur.`);
+    } else {
+      ajoute("warn", `${ABXNAME[seule]} sensible et ${ABXNAME[assoc]} non : ${x[2]}, `
+        + `l'association ne peut donc pas être moins active que la molécule seule. `
+        + `Erreur de transcription ou inversion de disques probable — vérifier avant de rendre.`);
+    }
+  });
+
+  /* --- 2. Méticilline : deux mesures qui doivent s'accorder --- */
+  if (org && org.engine === "staph" && has(r, "FOX") && has(r, "OXA")
+      && isRI(r.FOX) !== isRI(r.OXA)) {
+    ajoute("warn", "Céfoxitine et oxacilline en désaccord : elles dépistent la même résistance. "
+      + "La céfoxitine fait référence ; confirmer par détection de la PLP2a ou recherche de mecA/mecC "
+      + "avant de conclure.");
+  }
+
+  /* --- 3. Identification douteuse plutôt que faute de frappe --- */
+  if (org && org.intrinsic) {
+    const contredites = Object.keys(org.intrinsic).filter(k => r[k] === "S");
+    if (contredites.length >= 2) {
+      /* § 25 : en cas d'incertitude, ne pas deviner. Si l'espèce est
+         probablement fausse, le phénotype qu'on en tirerait l'est aussi —
+         et un phénotype faux est plus dangereux qu'une absence de
+         conclusion. On le dit, et on le dit AVANT le verdict. */
+      A.nonSecurise = `${contredites.length} résistances naturelles de cette espèce sont contredites (`
+        + contredites.map(k => ABXNAME[k] || k).join(", ") + `). Une seule serait une erreur de saisie ; `
+        + `plusieurs ensemble évoquent une identification erronée. Reprendre l'identification avant `
+        + `d'interpréter cet antibiogramme : le phénotype ci-dessous ne vaut que si l'espèce est la bonne.`;
+      ajoute("stop", A.nonSecurise);
+    }
+  }
+
+  /* --- 4. Molécules que le référentiel ne sait pas juger ici --- */
+  // Déjà dit couple par couple en mode diamètre ; en S/I/R, le résultat est
+  // repris tel quel et rien ne signalait l'absence de seuil.
+  return A;
+}
+
 function finalize(A, r) {
   const org = _activeOrg;
   if (org && org.intrinsic) {
@@ -426,6 +514,7 @@ function finalize(A, r) {
     _depistage.alerts.forEach(x => A.alerts.push(x));
     if (_depistage.sev && A.sev === "wild") A.sev = _depistage.sev;
   }
+  coherence(A, r, org, null);
   reglesCasfm(A, r);
 
   if (_depistageEchoue.length) {
