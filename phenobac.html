@@ -899,7 +899,25 @@
     .rp-table td.cat-S{color:#0f8a54}
     .rp-table td.cat-I{color:#a9700a}
     .rp-table td.cat-R{color:#c0392b}
-    .rp-table td.catf{color:#333;width:30%}
+    .rp-table td.catf{color:#333;width:26%}
+    .rp-table td.prov{width:20%;white-space:normal}
+
+    /* Pastilles de provenance. Imprimées en noir et blanc, elles doivent
+       rester distinctes : le trait, la graisse et le remplissage changent
+       ensemble, pas seulement la couleur. */
+    .rp-prov{display:inline-block;font-family:'IBM Plex Mono';font-size:6.5pt;letter-spacing:.07em;
+      border:1px solid #999;border-radius:2pt;padding:0 3pt;margin:1pt 2pt 1pt 0;white-space:nowrap;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rp-prov-m{color:#333;border-color:#999;background:#fff}
+    .rp-prov-c{color:#0a5960;border-color:#7fb3b8;background:#f0f7f7}
+    .rp-prov-i{color:#8a5a00;border-color:#d9b26a;background:#fdf6e8}
+    .rp-prov-x{color:#8e1b2e;border-color:#c98a94;background:#fbeef0;font-weight:600}
+
+    .rp-legende{border:1px solid #ccc;background:#fafafa;padding:7px 9px;margin-bottom:9px;
+      font-size:7.8pt;line-height:1.75;color:#444;break-inside:avoid}
+    .rp-legende b{color:#111;font-size:7.5pt;font-family:'IBM Plex Mono';letter-spacing:.06em;
+      text-transform:uppercase;display:block;margin-bottom:3px}
+    .rp-sect-t .rp-prov{margin-left:8pt;vertical-align:middle}
 
     .rp-list{margin:0;padding-left:16pt;font-size:9.5pt;color:#222}
     .rp-list li{margin-bottom:3px;break-inside:avoid}
@@ -4768,8 +4786,102 @@ function esc(s){
 // d'atteindre un nom de classe CSS.
 function classeCat(c){ return (c==="S"||c==="I"||c==="R") ? c : "none"; }
 
+/* ------------------------------------------------------------
+   PROVENANCE D'UNE DONNÉE RENDUE (§23 du cahier des charges).
+
+   Un compte rendu mélange quatre choses de nature différente, et le
+   lecteur n'a aucun moyen de les séparer s'il n'est pas prévenu :
+
+     MESURÉ      la donnée de paillasse, celle qui a été lue sur la boîte :
+                 un diamètre, une CMI, ou une catégorie relevée directement.
+                 PhénoBac ne la produit pas, il la reçoit.
+     CALCULÉ     la catégorie obtenue en appliquant au chiffre mesuré la
+                 concentration critique du référentiel. Mécanique, vérifiable,
+                 reproductible par quiconque a la table sous les yeux.
+     INTERPRÉTÉ  la catégorie modifiée par la lecture interprétative, ou le
+                 phénotype déduit du profil. Ce n'est plus une mesure : c'est
+                 un raisonnement, et il peut être discuté.
+     À CONFIRMER ce qui ne tient pas tout seul : une valeur dans la zone
+                 d'incertitude technique, un seuil qui n'est qu'une convention
+                 de laboratoire, une hypothèse mécanistique qu'aucun test n'a
+                 tranchée.
+
+   Les trois premiers se suivent : on mesure, on calcule, parfois on
+   interprète. Le quatrième n'est pas une étape mais une réserve, et peut
+   accompagner n'importe lequel des trois.
+   ------------------------------------------------------------ */
+const PROV_MESURE   = "MESURÉ";
+const PROV_CALCUL   = "CALCULÉ";
+const PROV_INTERP   = "INTERPRÉTÉ";
+const PROV_CONFIRM  = "À CONFIRMER";
+
+/* La chaîne de provenance d'une ligne d'antibiogramme, et ce qui la met en
+   réserve. Rend { chaine:[...], reserve:[motifs] }. */
+function provenanceLigne(k, g, cat, chg){
+  const chaine = [], reserve = [];
+  const brut = state.mode==="mic" ? (state.mic[k]||"")
+             : state.mode==="diam" ? (state.diam[k]||"") : "";
+
+  if(estMesure()){
+    if(brut){
+      chaine.push(PROV_MESURE);
+      // La catégorie n'est « calculée » que si elle a pu l'être : un chiffre
+      // sans seuil applicable reste un chiffre, et le compte rendu ne doit
+      // pas laisser croire qu'une catégorisation a eu lieu.
+      if(cat) chaine.push(PROV_CALCUL);
+    } else if(cat){
+      // Mode mesure, mais cette ligne porte une catégorie sans chiffre :
+      // elle a été saisie à la main. C'est une donnée de paillasse.
+      chaine.push(PROV_MESURE);
+    }
+  } else if(cat){
+    chaine.push(PROV_MESURE);
+  }
+
+  if(chg) chaine.push(PROV_INTERP);
+
+  // Réserves. Chacune est une raison nommée, pas un avertissement vague :
+  // un « à confirmer » sans motif n'apprend rien et finit ignoré.
+  if(brut && state.mode==="mic"  && enZit(brut, g, k))
+    reserve.push("valeur dans la zone d'incertitude technique du référentiel");
+  if(brut && state.mode==="diam" && enZitZone(brut, g, k))
+    reserve.push("diamètre dans la zone d'incertitude technique du référentiel");
+  // La réserve ne vaut que si un seuil a RÉELLEMENT été appliqué. En saisie
+  // S/I/R, aucune concentration critique n'entre en jeu : dire d'une catégorie
+  // lue à la paillasse qu'elle repose sur une convention de laboratoire serait
+  // faux, et apprendrait à se méfier de la mauvaise chose.
+  if(cat && estMesure() && brut && horsReferentiel(g, k, state.org))
+    reserve.push("seuil non fixé par " + referentiel().nom + " : convention de laboratoire");
+  // Un chiffre mesuré que rien ne permet de catégoriser doit se voir : sans
+  // marque, il se lirait comme un résultat que l'on aurait omis de traduire.
+  if(brut && !cat)
+    reserve.push("aucune concentration critique applicable à ce couple dans "
+      + referentiel().nom + " : la catégorisation automatique n'est pas possible");
+  if(chg && !A_CONFIRMEE)
+    reserve.push("catégorie modifiée sur un mécanisme présumé, non confirmé par un test");
+
+  return { chaine: chaine, reserve: reserve };
+}
+
+/* Le phénotype est-il adossé à un test de confirmation ? Posé une fois par
+   compte rendu : toutes les lignes modifiées en dépendent. */
+let A_CONFIRMEE = false;
+
+function pastillesProv(prov){
+  const p = prov.chaine.map(x=>`<span class="rp-prov rp-prov-${
+      x===PROV_MESURE?"m":x===PROV_CALCUL?"c":"i"}">${esc(x)}</span>`).join("");
+  const r = prov.reserve.length
+    ? `<span class="rp-prov rp-prov-x" title="${esc(prov.reserve.join(" ; "))}">${esc(PROV_CONFIRM)}</span>`
+    : "";
+  return p + r;
+}
+
 function buildReport(A){
   const org=currentOrg(), g=bpGroup();
+  // Une catégorie modifiée sur un mécanisme confirmé par un test n'est pas
+  // dans le même état qu'une autre modifiée sur une présomption : la réserve
+  // « à confirmer » ne vaut que pour la seconde.
+  A_CONFIRMEE = !!A.confirmation;
   const now=new Date();
   const dateStr=now.toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"})
     +" à "+now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
@@ -4792,15 +4904,17 @@ function buildReport(A){
       const catFull = chg
         ? libelleCat(chg.rendu) + " <i>(lu " + esc(lettreCat(chg.brut)) + ")</i>"
         : libelleCat(cat);
+      const prov = provenanceLigne(k, g, cat, chg);
       rows+=`<tr>
         <td>${esc(ABX[k].n)} <span class="rc">${esc(ABX[k].code)}</span></td>
         <td class="mic">${mesure?esc(mesure)+unite:"—"}</td>
         <td class="cat cat-${classeCat(cle)}">${cle?esc(lettreCat(cle)):"—"}</td>
         <td class="catf">${catFull}</td>
+        <td class="prov">${pastillesProv(prov)}</td>
       </tr>`;
     });
   });
-  if(!rows) rows=`<tr><td colspan="4" style="color:#777">Aucun résultat saisi.</td></tr>`;
+  if(!rows) rows=`<tr><td colspan="5" style="color:#777">Aucun résultat saisi.</td></tr>`;
 
   // Lecture interprétative : le compte-rendu porte le résultat rendu ET le
   // résultat brut. Un clinicien doit pouvoir voir que la catégorie a été
@@ -4829,7 +4943,9 @@ function buildReport(A){
     </table>
 
     <div class="rp-verdict rp-${A.sev}">
-      <div class="rp-vlab">Verdict phénotypique — ${sevLbl}${A.confiance?" · "+esc(A.confiance):""}</div>
+      <div class="rp-vlab">Verdict phénotypique — ${sevLbl}${A.confiance?" · "+esc(A.confiance):""}
+        <span class="rp-prov rp-prov-i">${esc(PROV_INTERP)}</span>${
+          (!A.confirmation && A.aConfirmerPar) ? `<span class="rp-prov rp-prov-x">${esc(PROV_CONFIRM)}</span>` : ""}</div>
       <div class="rp-vname">${esc(A.name)}</div>
       <div class="rp-vmech">${esc(A.mech)}</div>
       ${A.confirmation?`<div class="rp-vconf">Confirmé par : ${esc(A.confirmation)}.</div>`:""}
@@ -4837,8 +4953,20 @@ function buildReport(A){
     </div>
 
     <div class="rp-sect-t">Antibiogramme</div>
+    <div class="rp-legende">
+      <b>Provenance des données.</b>
+      <span class="rp-prov rp-prov-m">${esc(PROV_MESURE)}</span> donnée de paillasse — diamètre, CMI,
+      ou catégorie relevée directement ; PhénoBac ne la produit pas.
+      <span class="rp-prov rp-prov-c">${esc(PROV_CALCUL)}</span> catégorie obtenue en appliquant la
+      concentration critique du référentiel à la valeur mesurée.
+      <span class="rp-prov rp-prov-i">${esc(PROV_INTERP)}</span> catégorie modifiée par la lecture
+      interprétative, ou phénotype déduit du profil — un raisonnement, pas une mesure.
+      <span class="rp-prov rp-prov-x">${esc(PROV_CONFIRM)}</span> ce qui ne tient pas seul : zone
+      d'incertitude technique, seuil conventionnel, ou hypothèse qu'aucun test n'a tranchée.
+    </div>
     <table class="rp-table">
-      <thead><tr><th>Antibiotique</th><th>CMI</th><th>Cat.</th><th>Interprétation</th></tr></thead>
+      <thead><tr><th>Antibiotique</th><th>${esc(enteteMesure())}</th><th>Cat.</th>
+        <th>Interprétation</th><th>Provenance</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
 
@@ -4846,7 +4974,8 @@ function buildReport(A){
     ${alerts?`<div class="rp-sect-t">Alertes et cohérence</div><ul class="rp-list">${alerts}</ul>`:""}
     ${rules?`<div class="rp-sect-t">Règles expertes appliquées</div><ul class="rp-list">${rules}</ul>`:""}
 
-    <div class="rp-sect-t">Commentaire d'interprétation</div>
+    <div class="rp-sect-t">Commentaire d'interprétation
+      <span class="rp-prov rp-prov-i">${esc(PROV_INTERP)}</span></div>
     <div class="rp-comment">${esc(A.comment)}</div>
 
     <div class="rp-sign">
@@ -4869,6 +4998,14 @@ function buildReport(A){
       base de connaissances ${esc(baseVersion())}.
       Les concentrations critiques sont paramétrables et doivent être vérifiées sur le référentiel en vigueur.
     </div>`;
+}
+
+/* L'en-tête de la colonne de mesure annonçait « CMI » quel que soit le mode :
+   en saisie de diamètres, elle surmontait des millimètres. */
+function enteteMesure(){
+  return state.mode==="mic"  ? "CMI (mg/L)"
+       : state.mode==="diam" ? "Diamètre (mm)"
+       : "Mesure";
 }
 
 function exportPDF(){
