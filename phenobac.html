@@ -25,11 +25,14 @@
 
        La règle est simple : ce qui se TRAVAILLE prend la largeur disponible —
        un tableau de 578 règles ou un antibiogramme en deux colonnes n'ont rien
-       à gagner à être serrés. Ce qui se LIT garde une colonne étroite, parce
-       qu'une ligne de prose de 1500 px est illisible : l'œil perd le début de
-       la ligne suivante. */
+       à gagner à être serrés.
+
+       La prose, elle, n'est pas contrainte par une largeur de bloc mais
+       répartie en COLONNES — l'avertissement, les sections d'« à propos ».
+       Elle remplit ainsi l'écran sans qu'aucune ligne ne s'étire : une ligne
+       de 1500 px est illisible, l'œil perd le début de la suivante en
+       revenant à la marge. */
     --maxw:1560px;
-    --maxw-lecture:820px;
     --bg:#e9eef0;
     --surface:#ffffff;
     --surface-2:#f4f8f9;
@@ -119,7 +122,7 @@
   }
 
   /* vue quiz */
-  .quiz-wrap{max-width:var(--maxw-lecture);margin:22px auto 0;padding:0 20px}
+  .quiz-wrap{max-width:var(--maxw);margin:22px auto 0;padding:0 20px}
   .quiz-card{overflow:hidden}
   .quiz-top{padding:16px 18px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .quiz-eyebrow{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.12em;text-transform:uppercase;
@@ -288,7 +291,7 @@
   .modal-err{font-size:12.5px;color:var(--r);margin-top:9px;min-height:16px}
 
   /* page Offres */
-  .ident-wrap{max-width:var(--maxw-lecture);margin:26px auto 0;padding:0 20px}
+  .ident-wrap{max-width:var(--maxw);margin:26px auto 0;padding:0 20px}
   .id-choice{display:flex;gap:8px;flex-wrap:wrap}
   .id-choice .c{font-family:'IBM Plex Mono';font-size:13px;padding:9px 16px;border-radius:100px;background:#fff;
     border:1px solid #c2d0d4;color:#4b6169;cursor:pointer}
@@ -317,13 +320,13 @@
   .id-note{font-size:12px;color:#8098a1;line-height:1.5;margin-top:8px;background:#f4f8f9;border:1px solid #d6e0e3;
     border-left:3px solid #a9700a;border-radius:4px;padding:10px 12px}
   .id-note b{color:#0f2129}
-  .offres-wrap{max-width:calc(var(--maxw-lecture) + 100px);margin:26px auto 0;padding:0 20px}
+  .offres-wrap{max-width:var(--maxw);margin:26px auto 0;padding:0 20px}
   .offres-hero{text-align:center;margin-bottom:26px}
   .offres-hero .oh-eyebrow{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--gold-deep);font-weight:500}
   .offres-hero h1{font-weight:600;font-size:clamp(22px,3vw,30px);line-height:1.2;letter-spacing:-.012em;
     color:var(--ink);margin:12px auto;max-width:24ch;text-wrap:balance}
-  .offres-hero p{font-size:15.5px;color:var(--ink-soft);max-width:52ch;margin:0 auto;line-height:1.68}
+  .offres-hero p{font-size:15.5px;color:var(--ink-soft);max-width:72ch;margin:0 auto;line-height:1.68}
   .oh-tagline{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.22em;text-transform:uppercase;
     color:var(--teal-deep);margin-top:14px}
   .plans{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
@@ -859,9 +862,15 @@
   }
 
   footer{max-width:var(--maxw);margin:24px auto 0;padding:0 20px}
+  /* L'avertissement prend toute la largeur, mais le texte se répartit en
+     colonnes : une ligne de prose de 1500 px est illisible — l'œil perd le
+     début de la ligne suivante en revenant à la marge. Deux colonnes
+     remplissent l'écran ET gardent une mesure confortable. */
   .disclaimer{font-size:13px;color:var(--ink-soft);line-height:1.7;background:var(--surface);
     border:1px solid var(--line);border-left:3px solid var(--i);border-radius:var(--radius);
-    padding:16px 18px;max-width:74ch}
+    padding:16px 18px}
+  @media(min-width:1000px){ .disclaimer{columns:2;column-gap:34px} }
+  @media(min-width:1500px){ .disclaimer{columns:3} }
   .credit{margin-top:14px;font-family:'IBM Plex Mono';font-size:11.5px;line-height:1.6;
     color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 18px}
   .credit b{color:var(--ink-soft);font-weight:500}
@@ -895,7 +904,7 @@
     font-size:clamp(20px,2.6vw,27px); font-weight:600; line-height:1.22;
     letter-spacing:-.01em; color:var(--ink); margin-bottom:10px; text-wrap:balance;
   }
-  .intro-lead{ font-size:14.5px; line-height:1.62; color:var(--ink-soft); max-width:66ch; }
+  .intro-lead{ font-size:14.5px; line-height:1.62; color:var(--ink-soft); max-width:92ch; }
   .intro-lead b{ color:var(--ink); font-weight:600; }
 
   .intro-facts{
@@ -980,7 +989,12 @@
   .brand-open:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
 
   /* Page « À propos » : texte de positionnement, plus de grille tarifaire. */
-  .apropos{ max-width:var(--maxw-lecture); margin:26px auto 0; display:flex; flex-direction:column; gap:22px; }
+  /* Les sections se rangent côte à côte quand l'écran le permet : elles
+     occupent alors toute la largeur sans qu'aucune ligne ne s'étire. */
+  .apropos{ max-width:none; margin:26px auto 0; display:grid; gap:22px;
+    /* « min(380px, 100%) » et non « 380px » : sur un téléphone de 375 px, un
+       minimum fixe plus large que l'écran fait déborder la page entière. */
+    grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr)); align-items:start; }
   .ap-bloc{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
     box-shadow:var(--shadow); padding:24px 26px;
