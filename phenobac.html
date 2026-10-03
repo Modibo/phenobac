@@ -705,10 +705,19 @@
   .cq-ligne-d{color:var(--ink-faint);font-size:11.5px;line-height:1.55;margin-top:3px}
   .cq-ligne-a{color:var(--ink-soft);font-size:11.5px;line-height:1.55;margin-top:3px;
     padding-left:9px;border-left:2px solid var(--line-strong)}
-  .cq-sup{position:absolute;top:9px;right:0;font-family:'IBM Plex Mono';font-size:10px;
-    letter-spacing:.04em;background:none;border:1px solid var(--line);border-radius:100px;
-    padding:2px 9px;color:var(--ink-faint);cursor:pointer}
+  /* Valider et supprimer sont les deux seuls gestes de la ligne : ils se
+     suivent dans un même conteneur, et se distinguent par la couleur du
+     trait — les confondre coûterait un contrôle. */
+  .cq-actes{position:absolute;top:9px;right:0;display:flex;gap:6px}
+  .cq-sup,.cq-val{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.04em;
+    background:none;border:1px solid var(--line);border-radius:100px;
+    padding:2px 9px;color:var(--ink-faint);cursor:pointer;white-space:nowrap}
   .cq-sup:hover{border-color:var(--r-line);color:var(--r)}
+  .cq-val{border-color:var(--teal);color:var(--teal-deep)}
+  .cq-val:hover{background:var(--teal);color:#fff}
+  .cq-ligne-v{color:var(--teal-deep);font-size:11.5px;line-height:1.55;margin-top:3px;
+    padding-left:9px;border-left:2px solid var(--teal)}
+  .cq-ligne-v b{font-weight:600}
   /* Versement à la surveillance */
   .surv-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:11px;margin:14px 0}
   .surv-ch{display:flex;flex-direction:column;gap:4px}
@@ -934,6 +943,24 @@
     .rp-sig-val{display:block;border-top:1px solid #999;padding-top:4px;font-size:9.5pt;color:#111}
 
     .rp-foot{margin-top:20px;padding-top:8px;border-top:1px solid #ccc;font-size:7.5pt;color:#777;line-height:1.5}
+
+    /* Registre de contrôle qualité. Un bloc par contrôle, qui ne doit pas se
+       couper entre deux pages : un tableau de mesures séparé de son verdict
+       et de sa conduite tenue ne se relit pas. */
+    .cqr-bloc{border:1px solid #ccc;padding:8px 10px;margin-bottom:9px;break-inside:avoid}
+    .cqr-bloc-h{font-size:10pt;color:#111;display:flex;align-items:baseline;gap:8pt;flex-wrap:wrap}
+    .cqr-bloc-h b{font-family:'IBM Plex Mono'}
+    .cqr-etat{margin-left:auto;font-family:'IBM Plex Mono';font-size:7pt;letter-spacing:.08em;
+      text-transform:uppercase;border:1px solid #999;border-radius:2pt;padding:0 4pt;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .cqr-etat.ok{color:#0a5c39;border-color:#9ccfb5}
+    .cqr-etat.hors{color:#8e1b2e;border-color:#c98a94;font-weight:600}
+    .cqr-bloc-m{font-size:8pt;color:#666;margin:3px 0 6px}
+    .cqr-bloc .rp-table{font-size:9pt}
+    .cqr-action{font-size:9pt;color:#111;margin-top:6px;padding-left:8pt;border-left:2px solid #999}
+    .cqr-action b{font-family:'IBM Plex Mono';font-size:7.5pt;letter-spacing:.06em;
+      text-transform:uppercase;color:#666;display:block;margin-bottom:2px}
+    .cqr-valid{font-size:8.5pt;color:#444;margin-top:6px;padding-top:4px;border-top:1px dotted #bbb}
   }
 
   footer{max-width:var(--maxw);margin:24px auto 0;padding:0 20px}
@@ -1604,6 +1631,11 @@
 </div>
 
 <div class="report" id="report" aria-hidden="true"></div>
+<!-- Le registre de contrôle qualité s'imprime par le même chemin que le
+     compte-rendu d'antibiogramme, dans son propre conteneur : les deux ne
+     sont jamais remplis en même temps, chacun vide l'autre avant de
+     s'imprimer. -->
+<div class="report" id="cqReport" aria-hidden="true"></div>
 
 <!-- Les règles, puis le raisonnement. L'ORDRE COMPTE : le moteur reconstruit
      ses tables depuis la base au chargement, et la page emprunte ensuite ces
@@ -2445,6 +2477,21 @@ const CQ = {
    emprunter — surtout pas son espèce ni ses résultats. */
 var CQ_ETAT = { souche: "ecoli25922", mesures: {}, date: "", lot: "", lotMilieu: "",
                 incubateur: "", operateur: "", action: "" };
+
+/* En-tête du registre : le nom du laboratoire et celui du biologiste qui
+   valide d'ordinaire. Un registre de contrôle qualité qui ne porte pas le
+   nom du laboratoire ne vaut rien une fois sorti du poste — et retaper ces
+   deux lignes à chaque impression serait le meilleur moyen de ne plus les
+   remplir. Ils restent sur le poste, comme le registre lui-même. */
+const CQ_ENTETE_CLE = "phenobac.cq.entete";
+function cqEntete(){
+  try{ const e = JSON.parse(localStorage.getItem(CQ_ENTETE_CLE) || "{}");
+       return { labo: e.labo || "", valideur: e.valideur || "" }; }
+  catch(e){ return { labo:"", valideur:"" }; }
+}
+function cqEnteteEcrire(e){
+  try{ localStorage.setItem(CQ_ENTETE_CLE, JSON.stringify(e)); }catch(x){}
+}
 
 /* ============================================================
    REGISTRE DE CONTRÔLE DE QUALITÉ
@@ -3323,6 +3370,21 @@ function renderCQ(){
   champ("lotMilieu", "Lot de gélose", "text", "n° de lot");
   champ("incubateur", "Étuve", "text", "repère");
   champ("operateur", "Lu par", "text", "initiales");
+  // L'en-tête du registre imprimé. Retenue d'une fois sur l'autre : c'est la
+  // même ligne à chaque impression, et la retaper serait le meilleur moyen de
+  // sortir un registre anonyme.
+  const ent = cqEntete();
+  const champEntete = (cle, libelle, gabarit)=>{
+    const d = document.createElement("div"); d.className = "surv-ch";
+    d.innerHTML = `<span>${libelle}</span>`;
+    const i = document.createElement("input");
+    i.type = "text"; i.id = "cq-entete-" + cle; i.placeholder = gabarit;
+    i.value = ent[cle] || "";
+    i.oninput = ()=>{ const e = cqEntete(); e[cle] = i.value.slice(0,80); cqEnteteEcrire(e); };
+    d.appendChild(i); grille.appendChild(d);
+  };
+  champEntete("labo", "Laboratoire (en-tête du registre)", "nom du laboratoire");
+  champEntete("valideur", "Biologiste responsable", "nom et prénom");
   body.appendChild(grille);
 
   const bilan = document.createElement("div"); bilan.className = "cq-bilan";
@@ -3394,7 +3456,11 @@ function renderCQ(){
   bEnr.textContent = "Enregistrer ce contrôle"; bEnr.onclick = cqEnregistrer;
   const bExp = document.createElement("button"); bExp.className = "bp-reset";
   bExp.textContent = "Exporter le registre (CSV)"; bExp.onclick = cqExporter;
-  barre.appendChild(bEnr); barre.appendChild(bExp);
+  // Le CSV sert à relire et à recalculer ; il ne se signe pas. Le document
+  // imprimé est celui qu'on archive et qu'on présente.
+  const bImp = document.createElement("button"); bImp.className = "bp-reset";
+  bImp.textContent = "Imprimer le registre (PDF)"; bImp.onclick = cqImprimer;
+  barre.appendChild(bEnr); barre.appendChild(bExp); barre.appendChild(bImp);
   body.appendChild(barre);
 
   // Vide, il ne doit pas occuper de place : la règle « .cq-avis:empty » s'en
@@ -3469,8 +3535,10 @@ function cqHistorique(){
     return bloc;
   }
   const horsTotal = reg.reduce((n,e)=>n + e.lignes.filter(l=>l.verdict==="hors").length, 0);
+  const aValider = reg.filter(e=>!e.valide).length;
   let html = `<div class="cq-histo-t">Registre — ${reg.length} contrôle${reg.length>1?"s":""}`
            + (horsTotal ? `, ${horsTotal} mesure${horsTotal>1?"s":""} hors limites` : "")
+           + (aValider ? `, ${aValider} en attente de validation` : ", tous validés")
            + `</div>`;
   reg.slice().reverse().forEach((e, rang)=>{
     const i = reg.length - 1 - rang;
@@ -3486,12 +3554,24 @@ function cqHistorique(){
       + (hors.length ? ` · ${esc(hors.map(l=>(ABX[l.abx]?ABX[l.abx].n:l.abx) + " " + l.mesure + " mm").join(", "))}` : "")
       + `</div>`
       + (e.action ? `<div class="cq-ligne-a">Conduite tenue : ${esc(e.action)}</div>` : "")
-      + `<button class="cq-sup" data-i="${i}" title="Supprimer cette ligne du registre">supprimer</button>
+      + (e.valide
+          ? `<div class="cq-ligne-v">Validé par <b>${esc(e.valide.par)}</b> le ${esc(dateFr(e.valide.quand))}</div>`
+          : "")
+      // Les deux gestes de la ligne voyagent ensemble : positionnés chacun de
+      // son côté, leur écart dépendait de la largeur du texte des boutons, et
+      // ils se chevauchaient sur un écran étroit.
+      + `<div class="cq-actes">`
+      + (e.valide ? "" : `<button class="cq-val" data-v="${i}" title="Déclarer ce contrôle relu et clos">valider</button>`)
+      + `<button class="cq-sup" data-i="${i}" title="Supprimer cette ligne du registre">supprimer</button>`
+      + `</div>
     </div>`;
   });
   bloc.innerHTML = html;
   bloc.querySelectorAll(".cq-sup").forEach(b=>{
     b.onclick = ()=>cqSupprimer(Number(b.dataset.i));
+  });
+  bloc.querySelectorAll(".cq-val").forEach(b=>{
+    b.onclick = ()=>cqValider(Number(b.dataset.v));
   });
   return bloc;
 }
@@ -3542,6 +3622,57 @@ function cqEnregistrer(){
        + " Pensez à exporter le registre : le stockage du navigateur n'est pas une archive.", hors?"hors":"ok");
 }
 
+/* ============================================================
+   VALIDATION D'UN CONTRÔLE — § 12
+
+   Un registre que personne n'a relu n'est pas un registre : c'est une
+   collection de mesures. La validation consigne QUI déclare avoir relu le
+   contrôle, et QUAND. Elle ne change aucune mesure et n'en efface aucune.
+
+   CE QU'ELLE N'EST PAS. Ce n'est pas une signature électronique. Rien ici ne
+   garantit l'identité du signataire ni l'intégrité du fichier : tout vit dans
+   le navigateur du poste, et quiconque y a accès peut l'écrire. L'interface
+   le dit, parce qu'un laboratoire accrédité doit savoir ce qu'il peut
+   opposer à un auditeur — c'est le document imprimé et signé de la main du
+   biologiste qui fait foi, pas cette ligne.
+
+   Une non-conformité reste inclôturable sans conduite tenue : cette règle
+   est posée à l'enregistrement, et la validation ne la contourne pas.
+   ============================================================ */
+/* Une date ISO rendue lisible. Un horodatage brut dans un registre destiné à
+   être relu par un auditeur ne se lit pas. */
+function dateFr(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return String(iso||"").slice(0,10);
+  return d.toLocaleDateString("fr-FR") + " à " + d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+}
+
+function cqValider(i){
+  const reg = cqRegistre();
+  const e = reg[i]; if(!e) return;
+  if(e.valide) return;
+
+  const hors = (e.lignes||[]).filter(l=>l.verdict==="hors").length;
+  if(hors && !String(e.action||"").trim())
+    return cqAvis("Ce contrôle porte " + hors + " mesure" + (hors>1?"s":"") + " hors limites sans "
+                + "conduite tenue : il ne peut pas être clôturé. Supprimez-le et ressaisissez-le "
+                + "avec la conduite tenue.", "hors");
+
+  const ent = cqEntete();
+  const nom = (prompt("Validation du contrôle du " + e.date + ".\n\n"
+    + "Nom du biologiste qui déclare l'avoir relu :", ent.valideur || "") || "").trim();
+  if(!nom) return;
+
+  e.valide = { par: nom.slice(0,60), quand: new Date().toISOString() };
+  if(!cqEcrire(reg))
+    return cqAvis("Le navigateur a refusé d'enregistrer la validation (stockage plein ou désactivé).", "hors");
+  ent.valideur = nom.slice(0,60); cqEnteteEcrire(ent);
+  renderCQ();
+  const d = document.querySelector(".cq-panneau"); if(d) d.setAttribute("open","");
+  cqAvis("Contrôle du " + e.date + " validé par " + nom + ". Cette mention consigne une déclaration : "
+       + "elle ne vaut pas signature électronique. Imprimez et signez le registre pour l'archiver.", "ok");
+}
+
 function cqAvis(texte, classe){
   const e = document.querySelector(".cq-avis"); if(!e) return;
   e.textContent = texte;
@@ -3557,7 +3688,7 @@ function cqExporter(){
   if(!reg.length) return cqAvis("Registre vide : rien à exporter.", "hors");
   const col = ["Date","Horodatage","Souche","Référence","LotDisques","LotGelose","Etuve","Opérateur",
                "Antibiotique","Code","ChargeDisque","MesureMm","CibleMm","MinMm","MaxMm",
-               "Verdict","ConduiteTenue"];
+               "Verdict","ConduiteTenue","ValidePar","ValideLe"];
   const ech = v => {
     const s = String(v===undefined||v===null ? "" : v);
     return /[";\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
@@ -3568,7 +3699,8 @@ function cqExporter(){
                 (ABX[l.abx]?ABX[l.abx].n:l.abx), l.abx, l.charge, l.mesure,
                 l.cible, l.min, l.max,
                 l.verdict==="ok" ? "conforme" : "hors limites",
-                l.verdict==="hors" ? e.action : ""].map(ech).join(";"));
+                l.verdict==="hors" ? e.action : "",
+                e.valide ? e.valide.par : "", e.valide ? e.valide.quand : ""].map(ech).join(";"));
   }));
   const csv = "\ufeff" + col.join(";") + "\n" + corps.join("\n") + "\n";
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
@@ -3581,11 +3713,178 @@ function cqExporter(){
        + (reg.length>1?"s":"") + ". Conservez ce fichier : c'est lui, le registre.", "ok");
 }
 
+/* ============================================================
+   REGISTRE IMPRIMABLE — § 12
+
+   Le CSV sert à relire, à trier, à recalculer. Il ne se signe pas. Ce qu'un
+   laboratoire archive et présente à un auditeur, c'est un document daté,
+   nominatif, où chaque contrôle porte ses mesures, son verdict, la conduite
+   tenue le cas échéant, et la signature du biologiste.
+
+   Trois parties, dans cet ordre : ce que le registre couvre, ce qu'il montre
+   une fois agrégé (conformité par couple, dérives), puis le détail contrôle
+   par contrôle. Un auditeur lit la synthèse ; un biologiste qui cherche
+   quand son lot a faibli lit le détail.
+   ============================================================ */
+/* Construire d'un côté, imprimer de l'autre : le document se vérifie alors
+   sans ouvrir de boîte d'impression. Rend false si le registre est vide. */
+function cqConstruireRegistre(){
+  const reg = cqRegistre();
+  if(!reg.length) return false;
+
+  const ent = cqEntete();
+  const now = new Date();
+  const dates = reg.map(e=>e.date).filter(Boolean).sort();
+  const periode = dates.length
+    ? (dates[0] === dates[dates.length-1] ? dates[0] : dates[0] + " au " + dates[dates.length-1])
+    : "—";
+
+  const mesures   = reg.reduce((n,e)=>n + (e.lignes||[]).length, 0);
+  const horsTotal = reg.reduce((n,e)=>n + (e.lignes||[]).filter(l=>l.verdict==="hors").length, 0);
+  const valides   = reg.filter(e=>e.valide).length;
+  const conf      = mesures ? Math.round((mesures - horsTotal) / mesures * 1000) / 10 : 0;
+
+  /* --- Synthèse par couple souche × antibiotique. C'est à ce grain qu'une
+         faiblesse se voit : un lot de disques ne faiblit pas « en général »,
+         il faiblit sur une molécule. --- */
+  const couples = {};
+  reg.forEach(e=>(e.lignes||[]).forEach(l=>{
+    const cle = e.souche + "|" + l.abx;
+    const c = couples[cle] || (couples[cle] = {
+      espece:e.espece, reference:e.reference, souche:e.souche, abx:l.abx, n:0, hors:0 });
+    c.n++; if(l.verdict==="hors") c.hors++;
+  }));
+  const synth = Object.keys(couples).map(k=>couples[k])
+    .sort((a,b)=> (b.hors - a.hors) || a.espece.localeCompare(b.espece)
+                || (ABX[a.abx]?ABX[a.abx].n:a.abx).localeCompare(ABX[b.abx]?ABX[b.abx].n:b.abx));
+
+  const ligneSynth = synth.map(c=>{
+    // La dérive est calculée par le même code que l'écran : une alerte qui
+    // n'apparaîtrait que sur le papier, ou que sur l'écran, serait pire que
+    // pas d'alerte du tout.
+    let der = "";
+    try{
+      const avis = cqDerive(cqSerie(c.souche, c.abx));   // liste de { regle, txt }
+      der = avis.map(a=>a.regle).join(", ");
+    }catch(x){ der = ""; }
+    const taux = c.n ? Math.round((c.n - c.hors) / c.n * 1000) / 10 : 0;
+    return `<tr>
+      <td>${esc(c.espece)} ${esc(c.reference)}</td>
+      <td>${esc(ABX[c.abx]?ABX[c.abx].n:c.abx)} <span class="rc">${esc(c.abx)}</span></td>
+      <td class="cat">${c.n}</td>
+      <td class="cat">${c.hors || "—"}</td>
+      <td class="cat">${taux} %</td>
+      <td>${der ? `<span class="rp-prov rp-prov-x">${esc(der)}</span>` : "—"}</td>
+    </tr>`;
+  }).join("");
+
+  /* --- Détail, du plus récent au plus ancien. --- */
+  const detail = reg.slice().reverse().map(e=>{
+    const hors = (e.lignes||[]).filter(l=>l.verdict==="hors");
+    const lignes = (e.lignes||[]).map(l=>`<tr>
+        <td>${esc(ABX[l.abx]?ABX[l.abx].n:l.abx)} <span class="rc">${esc(l.abx)}</span></td>
+        <td class="mic">${esc(String(l.charge))}</td>
+        <td class="mic">${esc(String(l.mesure))} mm</td>
+        <td class="mic">${esc(String(l.cible))} (${esc(String(l.min))}–${esc(String(l.max))})</td>
+        <td class="cat ${l.verdict==="hors"?"cat-R":"cat-S"}">${l.verdict==="hors"?"hors":"dans"}</td>
+      </tr>`).join("");
+    return `<div class="cqr-bloc">
+      <div class="cqr-bloc-h">
+        <b>${esc(e.date)}</b> — ${esc(e.espece)} ${esc(e.reference)}
+        <span class="cqr-etat ${hors.length?"hors":"ok"}">${hors.length ? hors.length + " hors limites" : "conforme"}</span>
+      </div>
+      <div class="cqr-bloc-m">
+        Lot de disques ${esc(e.lot||"non renseigné")} ·
+        gélose ${esc(e.lotMilieu||"non renseignée")} ·
+        étuve ${esc(e.incubateur||"non renseignée")} ·
+        lu par ${esc(e.operateur||"non renseigné")}
+      </div>
+      <table class="rp-table">
+        <thead><tr><th>Antibiotique</th><th>Charge</th><th>Mesuré</th><th>Cible (limites)</th><th>Verdict</th></tr></thead>
+        <tbody>${lignes}</tbody>
+      </table>
+      ${e.action ? `<div class="cqr-action"><b>Conduite tenue</b> ${esc(e.action)}</div>` : ""}
+      <div class="cqr-valid">${e.valide
+        ? `Relu et déclaré clos par <b>${esc(e.valide.par)}</b>, le ${esc(dateFr(e.valide.quand))}.`
+        : `<i>Contrôle non validé à la date d'édition.</i>`}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("report").innerHTML = "";   // un seul document à la fois
+  document.getElementById("cqReport").innerHTML = `
+    <div class="rp-head">
+      <div class="rp-brand">Phéno<b>Bac</b><span>Registre de contrôle de qualité de l'antibiogramme</span></div>
+      <div class="rp-date">Édité le ${esc(now.toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}))}
+        à ${esc(now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}))}</div>
+    </div>
+
+    <table class="rp-meta">
+      <tr><th>Laboratoire</th><td>${esc(ent.labo) || "…………………………………………"}</td>
+          <th>Période couverte</th><td>${esc(periode)}</td></tr>
+      <tr><th>Contrôles</th><td>${reg.length}, dont ${valides} validé${valides>1?"s":""}</td>
+          <th>Mesures</th><td>${mesures}, dont ${horsTotal} hors limites — conformité ${conf} %</td></tr>
+    </table>
+
+    <div class="rp-sect-t">Synthèse par couple souche × antibiotique</div>
+    <table class="rp-table">
+      <thead><tr><th>Souche de référence</th><th>Antibiotique</th><th>n</th><th>Hors</th>
+        <th>Conformité</th><th>Dérive</th></tr></thead>
+      <tbody>${ligneSynth || `<tr><td colspan="6">—</td></tr>`}</tbody>
+    </table>
+    <div class="rp-legende">
+      <b>Lecture de la dérive.</b> Une mesure peut rester dans ses limites et dériver quand même.
+      « Décalage » signale dix mesures consécutives du même côté de la cible, « tendance » sept
+      mesures qui montent ou qui descendent sans interruption. Ces deux règles ne supposent aucune
+      distribution ; les règles en multiples d'écart-type ne sont pas reprises. Un changement de lot
+      de disques coupe la série : un lot nouveau est un autre système.
+    </div>
+
+    <div class="rp-sect-t">Détail des contrôles</div>
+    ${detail}
+
+    <div class="rp-sect-t">Validation du registre</div>
+    <div class="rp-sign">
+      <div class="rp-sig-line">
+        <span class="rp-sig-lab">Biologiste responsable</span>
+        <span class="rp-sig-val">${esc(ent.valideur) || "…………………………………………"}</span>
+      </div>
+      <div class="rp-sig-line">
+        <span class="rp-sig-lab">Date / signature</span>
+        <span class="rp-sig-val">…………………………………………</span>
+      </div>
+    </div>
+
+    <div class="rp-foot">
+      Cibles et limites : <b>CA-SFM 2026, chapitre 1.4</b>. Les charges de disque y sont identiques
+      à celles du tableau EUCAST.
+      <br><b>Portée des mentions de validation.</b> Une mention « relu et déclaré clos » consigne
+      une déclaration saisie sur ce poste. Ce n'est pas une signature électronique : elle ne garantit
+      ni l'identité du déclarant ni l'intégrité du fichier. C'est le présent document, imprimé et
+      signé, qui fait registre.
+      <br>PhénoBac ${esc(PHENOBAC_VERSION)} · base de connaissances ${esc(baseVersion())}.
+    </div>`;
+  return true;
+}
+
+function cqImprimer(){
+  if(!cqConstruireRegistre())
+    return cqAvis("Registre vide : rien à imprimer.", "hors");
+  window.print();
+}
+
 function cqSupprimer(i){
   const reg = cqRegistre();
   const e = reg[i]; if(!e) return;
-  if(!confirm("Supprimer le contrôle du " + e.date + " sur " + e.espece + " ?\n\n"
-            + "Un registre de contrôle de qualité se conserve : ne supprimez que ce qui a été saisi par erreur.")) return;
+  // Un contrôle validé a été relu et déclaré clos par quelqu'un : le faire
+  // disparaître d'un clic laisserait un registre dont les trous ne se voient
+  // pas. On nomme le validateur dans la question.
+  const avert = e.valide
+    ? "Ce contrôle a été VALIDÉ par " + e.valide.par + " le "
+      + String(e.valide.quand).slice(0,10) + ".\n\n"
+      + "Le supprimer retire du registre une ligne déclarée close. "
+      + "Ne le faites que si le contrôle lui-même était erroné, et notez-le ailleurs.\n\n"
+    : "Un registre de contrôle de qualité se conserve : ne supprimez que ce qui a été saisi par erreur.";
+  if(!confirm("Supprimer le contrôle du " + e.date + " sur " + e.espece + " ?\n\n" + avert)) return;
   reg.splice(i,1); cqEcrire(reg); renderCQ();
   const d = document.querySelector(".cq-panneau"); if(d) d.setAttribute("open","");
 }
@@ -5011,6 +5310,8 @@ function enteteMesure(){
 function exportPDF(){
   const A = state.lastA;
   if(!A) return;
+  const cqr = document.getElementById("cqReport");
+  if(cqr) cqr.innerHTML = "";          // un seul document à la fois
   buildReport(A);
   window.print();
 }
