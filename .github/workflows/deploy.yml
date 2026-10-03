@@ -18,12 +18,15 @@ jobs:
       - name: node --check sur le serveur et les fonctions
         run: |
           node --check server.js
+          node --check base-connaissances.js
           node --check moteur.js
           for f in netlify/functions/*.js netlify/functions/lib/*.js; do
             echo "check $f"; node --check "$f";
           done
 
-      - name: Concordance des tables de concentrations critiques
+      # La base fait foi ; ce contrôle vérifie que le moteur en bâtit
+      # exactement les tables, et que la page ne les redéclare pas.
+      - name: La base, le moteur et la page concordent
         run: python3 outils/verifier-tables.py
 
       # Une résistance naturelle déclarée à tort fait lever une FAUSSE alerte

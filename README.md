@@ -248,16 +248,55 @@ done; echo
 
 Les premières réponses sont des `200`, les dernières des `429`.
 
+## Les règles sont des données
+
+`base-connaissances.js` **fait foi** : 578 règles, une par ligne, chacune
+identifiée par cinq coordonnées — référentiel, groupe bactérien, antibiotique,
+méthode, site — et portant ce qui en découle : seuils, charge du disque, zone
+d'incertitude, molécule témoin, seuil de dépistage, statut officiel ou
+conventionnel.
+
+Le moteur n'écrit plus aucun seuil : il reconstruit ses tables depuis cette
+base au chargement. **Mettre à jour un référentiel ne demande donc plus de
+toucher à l'application.**
+
+Vingt-et-une tables imbriquées se sont réduites à une seule, parce que la
+plupart n'étaient pas des règles distinctes mais des *attributs* d'un même
+couple : la charge du disque, la zone d'incertitude et le statut « hors
+référentiel » accompagnent un seuil, ils ne vivent pas à côté de lui.
+
+Une subtilité qui vaut d'être retenue : **`null` et l'absence ne sont pas la
+même chose**. `null` en S signifie qu'aucune catégorie « sensible » n'est
+accordée à posologie standard — une décision du comité. L'absence signifie
+qu'il n'y a pas de seuil du tout. Les confondre ferait de la ligne de
+l'amoxicilline, qui ne porte qu'un renvoi vers le disque d'ampicilline, un
+seuil `{S:null, R:null}`, et le renvoi serait perdu.
+
+La page ne redéclare plus rien : elle emprunte au moteur les tables qu'il a
+bâties. `ORG` fait exception — la page le construit, mais par **fusion** de ce
+que le moteur sait d'une espèce (famille de raisonnement, groupe de seuils,
+résistances naturelles) et de ce qu'elle-même en affiche (nom, panel,
+questions de contexte). `outils/verifier-tables.py` échoue si la page reprend à
+son compte un champ du raisonnement.
+
+**Provenance.** Chaque référentiel porte son document, sa version et sa date de
+publication ; la base porte la sienne (`BASE_VERSION`). `PhenoBacMoteur.regleDe()`
+retrouve la règle employée par ses coordonnées — c'est elle que l'interface
+citera pour répondre à « pourquoi ? ».
+
 ## Où vit le raisonnement
 
 `moteur.js` porte l'intégralité du raisonnement phénotypique, et **rien
 d'autre** : ni licence, ni réseau, ni secret, ni écriture. Il est chargé par
 les deux côtés.
 
-| | charge `moteur.js` | rôle |
+| | charge | rôle |
 |---|---|---|
-| `phenobac.html` | `<script src="moteur.js">` | interprète **sur le poste**, sans réseau |
+| `phenobac.html` | `<script>` base puis moteur | interprète **sur le poste**, sans réseau |
 | `netlify/functions/premium-interpret.js` | `require("../../moteur")` | expose le même calcul en API |
+
+L'ordre compte : le moteur reconstruit ses tables depuis la base au
+chargement, et la page emprunte ensuite ces tables au moteur.
 
 Il n'existe donc qu'un exemplaire du raisonnement, et les deux chemins ne
 peuvent pas diverger. La fonction serveur est passée de 1 934 à 95 lignes et

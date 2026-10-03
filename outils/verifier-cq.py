@@ -37,7 +37,27 @@ def _module(nom, fichier):
     return mod
 
 
-VT = _module("verifier_tables", "verifier-tables.py")
+MP = _module("moteur_py", "moteur_py.py")
+
+
+def bloc_const(chemin, nom):
+    """Étendue de « const NOM = { … } » dans un fichier. La table CQ est la
+    seule qui vive encore comme littéral, et seulement dans la page : elle ne
+    sert pas au raisonnement, elle sert à la paillasse."""
+    s = open(chemin, encoding='utf-8').read()
+    if nom not in s:
+        return None
+    i = s.index(nom)
+    j = s.index('{', i)
+    prof = 0
+    for k in range(j, len(s)):
+        if s[k] == '{':
+            prof += 1
+        elif s[k] == '}':
+            prof -= 1
+            if prof == 0:
+                return s[j:k + 1]
+    raise SystemExit("table %s mal formée" % nom)
 
 
 def cibles(source):
@@ -57,7 +77,7 @@ def cibles(source):
 
 def main():
     cli = os.path.join(RACINE, 'phenobac.html')
-    bloc = VT.bloc_bp(cli, 'const CQ =')
+    bloc = bloc_const(cli, 'const CQ =')
     if bloc is None:
         print("Table CQ absente de phenobac.html.")
         return 1
@@ -88,8 +108,11 @@ def main():
                     ecarts.append("%s/%s : code %s, communiqué %s" % (s, code, a.get(code), b.get(code)))
 
     # ---- 2. les charges, confrontées aux tables de seuils ----
-    srv = os.path.join(RACINE, 'moteur.js')
-    DISQUE = VT.valeurs_texte(VT.bloc_bp(srv, 'const DISQUE ='))
+    # Le moteur est ÉVALUÉ, pas relu : ses tables n'existent plus comme
+    # littéraux, et les confronter à la base reviendrait à se comparer à
+    # soi-même. On vérifie ce que le laboratoire exécute.
+    _T = MP.tables(['DISQUE', 'DZ'])
+    DISQUE = _T['DISQUE']
     accord, hors = 0, 0
     for souche, (groupe, abx) in sorted(table.items()):
         for code, (charge, v, lo, hi) in sorted(abx.items()):
@@ -115,7 +138,7 @@ def main():
     # le laboratoire pourrait rendre un résultat qu'il n'a aucun moyen de
     # valider. C'est ainsi que la gentamicine et le méropénème avaient disparu
     # de la table sans que rien ne le signale.
-    DZ = VT.seuils(VT.bloc_bp(srv, 'const DZ ='))
+    DZ = {g: {k: (v.get('S'), v.get('R')) for k, v in d.items()} for g, d in _T['DZ'].items()}
     trous = []
     for souche, (groupe, abx) in sorted(table.items()):
         for code in sorted(DZ.get(groupe, {})):

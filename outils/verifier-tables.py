@@ -1,316 +1,188 @@
 # -*- coding: utf-8 -*-
 """
-verifier-tables.py — les deux tables de concentrations critiques concordent-elles ?
+verifier-tables.py — la base, le moteur et la page disent-ils la même chose ?
 
-Les seuils existent en double : dans phenobac.html (affichage, saisie CMI) et
-dans moteur.js (le raisonnement, qui fait foi, chargé par le navigateur ET
-par la fonction serveur). Rien
-n'empêche de corriger l'un en oubliant l'autre — l'application afficherait
-alors une catégorie et le compte-rendu en porterait une autre.
+CE QUE CE CONTRÔLE VÉRIFIAIT AVANT, ET POURQUOI CE N'EST PLUS CELA
 
-Ce contrôle échoue si les deux tables divergent. Lancé par la CI à chaque push.
+Les seuils existaient en double, dans phenobac.html et dans le moteur, et rien
+n'empêchait de corriger l'un en oubliant l'autre : l'application affichait
+alors une catégorie et le compte rendu en portait une autre. Ce contrôle
+comparait les deux copies.
+
+Le double n'existe plus. base-connaissances.js fait foi, le moteur en
+reconstruit ses tables au chargement, et la page les lui emprunte. Il n'y a
+donc plus de concordance à surveiller — mais trois propriétés à défendre, dont
+la perte ramènerait le problème :
+
+  1. la page ne REDÉCLARE aucune des tables qu'elle emprunte ;
+  2. les tables que le moteur bâtit correspondent exactement à la base, règle
+     par règle, dans les deux sens ;
+  3. le moteur reste cloisonné et n'expose que « PhenoBacMoteur ».
 
     python3 outils/verifier-tables.py
 """
-import os, re, sys
+import importlib.util
+import json
+import os
+import re
+import sys
+
+ICI = os.path.dirname(os.path.abspath(__file__))
+RACINE = os.path.dirname(ICI)
 
 
-def bloc_bp(chemin, nom='const BP ='):
-    s = open(chemin, encoding='utf-8').read()
-    if nom not in s:
-        return None
-    i = s.index(nom)
-    j = s.index('{', i)
-    prof = 0
-    for k in range(j, len(s)):
-        if s[k] == '{':
-            prof += 1
-        elif s[k] == '}':
-            prof -= 1
-            if prof == 0:
-                return s[j:k + 1]
-    raise SystemExit("table BP mal formée dans %s" % chemin)
+def _mod(nom, fichier):
+    s = importlib.util.spec_from_file_location(nom, os.path.join(ICI, fichier))
+    m = importlib.util.module_from_spec(s)
+    s.loader.exec_module(m)
+    return m
 
 
-def _val(t):
-    return None if t == 'null' else float(t)
+MP = _mod("moteur_py", "moteur_py.py")
 
+# Tables que la page emprunte au moteur et ne doit donc plus déclarer.
+EMPRUNTEES = ["BP", "BP_MENINGE", "BP_CASFM", "BP_CASFM_URIN", "BP_MENINGE_CASFM",
+              "DZ", "DZ_MENINGE", "DZ_CASFM", "DZ_CASFM_URIN", "DZ_TEMOIN", "DZ_CASFM_ESPECE",
+              "DISQUE", "DISQUE_CASFM", "ZIT", "ZIT_CASFM", "ZIT_ZONE", "ZIT_ZONE_CASFM",
+              "HORS_EUCAST", "CASFM_COUVRE", "CASFM_COUVRE_ESPECE", "DEPISTAGE_CASFM",
+              "REFERENTIELS", "OXA_PNEUMO"]
 
-def seuils(bloc):
-    """{groupe: {code: (S, R)}} — insensible aux commentaires et à la mise en forme."""
-    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
-    bloc = re.sub(r'//[^\n]*', ' ', bloc)
-    table = {}
-    for mg in re.finditer(r'(\w+)\s*:\s*\{((?:[^{}]|\{[^{}]*\})*)\}', bloc):
-        entrees = {}
-        # « null » signifie « pas de catégorie S » : à lire comme une valeur à
-        # part entière, sinon ces seuils sortent silencieusement du contrôle.
-        for ma in re.finditer(r'(\w+)\s*:\s*\{\s*S:\s*([\d.]+|null)\s*,\s*R:\s*([\d.]+|null)\s*\}', mg.group(2)):
-            entrees[ma.group(1)] = (_val(ma.group(2)), _val(ma.group(3)))
-        if entrees:
-            table[mg.group(1)] = entrees
-    return table
+# ORG fait exception : la page le DÉCLARE, mais pour fusionner ce que le
+# moteur sait d'une espèce — famille de raisonnement, groupe de seuils,
+# résistances naturelles — avec ce qu'elle-même en affiche. Ce qu'il faut
+# interdire, ce n'est donc pas la déclaration, c'est que la page reprenne à
+# son compte les champs du raisonnement.
+CHAMPS_DU_MOTEUR = ["bpGroup", "engine", "intrinsic"]
 
-
-def valeurs_simples(bloc):
-    """{groupe: {code: valeur}} — pour les tables à une seule valeur par
-    couple, comme les zones d'incertitude technique."""
-    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
-    bloc = re.sub(r'//[^\n]*', ' ', bloc)
-    table = {}
-    for mg in re.finditer(r'(\w+)\s*:\s*\{([^{}]*)\}', bloc):
-        entrees = {}
-        for ma in re.finditer(r'(\w+)\s*:\s*([\d.]+)', mg.group(2)):
-            entrees[ma.group(1)] = float(ma.group(2))
-        if entrees:
-            table[mg.group(1)] = entrees
-    return table
-
-
-def valeurs_texte(bloc):
-    """{groupe: {code: "texte"}} — pour les tables dont la valeur est une
-    chaîne : la charge du disque (« 30 », « 1 unit », « 1.25-23.75 ») et le
-    témoin de l'amoxicilline. Le lecteur numérique les rendait vides, donc
-    toujours concordantes — un garde-fou qui ne garde rien."""
-    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
-    bloc = re.sub(r'//[^\n]*', ' ', bloc)
-    table = {}
-    for mg in re.finditer(r'(\w+)\s*:\s*\{([^{}]*)\}', bloc):
-        entrees = {}
-        for ma in re.finditer(r'(\w+)\s*:\s*"([^"]*)"', mg.group(2)):
-            entrees[ma.group(1)] = ma.group(2)
-        if entrees:
-            table[mg.group(1)] = entrees
-    return table
-
-
-def intervalles(bloc):
-    """{groupe: {code: (lo, hi)}} — pour les zones d'incertitude au disque,
-    qui sont des intervalles de millimètres et non une valeur unique."""
-    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
-    bloc = re.sub(r'//[^\n]*', ' ', bloc)
-    table = {}
-    for mg in re.finditer(r'(\w+)\s*:\s*\{((?:[^{}\[\]]|\[[^\[\]]*\])*)\}', bloc):
-        entrees = {}
-        for ma in re.finditer(r'(\w+)\s*:\s*\[\s*(\d+)\s*,\s*(\d+)\s*\]', mg.group(2)):
-            entrees[ma.group(1)] = (int(ma.group(2)), int(ma.group(3)))
-        if entrees:
-            table[mg.group(1)] = entrees
-    return table
-
-
-def referentiels(chemin):
-    """{cle: {nom, version, etat, ...}} pour chaque entrée du registre."""
-    s = open(chemin, encoding='utf-8').read()
-    m = re.search(r'const REFERENTIELS\s*=\s*\{', s)
-    if not m:
-        return None
-    j = s.index('{', m.start())
-    prof = 0
-    for k in range(j, len(s)):
-        if s[k] == '{':
-            prof += 1
-        elif s[k] == '}':
-            prof -= 1
-            if prof == 0:
-                bloc = s[j:k + 1]
-                break
-    else:
-        raise SystemExit("registre REFERENTIELS mal formé dans %s" % chemin)
-    bloc = re.sub(r'/\*.*?\*/', ' ', bloc, flags=re.S)
-    bloc = re.sub(r'//[^\n]*', ' ', bloc)
-    out = {}
-    for mg in re.finditer(r'(\w+)\s*:\s*\{([^{}]*)\}', bloc):
-        d = {}
-        for k2, v2 in re.findall(r'(\w+)\s*:\s*"([^"]*)"', mg.group(2)):
-            d[k2] = v2
-        out[mg.group(1)] = d
-    return out
+# Où va chaque seuil, selon ses coordonnées — la même correspondance que celle
+# du moteur, réécrite ici pour qu'une erreur de l'un ne soit pas couverte par
+# la même erreur dans l'autre.
+SEUILS = {
+    ("eucast", "cmi", "standard"): "BP",        ("eucast", "cmi", "meninge"): "BP_MENINGE",
+    ("casfm", "cmi", "standard"): "BP_CASFM",   ("casfm", "cmi", "urinaire"): "BP_CASFM_URIN",
+    ("casfm", "cmi", "meninge"): "BP_MENINGE_CASFM",
+    ("eucast", "disque", "standard"): "DZ",     ("eucast", "disque", "meninge"): "DZ_MENINGE",
+    ("casfm", "disque", "standard"): "DZ_CASFM", ("casfm", "disque", "urinaire"): "DZ_CASFM_URIN",
+}
 
 
 def noms_declares(code):
-    """Noms déclarés au premier niveau d'un bout de JavaScript."""
     code = re.sub(r'/\*.*?\*/', ' ', code, flags=re.S)
     code = re.sub(r'//[^\n]*', ' ', code)
     return set(re.findall(r'^(?:const|let|var|function)\s+(\w+)', code, re.M))
 
 
-def cloisonnement(racine):
-    """moteur.js ne doit exposer QUE « PhenoBacMoteur ».
-
-    La page et le moteur déclarent des noms identiques — « has », « isR »,
-    « finalize »… Tant que le moteur est enfermé dans sa propre fonction,
-    cela ne porte pas à conséquence. S'il en sortait, deux « const has » au
-    même niveau feraient échouer le script ENTIER de la page, pas seulement
-    la ligne fautive : l'application s'ouvrirait sans rien faire. C'est
-    arrivé ; d'où ce contrôle."""
-    src = open(os.path.join(racine, 'moteur.js'), encoding='utf-8').read()
-    ecarts = []
-
-    if '(function (racine) {' not in src or '})(typeof self !== "undefined" ? self : this);' not in src:
-        ecarts.append("moteur.js n'est plus enfermé dans sa propre portée — "
-                      "ses déclarations atterriraient dans celle de la page")
-
-    page = open(os.path.join(racine, 'phenobac.html'), encoding='utf-8').read()
-    inline = "\n".join(re.findall(r'<script>(.*?)</script>', page, re.S))
-    communs = noms_declares(src) & noms_declares(inline)
-    return ecarts, sorted(communs)
+def base_lue():
+    """Les règles, relues du FICHIER — pas via le moteur, sinon on
+    comparerait le moteur à lui-même."""
+    src = open(os.path.join(RACINE, 'base-connaissances.js'), encoding='utf-8').read()
+    cols = re.search(r'const COLONNES = \[(.*?)\];', src, re.S).group(1)
+    cols = re.findall(r'"(\w+)"', cols)
+    corps = src[src.index("const REGLES = ["):src.index("\n];")]
+    regles = []
+    for ligne in re.findall(r'^\[(.*)\],$', corps, re.M):
+        # Découpe au premier niveau : une valeur peut être un tableau.
+        vals, prof, cour = [], 0, ""
+        for ch in ligne:
+            if ch == '[': prof += 1
+            elif ch == ']': prof -= 1
+            if ch == ',' and prof == 0:
+                vals.append(cour); cour = ""
+            else:
+                cour += ch
+        vals.append(cour)
+        d = {}
+        for nom, v in zip(cols, vals):
+            v = v.strip()
+            if v == "undefined": continue           # absent : la clé n'existe pas
+            if v == "null": d[nom] = None
+            elif v == "true": d[nom] = True
+            elif v.startswith('"'): d[nom] = v.strip('"')
+            elif v.startswith('['):
+                # Un tableau porte soit des codes d'espèce (chaînes), soit les
+                # deux bornes d'une zone d'incertitude (nombres).
+                inter = v.strip('[]')
+                d[nom] = (re.findall(r'"([^"]*)"', v) if '"' in v
+                          else [int(x) if '.' not in x else float(x)
+                                for x in inter.split(',') if x.strip()])
+            else: d[nom] = float(v) if '.' in v else int(v)
+        regles.append(d)
+    return regles
 
 
 def main():
-    racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cli = os.path.join(racine, 'phenobac.html')
-    srv = os.path.join(racine, 'moteur.js')
-
     ecarts = []
-    totaux = {}
+    page = open(os.path.join(RACINE, 'phenobac.html'), encoding='utf-8').read()
+    moteur = open(os.path.join(RACINE, 'moteur.js'), encoding='utf-8').read()
 
-    # Quatre tables existent maintenant en double : les seuils courants, ceux
-    # du prélèvement méningé, et les deux tables de différences du CA-SFM.
-    # Toutes doivent être contrôlées, sinon l'ajout d'une table échappe
-    # silencieusement au garde-fou.
-    for nom, etiquette in (('const BP =', 'seuils courants'),
-                           ('const BP_MENINGE =', 'seuils méningés'),
-                           ('const BP_CASFM =', 'différences CA-SFM'),
-                           ('const BP_CASFM_URIN =', 'CA-SFM, infection urinaire'),
-                           ('const BP_MENINGE_CASFM =', 'CA-SFM, contexte méningé'),
-                           # Les diamètres ont la même forme {S, R} que les CMI,
-                           # mais le sens inverse. La forme suffit au contrôle de
-                           # concordance ; le sens est éprouvé par
-                           # outils/essai-diametres.js.
-                           ('const DZ =', 'diamètres critiques'),
-                           ('const DZ_MENINGE =', 'diamètres, contexte méningé'),
-                           ('const DZ_CASFM =', 'diamètres CA-SFM'),
-                           ('const DZ_CASFM_URIN =', 'diamètres CA-SFM, urine')):
-        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
-        if ba is None and bb is None:
-            continue
-        if ba is None or bb is None:
-            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
-        a, b = seuils(ba), seuils(bb)
-        totaux[etiquette] = sum(len(v) for v in b.values())
-        for g in sorted(set(a) | set(b)):
-            if g not in a:
-                ecarts.append("%s : groupe %s absent du client" % (etiquette, g)); continue
-            if g not in b:
-                ecarts.append("%s : groupe %s absent du serveur" % (etiquette, g)); continue
-            for code in sorted(set(a[g]) | set(b[g])):
-                va, vb = a[g].get(code), b[g].get(code)
+    # ---- 1. la page ne redéclare rien ----
+    inline = "\n".join(re.findall(r'<script>(.*?)</script>', page, re.S))
+    for n in EMPRUNTEES:
+        if re.search(r'^const %s = [\{\[\d]' % n, inline, re.M):
+            ecarts.append("phenobac.html redéclare %s : les deux copies pourraient diverger" % n)
+    for champ in CHAMPS_DU_MOTEUR:
+        if re.search(r'\b%s\s*:' % champ, inline):
+            ecarts.append("phenobac.html porte « %s » : ce champ relève du moteur, et "
+                          "les deux copies pourraient diverger" % champ)
+    if "Object.assign({}, _M.ORG[id]" not in inline:
+        ecarts.append("phenobac.html ne construit plus ORG à partir de celui du moteur")
+
+    # ---- 2. le moteur bâtit exactement ce que la base contient ----
+    regles = base_lue()
+    bati = MP.tables(sorted(set(SEUILS.values())) + ["DISQUE", "DISQUE_CASFM", "ZIT",
+                                                    "ZIT_CASFM", "ZIT_ZONE", "ZIT_ZONE_CASFM",
+                                                    "DZ_TEMOIN", "DEPISTAGE_CASFM"])
+    attendu = {n: {} for n in bati}
+
+    def met(n, g, a, v):
+        attendu[n].setdefault(g, {})[a] = v
+
+    for r in regles:
+        cle = (r["ref"], r["meth"], r["site"])
+        if "S" in r or "R" in r:
+            if cle in SEUILS:
+                met(SEUILS[cle], r["groupe"], r["abx"], {"S": r.get("S"), "R": r.get("R")})
+        if "charge" in r:
+            met("DISQUE_CASFM" if r["ref"] == "casfm" else "DISQUE", r["groupe"], r["abx"], r["charge"])
+        if "zit" in r:
+            n = ("ZIT_CASFM" if r["ref"] == "casfm" else "ZIT") if r["meth"] == "cmi" \
+                else ("ZIT_ZONE_CASFM" if r["ref"] == "casfm" else "ZIT_ZONE")
+            met(n, r["groupe"], r["abx"], r["zit"])
+        if "temoin" in r: met("DZ_TEMOIN", r["groupe"], r["abx"], r["temoin"])
+        if "dep" in r:    met("DEPISTAGE_CASFM", r["groupe"], r["abx"], r["dep"])
+
+    for n in sorted(attendu):
+        A, B = attendu[n], bati.get(n, {})
+        for g in sorted(set(A) | set(B)):
+            for a in sorted(set(A.get(g, {})) | set(B.get(g, {}))):
+                va, vb = A.get(g, {}).get(a), B.get(g, {}).get(a)
                 if va != vb:
-                    ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
+                    ecarts.append("%s/%s/%s : base %s, moteur %s" % (n, g, a, va, vb))
 
-    # Les zones d'incertitude technique existent elles aussi en double, et
-    # elles ne portent qu'une valeur par couple : autre forme, autre lecture.
-    for nom, etiquette in (('const ZIT =', 'ZIT communes'),
-                           ('const ZIT_CASFM =', 'ZIT propres au CA-SFM')):
-        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
-        if ba is None and bb is None:
-            continue
-        if ba is None or bb is None:
-            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
-        a, b = valeurs_simples(ba), valeurs_simples(bb)
-        totaux[etiquette] = sum(len(v) for v in b.values())
-        for g in sorted(set(a) | set(b)):
-            for code in sorted(set(a.get(g, {})) | set(b.get(g, {}))):
-                va, vb = a.get(g, {}).get(code), b.get(g, {}).get(code)
-                if va != vb:
-                    ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
-
-    for nom, etiquette in (('const DZ_TEMOIN =', 'témoins de diamètre'),
-                           ('const DISQUE =', 'charges de disque'),
-                           ('const DISQUE_CASFM =', 'charges de disque CA-SFM')):
-        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
-        if (ba is None) != (bb is None):
-            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
-        if ba is None:
-            continue
-        a, b = valeurs_texte(ba), valeurs_texte(bb)
-        totaux[etiquette] = sum(len(v) for v in b.values())
-        if not totaux[etiquette]:
-            ecarts.append("%s : table lue vide — le contrôle ne garantit plus rien" % etiquette)
-        for g in sorted(set(a) | set(b)):
-            for code in sorted(set(a.get(g, {})) | set(b.get(g, {}))):
-                va, vb = a.get(g, {}).get(code), b.get(g, {}).get(code)
-                if va != vb:
-                    ecarts.append("%s, %s/%s : client %r, serveur %r" % (etiquette, g, code, va, vb))
-
-    # Les zones d'incertitude au disque sont des INTERVALLES : [19, 20]. Ni la
-    # forme {S, R} ni la valeur unique ne les lisent.
-    for nom, etiquette in (('const ZIT_ZONE =', 'ZIT au disque'),
-                           ('const ZIT_ZONE_CASFM =', 'ZIT au disque, CA-SFM')):
-        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
-        if (ba is None) != (bb is None):
-            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
-        if ba is None:
-            continue
-        a, b = intervalles(ba), intervalles(bb)
-        totaux[etiquette] = sum(len(v) for v in b.values())
-        for g in sorted(set(a) | set(b)):
-            for code in sorted(set(a.get(g, {})) | set(b.get(g, {}))):
-                va, vb = a.get(g, {}).get(code), b.get(g, {}).get(code)
-                if va != vb:
-                    ecarts.append("%s, %s/%s : client %s, serveur %s" % (etiquette, g, code, va, vb))
-
-    # Les deux tables qui restreignent : l'espèce pour la céfoxitine, le seuil
-    # de dépistage pour la pénicilline. Une divergence y serait invisible à
-    # l'usage courant et décisive quand elle joue.
-    for nom, etiquette in (('const DZ_CASFM_ESPECE =', 'restriction d\'espèce'),
-                           ('const DEPISTAGE_CASFM =', 'dépistages CA-SFM')):
-        ba, bb = bloc_bp(cli, nom), bloc_bp(srv, nom)
-        if (ba is None) != (bb is None):
-            ecarts.append("%s : table présente d'un seul côté" % etiquette); continue
-        if ba is None:
-            continue
-        na = re.sub(r'\s+', '', re.sub(r'//[^\n]*', '', ba))
-        nb = re.sub(r'\s+', '', re.sub(r'//[^\n]*', '', bb))
-        totaux[etiquette] = na.count(':') - na.count('::')
-        if na != nb:
-            ecarts.append("%s : client %s, serveur %s" % (etiquette, na[:80], nb[:80]))
-
-    ec, communs = cloisonnement(racine)
-    ecarts.extend(ec)
-
-    ra, rb = referentiels(cli), referentiels(srv)
-    if ra and rb:
-        for nom_ref in sorted(set(ra) | set(rb)):
-            if nom_ref not in ra:
-                ecarts.append("référentiel %s absent du client" % nom_ref); continue
-            if nom_ref not in rb:
-                ecarts.append("référentiel %s absent du serveur" % nom_ref); continue
-            for cle in ('nom', 'version', 'etat'):
-                if ra[nom_ref].get(cle) != rb[nom_ref].get(cle):
-                    ecarts.append("référentiel %s, %s : client %r, serveur %r"
-                                  % (nom_ref, cle, ra[nom_ref].get(cle), rb[nom_ref].get(cle)))
-    elif ra or rb:
-        ecarts.append("registre REFERENTIELS absent d'un des deux fichiers")
+    # ---- 3. cloisonnement ----
+    if '(function (racine) {' not in moteur or '})(typeof self !== "undefined" ? self : this);' not in moteur:
+        ecarts.append("moteur.js n'est plus enfermé dans sa propre portée — ses "
+                      "déclarations atterriraient dans celle de la page")
+    communs = noms_declares(moteur) & noms_declares(inline)
 
     if ecarts:
-        print("Les deux tables DIVERGENT :")
-        for e in ecarts:
+        print("La base, le moteur et la page DIVERGENT :")
+        for e in ecarts[:25]:
             print("  -", e)
-        print("\nLe moteur serveur fait foi. Alignez phenobac.html sur lui.")
+        if len(ecarts) > 25:
+            print("  … et %d autres." % (len(ecarts) - 25))
         return 1
 
-    print("moteur.js reste cloisonné : il n'expose que « PhenoBacMoteur »%s."
+    n = sum(len(t) for tbl in bati.values() for t in tbl.values())
+    print("%d règles dans la base ; le moteur en bâtit %d entrées, toutes conformes."
+          % (len(regles), sum(len(g) for t in bati.values() for g in t.values())))
+    print("La page n'en redéclare aucune : elle les emprunte au moteur.")
+    print("moteur.js reste cloisonné%s."
           % (" (%d noms seraient en collision sans cela)" % len(communs) if communs else ""))
-    print("Tables concordantes : " + ", ".join("%s %d" % (k, v) for k, v in totaux.items()) + ".")
-    for cle in ('eucast', 'casfm'):
-        d = (rb or {}).get(cle)
-        if not d:
-            continue
-        print("Référentiel déclaré : %s %s (%s)." % (d.get('nom'), d.get('version'), d.get('etat')))
-        if d.get('etat') == 'aligne':
-            print("  Tous les seuils qu'EUCAST définit sont conformes ; ceux qu'il ne")
-            print("  définit pas sont marqués « hors EUCAST » dans l'éditeur.")
-        elif d.get('etat') == 'delta':
-            print("  Différences françaises seulement : tout couple absent des tables")
-            print("  CA-SFM garde sa valeur EUCAST. Voir REFERENTIEL-CASFM.md.")
-        elif d.get('etat') == 'partiel':
-            print("  Note : alignement partiel — les seuils à ligne officielle unique sont")
-            print("         conformes ; ceux à lignes multiples attendent un arbitrage.")
-        elif d.get('etat') != 'valide':
-            print("  Note : les seuils n'ont pas encore été confrontés au tableau officiel")
-            print("         (outils/comparer-eucast.py). Ce n'est pas une erreur, c'est un état.")
+    src = MP.tables(["SOURCES", "BASE_VERSION"])
+    for cle, d in sorted(src["SOURCES"].items()):
+        print("  %-7s %s %s — publié le %s" % (cle, d["nom"], d["version"], d["publie"]))
+    print("  base de connaissances : version %s" % src["BASE_VERSION"])
     return 0
 
 

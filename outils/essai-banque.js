@@ -41,8 +41,12 @@ function lire(chemin) {
   if (typeof require === "function" && typeof module === "object" && module.exports) {
     E = require("../moteur");
   } else {
+    // La base d'abord : le moteur y reconstruit ses tables au chargement.
+    var modB = { exports: {} };
+    (new Function("module", "exports", lire("base-connaissances.js")))(modB, modB.exports);
     var mod = { exports: {} };
-    (new Function("module", "exports", lire("moteur.js")))(mod, mod.exports);
+    (new Function("module", "exports", "require",
+                  lire("moteur.js")))(mod, mod.exports, function () { return modB.exports; });
     E = mod.exports;
   }
 

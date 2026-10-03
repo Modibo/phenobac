@@ -97,18 +97,33 @@ def valeurs_des_tables(s):
     return v
 
 
+import importlib.util as _ilu
+
+
+def _mod(nom, fichier):
+    _s = _ilu.spec_from_file_location(nom, os.path.join(os.path.dirname(os.path.abspath(__file__)), fichier))
+    _m = _ilu.module_from_spec(_s); _s.loader.exec_module(_m); return _m
+
+
+MP = _mod("moteur_py", "moteur_py.py")
+
+
 def main():
     srv = os.path.join(RACINE, 'moteur.js')
     cli = os.path.join(RACINE, 'phenobac.html')
     ref = transcription()
     a = declarations(srv, 'burk')
-    b = declarations(cli, 'burk')
 
     ecarts = []
-    for germe in sorted(set(a) | set(b)):
-        if a.get(germe) != b.get(germe):
-            ecarts.append("%s : moteur %s, client %s"
-                          % (germe, sorted(a.get(germe, [])), sorted(b.get(germe, []))))
+    # La page déclarait autrefois sa propre copie d'ORG, qu'il fallait
+    # confronter à celle du moteur. Elle ne la déclare plus : elle l'emprunte.
+    # Ce qu'il faut garder, c'est que personne ne la redéclare — sans quoi la
+    # divergence reviendrait sans que rien ne la cherche.
+    page = open(cli, encoding='utf-8').read()
+    if re.search(r'intrinsic\s*:\s*\{', page):
+        ecarts.append("phenobac.html redéclare des résistances naturelles : elles "
+                      "appartiennent au moteur, qui les porte avec la règle EUCAST "
+                      "qui les justifie, et les deux copies pourraient diverger")
     for germe in sorted(set(a) | set(ref)):
         attendu = set(ref.get(germe, ('', {}))[1].keys())
         obtenu = a.get(germe, set())
@@ -117,7 +132,16 @@ def main():
                           % (germe, sorted(obtenu), sorted(attendu)))
 
     s = open(srv, encoding='utf-8').read()
-    tables = valeurs_des_tables(s)
+    # Les tables sont ÉVALUÉES : le moteur ne les porte plus comme littéraux.
+    tables = set()
+    for nom, tbl in MP.tables(['BP', 'BP_MENINGE', 'BP_CASFM', 'BP_CASFM_URIN',
+                               'BP_MENINGE_CASFM', 'ZIT', 'ZIT_CASFM']).items():
+        for grp in tbl.values():
+            for v in grp.values():
+                vals = v.values() if isinstance(v, dict) else [v]
+                for x in vals:
+                    if isinstance(x, (int, float)):
+                        tables.add(('%f' % x).rstrip('0').rstrip('.'))
     prose = s[s.index('function rendreR'):]
     orphelines = []
     for c in sorted(set(re.findall(r'(\d+(?:[,.]\d+)?)\s*mg/L', prose)),
@@ -136,8 +160,8 @@ def main():
 
     total = sum(len(c) for c in a.values())
     print("%d résistances naturelles déclarées sur %d germes." % (total, len(a)))
-    print("Conformes au document EUCAST « Expected Resistant Phenotypes » v1.2,")
-    print("et identiques entre le moteur et le client.")
+    print("Conformes au document EUCAST « Expected Resistant Phenotypes » v1.2.")
+    print("La page ne les redéclare pas : elle les emprunte au moteur.")
     print("Les %d valeurs citées dans les textes existent dans les tables." % len(set(re.findall(r'\d+(?:[,.]\d+)?\s*mg/L', prose))))
     return 0
 
