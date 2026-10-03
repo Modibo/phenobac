@@ -416,6 +416,37 @@ ce cloisonnement disparaît.
 `Dockerfile` s'en chargent ; le service worker le met en cache, sans quoi
 l'application s'ouvrirait hors ligne sans pouvoir interpréter.
 
+## Surveillance locale
+
+Un onglet **Surveillance** présente ce que le laboratoire a accumulé :
+antibiogramme cumulatif par espèce, évolution d'une année sur l'autre, export
+CSV. L'export GLASS s'adresse à l'OMS ; cette vue s'adresse au prescripteur
+d'à côté, qui veut savoir ce qui marche encore dans son hôpital.
+
+**L'isolat est écrit localement d'abord, puis transmis.** Le versement
+n'existait qu'en ligne : serveur injoignable, et la saisie était perdue. Dans
+un laboratoire dont la connexion va et vient, cela veut dire que les isolats
+des mauvais jours ne comptaient pas — et ce sont souvent les jours chargés. Ce
+qui n'a pas pu partir reste marqué « en attente » et se retransmet depuis
+l'onglet.
+
+Deux règles qui ne sont pas cosmétiques :
+
+- **un patient ne compte qu'une fois** — premier isolat par patient et par
+  espèce sur l'année. Sans cela, un malade hospitalisé longtemps et prélevé
+  chaque semaine pèserait dix fois, et ses souches répétées étant les plus
+  résistantes, les taux s'effondreraient sans qu'aucune épidémie n'ait eu
+  lieu. La règle diffère de celle de l'export GLASS, qui retient en plus un
+  isolat par site : l'OMS surveille des sites, le laboratoire soigne des
+  patients ;
+- **en dessous de 30 isolats, aucun pourcentage n'est rendu** — seuil usuel
+  des antibiogrammes cumulatifs (CLSI M39). Avec huit souches, une seule
+  résistante déplace le taux de douze points : le chiffre dirait plus sur le
+  hasard que sur l'épidémiologie. L'effectif, lui, est toujours affiché.
+
+Le registre vit dans le navigateur, comme celui du contrôle de qualité, avec
+la même réserve : **c'est le fichier exporté qui fait archive**.
+
 ## Surveillance de la résistance (GLASS)
 
 Le moteur d'interprétation **n'enregistre rien**. Le seul chemin par lequel un

@@ -458,6 +458,33 @@
   .bp-conv{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
     background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
     border-radius:100px;padding:1px 6px;margin-left:7px;white-space:nowrap;cursor:help}
+  /* Surveillance locale — chiffres, antibiogramme cumulatif, évolution */
+  .surv-wrap{max-width:var(--maxw,1180px);margin:0 auto;padding:0 20px 40px}
+  .surv-chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+  .sc{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+  .sc b{display:block;font-family:'IBM Plex Mono';font-size:24px;line-height:1.1;color:var(--teal-deep);
+    font-variant-numeric:tabular-nums}
+  .sc span{display:block;font-size:11.5px;color:var(--ink-faint);margin-top:3px;line-height:1.4}
+  .sc.att b{color:var(--i)}
+  .surv-esp{margin-bottom:20px}
+  .surv-esp:last-child{margin-bottom:0}
+  .surv-esp-t{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;font-weight:600;font-size:15px;
+    margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .surv-n{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-faint);font-weight:400}
+  .surv-faible{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
+    background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);border-radius:100px;padding:1px 8px}
+  .tbl-cumul{overflow-x:auto}
+  .tbl-cumul table{border-collapse:collapse;width:100%;font-size:13px;min-width:460px}
+  .tbl-cumul th,.tbl-cumul td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+  .tbl-cumul th{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:400}
+  .tbl-cumul td.num,.tbl-cumul th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+  .tbl-cumul td.num{font-family:'IBM Plex Mono';font-size:12.5px}
+  .pc{font-weight:600;border-radius:100px;padding:1px 8px}
+  .pc.bon{background:var(--s-bg);color:var(--s)}
+  .pc.moyen{background:var(--i-bg);color:var(--i)}
+  .pc.bas{background:var(--r-bg);color:var(--r)}
+  .surv-nd{color:var(--ink-faint);font-weight:400}
   /* Resistance Detective — la chaîne du raisonnement */
   .modal-pied{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
     padding:14px 22px 18px;border-top:1px solid var(--line)}
@@ -989,6 +1016,7 @@
       <button data-view="ident">Identification</button>
       <button data-view="work" class="on">Interprétation</button>
       <button data-view="quiz">Entraînement</button>
+      <button data-view="surv">Surveillance</button>
       <button data-view="offres">À propos</button>
     </div>
     <div class="live-chip" id="liveChip">
@@ -1127,6 +1155,32 @@
   </div>
 </div>
 
+<!-- § 13 — la surveillance LOCALE. L'export GLASS s'adresse à l'OMS ; cette
+     vue s'adresse au prescripteur d'à côté, qui veut savoir ce qui marche
+     encore dans son hôpital. -->
+<div class="surv-wrap" id="survView" style="display:none">
+  <div class="card">
+    <div class="card-h">
+      <span class="eyebrow"><span class="num">01</span>Registre local</span>
+      <div style="margin-left:auto" class="toolbar">
+        <button class="btn" id="survExport">Exporter (CSV)</button>
+        <button class="btn" id="survTransmettre">Transmettre les isolats en attente</button>
+      </div>
+    </div>
+    <div class="card-b" id="survResume"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="eyebrow"><span class="num">02</span>Antibiogramme cumulatif</span></div>
+    <div class="card-b" id="survCumul"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="eyebrow"><span class="num">03</span>Évolution</span></div>
+    <div class="card-b" id="survTendance"></div>
+  </div>
+</div>
+
 <div class="quiz-wrap" id="quizView" style="display:none">
   <div class="card quiz-card">
     <div class="quiz-top">
@@ -1183,6 +1237,7 @@
           <li><b>La lecture interprétative, visible.</b> Quand une catégorie est modifiée — BLSE, carbapénémase confirmée —, le compte-rendu porte <i>la catégorie rendue et celle qui a été lue</i>, avec le motif. Le résultat de paillasse n'est jamais effacé.</li>
           <li><b>Les incohérences.</b> Un résultat contraire aux résistances naturelles attendues de l'espèce est signalé avant le rendu.</li>
           <li><b>La lecture au disque, en millimètres.</b> Entrez les diamètres mesurés : la catégorie se calcule, avec la charge du disque rappelée sous chaque molécule — « 23 mm » ne veut rien dire sans elle. Là où le référentiel ne reconnaît pas la méthode des disques — colistine, vancomycine sur staphylocoque —, l'application refuse de conclure et le dit, plutôt que de laisser croire l'antibiotique non testé.</li>
+          <li><b>La surveillance de votre propre résistance.</b> Les antibiogrammes versés alimentent un registre local d'où sortent votre antibiogramme cumulatif et son évolution annuelle, avec la déduplication par patient et le seuil de 30 isolats en dessous duquel aucun pourcentage n'est rendu. Rien ne quitte le poste tant que vous ne le transmettez pas.</li>
           <li><b>Un registre de contrôle de qualité.</b> Les diamètres obtenus sur souche de référence sont confrontés aux cibles du CA-SFM, enregistrés avec leur date, le lot de disques et la conduite tenue en cas d'écart, et exportables en CSV. L'application refuse d'enregistrer une non-conformité sans conduite tenue.</li>
           <li><b>Les dépistages, à leur place.</b> Sur le pneumocoque, les β-lactamines ne se lisent pas au disque : c'est le disque d'oxacilline 1 µg qui répond. Sur les streptocoques A, C et G, le CA-SFM n'autorise qu'à reconnaître les souches sensibles. Dans les deux cas, PhénoBac applique la règle et ne rend jamais « résistant » sur un simple dépistage.</li>
           <li><b>Les zones d'incertitude technique.</b> Quand la valeur mesurée tombe là où la catégorie n'est plus reproductible, PhénoBac le dit et rappelle la conduite à tenir — sans jamais dégrader la catégorie de lui-même.</li>
@@ -3826,6 +3881,55 @@ function setLive(A){
 const SURV_FN = API_BASE + "/.netlify/functions/surveillance";
 var survDernier = null;
 
+/* ============================================================
+   REGISTRE LOCAL DES ISOLATS — § 13
+
+   Le versement n'existait qu'en ligne : serveur injoignable, et la saisie
+   était perdue. Dans un laboratoire dont la connexion va et vient, cela veut
+   dire que les isolats des mauvais jours ne comptent pas — et ce sont souvent
+   les jours chargés.
+
+   L'isolat est donc écrit ICI D'ABORD, toujours, puis transmis si le réseau
+   le permet. Ce qui n'a pas pu partir reste marqué comme tel et se
+   retransmet plus tard.
+
+   Ce registre sert aussi, et surtout, au laboratoire lui-même : c'est de lui
+   que sortent l'antibiogramme cumulatif et les taux de sensibilité locaux.
+   L'export GLASS s'adresse à l'OMS ; celui-ci s'adresse au prescripteur d'à
+   côté, qui veut savoir ce qui marche encore dans SON hôpital.
+   ============================================================ */
+const SURV_CLE = "phenobac.surv.registre";
+const SURV_MAX = 5000;
+
+function survRegistre(){
+  try{ return JSON.parse(localStorage.getItem(SURV_CLE) || "[]"); }
+  catch(e){ return []; }
+}
+function survEcrire(liste){
+  try{ localStorage.setItem(SURV_CLE, JSON.stringify(liste.slice(-SURV_MAX))); return true; }
+  catch(e){ return false; }
+}
+
+/* Déduplication pour l'antibiogramme cumulatif : PREMIER isolat par patient et
+   par espèce sur la période. C'est la règle usuelle (CLSI M39) et elle n'est
+   pas cosmétique — un patient hospitalisé longtemps et prélevé chaque semaine
+   pèserait dix fois, et ses souches répétées étant les plus résistantes, le
+   taux de sensibilité s'effondrerait sans qu'aucune épidémie n'ait eu lieu.
+
+   Elle diffère de celle de l'export GLASS, qui retient un isolat par SITE de
+   prélèvement en plus : l'OMS surveille des sites, le laboratoire soigne des
+   patients. */
+function survDedupliquer(isolats){
+  const vus = new Set(), gardes = [];
+  isolats.slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")))
+    .forEach(i=>{
+      const cle = [i.patient||"(sans compteur)", i.organism, String(i.date||"").slice(0,4)].join("|");
+      if(vus.has(cle)) return;
+      vus.add(cle); gardes.push(i);
+    });
+  return gardes;
+}
+
 function survMemoire(cle, valeur){
   try{
     if(valeur === undefined) return localStorage.getItem("phenobac.surv." + cle) || "";
@@ -3880,25 +3984,35 @@ async function verserSurveillance(){
   survMemoire("labo", labo);
   survMemoire("pays", $("#survPays").value.trim().toUpperCase() || "MLI");
 
+  const isolat = {
+    organism: state.org,
+    prelevement: $("#specimen") ? $("#specimen").value : "",
+    resultats: {...state.results},
+    phenotype: survDernier ? survDernier.name : "",
+    ctx: {...state.ctx},
+    referentiel: REF_ACTIF,
+    laboratoire: labo,
+    pays: $("#survPays").value.trim().toUpperCase() || "MLI",
+    patient: $("#survPatient").value.trim(),
+    genre: $("#survGenre").value,
+    age: $("#survAge").value,
+    typePatient: $("#survType").value,
+    date: $("#survDate").value
+  };
+
+  // D'ABORD le registre local. Si le réseau manque, l'isolat est conservé et
+  // la transmission attendra ; l'inverse perdrait la saisie.
+  const reg = survRegistre();
+  const local = Object.assign({}, isolat, { cle: "loc_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
+                                            saisi: new Date().toISOString(), transmis: false });
+  reg.push(local);
+  const garde = survEcrire(reg);
+
   bouton.disabled = true; bouton.textContent = "Envoi…";
   try{
     const r = await fetch(SURV_FN, {
       method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ action:"verser", isolat:{
-        organism: state.org,
-        prelevement: $("#specimen") ? $("#specimen").value : "",
-        resultats: state.results,
-        phenotype: survDernier ? survDernier.name : "",
-        ctx: state.ctx,
-        referentiel: REF_ACTIF,
-        laboratoire: labo,
-        pays: $("#survPays").value.trim().toUpperCase() || "MLI",
-        patient: $("#survPatient").value.trim(),
-        genre: $("#survGenre").value,
-        age: $("#survAge").value,
-        typePatient: $("#survType").value,
-        date: $("#survDate").value
-      }})
+      body: JSON.stringify({ action:"verser", isolat: isolat })
     });
     const data = await r.json();
     if(!r.ok){
@@ -3906,20 +4020,234 @@ async function verserSurveillance(){
       avis.textContent = data.message || "Le versement a été refusé.";
     }else{
       avis.className = "surv-avis " + (data.glass ? "ok" : "hors");
-      avis.textContent = data.message || "Isolat enregistré.";
+      avis.textContent = (data.message || "Isolat enregistré.") + " Il figure aussi au registre local.";
+      survMarquerTransmis(local.cle);
       $("#survPatient").value = "";
       setTimeout(fermerSurveillance, 1800);
     }
   }catch(e){
-    avis.className = "surv-avis ko";
-    avis.textContent = "Serveur injoignable. Rien n'a été enregistré — réessayez plus tard.";
+    // L'isolat EST enregistré : seule la transmission a échoué. Dire le
+    // contraire ferait ressaisir une donnée qu'on a déjà.
+    avis.className = "surv-avis hors";
+    avis.textContent = garde
+      ? "Serveur injoignable. L'isolat est conservé au registre local et sera transmis depuis l'onglet Surveillance."
+      : "Serveur injoignable, et le navigateur a refusé d'enregistrer localement. Notez l'isolat autrement.";
+    $("#survPatient").value = "";
   }
   bouton.disabled = false; bouton.textContent = "Verser à la surveillance";
+}
+
+/* ---------- Antibiogramme cumulatif ----------
+   Pour chaque espèce, le pourcentage de souches sensibles à chaque
+   antibiotique. C'est le chiffre sur lequel un clinicien choisit un
+   traitement probabiliste, donc celui qu'il ne faut pas publier à la légère.
+
+   SEUIL DE 30 ISOLATS. En deçà, le pourcentage n'est pas rendu : avec huit
+   souches, une seule résistante déplace le taux de douze points, et le
+   chiffre dit alors plus sur le hasard que sur l'épidémiologie. C'est le
+   seuil usuel des antibiogrammes cumulatifs (CLSI M39). L'effectif, lui,
+   est toujours affiché — savoir qu'on n'a que huit souches est une
+   information utile. */
+const SURV_MIN = 30;
+
+function survCumulatif(isolats){
+  const parEspece = {};
+  survDedupliquer(isolats).forEach(i=>{
+    const e = parEspece[i.organism] || (parEspece[i.organism] = { n: 0, abx: {} });
+    e.n++;
+    Object.keys(i.resultats || {}).forEach(k=>{
+      const c = i.resultats[k];
+      if(["S","I","R"].indexOf(c) === -1) return;
+      const a = e.abx[k] || (e.abx[k] = { S:0, I:0, R:0, n:0 });
+      a[c]++; a.n++;
+    });
+  });
+  return parEspece;
+}
+
+/* ---------- Évolution ----------
+   Le même taux, par année. Une tendance ne se lit qu'avec les effectifs à
+   côté : passer de 80 % à 40 % de sensibilité n'a pas le même sens sur
+   cinq souches et sur cinquante. */
+function survParPeriode(isolats){
+  const out = {};
+  survDedupliquer(isolats).forEach(i=>{
+    const an = String(i.date || "").slice(0,4) || "?";
+    const cle = i.organism;
+    const e = out[cle] || (out[cle] = {});
+    const p = e[an] || (e[an] = { n:0, abx:{} });
+    p.n++;
+    Object.keys(i.resultats || {}).forEach(k=>{
+      const c = i.resultats[k];
+      if(["S","I","R"].indexOf(c) === -1) return;
+      const a = p.abx[k] || (p.abx[k] = { S:0, n:0 });
+      if(c === "S") a.S++;
+      a.n++;
+    });
+  });
+  return out;
+}
+
+function survNomEspece(id){ return (ORG[id] && ORG[id].label) || id; }
+
+function renderSurveillanceLocale(){
+  const reg = survRegistre();
+  const dedup = survDedupliquer(reg);
+  const attente = reg.filter(i=>!i.transmis).length;
+  const dates = reg.map(i=>i.date).filter(Boolean).sort();
+
+  /* --- résumé --- */
+  let h;
+  if(!reg.length){
+    h = `<div class="bp-note">Aucun isolat au registre. Chaque antibiogramme versé depuis
+      l'onglet <b>Interprétation</b> — bouton « Verser à la surveillance » — vient s'y ajouter,
+      <b>même sans réseau</b>. Le registre reste sur ce poste : il n'est envoyé nulle part tant
+      que vous ne le transmettez pas.</div>`;
+  } else {
+    h = `<div class="surv-chiffres">
+      <div class="sc"><b>${reg.length}</b><span>isolat${reg.length>1?"s":""} enregistré${reg.length>1?"s":""}</span></div>
+      <div class="sc"><b>${dedup.length}</b><span>après déduplication</span></div>
+      <div class="sc"><b>${Object.keys(survCumulatif(reg)).length}</b><span>espèce${Object.keys(survCumulatif(reg)).length>1?"s":""}</span></div>
+      <div class="sc ${attente?"att":""}"><b>${attente}</b><span>en attente de transmission</span></div>
+    </div>
+    <div class="bp-note">Période couverte : du <b>${esc(dates[0]||"—")}</b> au <b>${esc(dates[dates.length-1]||"—")}</b>.
+      La déduplication retient le <b>premier isolat par patient et par espèce</b> sur l'année — sans elle,
+      un patient prélevé chaque semaine pèserait dix fois et ferait chuter les taux sans qu'aucune
+      épidémie n'ait eu lieu.</div>`;
+  }
+  $("#survResume").innerHTML = h;
+
+  /* --- antibiogramme cumulatif --- */
+  const cum = survCumulatif(reg);
+  const especes = Object.keys(cum).sort((a,b)=>cum[b].n - cum[a].n);
+  if(!especes.length){
+    $("#survCumul").innerHTML = `<div class="placeholder">Les taux de sensibilité apparaîtront ici dès les premiers isolats versés.</div>`;
+  } else {
+    let c = "";
+    especes.forEach(id=>{
+      const e = cum[id];
+      const assez = e.n >= SURV_MIN;
+      c += `<div class="surv-esp"><div class="surv-esp-t">${esc(survNomEspece(id))}
+            <span class="surv-n">${e.n} isolat${e.n>1?"s":""}</span>
+            ${assez ? "" : `<span class="surv-faible">effectif insuffisant — taux non rendus</span>`}</div>`;
+      const codes = Object.keys(e.abx).sort((x,y)=>(ABX[x]?ABX[x].n:x).localeCompare(ABX[y]?ABX[y].n:y));
+      if(!codes.length){ c += `<div class="det-vide">Aucun antibiotique renseigné.</div></div>`; return; }
+      c += `<div class="tbl-cumul"><table><thead><tr>
+          <th>Antibiotique</th><th>Testés</th><th>S</th><th>I</th><th>R</th><th>% sensibles</th>
+        </tr></thead><tbody>`;
+      codes.forEach(k=>{
+        const a = e.abx[k];
+        const pc = assez && a.n ? Math.round(a.S / a.n * 100) : null;
+        c += `<tr><td>${esc(ABX[k]?ABX[k].n:k)}</td><td class="num">${a.n}</td>
+              <td class="num">${a.S}</td><td class="num">${a.I}</td><td class="num">${a.R}</td>
+              <td class="num">${pc===null ? '<span class="surv-nd">—</span>'
+                : `<span class="pc ${pc>=80?"bon":pc>=50?"moyen":"bas"}">${pc} %</span>`}</td></tr>`;
+      });
+      c += `</tbody></table></div></div>`;
+    });
+    $("#survCumul").innerHTML = c;
+  }
+
+  /* --- évolution --- */
+  const per = survParPeriode(reg);
+  const avecPlusieurs = Object.keys(per).filter(id=>Object.keys(per[id]).length > 1);
+  if(!avecPlusieurs.length){
+    $("#survTendance").innerHTML = `<div class="placeholder">Une évolution demande au moins deux années de recul.
+      ${reg.length ? "Le registre n'en couvre qu'une pour l'instant." : ""}</div>`;
+  } else {
+    let c = "";
+    avecPlusieurs.forEach(id=>{
+      const annees = Object.keys(per[id]).sort();
+      const codes = {};
+      annees.forEach(an=>Object.keys(per[id][an].abx).forEach(k=>codes[k]=1));
+      c += `<div class="surv-esp"><div class="surv-esp-t">${esc(survNomEspece(id))}</div>
+        <div class="tbl-cumul"><table><thead><tr><th>Antibiotique</th>`
+        + annees.map(a=>`<th>${esc(a)}</th>`).join("") + `</tr></thead><tbody>`;
+      Object.keys(codes).sort().forEach(k=>{
+        c += `<tr><td>${esc(ABX[k]?ABX[k].n:k)}</td>`;
+        annees.forEach(an=>{
+          const a = per[id][an].abx[k];
+          c += `<td class="num">${a && a.n ? Math.round(a.S/a.n*100) + " % <span class=\"surv-nd\">(" + a.n + ")</span>" : "—"}</td>`;
+        });
+        c += `</tr>`;
+      });
+      c += `</tbody></table></div></div>`;
+    });
+    $("#survTendance").innerHTML = c
+      + `<div class="bp-note">Les effectifs sont donnés entre parenthèses : passer de 80 % à 40 %
+         n'a pas le même sens sur cinq souches et sur cinquante.</div>`;
+  }
+}
+
+/* Export du registre : une ligne par couple isolat × antibiotique, le grain
+   auquel on relit une surveillance. Point-virgule et BOM, comme les autres
+   exports de l'application. */
+function survExporter(){
+  const reg = survRegistre();
+  if(!reg.length) return alert("Registre vide : rien à exporter.");
+  const col = ["Date","Laboratoire","Pays","CompteurPatient","Genre","Age","TypePatient",
+               "Espece","Prelevement","Phenotype","Referentiel","Antibiotique","Code","Categorie",
+               "PremierIsolat","Transmis"];
+  const premiers = new Set(survDedupliquer(reg).map(i=>i.cle));
+  const ech = v => {
+    const s = String(v===undefined||v===null ? "" : v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const lignes = [];
+  reg.forEach(i=>{
+    Object.keys(i.resultats||{}).forEach(k=>{
+      lignes.push([i.date, i.laboratoire, i.pays, i.patient, i.genre, i.age, i.typePatient,
+                   survNomEspece(i.organism), i.prelevement, i.phenotype, i.referentiel,
+                   (ABX[k]?ABX[k].n:k), k, i.resultats[k],
+                   premiers.has(i.cle) ? "oui" : "non",
+                   i.transmis ? "oui" : "non"].map(ech).join(";"));
+    });
+  });
+  const csv = "\ufeff" + col.join(";") + "\n" + lignes.join("\n") + "\n";
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "phenobac-surveillance-locale.csv";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+/* Transmission différée. Ce qui n'a pas pu partir le jour même part
+   maintenant ; ce qui part est marqué, et ne repartira pas deux fois. */
+async function survTransmettreEnAttente(){
+  const bouton = $("#survTransmettre");
+  const reg = survRegistre();
+  const attente = reg.filter(i=>!i.transmis);
+  if(!attente.length){ bouton.textContent = "Rien en attente"; setTimeout(()=>{bouton.textContent="Transmettre les isolats en attente";},1800); return; }
+  bouton.disabled = true;
+  let partis = 0, echecs = 0;
+  for(const i of attente){
+    try{
+      bouton.textContent = `Transmission… ${partis+echecs+1}/${attente.length}`;
+      const r = await fetch(SURV_FN, { method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ action:"verser", isolat: i }) });
+      if(r.ok){ survMarquerTransmis(i.cle); partis++; } else echecs++;
+    }catch(e){ echecs++; break; }   // réseau coupé : inutile d'insister
+  }
+  bouton.disabled = false;
+  bouton.textContent = "Transmettre les isolats en attente";
+  renderSurveillanceLocale();
+  const r = $("#survResume");
+  if(r) r.insertAdjacentHTML("afterbegin",
+    `<div class="surv-avis ${echecs?"hors":"ok"}">${partis} isolat(s) transmis`
+    + (echecs ? `, ${echecs} encore en attente — le serveur n'a pas répondu.` : ".") + `</div>`);
+}
+
+function survMarquerTransmis(cle){
+  const reg = survRegistre();
+  const i = reg.findIndex(x=>x.cle === cle);
+  if(i !== -1){ reg[i].transmis = true; survEcrire(reg); }
 }
 
 $("#survClose").onclick = fermerSurveillance;
 $("#survModal").onclick = e => { if(e.target.id === "survModal") fermerSurveillance(); };
 $("#survEnvoyer").onclick = verserSurveillance;
+if($("#survExport")) $("#survExport").onclick = survExporter;
+if($("#survTransmettre")) $("#survTransmettre").onclick = survTransmettreEnAttente;
 
 /* --- identification (facultative) pour le compte-rendu --- */
 state.meta = { idEch:"", valideur:"" };
@@ -5199,11 +5527,13 @@ function setView(v){
   $("#workView").style.display = v==="work" ? "" : "none";
   $("#identView").style.display = v==="ident" ? "" : "none";
   $("#quizView").style.display = v==="quiz" ? "" : "none";
+  $("#survView").style.display = v==="surv" ? "" : "none";
   $("#offresView").style.display = v==="offres" ? "" : "none";
   $("#liveChip").style.visibility = v==="work" ? "visible" : "hidden";
   $("#tabs").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.view===v));
   if(v==="ident") renderIdent();
   if(v==="quiz" && quiz.queue.length===0) startQuiz();
+  if(v==="surv") renderSurveillanceLocale();
   if(v==="offres") renderOffres();
 }
 $("#tabs").querySelectorAll("button").forEach(b=>{
@@ -5444,6 +5774,39 @@ $("#introClose").onclick = ()=> fermerIntro(false);
    propos, et les deux côte à côte feraient doublon.
    ============================================================ */
 var PRESENTATIONS = {
+
+  surv: {
+    eyebrow: "Surveillance locale de la résistance",
+    titre: "Ce qui marche encore, chez vous.",
+    lead: `Chaque antibiogramme versé s'ajoute à un <b>registre qui reste sur ce poste</b>.
+           L'application en tire votre <b>antibiogramme cumulatif</b> — le pourcentage de souches
+           sensibles à chaque molécule, espèce par espèce — et son <b>évolution</b> d'une année
+           sur l'autre. C'est le chiffre sur lequel un clinicien choisit un traitement
+           probabiliste quand le résultat n'est pas encore là.`,
+    reperes: ["Registre local, rien n'est envoyé sans vous", "Antibiogramme cumulatif",
+              "Évolution annuelle", "Export CSV", "Transmission GLASS différée"],
+    cta: "Ouvrir le registre",
+    cible: "survView",
+    guideTitre: "Ce qu'il faut savoir",
+    etapes: [
+      `<b>Le registre se remplit depuis l'onglet Interprétation.</b>
+       Bouton <span class="ge-ref">Verser à la surveillance</span> sous le commentaire. L'isolat est
+       enregistré <b>même sans réseau</b> ; la transmission à GLASS suit quand la connexion revient.`,
+      `<b>Un patient ne compte qu'une fois.</b>
+       Le premier isolat par patient et par espèce sur l'année. Sans cette règle, un malade
+       hospitalisé longtemps et prélevé chaque semaine pèserait dix fois — et ses souches répétées
+       étant les plus résistantes, vos taux s'effondreraient sans qu'aucune épidémie n'ait eu lieu.`,
+      `<b>En dessous de 30 isolats, le pourcentage n'est pas rendu.</b>
+       Avec huit souches, une seule résistante déplace le taux de douze points : le chiffre dirait
+       plus sur le hasard que sur votre épidémiologie. L'effectif, lui, est toujours affiché.`,
+      `<b>Exportez pour diffuser.</b>
+       Le CSV porte une ligne par couple isolat × antibiotique, avec la mention du premier isolat
+       et de la transmission. C'est lui qui fait document.`
+    ],
+    astuce: `<b>Le registre ne quitte pas ce poste.</b> Il n'est ni envoyé, ni partagé, et il ne
+       survivrait pas à un vidage du cache du navigateur : <b>c'est le fichier exporté qui fait
+       archive</b>. La transmission à GLASS, elle, est une action distincte et volontaire.`
+  },
 
   work: {
     eyebrow: "Lecture interprétative de l'antibiogramme",
