@@ -1047,6 +1047,7 @@
       <button data-view="ident">Identification</button>
       <button data-view="work" class="on">Interprétation</button>
       <button data-view="quiz">Entraînement</button>
+      <button data-view="cq">Contrôle qualité</button>
       <button data-view="surv">Surveillance</button>
       <button data-view="offres">À propos</button>
     </div>
@@ -1183,6 +1184,16 @@
   <div class="card" id="idResultCard" style="display:none">
     <div class="card-h"><span class="eyebrow"><span class="num">03</span>Identification présumée</span></div>
     <div class="card-b" id="idResults"></div>
+  </div>
+</div>
+
+<!-- § 22 — le contrôle de qualité a son entrée propre. Il vivait replié sous
+     l'antibiogramme, en mode Diamètre seulement : depuis que l'application
+     s'ouvre en S/I/R, on ne le rencontrait plus jamais. -->
+<div class="surv-wrap" id="cqView" style="display:none">
+  <div class="card">
+    <div class="card-h"><span class="eyebrow"><span class="num">CQ</span>Souche de référence</span></div>
+    <div class="card-b" id="cqCorps"></div>
   </div>
 </div>
 
@@ -3050,8 +3061,7 @@ function renderAbx(){
   const existingBp=document.querySelector(".bp-editor");
   if(existingBp && state.mode!=="mic") existingBp.remove();
   if(state.mode==="mic") renderBpEditor();
-  if(state.mode==="diam"){ renderCQ(); renderDiamNote(); }
-  else { const cq=document.querySelector(".cq-panneau"); if(cq) cq.remove(); }
+  if(state.mode==="diam") renderDiamNote();
 }
 
 /* libellé de seuil pour l'aide sous chaque antibiotique */
@@ -3108,14 +3118,13 @@ function dzHint(group,k){
 
    Cet écran est volontairement séparé de l'antibiogramme du patient : on n'y
    choisit pas l'espèce du jour, on choisit une souche de collection. */
+/* Le contrôle de qualité a désormais son onglet. Il n'est plus replié : un
+   panneau qu'il faut déplier est un panneau qu'on n'ouvre pas, et un contrôle
+   de qualité qu'on n'ouvre pas ne contrôle rien. */
 function renderCQ(){
-  const prev = document.querySelector(".cq-panneau"); if(prev) prev.remove();
-  const wasOpen = prev ? prev.hasAttribute("open") : false;
-
-  const det = document.createElement("details");
-  det.className = "bp-editor cq-panneau";
-  if(wasOpen) det.setAttribute("open","");
-  det.innerHTML = `<summary><span class="caret">▸</span>Contrôle de qualité — souche de référence</summary>`;
+  const hote = $("#cqCorps"); if(!hote) return;
+  const det = document.createElement("div");
+  det.className = "cq-panneau";
   const body = document.createElement("div"); body.className = "bp-body";
 
   const s = CQ[CQ_ETAT.souche] || CQ.ecoli25922;
@@ -3245,7 +3254,7 @@ function renderCQ(){
   body.appendChild(cqSuivi(s));
   body.appendChild(cqHistorique());
   det.appendChild(body);
-  abxGrid.parentNode.insertBefore(det, abxGrid.nextSibling);
+  hote.innerHTML = ""; hote.appendChild(det);
 }
 
 /* Suivi dans le temps : cartes de contrôle, dérives, conformité par mois.
@@ -3452,6 +3461,10 @@ function renderDiamNote(){
     const codes=Object.keys(DEPISTAGE_CASFM[g]).map(k=>ABX[k]?ABX[k].n:k).join(", ");
     body.innerHTML += `<div class="bp-note">Le CA-SFM ne voit ici qu'un <b>dépistage</b> : ${esc(codes)} au disque ne sert qu'à reconnaître les souches sensibles. En dessous du seuil, il faut une CMI — la résistance aux β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème technique.</div>`;
   }
+  body.innerHTML += `<div class="bp-note" style="margin-top:12px">Avant de rendre des diamètres,
+    contrôlez votre technique sur une souche de référence : onglet
+    <b>Contrôle qualité</b>. Un lot de disques altéré déplace toutes les zones ensemble, et les
+    catégories restent plausibles.</div>`;
   if(g==="pneumo"){
     body.innerHTML += `<div class="bp-note">Pneumocoque : les β-lactamines ne se lisent pas au disque. Renseignez l'<b>oxacilline 1 µg</b> — zone ≥ ${OXA_PNEUMO} mm, l'EUCAST permet de rendre sensibles la pénicilline G, l'amoxicilline et le céfotaxime sans autre test ; zone &lt; ${OXA_PNEUMO} mm, une CMI de pénicilline G est nécessaire. Un dépistage positif n'est pas une résistance.</div>`;
   }
@@ -5875,12 +5888,14 @@ function setView(v){
   $("#workView").style.display = v==="work" ? "" : "none";
   $("#identView").style.display = v==="ident" ? "" : "none";
   $("#quizView").style.display = v==="quiz" ? "" : "none";
+  $("#cqView").style.display = v==="cq" ? "" : "none";
   $("#survView").style.display = v==="surv" ? "" : "none";
   $("#offresView").style.display = v==="offres" ? "" : "none";
   $("#liveChip").style.visibility = v==="work" ? "visible" : "hidden";
   $("#tabs").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.view===v));
   if(v==="ident") renderIdent();
   if(v==="quiz" && quiz.queue.length===0) startQuiz();
+  if(v==="cq") renderCQ();
   if(v==="surv") renderSurveillanceLocale();
   if(v==="offres") renderOffres();
 }
@@ -6143,6 +6158,40 @@ $("#introClose").onclick = ()=> fermerIntro(false);
    propos, et les deux côte à côte feraient doublon.
    ============================================================ */
 var PRESENTATIONS = {
+
+  cq: {
+    eyebrow: "Contrôle de qualité de l'antibiogramme",
+    titre: "Vos 19 mm sont-ils vraiment 19 mm ?",
+    lead: `Traduire un diamètre en catégorie ne vaut que si le diamètre est juste. Un lot de
+           disques altéré, une gélose trop épaisse ou un inoculum trop dense déplacent
+           <b>toutes</b> les zones ensemble : les catégories restent plausibles, et elles sont
+           fausses. La souche de référence est le seul garde-fou.`,
+    reperes: ["95 cibles sur 7 souches", "CA-SFM 2026, chapitre 1.4",
+              "Carte de Levey-Jennings", "Détection de dérive", "Registre daté, export CSV"],
+    cta: "Ouvrir le contrôle",
+    cible: "cqView",
+    guideTitre: "Comment s'en servir",
+    etapes: [
+      `<b>Choisissez la souche contrôlée.</b>
+       Sept souches de collection, avec leurs cibles et leurs limites acceptables. La
+       <b>charge du disque</b> est rappelée : un contrôle mené avec une autre charge ne prouve rien.`,
+      `<b>Relevez vos diamètres.</b>
+       Chaque mesure est située dans ses limites, et le bilan nomme ce qui en sort. Ce n'est pas la
+       souche du malade qui est en cause : vérifiez le lot et la conservation des disques,
+       l'épaisseur et le pH de la gélose, la densité de l'inoculum et le délai de lecture.`,
+      `<b>Enregistrez, avec la conduite tenue.</b>
+       L'application <b>refuse</b> d'enregistrer un écart sans conduite tenue : un écart constaté
+       sans suite ne vaut pas mieux que pas de contrôle.`,
+      `<b>Surveillez la dérive.</b>
+       La carte de contrôle montre ce qu'une liste de nombres cache. Dix mesures du même côté de la
+       cible, ou sept qui descendent, annoncent le lot qui faiblit <b>des semaines avant</b> la
+       première non-conformité.`
+    ],
+    astuce: `<b>Le registre reste sur ce poste</b> et ne survivrait pas à un vidage du cache :
+       c'est le <b>fichier exporté</b> qui fait archive. Un changement de lot coupe la série —
+       un nouveau lot est un autre système, et y chercher la continuité du précédent produirait
+       des dérives imaginaires.`
+  },
 
   surv: {
     eyebrow: "Surveillance locale de la résistance",
