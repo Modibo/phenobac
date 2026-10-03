@@ -352,6 +352,65 @@ function reglesCasfm(A, r) {
   }
 }
 
+/* ============================================================
+   POURQUOI CE PHÉNOTYPE, ET AVEC QUELLE ASSURANCE
+
+   Le § 7 du cahier des charges demande, pour chaque hypothèse, les arguments
+   en faveur, les éléments discordants et un niveau de confiance. Le moteur
+   rendait une conclusion ; il rend maintenant le chemin qui y mène.
+
+   LES CRITÈRES SONT ÉNONCÉS AU POINT DE DÉCISION, à côté de la condition qui
+   les teste. C'est délibéré : une grille écrite à part, dans un coin du
+   fichier, finirait par décrire autre chose que ce que le moteur fait
+   réellement — et un raisonnement faux présenté comme une explication est
+   pire qu'une conclusion sans explication.
+
+   Trois niveaux de confiance, adossés à ce qu'on a en main et non à une
+   impression :
+
+     confirmé   un test de confirmation figure au dossier et l'appuie
+     probable   le profil est complet et rien ne le contredit
+     possible   un élément discorde, ou une molécule clé n'a pas été testée
+
+   « Possible » n'est pas un demi-échec : c'est l'état normal d'un
+   antibiogramme incomplet, et le dire vaut mieux que de conclure quand même.
+   ============================================================ */
+function parce(A, r, grille) {
+  const g = grille || {};
+  A.pour = []; A.contre = []; A.nonTeste = [];
+
+  (g.pour || []).forEach(function (cr) {
+    const code = cr[0], attendu = cr[1], texte = cr[2];
+    const nom = ABXNAME[code] || code;
+    if (!has(r, code)) { A.nonTeste.push({ abx: code, txt: nom + " — " + texte }); return; }
+    const v = r[code];
+    if (attendu.indexOf(v) !== -1) A.pour.push({ abx: code, cat: v, txt: nom + " " + v + " : " + texte });
+    else A.contre.push({ abx: code, cat: v, txt: nom + " " + v + " : " + texte + " — attendu ici" });
+  });
+
+  // Ce qui, si on l'observe, affaiblit l'hypothèse. Son absence ne prouve
+  // rien et ne vaut donc pas argument : on se tait.
+  (g.contre || []).forEach(function (cr) {
+    const code = cr[0], attendu = cr[1], texte = cr[2];
+    if (!has(r, code)) return;
+    if (attendu.indexOf(r[code]) !== -1)
+      A.contre.push({ abx: code, cat: r[code], txt: (ABXNAME[code] || code) + " " + r[code] + " : " + texte });
+  });
+
+  if (g.confirme) {
+    A.confirmation = g.confirme;
+    A.confiance = "confirmé";
+  } else if (A.contre.length) {
+    A.confiance = "possible";
+  } else if (A.nonTeste.length) {
+    A.confiance = "possible";
+  } else {
+    A.confiance = "probable";
+  }
+  if (g.aConfirmerPar) A.aConfirmerPar = g.aConfirmerPar;
+  return A;
+}
+
 function finalize(A, r) {
   const org = _activeOrg;
   if (org && org.intrinsic) {
@@ -433,6 +492,12 @@ function enteroInterpret(r, c, { amino, species, klebsiella, imipenemIntrinsic }
   if (carba) {
     A.sev = "crit"; A.name = "Suspicion de carbapénémase";
     A.mech = "Sensibilité diminuée à au moins un carbapénème. À confirmer (carba NP, immuno-chromatographie, biologie moléculaire) avant conclusion.";
+    parce(A, r, {
+      pour: carbaKeys.map(function (k) {
+        return [k, "RI", "sensibilité diminuée à un carbapénème — c'est ce qui fait suspecter l'enzyme"];
+      }),
+      aConfirmerPar: "carba NP, immuno-chromatographie ou biologie moléculaire"
+    });
     A.alerts.push({ lvl: "crit", txt: "Isolat hautement résistant : précautions complémentaires contact et signalement (EOH / hygiène)." });
     A.alerts.push({ lvl: "warn", txt: "Confirmer le mécanisme : discordance imipénème/méropénème/ertapénème possible (imperméabilité vs carbapénémase vraie)." });
     A.rules.push({ k: "→R", txt: "Interpréter l'ensemble des β-lactamines avec prudence tant que le mécanisme n'est pas confirmé." });
@@ -472,6 +537,13 @@ function enteroInterpret(r, c, { amino, species, klebsiella, imipenemIntrinsic }
     if (c && c.syn === "Positif") {
       A.sev = "high"; A.name = "BLSE";
       A.mech = "β-lactamase à spectre étendu : synergie C3G + clavulanate positive. La céfoxitine reste habituellement sensible.";
+      parce(A, r, {
+        pour: [["CTX", "RI", "céphalosporine de 3e génération atteinte"],
+               ["CAZ", "RI", "céphalosporine de 3e génération atteinte"],
+               ["FOX", "S", "céfoxitine conservée — la BLSE ne l'atteint pas, contrairement à une céphalosporinase"]],
+        contre: [["FOX", "RI", "une céfoxitine atteinte oriente vers une céphalosporinase, ou vers une BLSE accompagnée d'une imperméabilité"]],
+        confirme: "synergie C3G + acide clavulanique positive"
+      });
       A.alerts.push({ lvl: "warn", txt: "Précautions complémentaires contact ; signalement selon la politique locale." });
       A.rules.push({ k: "?", txt: "Céfépime : interpréter selon la CMI (effet inoculum possible)." });
       // Ici les deux référentiels divergent franchement (CA-SFM 2026, p. 8) :
@@ -489,6 +561,13 @@ function enteroInterpret(r, c, { amino, species, klebsiella, imipenemIntrinsic }
     } else if (isRI(r.FOX)) {
       A.sev = "high"; A.name = "Céphalosporinase hyperproduite (AmpC)";
       A.mech = "Résistance C3G + céfoxitine sans synergie au clavulanate : profil de céphalosporinase déréprimée / plasmidique.";
+      parce(A, r, {
+        pour: [["FOX", "RI", "céfoxitine atteinte — la céphalosporinase l'hydrolyse, la BLSE non"],
+               ["CTX", "RI", "céphalosporine de 3e génération atteinte"],
+               ["CAZ", "RI", "céphalosporine de 3e génération atteinte"]],
+        contre: [["FEP", "R", "la céfépime est habituellement conservée face à une céphalosporinase ; atteinte, elle évoque une BLSE surajoutée"]],
+        aConfirmerPar: "recherche de BLSE associée (synergie sur gélose au cloxacilline) si la céfépime est atteinte"
+      });
       A.rules.push({ k: "?", txt: "Céfépime souvent conservé — vérifier la CMI." });
       if (estCasfm()) {
         A.rules.push({ k: "→R", txt: "CA-SFM : lecture interprétative — C1G à C3G et céfoxitine rendues R ; associations avec inhibiteur peu fiables." });
@@ -607,6 +686,12 @@ function staphInterpret(r, c, a) {
   if (mrsa) {
     A.sev = "crit"; A.name = metiR;
     A.mech = "Résistance à la méticilline (mecA/mecC) : toutes les β-lactamines usuelles sont inactives.";
+    parce(A, r, {
+      pour: [["FOX", "RI", "céfoxitine atteinte — c'est elle qui dépiste la résistance à la méticilline, mieux que l'oxacilline"],
+             ["OXA", "RI", "oxacilline atteinte"]],
+      contre: [["PEN", "S", "une pénicilline G conservée est inattendue chez une souche résistante à la méticilline : vérifier l'identification et la pureté"]],
+      aConfirmerPar: "détection de la PLP2a, ou recherche de mecA/mecC, si le profil surprend"
+    });
     A.alerts.push({ lvl: "crit", txt: coNS
       ? "Résistance à la méticilline : β-lactamines inactives. Impact majeur sur les infections de matériel étranger / prothèse."
       : "Précautions complémentaires contact et signalement (portage, épidémiologie)." });
@@ -615,6 +700,11 @@ function staphInterpret(r, c, a) {
   } else if (isR(r.PEN)) {
     A.sev = "mod"; A.name = coNS ? `${sp} — pénicillinase` : "SASM producteur de pénicillinase";
     A.mech = "Pénicilline G résistante par pénicillinase (blaZ) ; méticilline / oxacilline actives.";
+    parce(A, r, {
+      pour: [["PEN", "R", "pénicilline G atteinte — l'enzyme l'hydrolyse"],
+             ["FOX", "S", "céfoxitine conservée : la méticilline reste active, ce qui sépare la pénicillinase de la méticillino-résistance"]],
+      aConfirmerPar: "test à la nitrocéfine, si le rendu de la pénicilline G doit être affirmé"
+    });
     A.rules.push({ k: "→R", txt: "Pénicilline G et aminopénicillines sans inhibiteur rendues R." });
     A.comment = `${sp} ${metiS}, producteur de pénicillinase. Pénicilline G résistante ; pénicillines M et associations avec inhibiteur actives.`;
   } else {
@@ -650,6 +740,11 @@ function enteroCoccusInterpret(r, c, { species, ampExpectedS }) {
   if (isRI(r.VA)) {
     A.sev = "crit"; A.name = "ERV — Entérocoque résistant aux glycopeptides";
     A.mech = "Résistance à la vancomycine (gènes vanA/vanB le plus souvent). Confirmer le génotype.";
+    parce(A, r, {
+      pour: [["VA", "RI", "vancomycine atteinte — c'est la définition du phénotype"],
+             ["TEC", "RI", "téicoplanine également atteinte : oriente vers vanA plutôt que vanB"]],
+      aConfirmerPar: "génotypage van (vanA / vanB), qui distingue les deux et change la conduite"
+    });
     A.alerts.push({ lvl: "crit", txt: "Précautions complémentaires contact renforcées et signalement immédiat (EOH). Risque épidémique." });
     A.rules.push({ k: "✚", txt: "Options à discuter selon l'antibiogramme : linézolide (souvent actif)." });
     A.comment = `${species} résistant aux glycopeptides (ERV). Souche à signaler d'urgence, précautions complémentaires contact renforcées. Génotype van à confirmer.`;
@@ -685,6 +780,16 @@ function pseudoInterpret(r, c) {
     isRI(r.GEN) || isRI(r.AMK)
   ].filter(Boolean).length;
 
+  // Les familles comptées ci-dessus, dites en clair pour la grille.
+  const FAMILLES = [["TZP", "RI", "β-lactamine anti-pyocyanique atteinte"],
+                    ["CAZ", "RI", "β-lactamine anti-pyocyanique atteinte"],
+                    ["FEP", "RI", "β-lactamine anti-pyocyanique atteinte"],
+                    ["IPM", "RI", "carbapénème atteint"],
+                    ["MEM", "RI", "carbapénème atteint"],
+                    ["CIP", "RI", "fluoroquinolone atteinte"],
+                    ["GEN", "RI", "aminoside atteint"],
+                    ["AMK", "RI", "aminoside atteint"]];
+
   const carba = isRI(r.IPM) || isRI(r.MEM);
   const onlyColistin = has(r, "COL") && r.COL === "S" &&
     ["TZP", "CAZ", "FEP", "IPM", "MEM", "CIP", "GEN", "AMK"].every(k => !has(r, k) || isRI(r[k]));
@@ -692,16 +797,27 @@ function pseudoInterpret(r, c) {
   if (onlyColistin && classes >= 3) {
     A.sev = "crit"; A.name = "Pseudomonas toto-résistant (XDR)";
     A.mech = "Résistance à quasiment toutes les familles anti-pyocyaniques, colistine encore active.";
+    parce(A, r, {
+      pour: FAMILLES.concat([["COL", "S", "colistine encore active — c'est ce qui sépare le toto-résistant du multirésistant"]]),
+      aConfirmerPar: "CMI de colistine par microdilution en milieu liquide : la méthode des disques ne vaut pas pour elle"
+    });
     A.alerts.push({ lvl: "crit", txt: "Précautions complémentaires contact et signalement. Avis référent en antibiothérapie." });
     A.comment = "Pseudomonas aeruginosa toto-résistant (XDR) : seule la colistine reste active sur le panel. Souche à signaler ; avis spécialisé indispensable.";
   } else if (classes >= 3) {
     A.sev = "high"; A.name = "Pseudomonas multirésistant (MDR)";
     A.mech = "Résistance acquise à au moins trois familles anti-pyocyaniques.";
+    parce(A, r, { pour: FAMILLES });
     A.alerts.push({ lvl: "warn", txt: "Précautions complémentaires contact ; options thérapeutiques limitées." });
     A.comment = "Pseudomonas aeruginosa multirésistant (MDR). Options thérapeutiques restreintes — voir antibiogramme détaillé.";
   } else if (carba) {
     A.sev = "high"; A.name = "Résistance aux carbapénèmes";
     A.mech = "Sensibilité diminuée aux carbapénèmes : imperméabilité (perte OprD) et/ou carbapénémase.";
+    parce(A, r, {
+      pour: [["IPM", "RI", "imipénème atteint — la perte de la porine OprD l'atteint en premier"],
+             ["MEM", "RI", "méropénème atteint"]],
+      contre: [["CAZ", "S", "une ceftazidime conservée oriente vers une imperméabilité plutôt que vers une carbapénémase"]],
+      aConfirmerPar: "recherche de carbapénémase, qui change la conduite d'hygiène"
+    });
     A.alerts.push({ lvl: "warn", txt: "Discordance imipénème/méropénème possible ; envisager confirmation de carbapénémase." });
     A.comment = "Pseudomonas aeruginosa de sensibilité diminuée aux carbapénèmes (imperméabilité et/ou carbapénémase à préciser).";
   } else if (classes > 0) {
@@ -794,12 +910,22 @@ function pneumoInterpret(r, c) {
   if (betaR) {
     A.sev = "high"; A.name = "PSDP — sensibilité diminuée aux β-lactamines";
     A.mech = "Pneumocoque de sensibilité diminuée à la pénicilline et/ou aux céphalosporines (modification des PLP).";
+    parce(A, r, {
+      pour: [["PEN", "RI", "pénicilline G atteinte"],
+             ["AMX", "RI", "amoxicilline atteinte"],
+             ["CTX", "RI", "céfotaxime atteint — l'atteinte des céphalosporines est plus tardive que celle de la pénicilline"]],
+      aConfirmerPar: "CMI de pénicilline G, d'amoxicilline et de céfotaxime, qui ne se recouvrent pas"
+    });
     A.rules.push({ k: "CMI", txt: "Rendre pénicilline, amoxicilline et céfotaxime selon leur CMI (les catégories diffèrent par molécule)." });
     if (mening) A.alerts.push({ lvl: "crit", txt: "Contexte méningé : appliquer les seuils méningés (stricts). Céfotaxime/ceftriaxone à forte dose ; avis spécialisé." });
     A.comment = `Streptococcus pneumoniae de sensibilité diminuée aux β-lactamines (PSDP). Rendre pénicilline G, amoxicilline et céfotaxime selon leurs CMI respectives${mening ? ", avec les seuils méningés" : ""}.`;
   } else if (oxaR) {
     A.sev = "mod"; A.name = "Dépistage oxacilline positif — CMI requises";
     A.mech = "Diamètre oxacilline diminué : sensibilité aux β-lactamines à confirmer par les CMI de pénicilline, amoxicilline et céfotaxime.";
+    parce(A, r, {
+      pour: [["OXA", "RI", "dépistage à l'oxacilline positif — il signale une modification des protéines liant les pénicillines, PAS une résistance clinique"]],
+      aConfirmerPar: "CMI de pénicilline G, d'amoxicilline et de céfotaxime : le dépistage ne tranche pas, il alerte"
+    });
     A.alerts.push({ lvl: "warn", txt: "Déterminer les CMI de pénicilline G, amoxicilline et céfotaxime avant de conclure." });
     A.comment = "Streptococcus pneumoniae : dépistage oxacilline positif. Déterminer les CMI de pénicilline, amoxicilline et céfotaxime pour catégorisation.";
   } else {
@@ -915,11 +1041,21 @@ function fastidInterpret(r, c, a) {
       if (amcR) {
         A.sev = "high"; A.name = "BLPACR (β-lactamase + PLP3)";
         A.mech = "Double mécanisme : β-lactamase ET modification de PLP3 (ftsI).";
+        parce(A, r, {
+          pour: [["AMP", "RI", "ampicilline atteinte"],
+                 ["AMC", "RI", "l'association avec le clavulanate reste atteinte : l'inhibiteur ne restaure pas tout, donc une PLP3 modifiée s'ajoute à l'enzyme"]],
+          confirme: "test à la β-lactamase (nitrocéfine) positif"
+        });
         A.rules.push({ k: "→R", txt: "Aminopénicillines et associations avec inhibiteur R ; sensibilité aux C3G diminuée — vérifier la CMI de céfotaxime." });
         A.comment = `${sp} BLPACR (β-lactamase + PLP3 modifiée). Aminopénicillines et amoxicilline-clavulanate résistantes ; C3G à interpréter selon la CMI.`;
       } else {
         A.sev = "mod"; A.name = "BLPAR (β-lactamase +)";
         A.mech = "β-lactamase (TEM-1 le plus souvent) : aminopénicillines hydrolysées, restaurées par le clavulanate.";
+        parce(A, r, {
+          pour: [["AMP", "RI", "ampicilline atteinte — l'enzyme l'hydrolyse"],
+                 ["AMC", "S", "le clavulanate restaure l'activité : c'est la signature d'une β-lactamase seule"]],
+          confirme: "test à la β-lactamase (nitrocéfine) positif"
+        });
         A.rules.push({ k: "→R", txt: "Ampicilline / amoxicilline R ; amoxicilline-clavulanate et C3G actives." });
         A.comment = `${sp} producteur de β-lactamase (BLPAR). Ampicilline/amoxicilline résistantes ; amoxicilline-clavulanate et céphalosporines de 3e génération actives.`;
       }
@@ -927,6 +1063,12 @@ function fastidInterpret(r, c, a) {
       if (amcR || blac === "Négatif") {
         A.sev = "high"; A.name = "BLNAR (PLP3 modifiée)";
         A.mech = "Résistance à l'ampicilline sans β-lactamase : modification de PLP3 (ftsI). Le clavulanate ne restaure pas l'activité.";
+        parce(A, r, {
+          pour: [["AMP", "RI", "ampicilline atteinte"],
+                 ["AMC", "RI", "le clavulanate ne restaure rien : la cible est modifiée, il n'y a pas d'enzyme à inhiber"]],
+          confirme: blac === "Négatif" ? "test à la β-lactamase (nitrocéfine) négatif" : null,
+          aConfirmerPar: blac === "Négatif" ? null : "test à la β-lactamase (nitrocéfine), qui sépare ce phénotype d'une β-lactamase"
+        });
         A.rules.push({ k: "→R", txt: "Aminopénicillines R ; associations avec inhibiteur peu fiables ; sensibilité aux C3G diminuée — vérifier la CMI." });
         A.alerts.push({ lvl: "warn", txt: "BLNAR : privilégier une C3G (céfotaxime/ceftriaxone) pour les formes invasives, après vérification de la CMI." });
         A.comment = `${sp} BLNAR (PLP3 modifiée, β-lactamase négative). Aminopénicillines résistantes non restaurées par le clavulanate ; C3G selon la CMI.`;
@@ -949,6 +1091,10 @@ function fastidInterpret(r, c, a) {
     if (penRI) {
       A.sev = "mod"; A.name = "Sensibilité diminuée à la pénicilline (penA/PLP2)";
       A.mech = "Modification de PLP2 : sensibilité diminuée à la pénicilline G et à l'amoxicilline.";
+      parce(A, r, {
+        pour: [["PEN", "RI", "pénicilline G atteinte sans β-lactamase décelée — la cible est modifiée"]],
+        aConfirmerPar: "CMI de ceftriaxone, qui conditionne le traitement"
+      });
       A.rules.push({ k: "CMI", txt: "Rendre la pénicilline selon la CMI ; la C3G reste active." });
       A.comment = `${sp} de sensibilité diminuée à la pénicilline. La céfotaxime/ceftriaxone reste le traitement de référence des formes invasives.`;
     } else {

@@ -202,6 +202,60 @@ QUIZ_BANK.forEach(function (c, i) {
   if (c.q2) verifierResoluble(c, n, c.q2.answer, c.ctx);
 });
 
+/* ------------------------------------------------------------
+   Les arguments décrivent-ils l'antibiogramme qu'on a sous les yeux ?
+
+   Un « argument en faveur » qui citerait une catégorie que la souche ne
+   porte pas serait pire qu'une absence d'explication : il donnerait au
+   raisonnement une apparence de rigueur en le fondant sur rien. Ce contrôle
+   confronte donc chaque élément de la grille au résultat réellement saisi.
+
+   Les éléments DISCORDANTS, eux, ne sont pas une faute : une BLSE
+   accompagnée d'une imperméabilité atteint la céfoxitine, et le dire est
+   juste. Ils sont comptés et affichés, pas sanctionnés.
+   ------------------------------------------------------------ */
+dire("\nLes arguments correspondent-ils à l'antibiogramme ?");
+(function () {
+  var avecGrille = 0, sansGrille = [], discordants = 0, niveaux = {};
+  var NIVEAUX = ["confirmé", "probable", "possible"];
+
+  QUIZ_BANK.forEach(function (c, i) {
+    if (c.kind === "ident") return;
+    var cas = (c.kind === "combo") ? c.interp : c;
+    if (!cas.res) return;
+    var A = E.runInterpretation({ organism: cas.org, mode: "sir",
+                                  results: cas.res, ctx: cas.ctx || {} }).interpretation;
+    if (!A.pour && !A.contre) { sansGrille.push(cas.org); return; }
+    avecGrille++;
+
+    (A.pour || []).concat(A.contre || []).forEach(function (x) {
+      if (cas.res[x.abx] !== x.cat) {
+        KO++;
+        dire("  ÉCHEC  cas " + (i + 1) + " (" + cas.org + ") : la grille cite " +
+             x.abx + " " + x.cat + ", l'antibiogramme porte " + (cas.res[x.abx] || "rien"));
+      } else { OK++; }
+    });
+
+    if (NIVEAUX.indexOf(A.confiance) === -1) {
+      KO++; dire("  ÉCHEC  cas " + (i + 1) + " : niveau de confiance inattendu « " + A.confiance + " »");
+    } else { OK++; niveaux[A.confiance] = (niveaux[A.confiance] || 0) + 1; }
+
+    if (A.confirmation && A.confiance !== "confirmé") {
+      KO++; dire("  ÉCHEC  cas " + (i + 1) + " : un test de confirmation est cité, mais la confiance reste « " + A.confiance + " »");
+    } else { OK++; }
+
+    discordants += (A.contre || []).length;
+  });
+
+  dire("  " + avecGrille + " cas sur " + (avecGrille + sansGrille.length) +
+       " portent une grille d'arguments.");
+  dire("  niveaux : " + NIVEAUX.map(function (n) { return (niveaux[n] || 0) + " " + n; }).join(", ") + ".");
+  if (discordants) dire("  " + discordants + " élément(s) discordant(s) signalé(s) — ce n'est pas une faute.");
+  if (sansGrille.length)
+    dire("  sans grille, et donc sans explication affichée : " +
+         sansGrille.filter(function (v, k, s) { return s.indexOf(v) === k; }).join(", ") + ".");
+})();
+
 dire("\n" + QUIZ_BANK.length + " cas dans la banque — " + exacts + " sur le titre du phénotype, "
      + secondaires + " sur un axe secondaire appuyé par le moteur.");
 dire(KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."

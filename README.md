@@ -248,6 +248,41 @@ done; echo
 
 Les premières réponses sont des `200`, les dernières des `429`.
 
+## Pourquoi ce phénotype
+
+Le moteur ne rend plus seulement une conclusion : il rend le chemin qui y
+mène — **arguments en faveur**, **éléments discordants**, **niveau de
+confiance**, et le test qui permettrait de trancher.
+
+Les critères sont énoncés **au point de décision**, dans la branche même qui
+les teste. C'est délibéré : une grille écrite à part finirait par décrire
+autre chose que ce que le moteur fait, et un raisonnement faux présenté comme
+une explication est pire qu'une conclusion sans explication.
+
+Trois niveaux, adossés à ce qu'on a en main :
+
+| | |
+|---|---|
+| **confirmé** | un test de confirmation figure au dossier et l'appuie |
+| **probable** | le profil est complet et rien ne le contredit |
+| **possible** | un élément discorde, ou une molécule clé n'a pas été testée |
+
+« Possible » n'est pas un demi-échec : c'est l'état normal d'un antibiogramme
+incomplet, et le dire vaut mieux que de conclure quand même. Le niveau figure
+aussi **sur le compte rendu**, à côté du verdict, avec ce qu'il faudrait pour
+trancher — un phénotype seulement possible ne doit pas se lire comme une
+affirmation.
+
+`outils/essai-banque.js` confronte chaque grille aux 55 antibiogrammes de la
+banque : un argument qui citerait une catégorie que la souche ne porte pas
+fait échouer le banc. Les éléments discordants, eux, sont comptés et affichés
+sans être sanctionnés — une BLSE accompagnée d'une imperméabilité atteint la
+céfoxitine, et le dire est juste.
+
+Seize phénotypes portent une grille à ce jour. Le banc annonce la couverture
+à chaque exécution, et nomme les espèces qui n'en ont pas : elle se complète
+sans qu'on ait à s'en souvenir.
+
 ## Les règles sont des données
 
 `base-connaissances.js` **fait foi** : 578 règles, une par ligne, chacune
