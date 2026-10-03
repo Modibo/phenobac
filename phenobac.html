@@ -321,27 +321,20 @@
     border-left:3px solid #a9700a;border-radius:4px;padding:10px 12px}
   .id-note b{color:#0f2129}
   .offres-wrap{max-width:var(--maxw);margin:26px auto 0;padding:0 20px}
-  /* Le bandeau d'ouverture restait centré sur sept cents pixels au milieu
-     d'un écran vide. Au-delà de 1000 px il se range en deux colonnes — le
-     titre d'un côté, le propos de l'autre — et occupe toute la largeur sans
-     que la ligne de texte s'allonge. */
+  /* Le bandeau d'ouverture : un seul bloc aligné à gauche sur grand écran,
+     titre puis propos, chacun sur toute la largeur. Pas de découpe en
+     colonnes. */
   .offres-hero{text-align:center;margin-bottom:26px}
   @media(min-width:1000px){
-    .offres-hero{text-align:left;display:grid;gap:10px 44px;align-items:center;
-      grid-template-columns:minmax(0,auto) minmax(0,1fr);margin-bottom:30px}
-    .offres-mark{grid-column:1;margin:0 0 4px}
-    .offres-hero .oh-eyebrow{grid-column:1}
-    .offres-hero h1{grid-column:1;margin:0;max-width:18ch}
-    .offres-hero .oh-tagline{grid-column:1;margin-top:4px}
-    /* Le propos occupe la seconde colonne sur toute la hauteur du bloc. */
-    .offres-hero p{grid-column:2;grid-row:1 / span 4;margin:0;max-width:none;
-      column-count:2;column-gap:34px;align-self:center}
+    .offres-hero{text-align:left;margin-bottom:30px}
+    .offres-mark{margin:0 0 6px}
+    .offres-hero .oh-tagline{margin-top:12px}
   }
   .offres-hero .oh-eyebrow{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--gold-deep);font-weight:500}
   .offres-hero h1{font-weight:600;font-size:clamp(22px,3vw,30px);line-height:1.2;letter-spacing:-.012em;
-    color:var(--ink);margin:12px auto;max-width:24ch;text-wrap:balance}
-  .offres-hero p{font-size:15.5px;color:var(--ink-soft);max-width:72ch;margin:0 auto;line-height:1.68}
+    color:var(--ink);margin:12px auto;text-wrap:balance}
+  .offres-hero p{font-size:15.5px;color:var(--ink-soft);margin:10px auto 0;line-height:1.68}
   .oh-tagline{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.22em;text-transform:uppercase;
     color:var(--teal-deep);margin-top:14px}
   .plans{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
@@ -877,14 +870,10 @@
   }
 
   footer{max-width:var(--maxw);margin:24px auto 0;padding:0 20px}
-  /* L'avertissement prend toute la largeur, mais le texte se répartit en
-     colonnes : une ligne de prose de 1500 px est illisible — l'œil perd le
-     début de la ligne suivante en revenant à la marge. Deux colonnes
-     remplissent l'écran ET gardent une mesure confortable. */
+  /* Pleine largeur, d'un seul tenant : pas de découpe en colonnes. */
   .disclaimer{font-size:13px;color:var(--ink-soft);line-height:1.7;background:var(--surface);
     border:1px solid var(--line);border-left:3px solid var(--i);border-radius:var(--radius);
     padding:16px 18px}
-  @media(min-width:1000px){ .disclaimer{columns:2;column-gap:40px} }
   .credit{margin-top:14px;font-family:'IBM Plex Mono';font-size:11.5px;line-height:1.6;
     color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 18px}
   .credit b{color:var(--ink-soft);font-weight:500}
@@ -918,7 +907,7 @@
     font-size:clamp(20px,2.6vw,27px); font-weight:600; line-height:1.22;
     letter-spacing:-.01em; color:var(--ink); margin-bottom:10px; text-wrap:balance;
   }
-  .intro-lead{ font-size:14.5px; line-height:1.62; color:var(--ink-soft); max-width:92ch; }
+  .intro-lead{ font-size:14.5px; line-height:1.62; color:var(--ink-soft); }
   .intro-lead b{ color:var(--ink); font-weight:600; }
 
   .intro-facts{
@@ -1024,26 +1013,15 @@
   .ap-bloc h2{
     font-size:17px; font-weight:600; color:var(--ink); margin-bottom:12px; letter-spacing:-.01em;
   }
-  .ap-bloc p{ font-size:15px; line-height:1.68; color:var(--ink-soft); max-width:56ch; }
+  .ap-bloc p{ font-size:15px; line-height:1.68; color:var(--ink-soft); }
   .ap-bloc p + p{ margin-top:9px; }
   .ap-bloc b{ color:var(--ink); font-weight:600; }
-  /* La liste et les paragraphes coulent en colonnes : c'est là que la largeur
-     se remplit. Un point de la liste ne doit pas être coupé en deux par un
-     saut de colonne — on le lirait en deux endroits. */
-  .ap-liste{ list-style:none; display:block; }
-  @media(min-width:900px){ .ap-liste{ columns:2; column-gap:34px } }
-  @media(min-width:1340px){ .ap-liste{ columns:3 } }
-  /* Deux colonnes pour les paragraphes, trois pour la liste : un paragraphe
-     court découpé en trois donne des lignes de quatre mots, qui se lisent
-     plus mal qu'une seule colonne. La liste, elle, est assez longue pour
-     que trois colonnes la servent. */
+  /* Liste et paragraphes d'un seul tenant, sur toute la largeur. */
+  .ap-liste{ list-style:none; display:flex; flex-direction:column; gap:10px; }
   .ap-bloc > p{ margin:0 }
-  @media(min-width:900px){ .ap-bloc > p{ columns:2; column-gap:40px } }
   .ap-liste li{
     font-size:15px; line-height:1.62; color:var(--ink-soft);
     padding-left:16px; position:relative;
-    break-inside:avoid; -webkit-column-break-inside:avoid;
-    margin-bottom:10px;
   }
   .ap-liste li::before{
     content:""; position:absolute; left:0; top:.62em; width:6px; height:6px;
