@@ -248,6 +248,34 @@ done; echo
 
 Les premières réponses sont des `200`, les dernières des `429`.
 
+## Resistance Detective
+
+Un bouton **« Pourquoi ? »** sous le verdict déroule le raisonnement en sept
+étapes : ce qui a été mesuré → les seuils appliqués → les résistances
+naturelles de l'espèce → les cohérences et les incohérences → le phénotype
+compatible → ce qui permettrait de trancher → l'interprétation proposée.
+
+Rien n'y est recalculé : tout vient du moteur, remis dans l'ordre du
+raisonnement. **L'ordre est l'explication** — c'est lui qui montre que le
+phénotype découle des observations, et non l'inverse.
+
+Une étape n'existait nulle part ailleurs : **les seuils réellement
+appliqués**. Quand le laboratoire saisit 10 mm, c'est une règle précise qui en
+fait un « R », et cette règle a une charge de disque, une source, une version
+et une date :
+
+```
+Amoxicilline · 10 mm · S ≥ 14 · R < 14 mm · disque 10 µg · R
+Breakpoint tables… v16.1 — publiée le 2026-06-24 · base de connaissances 2026.10
+```
+
+En mode S/I/R, le panneau le dit franchement : les catégories ont été saisies
+telles qu'elles ont été lues, aucun seuil n'a été appliqué. Montrer un seuil
+qui n'a pas servi serait trompeur.
+
+Le raisonnement se **copie en texte**, pour le dossier ou pour un
+enseignement.
+
 ## Contrôles de cohérence
 
 Quatre niveaux, nommés à l'écran — **information**, **à vérifier**, **alerte

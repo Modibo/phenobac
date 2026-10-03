@@ -458,6 +458,37 @@
   .bp-conv{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
     background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
     border-radius:100px;padding:1px 6px;margin-left:7px;white-space:nowrap;cursor:help}
+  /* Resistance Detective — la chaîne du raisonnement */
+  .modal-pied{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:14px 22px 18px;border-top:1px solid var(--line)}
+  .det-msg{font-size:12.5px;color:var(--ink-faint)}
+  .det-chaine{position:relative;padding-left:26px}
+  /* Le trait qui relie les étapes : c'est lui qui dit « donc ». */
+  .det-chaine::before{content:"";position:absolute;left:7px;top:10px;bottom:10px;
+    width:1px;background:var(--line-strong)}
+  .det-et{position:relative;padding:0 0 18px}
+  .det-et:last-child{padding-bottom:0}
+  .det-et::before{content:"";position:absolute;left:-23px;top:5px;width:9px;height:9px;
+    border-radius:100px;background:var(--surface);border:1.5px solid var(--line-strong)}
+  .det-et.pivot::before{background:var(--teal);border-color:var(--teal)}
+  .det-t{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--ink-faint);margin-bottom:5px}
+  .det-c{font-size:13.5px;line-height:1.6;color:var(--ink)}
+  .det-c b{font-weight:600}
+  .det-vide{color:var(--ink-faint);font-style:italic}
+  .det-ligne{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;
+    padding:4px 0;border-bottom:1px dashed var(--line)}
+  .det-ligne:last-child{border-bottom:none}
+  .det-ligne .dn{flex:1 1 150px;min-width:0}
+  .det-ligne .dm{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--ink-soft);white-space:nowrap}
+  .det-ligne .dc{font-family:'IBM Plex Mono';font-weight:600;font-size:12px}
+  .det-src{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);margin-top:7px}
+  .det-concl{background:var(--teal-wash,#e8f2f0);border:1px solid var(--line);border-radius:4px;
+    padding:12px 14px;font-size:13.5px;line-height:1.6}
+  .v-pourquoi{font-family:'IBM Plex Sans';font-size:12px;font-weight:500;padding:5px 12px;
+    border-radius:100px;cursor:pointer;border:1px solid currentColor;background:transparent;
+    color:inherit;opacity:.85;margin-top:10px}
+  .v-pourquoi:hover{opacity:1}
   /* Refus de conclure, et niveaux d'alerte nommés */
   .nonsecur{border:1.5px solid var(--r-line);background:var(--r-bg);border-radius:var(--radius);
     padding:14px 16px;margin-bottom:14px}
@@ -1222,6 +1253,24 @@
 
 <!-- Versement à la surveillance. Ce qui part est écrit noir sur blanc dans la
      modale : personne ne doit découvrir après coup ce qui a été transmis. -->
+<!-- Resistance Detective — § 8. Le raisonnement déroulé, de ce qui a été
+     mesuré jusqu'à ce qui est proposé, lisible par un technicien ou un
+     étudiant. Rien n'y est recalculé : tout vient du moteur. -->
+<div class="modal-ov" id="detectiveModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Pourquoi cette interprétation">
+    <div class="modal-top">
+      <div class="modal-eyebrow">Resistance Detective</div>
+      <div class="modal-title">Pourquoi cette interprétation&nbsp;?</div>
+      <button class="modal-close" id="detClose" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-b" id="detCorps"></div>
+    <div class="modal-pied">
+      <button class="btn" id="detCopier">Copier le raisonnement</button>
+      <span class="det-msg" id="detMsg"></span>
+    </div>
+  </div>
+</div>
+
 <div class="modal-ov" id="survModal">
   <div class="modal" role="dialog" aria-modal="true" aria-label="Verser à la surveillance">
     <div class="modal-top">
@@ -3326,6 +3375,163 @@ function selectionner(el){
   }catch(e){ /* sélection impossible : on n'insiste pas */ }
 }
 
+/* ============================================================
+   RESISTANCE DETECTIVE — § 8
+
+   « Pourquoi PhénoBac propose-t-il cette interprétation ? »
+
+   La réponse déroule sept étapes, de ce qui a été mesuré jusqu'à ce qui est
+   proposé. Rien n'y est recalculé : tout vient du moteur, remis dans l'ordre
+   du raisonnement. L'ordre EST l'explication — c'est lui qui montre que le
+   phénotype découle des observations, et non l'inverse.
+
+   Une étape n'existait nulle part ailleurs : les SEUILS RÉELLEMENT APPLIQUÉS.
+   Quand le laboratoire saisit 12 mm, c'est une règle précise qui en fait un
+   « R », et cette règle a une source, une version et une date. Le § 17 demande
+   qu'elle soit citable ; c'est ici qu'elle l'est.
+   ============================================================ */
+const DET_ETAPES = [
+  "Ce qui a été mesuré",
+  "Les seuils appliqués",
+  "Les résistances naturelles de l'espèce",
+  "Les cohérences et les incohérences",
+  "Le phénotype compatible",
+  "Ce qui permettrait de trancher",
+  "L'interprétation proposée"
+];
+
+function detEtape(i, corps, pivot){
+  return `<div class="det-et${pivot?" pivot":""}">
+      <div class="det-t">${i+1}. ${esc(DET_ETAPES[i])}</div>
+      <div class="det-c">${corps || '<span class="det-vide">rien à signaler</span>'}</div>
+    </div>`;
+}
+
+/* Les seuils employés, molécule par molécule. En S/I/R il n'y en a pas : la
+   catégorie a été lue à la paillasse, et le dire est plus honnête que de
+   montrer un seuil qui n'a pas servi. */
+function detSeuils(g){
+  const M = self.PhenoBacMoteur;
+  if(state.mode === "sir")
+    return `<span class="det-vide">Les catégories ont été saisies telles qu'elles ont été lues : `
+         + `aucun seuil n'a été appliqué par l'application.</span>`;
+  const mm = state.mode === "diam";
+  const valeurs = mm ? state.diam : state.mic;
+  const lignes = [];
+  panelComplet(currentOrg()).forEach(grp => grp.abx.forEach(k => {
+    const v = valeurs[k]; if(!v || !String(v).trim()) return;
+    const seuil = mm ? getDZ(g,k) : getBP(g,k);
+    const cat = state.results[k];
+    let regle;
+    if(!seuil){
+      regle = mm ? "aucun seuil au disque" : "aucun seuil";
+    } else if(mm){
+      regle = (seuil.S===null||seuil.S===undefined ? "pas de catégorie S" : "S ≥ "+seuil.S)
+            + " · R < " + seuil.R + " mm";
+      const d = disquePour(g,k);
+      if(d) regle += " · disque " + (d.charge==="1 unit" ? "1 UI" : d.charge+" µg");
+    } else {
+      regle = (seuil.S===null||seuil.S===undefined ? "pas de catégorie S" : "S ≤ "+fmt(seuil.S))
+            + " · R > " + fmt(seuil.R) + " mg/L";
+    }
+    lignes.push(`<div class="det-ligne">
+        <span class="dn">${esc(ABX[k]?ABX[k].n:k)}</span>
+        <span class="dm">${esc(String(v))} ${mm?"mm":"mg/L"} · ${esc(regle)}</span>
+        <span class="dc lc-${classeCat(cat)}">${cat?esc(lettreCat(cat)):"—"}</span>
+      </div>`);
+  }));
+  if(!lignes.length) return "";
+  const src = (M && M.SOURCES && M.SOURCES[REF_ACTIF]) || null;
+  return lignes.join("")
+    + `<div class="det-src">${src ? esc(src.document) : esc(refLibelle())}`
+    + ` — version ${esc(src?src.version:refDate())}, publiée le ${esc(src?src.publie:refDate())}`
+    + ` · base de connaissances ${esc((M&&M.BASE_VERSION)||"—")}</div>`;
+}
+
+function renderDetective(A){
+  const org = currentOrg(), g = bpGroup();
+  let h = `<div class="det-chaine">`;
+
+  // 1. ce qui a été mesuré
+  const mesures = [];
+  panelComplet(org).forEach(grp => grp.abx.forEach(k => {
+    const c = state.results[k]; if(!c) return;
+    mesures.push(`<div class="det-ligne"><span class="dn">${esc(ABX[k]?ABX[k].n:k)}</span>`
+      + `<span class="dc lc-${classeCat(c)}">${esc(lettreCat(c))}</span></div>`);
+  }));
+  h += detEtape(0, mesures.length ? mesures.join("")
+      : "", false);
+
+  // 2. les seuils
+  h += detEtape(1, detSeuils(g), false);
+
+  // 3. résistances naturelles
+  const intr = Object.keys(org.intrinsic || {});
+  h += detEtape(2, intr.length
+      ? intr.map(k => `<div class="det-ligne"><span class="dn">${esc(ABX[k]?ABX[k].n:k)}</span>`
+          + `<span class="dm">${esc(org.intrinsic[k])}</span></div>`).join("")
+      : `<span class="det-vide">Aucune résistance naturelle attendue sur ce panel.</span>`, false);
+
+  // 4. cohérences
+  const NIVN = { stop:"Interprétation impossible", crit:"Alerte majeure", warn:"À vérifier", info:"Information" };
+  h += detEtape(3, (A.alerts||[]).length
+      ? A.alerts.map(a => `<div class="det-ligne"><span class="dn">`
+          + `<b>${esc(NIVN[a.lvl]||"Information")}</b> — ${esc(a.txt)}</span></div>`).join("")
+      : "", false);
+
+  // 5. le phénotype, et ce qui l'appuie
+  let ph = `<b>${esc(A.name)}</b>`
+    + (A.confiance ? ` <span class="niv niv-${A.confiance==="confirmé"?"conf":A.confiance==="probable"?"prob":"poss"}">${esc(A.confiance)}</span>` : "")
+    + `<div style="margin-top:6px">${esc(A.mech)}</div>`;
+  (A.pour||[]).forEach(x => { ph += `<div class="det-ligne"><span class="dn">+ ${esc(x.txt)}</span></div>`; });
+  (A.contre||[]).forEach(x => { ph += `<div class="det-ligne"><span class="dn">− ${esc(x.txt)}</span></div>`; });
+  (A.nonTeste||[]).forEach(x => { ph += `<div class="det-ligne"><span class="dn">? ${esc(x.txt)} — non testé</span></div>`; });
+  h += detEtape(4, ph, true);
+
+  // 6. ce qui trancherait
+  const trancher = [];
+  if(A.confirmation) trancher.push(`<div class="det-ligne"><span class="dn">Déjà au dossier : ${esc(A.confirmation)}.</span></div>`);
+  if(A.aConfirmerPar) trancher.push(`<div class="det-ligne"><span class="dn">${esc(A.aConfirmerPar)}</span></div>`);
+  h += detEtape(5, trancher.join(""), false);
+
+  // 7. l'interprétation
+  let concl = `<div class="det-concl">${esc(A.comment||"—")}</div>`;
+  if((A.rendu||[]).length){
+    concl += `<div style="margin-top:9px">Catégories modifiées par la lecture interprétative :</div>`
+      + A.rendu.map(x => `<div class="det-ligne"><span class="dn">${esc(ABX[x.abx]?ABX[x.abx].n:x.abx)}</span>`
+          + `<span class="dm">lu ${esc(lettreCat(x.brut))}, rendu R — ${esc(x.motif)}</span></div>`).join("");
+  }
+  h += detEtape(6, concl, true);
+
+  h += `</div>`;
+  $("#detCorps").innerHTML = h;
+  $("#detMsg").textContent = "";
+  $("#detectiveModal").classList.add("open");
+}
+
+/* Le même raisonnement en texte, pour le dossier ou pour un enseignement. */
+function detectiveTexte(A){
+  const org = currentOrg();
+  const L = [];
+  L.push("POURQUOI CETTE INTERPRÉTATION — " + (org.label||state.org));
+  L.push("");
+  document.querySelectorAll("#detCorps .det-et").forEach(e => {
+    L.push(e.querySelector(".det-t").textContent.trim());
+    e.querySelectorAll(".det-ligne, .det-concl, .det-vide, .det-src").forEach(x => {
+      // textContent colle les cellules les unes aux autres — « AmoxicillineR »
+      // au lieu de « Amoxicilline · R ». On recompose avec un séparateur.
+      const cases = x.querySelectorAll(".dn, .dm, .dc");
+      const s = (cases.length
+        ? [...cases].map(c => c.textContent.replace(/\s+/g," ").trim()).filter(Boolean).join(" · ")
+        : x.textContent.replace(/\s+/g," ").trim());
+      if(s) L.push("   " + s);
+    });
+    L.push("");
+  });
+  L.push("PhénoBac — outil d'aide à l'interprétation. Validation biologique requise.");
+  return L.join("\n");
+}
+
 function renderInterpretView(A){
   /* § 25 — l'absence de conclusion vaut mieux qu'une conclusion fausse. Quand
      l'espèce est probablement erronée, le bandeau passe DEVANT le verdict :
@@ -3339,6 +3545,7 @@ function renderInterpretView(A){
       <div class="v-eyebrow"><span class="led ${A.sev==='crit'?'pulse':''}" style="background:currentColor"></span>Verdict phénotypique · ${SEV_LBL[A.sev]}</div>
       <div class="v-name">${esc(A.name)}</div>
       <div class="v-mech">${esc(A.mech)}</div>
+      <button class="v-pourquoi" id="btnPourquoi">Pourquoi&nbsp;? — dérouler le raisonnement</button>
     </div>`;
 
   /* Pourquoi ce phénotype. Le § 7 du cahier des charges demande les arguments
@@ -3439,7 +3646,27 @@ function renderInterpretView(A){
   };
   $("#exportBtn").onclick=()=> isPremium() ? exportPDF() : openUpgrade("L'export PDF du compte-rendu est une fonction Premium.");
   const sb = $("#survBtn"); if(sb) sb.onclick = ()=> ouvrirSurveillance(A);
+  // Le raisonnement se déroule à la demande : l'afficher d'office noierait le
+  // verdict, que la plupart des lectures cherchent d'abord.
+  const bp = $("#btnPourquoi"); if(bp) bp.onclick = ()=> renderDetective(A);
 }
+
+/* --- fermeture et copie du panneau de raisonnement --- */
+(function detectiveGestes(){
+  const ov = $("#detectiveModal"); if(!ov) return;
+  const fermer = ()=> ov.classList.remove("open");
+  $("#detClose").onclick = fermer;
+  ov.onclick = e => { if(e.target.id === "detectiveModal") fermer(); };
+  document.addEventListener("keydown", e => { if(e.key === "Escape") fermer(); });
+  $("#detCopier").onclick = ()=>{
+    const txt = detectiveTexte(state.lastA || {});
+    copierTexte(txt)
+      .then(()=> { $("#detMsg").textContent = "Raisonnement copié."; })
+      // Si la copie échoue, le dire : croire qu'on a copié et coller du vide
+      // est pire que de devoir sélectionner soi-même.
+      .catch(()=> { $("#detMsg").textContent = "Copie refusée par le navigateur — sélectionnez le texte à la main."; });
+  };
+})();
 
 /* --- chemin serveur (verrou dur) --- */
 let _reqSeq = 0;
