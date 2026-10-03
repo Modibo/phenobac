@@ -29,6 +29,15 @@ jobs:
       - name: La base, le moteur et la page concordent
         run: python3 outils/verifier-tables.py
 
+      # Ce qu'une livraison change aux règles, imprimé dans le journal de la
+      # CI — et un échec si BASE_VERSION n'a pas suivi : deux bases
+      # différentes portant le même numéro rendraient tout rendu ancien
+      # irrattachable à ses règles.
+      - name: Journal des règles modifiées
+        run: |
+          git fetch --depth=2 origin ${{ github.sha }} 2>/dev/null || true
+          python3 outils/journal-base.py HEAD~1 || exit 1
+
       # Une résistance naturelle déclarée à tort fait lever une FAUSSE alerte
       # de cohérence — le pire défaut possible pour cette fonction.
       - name: Les résistances naturelles correspondent au document EUCAST

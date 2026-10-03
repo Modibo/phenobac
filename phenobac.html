@@ -4103,6 +4103,26 @@ var survDernier = null;
    L'export GLASS s'adresse à l'OMS ; celui-ci s'adresse au prescripteur d'à
    côté, qui veut savoir ce qui marche encore dans SON hôpital.
    ============================================================ */
+/* Les trois versions qu'un rendu doit porter pour être reproductible. */
+function refVersion(){
+  const s = (self.PhenoBacMoteur && self.PhenoBacMoteur.SOURCES || {})[REF_ACTIF];
+  return s ? s.version : "—";
+}
+function refPublie(){
+  const s = (self.PhenoBacMoteur && self.PhenoBacMoteur.SOURCES || {})[REF_ACTIF];
+  return s ? s.publie : "—";
+}
+function baseVersion(){
+  return (self.PhenoBacMoteur && self.PhenoBacMoteur.BASE_VERSION) || "—";
+}
+
+/* Version de l'APPLICATION, distincte de celle de la base de connaissances.
+   § 19 : un résultat exporté doit porter de quoi être reproduit — la version
+   de PhénoBac, celle du référentiel, et celle de la base de règles. Les trois
+   bougent indépendamment : une correction d'affichage ne change pas un seuil,
+   et un seuil déplacé ne change pas l'application. */
+const PHENOBAC_VERSION = "0.5";
+
 const SURV_CLE = "phenobac.surv.registre";
 const SURV_MAX = 5000;
 
@@ -4564,11 +4584,13 @@ function buildReport(A){
     </div>
 
     <div class="rp-foot">
-      Interprétation d'orientation produite par PhénoBac (v0.4), outil d'aide et de formation —
+      Interprétation d'orientation produite par PhénoBac, outil d'aide et de formation —
       pas un dispositif médical de diagnostic in vitro.
-      Référentiel des concentrations critiques : ${refLibelle()}, publié en ${refDate()}.
-      Les concentrations critiques employées sont paramétrables et doivent être vérifiées sur le référentiel de l'année en cours.
       Ce document ne remplace pas la validation biologique ni les tests de confirmation.
+      <br><b>Pour reproduire ce rendu :</b> PhénoBac ${esc(PHENOBAC_VERSION)} ·
+      ${esc(refLibelle())}, publié le ${esc(refPublie())} ·
+      base de connaissances ${esc(baseVersion())}.
+      Les concentrations critiques sont paramétrables et doivent être vérifiées sur le référentiel en vigueur.
     </div>`;
 }
 

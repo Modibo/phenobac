@@ -344,6 +344,43 @@ Seize phénotypes portent une grille à ce jour. Le banc annonce la couverture
 à chaque exécution, et nomme les espèces qui n'en ont pas : elle se complète
 sans qu'on ait à s'en souvenir.
 
+## Reproduire un rendu ancien
+
+Un laboratoire qui a rendu « sensible » en mars et « résistant » en octobre
+doit pouvoir dire si **la souche** a changé ou si **le seuil** a bougé. Sans
+cela, la question n'a pas de réponse — et c'est le laboratoire qu'on
+soupçonne.
+
+Chaque compte rendu porte donc les **trois versions** nécessaires, qui bougent
+indépendamment :
+
+```
+PhénoBac 0.5 · EUCAST 16.1, publié le 2026-06-24 · base de connaissances 2026.10
+```
+
+`outils/journal-base.py` dit ce qui a changé entre deux versions des règles :
+**AJOUTÉ**, **MODIFIÉ** (avec l'ancienne et la nouvelle valeur), **SUPPRIMÉ**,
+**INCHANGÉ**. Il tourne en intégration continue à chaque livraison, et
+**échoue** si les règles ont changé sans que `BASE_VERSION` suive : deux bases
+différentes portant le même numéro rendraient tout rendu ancien irrattachable
+à ses règles.
+
+```bash
+python3 outils/journal-base.py            # depuis le dernier commit
+python3 outils/journal-base.py v1.2.0     # depuis une étiquette
+```
+
+C'est aussi le contrôle à passer **avant** de livrer une mise à jour de
+référentiel : voir les quarante seuils qu'on déplace, un par un, vaut mieux que
+de les découvrir sur un antibiogramme.
+
+Pour rejouer une interprétation telle qu'elle a été produite, le fichier des
+règles est autonome et versionné :
+
+```bash
+git show <révision>:base-connaissances.js > base-connaissances.js
+```
+
 ## Les règles sont des données
 
 `base-connaissances.js` **fait foi** : 578 règles, une par ligne, chacune
