@@ -321,7 +321,22 @@
     border-left:3px solid #a9700a;border-radius:4px;padding:10px 12px}
   .id-note b{color:#0f2129}
   .offres-wrap{max-width:var(--maxw);margin:26px auto 0;padding:0 20px}
+  /* Le bandeau d'ouverture restait centré sur sept cents pixels au milieu
+     d'un écran vide. Au-delà de 1000 px il se range en deux colonnes — le
+     titre d'un côté, le propos de l'autre — et occupe toute la largeur sans
+     que la ligne de texte s'allonge. */
   .offres-hero{text-align:center;margin-bottom:26px}
+  @media(min-width:1000px){
+    .offres-hero{text-align:left;display:grid;gap:10px 44px;align-items:center;
+      grid-template-columns:minmax(0,auto) minmax(0,1fr);margin-bottom:30px}
+    .offres-mark{grid-column:1;margin:0 0 4px}
+    .offres-hero .oh-eyebrow{grid-column:1}
+    .offres-hero h1{grid-column:1;margin:0;max-width:18ch}
+    .offres-hero .oh-tagline{grid-column:1;margin-top:4px}
+    /* Le propos occupe la seconde colonne sur toute la hauteur du bloc. */
+    .offres-hero p{grid-column:2;grid-row:1 / span 4;margin:0;max-width:none;
+      column-count:2;column-gap:34px;align-self:center}
+  }
   .offres-hero .oh-eyebrow{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--gold-deep);font-weight:500}
   .offres-hero h1{font-weight:600;font-size:clamp(22px,3vw,30px);line-height:1.2;letter-spacing:-.012em;
@@ -1393,7 +1408,7 @@
       </section>
 
       <section class="ap-bloc">
-        <h2>Qui l'a fait</h2>
+        <h2>Conception</h2>
         <p>
           Conçu et développé par le <b>Dr. Modibo Mouctar COULIBALY</b>, PharmD, CLMS, PhD,
           <b>Maître de Recherche à l'Hôpital Sominé DOLO de Mopti</b> (Mali), pour les
