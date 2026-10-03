@@ -182,6 +182,14 @@ mécanisme** de résistance, ce qui est un autre exercice.
 | *E. faecalis* / pipéracilline-tazobactam | absent de la table |
 | *S. pneumoniae* / cotrimoxazole | colonnes arrivées dans le désordre à l'extraction (« 22-26 18 » au lieu de « 22 18-26 ») — un trou signalé vaut mieux qu'une cible devinée |
 
+#### Où il se trouve
+
+Le contrôle de qualité a **son propre onglet**. Il a vécu quelque temps replié
+sous l'antibiogramme, en mode Diamètre seulement : depuis que l'application
+s'ouvre en S/I/R, on ne le rencontrait plus jamais. Un panneau qu'il faut
+déplier est un panneau qu'on n'ouvre pas, et un contrôle de qualité qu'on
+n'ouvre pas ne contrôle rien.
+
 #### Détection de dérive
 
 Un registre qui enregistre sans prévenir ne sert qu'après coup. Une mesure peut
