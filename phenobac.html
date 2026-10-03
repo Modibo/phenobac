@@ -17,6 +17,19 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
+    /* DEUX LARGEURS, et deux seulement.
+
+       Il y en avait cinq, codées en dur, dont la plus grande à 1160 px : sur
+       un écran de 1680 px l'application laissait 500 px de marge vide, et les
+       onglets ne s'alignaient même pas entre eux.
+
+       La règle est simple : ce qui se TRAVAILLE prend la largeur disponible —
+       un tableau de 578 règles ou un antibiogramme en deux colonnes n'ont rien
+       à gagner à être serrés. Ce qui se LIT garde une colonne étroite, parce
+       qu'une ligne de prose de 1500 px est illisible : l'œil perd le début de
+       la ligne suivante. */
+    --maxw:1560px;
+    --maxw-lecture:820px;
     --bg:#e9eef0;
     --surface:#ffffff;
     --surface-2:#f4f8f9;
@@ -63,7 +76,7 @@
     border-bottom:1px solid var(--line);
   }
   .bar{
-    max-width:1160px;margin:0 auto;padding:12px 20px;
+    max-width:var(--maxw);margin:0 auto;padding:12px 20px;
     display:flex;align-items:center;gap:16px;flex-wrap:wrap;
   }
   .brand{display:flex;align-items:baseline;gap:10px;min-width:0}
@@ -106,7 +119,7 @@
   }
 
   /* vue quiz */
-  .quiz-wrap{max-width:760px;margin:22px auto 0;padding:0 20px}
+  .quiz-wrap{max-width:var(--maxw-lecture);margin:22px auto 0;padding:0 20px}
   .quiz-card{overflow:hidden}
   .quiz-top{padding:16px 18px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .quiz-eyebrow{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.12em;text-transform:uppercase;
@@ -275,7 +288,7 @@
   .modal-err{font-size:12.5px;color:var(--r);margin-top:9px;min-height:16px}
 
   /* page Offres */
-  .ident-wrap{max-width:760px;margin:26px auto 0;padding:0 20px}
+  .ident-wrap{max-width:var(--maxw-lecture);margin:26px auto 0;padding:0 20px}
   .id-choice{display:flex;gap:8px;flex-wrap:wrap}
   .id-choice .c{font-family:'IBM Plex Mono';font-size:13px;padding:9px 16px;border-radius:100px;background:#fff;
     border:1px solid #c2d0d4;color:#4b6169;cursor:pointer}
@@ -304,7 +317,7 @@
   .id-note{font-size:12px;color:#8098a1;line-height:1.5;margin-top:8px;background:#f4f8f9;border:1px solid #d6e0e3;
     border-left:3px solid #a9700a;border-radius:4px;padding:10px 12px}
   .id-note b{color:#0f2129}
-  .offres-wrap{max-width:900px;margin:26px auto 0;padding:0 20px}
+  .offres-wrap{max-width:calc(var(--maxw-lecture) + 100px);margin:26px auto 0;padding:0 20px}
   .offres-hero{text-align:center;margin-bottom:26px}
   .offres-hero .oh-eyebrow{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--gold-deep);font-weight:500}
@@ -347,7 +360,7 @@
   .offres-note a{color:var(--teal-deep);cursor:pointer}
 
   /* ---------- Layout ---------- */
-  main{max-width:1160px;margin:0 auto;padding:22px 20px 0;
+  main{max-width:var(--maxw);margin:0 auto;padding:22px 20px 0;
     display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:22px;align-items:start}
   @media(max-width:900px){main{grid-template-columns:1fr;gap:16px}}
 
@@ -509,7 +522,7 @@
     border-radius:4px;padding:3px 9px;background:var(--surface-2)}
   .cq-mois b{color:var(--ink)}
   /* Surveillance locale — chiffres, antibiogramme cumulatif, évolution */
-  .surv-wrap{max-width:var(--maxw,1180px);margin:0 auto;padding:0 20px 40px}
+  .surv-wrap{max-width:var(--maxw);margin:22px auto 0;padding:0 20px 40px}
   .surv-chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
   .sc{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
   .sc b{display:block;font-family:'IBM Plex Mono';font-size:24px;line-height:1.1;color:var(--teal-deep);
@@ -845,7 +858,7 @@
     .rp-foot{margin-top:20px;padding-top:8px;border-top:1px solid #ccc;font-size:7.5pt;color:#777;line-height:1.5}
   }
 
-  footer{max-width:1160px;margin:24px auto 0;padding:0 20px}
+  footer{max-width:var(--maxw);margin:24px auto 0;padding:0 20px}
   .disclaimer{font-size:13px;color:var(--ink-soft);line-height:1.7;background:var(--surface);
     border:1px solid var(--line);border-left:3px solid var(--i);border-radius:var(--radius);
     padding:16px 18px;max-width:74ch}
@@ -861,7 +874,7 @@
      formulaire vide, et sert de vitrine.
      ============================================================ */
   .intro{
-    max-width:1160px; margin:18px auto 0; padding:0 20px;
+    max-width:var(--maxw); margin:18px auto 0; padding:0 20px;
   }
   .intro-card{
     position:relative; background:var(--surface); border:1px solid var(--line);
@@ -967,7 +980,7 @@
   .brand-open:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
 
   /* Page « À propos » : texte de positionnement, plus de grille tarifaire. */
-  .apropos{ max-width:760px; margin:26px auto 0; display:flex; flex-direction:column; gap:22px; }
+  .apropos{ max-width:var(--maxw-lecture); margin:26px auto 0; display:flex; flex-direction:column; gap:22px; }
   .ap-bloc{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
     box-shadow:var(--shadow); padding:24px 26px;
