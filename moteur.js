@@ -229,6 +229,108 @@ const ORG = {
 };
 
 // organisme actif pour finalize (défini juste avant l'appel, calcul synchrone)
+/* ============================================================
+   CONDITIONS TECHNIQUES DE RÉALISATION — § 9
+
+   Le § 9 demande de vérifier, avant toute validation, le milieu, les
+   conditions d'incubation et la pureté de la culture. J'avais d'abord refusé :
+   rien dans un antibiogramme ne dit sur quelle gélose il a poussé, et une
+   alerte fondée sur une supposition apprend à ignorer les alertes.
+
+   Ce qui change tout : l'utilisateur DÉCLARE ses conditions, et PhénoBac les
+   confronte à ce que le référentiel EXIGE pour cette espèce. On ne devine
+   plus rien — on compare deux faits documentés. Une condition non renseignée
+   ne déclenche donc jamais rien : le silence n'est pas une non-conformité.
+
+   SOURCES, verbatim :
+
+   — EUCAST disk diffusion method, Version 13.0 (January 2025)
+       Table 1 « Media for antimicrobial susceptibility testing »
+       Table 3 « Incubation conditions for antimicrobial susceptibility test plates »
+       § 2.2  « The medium should have a level depth of 4.0 ± 0.5 mm »
+       § 3.3  « Adjust the density of the organism suspension to 0.5
+               (acceptable variation 0.4-0.6) McFarland »
+       § 3.4  règle des 15-15-15 : suspension employée dans les 15 min,
+               disques posés dans les 15 min, plaques à l'étuve dans les 15 min
+       § 6.3.1 « Incubation beyond the recommended time limits should not be
+               performed as this may result in growth within inhibition zones
+               and reporting isolates as false resistant. »
+       § 7.1.1 « If individual colonies can be seen, the inoculum is too light
+               and the test must be repeated. »
+       § 8.9.1 « In case of double zones, or distinct colonies within zones,
+               check for purity and repeat the test if necessary. If cultures
+               are pure, colonies within zones should be taken into account
+               when measuring the diameter. »
+       Annexe A, Table A1 : Campylobacter jejuni et coli — MH-F, microaérobie,
+               41 ± 1 °C, 24 ± 1 h.
+
+   — EUCAST disk diffusion methodology for selected rapidly growing anaerobic
+     bacteria on Fastidious Anaerobe Agar with defibrinated horse blood,
+     Version 3.0 (June 2026)
+       Milieu : FAA-HB, 5 % de sang de cheval défibriné mécaniquement, sans
+               autre additif ; épaisseur 4,0 ± 0,5 mm.
+       Inoculum : McFarland 1,0 (0,9-1,1) — et non 0,5.
+       Incubation : anaérobiose, 35-37 °C, 16-20 h. « Prolonged incubation
+               (beyond 20 h) is not allowed as it will affect zone sizes and
+               invalidate interpretative criteria. »
+       Le document liste les espèces pour lesquelles la méthode est validée et
+       précise : « It cannot be used for other species of anaerobic bacteria ».
+       Clostridioides difficile n'y figure pas.
+
+   — EUCAST Clinical Breakpoint Tables v. 16.1 (valid from 2026-06-24)
+       Neisseria gonorrhoeae et Neisseria meningitidis : « Disk diffusion
+       criteria for antimicrobial susceptibility testing […] have not yet been
+       defined and an MIC method should be used. »
+
+   CE QUI N'EST PAS COUVERT, et qui reste donc muet. Burkholderia cepacia ne
+   figure dans aucune de ces tables — l'EUCAST n'y chiffre que B. pseudomallei.
+   Inventer pour elle un milieu « par analogie » serait exactement ce que le
+   § 26 interdit.
+   ============================================================ */
+const COND_MH    = { milieu: "MH",     atmo: "air",    tmin: 34, tmax: 36, hmin: 16, hmax: 20, mcf: "0.5" };
+const COND_MHF   = { milieu: "MH-F",   atmo: "co2",    tmin: 34, tmax: 36, hmin: 16, hmax: 20, mcf: "0.5" };
+const COND_ANAER = { milieu: "FAA-HB", atmo: "anaero", tmin: 35, tmax: 37, hmin: 16, hmax: 20, mcf: "1.0" };
+
+const CONDITIONS = {
+  // Table 1 + Table 3 : Mueller-Hinton, air ambiant.
+  entero: COND_MH, morganella: COND_MH, salmonella: COND_MH, serratia: COND_MH,
+  pseudo: COND_MH, steno: COND_MH, acineto: COND_MH, staph: COND_MH, scn: COND_MH,
+  vibrio: COND_MH,
+  // Même ligne, avec la réserve des glycopeptides (Table 3).
+  enteroc: Object.assign({}, COND_MH, {
+    note: "Pour les glycopeptides, l'EUCAST demande 24 h : une souche qui paraît sensible à 16-20 h "
+        + "doit être réincubée et relue à 24 h, les colonies résistantes pouvant n'apparaître que là." }),
+  // Table 1 + Table 3 : MH-F, 4-6 % de CO2.
+  strepacg: COND_MHF, strepb: COND_MHF, pneumo: COND_MHF, viridans: COND_MHF,
+  haemo: COND_MHF, moraxella: COND_MHF, listeria: COND_MHF,
+  coryne: Object.assign({}, COND_MHF, {
+    note: "Une souche dont la croissance est insuffisante à 16-20 h est réincubée aussitôt et lue "
+        + "après 40-44 h au total (EUCAST, Table 3)." }),
+  // Annexe A : la seule espèce à 41 °C, et la seule en microaérobie.
+  campylo: { milieu: "MH-F", atmo: "micro", tmin: 40, tmax: 42, hmin: 23, hmax: 25, mcf: "0.5",
+    note: "Une souche de C. coli dont la croissance est insuffisante à 24 h est réincubée aussitôt "
+        + "et lue après 40-48 h au total (EUCAST, annexe A)." },
+  // Manuel des anaérobies v3.0.
+  bfragilis: COND_ANAER, cperfringens: COND_ANAER,
+  // Déclarés hors méthode, chacun pour sa raison propre.
+  cdifficile: { horsMethode:
+    "La méthode de diffusion en gélose de l'EUCAST pour les anaérobies (v3.0, juin 2026) est validée "
+  + "pour une liste nommée d'espèces, dont Clostridioides difficile ne fait pas partie ; le document "
+  + "précise qu'elle ne peut pas servir aux autres. Déterminer la CMI." },
+  ngono: { horsMethode:
+    "L'EUCAST (tables v16.1) écrit qu'aucun critère de diffusion en gélose n'est défini pour "
+  + "Neisseria gonorrhoeae et qu'une méthode de CMI doit être employée." },
+  nmening: { horsMethode:
+    "L'EUCAST (tables v16.1) écrit qu'aucun critère de diffusion en gélose n'est défini pour "
+  + "Neisseria meningitidis et qu'une méthode de CMI doit être employée." }
+  // burk : volontairement absent — voir le commentaire ci-dessus.
+};
+
+const COND_MILIEU_DIT = { "MH": "Mueller-Hinton", "MH-F": "MH-F (MH + 5 % sang de cheval + 20 mg/L β-NAD)",
+                          "FAA-HB": "FAA-HB (gélose anaérobie + 5 % sang de cheval)", "autre": "un autre milieu" };
+const COND_ATMO_DIT   = { air: "l'air ambiant", co2: "4-6 % de CO2", micro: "la microaérobie",
+                          anaero: "l'anaérobiose", autre: "une autre atmosphère" };
+
 let _activeOrg = null;
 let _activeId = null;
 // Couples tombant dans la zone d'incertitude technique pour la requête en cours.
@@ -236,6 +338,10 @@ let _zit = [];
 let _sansDisque = [];
 let _depistage = null;
 let _depistageEchoue = [];
+// Mode de saisie et contexte déclaré : finalize() en a besoin pour confronter
+// les conditions de réalisation à ce que le référentiel exige.
+let _mode = "sir";
+let _ctx = {};
 
 /* ------------------------------------------------------------
    Lecture interprétative — rendre R ce qui a été lu S ou SFP.
@@ -499,6 +605,124 @@ function coherence(A, r, org, c) {
   return A;
 }
 
+/* Les conditions déclarées, confrontées à ce que le référentiel exige.
+
+   Trois principes, et ils ne souffrent pas d'exception :
+     — une condition non renseignée ne produit RIEN. Le silence n'est pas une
+       non-conformité, et une alerte qui tombe parce qu'on n'a pas répondu
+       apprend à fermer le panneau ;
+     — chaque alerte dit ce qui a été déclaré, ce qui est exigé, et l'effet
+       attendu sur la mesure : un diamètre faussement grand ne se corrige pas
+       de la même façon qu'un diamètre faussement petit ;
+     — ce qui invalide la mesure arrête l'interprétation. Rendre un phénotype
+       tiré de diamètres non interprétables serait pire que ne rien rendre.
+*/
+function conditionsTechniques(A, org, ctx, mode) {
+  if (!org || !ctx) return;
+  const ajoute = (lvl, txt) => A.alerts.push({ lvl: lvl, txt: txt });
+  const stop = txt => { A.nonSecurise = txt; ajoute("stop", txt); };
+
+  /* --- La pureté. Elle vaut quel que soit le mode de saisie : un
+         antibiogramme de culture mixte n'appartient à aucune espèce. --- */
+  if (ctx.pur === "mixte")
+    stop("Culture déclarée NON PURE. Un antibiogramme lu sur plusieurs espèces mélangées ne se "
+       + "rapporte à aucune : chaque diamètre est la somme de ce que font deux souches. Réisoler sur "
+       + "milieu non sélectif et recommencer. Aucune interprétation n'est rendue.");
+
+  if (mode !== "diam") return;   // tout ce qui suit est propre à la méthode des disques
+
+  /* --- La croissance. EUCAST § 7.1.1 : le test DOIT être recommencé. --- */
+  if (ctx.nappe === "colonies")
+    stop("Colonies individuelles visibles au lieu d'une nappe confluente : l'inoculum était trop "
+       + "léger. L'EUCAST (§ 7.1.1) impose de recommencer le test — un inoculum trop léger agrandit "
+       + "toutes les zones, et rend sensible ce qui ne l'est pas. Aucune interprétation n'est rendue.");
+
+  /* --- Les zones doubles. La règle est nuancée, et la nuance compte. --- */
+  if (ctx.zones === "doubles") {
+    if (ctx.pur === "pur")
+      ajoute("info", "Zones doubles ou colonies dans les zones, sur une culture vérifiée pure : "
+        + "l'EUCAST (§ 8.9.1) demande alors de TENIR COMPTE de ces colonies dans la mesure du "
+        + "diamètre — c'est-à-dire de mesurer la zone intérieure, pas la zone extérieure.");
+    else
+      ajoute("crit", "Zones doubles ou colonies dans les zones, sans vérification de pureté. "
+        + "L'EUCAST (§ 8.9.1) demande de contrôler la pureté et de recommencer si nécessaire : "
+        + "c'est le premier signe d'une culture mixte. Vérifier avant de rendre.");
+  }
+
+  const C = CONDITIONS[org.bpGroup];
+
+  /* --- L'espèce relève-t-elle seulement de la méthode des disques ? --- */
+  if (C && C.horsMethode) { stop(C.horsMethode); return; }
+  if (!C) return;          // espèce non couverte par les documents : on se tait
+
+  /* --- Le milieu. --- */
+  if (ctx.milieu && ctx.milieu !== C.milieu)
+    ajoute("crit", "Gélose déclarée : " + (COND_MILIEU_DIT[ctx.milieu] || ctx.milieu) + ". Le référentiel "
+      + "exige pour cette espèce " + (COND_MILIEU_DIT[C.milieu] || C.milieu) + ". Les diamètres critiques "
+      + "ont été établis sur ce milieu-là et sur aucun autre : lus sur un autre, ils ne sont pas "
+      + "comparables aux seuils.");
+
+  /* --- L'atmosphère. --- */
+  if (ctx.atmo && ctx.atmo !== C.atmo)
+    ajoute("crit", "Atmosphère déclarée : " + (COND_ATMO_DIT[ctx.atmo] || ctx.atmo) + ". Le référentiel "
+      + "exige " + (COND_ATMO_DIT[C.atmo] || C.atmo) + " pour cette espèce. Le CO2 acidifie la gélose et "
+      + "déplace les zones de plusieurs millimètres, dans un sens qui dépend de la molécule.");
+
+  /* --- La température. --- */
+  if (ctx.tempC !== undefined && ctx.tempC !== null && ctx.tempC !== "") {
+    const tc = parseFloat(String(ctx.tempC).replace(",", "."));
+    if (!isNaN(tc) && (tc < C.tmin || tc > C.tmax))
+      ajoute("crit", "Température déclarée : " + tc + " °C. Le référentiel exige " + C.tmin + "-" + C.tmax
+        + " °C pour cette espèce. Hors de cet intervalle, la croissance et la diffusion ne se font plus "
+        + "à la même vitesse, et les diamètres ne valent plus.");
+  }
+
+  /* --- La durée. Les deux sens d'erreur n'ont pas le même danger. --- */
+  if (ctx.dureeH !== undefined && ctx.dureeH !== null && ctx.dureeH !== "") {
+    const h = parseFloat(String(ctx.dureeH).replace(",", "."));
+    if (!isNaN(h) && h > C.hmax)
+      ajoute("crit", "Incubation déclarée : " + h + " h, au-delà des " + C.hmin + "-" + C.hmax + " h exigées. "
+        + "L'EUCAST (§ 6.3.1) l'interdit : une incubation prolongée fait pousser des colonies DANS les "
+        + "zones et fait rendre résistantes des souches qui ne le sont pas."
+        + (C.note ? " " + C.note : ""));
+    else if (!isNaN(h) && h < C.hmin)
+      ajoute("crit", "Incubation déclarée : " + h + " h, en deçà des " + C.hmin + "-" + C.hmax + " h exigées. "
+        + "Une lecture trop précoce donne des zones trop grandes, et fait rendre sensible ce qui ne l'est pas.");
+  }
+
+  /* --- L'épaisseur de la gélose. --- */
+  if (ctx.epaisseur === "hors")
+    ajoute("warn", "Épaisseur de gélose déclarée hors de 4,0 ± 0,5 mm (EUCAST § 2.2). Une gélose trop "
+      + "épaisse rétrécit toutes les zones — donc fait rendre résistant ; trop mince, elle les agrandit. "
+      + "L'erreur porte sur TOUTES les molécules à la fois, et les catégories restent plausibles.");
+
+  /* --- L'inoculum. --- */
+  if (ctx.mcf && ctx.mcf !== C.mcf) {
+    if (ctx.mcf === "sans")
+      ajoute("warn", "Inoculum non ajusté à un étalon de McFarland. L'EUCAST (§ 3.3) le chiffre à "
+        + C.mcf + " pour cette espèce : un inoculum plus dense rétrécit les zones, un inoculum plus "
+        + "léger les agrandit.");
+    else
+      ajoute("crit", "Inoculum déclaré à McFarland " + ctx.mcf + ". Le référentiel exige McFarland "
+        + C.mcf + " pour cette espèce.");
+  }
+
+  /* --- Les délais. --- */
+  if (ctx.delais === "non")
+    ajoute("warn", "Règle des 15-15-15 non respectée (EUCAST § 3.4, 4.6 et 6.1 : suspension employée "
+      + "dans les 15 min, disques posés dans les 15 min, plaques à l'étuve dans les 15 min). Un délai "
+      + "avant la pose des disques laisse la souche pousser et rétrécit les zones ; un délai après la "
+      + "pose laisse l'antibiotique diffuser et les agrandit.");
+
+  /* --- Les réserves propres à l'espèce. Elles ne dépendent d'aucune
+         non-conformité : elles disent ce que le référentiel demande EN PLUS
+         pour cette espèce, et ne valent d'être rappelées qu'à celui qui a
+         ouvert le panneau — sinon elles s'ajouteraient à chaque antibiogramme. --- */
+  const renseigne = ["milieu","atmo","tempC","dureeH","epaisseur","mcf","delais","nappe","zones"]
+    .some(k => ctx[k] !== undefined && ctx[k] !== null && ctx[k] !== "");
+  if (C.note && renseigne) ajoute("info", C.note);
+}
+
 function finalize(A, r) {
   const org = _activeOrg;
   if (org && org.intrinsic) {
@@ -515,6 +739,8 @@ function finalize(A, r) {
     if (_depistage.sev && A.sev === "wild") A.sev = _depistage.sev;
   }
   coherence(A, r, org, null);
+  // § 9 : les conditions de réalisation déclarées, confrontées au référentiel.
+  conditionsTechniques(A, org, _ctx, _mode);
   reglesCasfm(A, r);
 
   if (_depistageEchoue.length) {
@@ -1845,6 +2071,8 @@ function runInterpretation(input) {
   }
 
   _activeOrg = org; _activeId = organism;      // fixés juste avant le calcul (synchrone)
+  _mode = input.mode || "sir";
+  _ctx = input.ctx || {};
   const A = ENGINE[org.engine](results, input.ctx || {}, org.args || {});
   // Lecture interprétative : les catégories rendues peuvent différer des
   // catégories brutes. Le client doit recevoir les deux, jamais l'une à la
@@ -1864,6 +2092,8 @@ const MOTEUR = {
   catFromMic, catFromDiam, parseMic, parseDiam,
   getBP, getDZ, disquePour, zitPour, zitZonePour, enZit, enZitZone,
   horsEucast, depistageSeuil, estCasfm,
+  // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
+  CONDITIONS, conditionsTechniques,
   // tables, pour l'affichage des seuils et des aides de saisie
   REFERENTIELS, ORG, ABXNAME,
   BP, BP_MENINGE, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
