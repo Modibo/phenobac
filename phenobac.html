@@ -458,6 +458,16 @@
   .bp-conv{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.04em;text-transform:uppercase;
     background:var(--i-bg);color:var(--i);border:1px solid var(--i-line);
     border-radius:100px;padding:1px 6px;margin-left:7px;white-space:nowrap;cursor:help}
+  /* Niveaux d'entraînement */
+  .quiz-niveaux{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px}
+  .quiz-niveaux button{font-family:'IBM Plex Sans';font-size:12.5px;font-weight:500;
+    padding:6px 12px;border-radius:var(--radius);cursor:pointer;text-align:left;
+    border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);transition:.12s}
+  .quiz-niveaux button span{display:block;font-family:'IBM Plex Mono';font-size:9.5px;
+    color:var(--ink-faint);margin-top:1px;font-weight:400}
+  .quiz-niveaux button:hover{border-color:var(--teal)}
+  .quiz-niveaux button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .quiz-niveaux button.on span{color:rgba(255,255,255,.8)}
   /* Carte de contrôle de Levey-Jennings */
   .lj{width:100%;height:auto;max-width:460px;display:block;margin:4px 0 2px}
   .lj-bande{fill:var(--s-bg);opacity:.5}
@@ -1208,6 +1218,7 @@
       <div class="quiz-eyebrow"><span class="num">Q</span>Entraînement guidé</div>
       <div class="quiz-stats" id="quizStats"></div>
     </div>
+    <div class="quiz-niveaux" id="quizNiveaux"></div>
     <div class="quiz-modes" id="quizModes">
       <button data-mode="interp" class="on">Interprétation</button>
       <button data-mode="ident">Identification</button>
@@ -4963,7 +4974,111 @@ const QUIZ_BANK = [
    teach:"L'antibiotique n'est qu'un adjuvant : c'est la réhydratation qui sauve, et elle ne se discute pas. La doxycycline en dose unique raccourcit la diarrhée et la durée du portage, ce qui compte en situation épidémique. Le cotrimoxazole résistant est banal et sans conséquence sur la prise en charge."}
 ];
 
-const quiz = { queue:[], idx:0, score:0, answered:false, phase:1, mode:"interp" };
+/* ============================================================
+   NIVEAUX D'ENTRAÎNEMENT — § 14
+
+   Quatre niveaux, et une difficulté : comment les attribuer sans que ce soit
+   l'humeur de celui qui range ?
+
+   Le niveau est DÉDUIT du cas, par une règle énoncée ici et vérifiable. Un
+   cas gagne en difficulté pour des raisons objectives : il faut un test
+   complémentaire pour trancher, il faut séparer deux mécanismes que
+   l'antibiogramme ne distingue pas seul, il faut connaître ce que le
+   référentiel fait d'une souche, ou il faut savoir NE PAS conclure.
+
+   Cinquante-cinq jugements à la main se seraient contredits entre eux et
+   n'auraient pas pu être relus. Une règle se discute, se corrige, et
+   s'applique pareil à tous les cas — y compris à ceux qu'on ajoutera.
+
+   DÉBUTANT    un seul élément porte la réponse : une résistance naturelle,
+               une souche sauvage, un mécanisme que l'antibiogramme crie
+   TECHNICIEN  un test complémentaire figure au dossier et tranche :
+               synergie, D-test, nitrocéfine, confirmation de carbapénémase
+   BIOLOGISTE  il faut choisir entre deux mécanismes que les propositions
+               opposent, ou identifier l'espèce avant de l'interpréter
+   EXPERT      le référentiel entre en jeu, ou la bonne réponse est de ne pas
+               trancher — « à confirmer », « pas d'antibiogramme de routine »,
+               « CMI requises »
+   ============================================================ */
+const NIVEAUX = ["debutant", "technicien", "biologiste", "expert"];
+const NIVEAU_NOM = { debutant:"Débutant", technicien:"Technicien",
+                     biologiste:"Biologiste", expert:"Expert" };
+const NIVEAU_DIT = {
+  debutant:   "Un seul élément porte la réponse.",
+  technicien: "Un test complémentaire tranche : encore faut-il le lire.",
+  biologiste: "Deux mécanismes se ressemblent : il faut les séparer.",
+  expert:     "Le référentiel entre en jeu, ou la bonne réponse est de ne pas conclure."
+};
+
+function niveauDuCas(c){
+  if(c.niveau) return c.niveau;                       // un cas peut imposer le sien
+
+  // Identifier l'espèce AVANT de l'interpréter est le geste du biologiste.
+  if(c.kind === "combo" || c.kind === "ident") return "biologiste";
+
+  const rep = String(c.answer || "");
+  const ctx = c.ctx || {};
+
+  /* Expert : la bonne réponse est de NE PAS trancher. « Suspicion »,
+     « à confirmer », « CMI requises » — ce sont les cas où conclure serait
+     la faute, et c'est le dernier réflexe qu'on acquiert. */
+  if(/suspicion|à confirmer|pas d'antibiogramme|CMI requises|mécanisme à préciser|non catégoris/i.test(rep))
+    return "expert";
+
+  /* Biologiste : des mécanismes que l'antibiogramme seul ne sépare pas, ou
+     dont la portée dépasse la lecture d'une ligne. */
+  if(/AmpC|céphalosporinase|carbapénémase|PSDP|sensibilité diminuée|MDR|XDR|multirésistant|toto-résistant|BLPACR/i.test(rep))
+    return "biologiste";
+
+  /* Technicien : un test complémentaire figure au dossier et tranche. Tout le
+     métier est de le lire et d'en tirer la conséquence. */
+  if(Object.keys(ctx).some(k => ctx[k] && ctx[k] !== "Non fait")) return "technicien";
+
+  /* Débutant : un seul élément porte la réponse — une résistance naturelle,
+     une souche sauvage, un mécanisme que l'antibiogramme crie. */
+  return "debutant";
+}
+
+/* Le niveau EXPERT reçoit en plus les cas qui portent une seconde question sur
+   le référentiel : ce que l'EUCAST et le CA-SFM font différemment d'une même
+   souche n'est pas une question de paillasse, c'est une question de choix. */
+function casExpert(){
+  const vus = new Set();
+  return allCases().filter(c=>{
+    const e = niveauDuCas(c) === "expert" || !!c.q2;
+    if(!e || vus.has(c)) return false;
+    vus.add(c); return true;
+  });
+}
+
+function casDuNiveau(niveau){
+  if(niveau === "expert") return casExpert();
+  return allCases().filter(c => niveauDuCas(c) === niveau);
+}
+
+/* ---------- Progression ----------
+   Conservée par niveau : ce qu'on a tenté, et le meilleur résultat. Sans
+   mémoire, un entraînement ne mesure rien — on recommence sans savoir si
+   l'on progresse. */
+const QUIZ_CLE = "phenobac.quiz";
+function quizProgres(){
+  try{ return JSON.parse(localStorage.getItem(QUIZ_CLE) || "{}"); }
+  catch(e){ return {}; }
+}
+function quizNoter(niveau, score, total, examen){
+  try{
+    const p = quizProgres();
+    const k = niveau + (examen ? ":examen" : "");
+    const e = p[k] || (p[k] = { seances:0, meilleur:0, total:total });
+    e.seances++; e.total = total;
+    if(score > e.meilleur) e.meilleur = score;
+    e.dernier = score; e.quand = new Date().toISOString().slice(0,10);
+    localStorage.setItem(QUIZ_CLE, JSON.stringify(p));
+  }catch(e){ /* sans mémoire, la séance reste valable */ }
+}
+
+const quiz = { queue:[], idx:0, score:0, answered:false, phase:1, mode:"interp",
+               niveau:"", examen:false, reponses:[] };
 /* Longueur d'une séance. Les cas complets font exception : chacun enchaîne
    une identification PUIS un antibiogramme, soit deux questions. En tirer
    autant que des cas simples doublerait la durée de la séance ; on en tire
@@ -4989,6 +5104,9 @@ function startQuiz(){
   }
   else if(quiz.mode==="combo"){ pool = comboPool(); len = QUIZ_LEN_COMBO; }
   else { pool = allCases(); }
+  // Un niveau choisi restreint le tirage. « Tous » le laisse entier : c'est le
+  // réglage par défaut, pour qui veut s'exercer sans se classer.
+  if(quiz.niveau) pool = pool.filter(c => casDuNiveau(quiz.niveau).indexOf(c) !== -1);
   quiz.queue = shuffle(pool).slice(0, Math.min(len, pool.length));
   quiz.idx=0; quiz.score=0; quiz.answered=false; quiz.phase=1;
   renderQuiz();
@@ -5292,6 +5410,9 @@ function answerComboInterp(pc, selected){
 
 function renderQuizResult(){
   const n=quizMaxScore(), s=quiz.score, pct=Math.round(s/n*100);
+  // Le résultat est consigné : c'est lui qui s'affichera sur le niveau la
+  // prochaine fois, et qui dit si l'on progresse.
+  if(quiz.niveau) { quizNoter(quiz.niveau, s, n, false); renderNiveaux(); }
   let grade, msg;
   if(pct>=90){grade="Excellent";msg="Maîtrise des phénotypes de résistance. Prêt pour la validation.";}
   else if(pct>=70){grade="Bien";msg="Bonne reconnaissance. Revoyez les cas manqués pour consolider les règles expertes.";}
@@ -5766,6 +5887,27 @@ function setView(v){
 $("#tabs").querySelectorAll("button").forEach(b=>{
   b.onclick=()=>setView(b.dataset.view);
 });
+/* Les niveaux, avec ce qu'on y a déjà fait. Un entraînement qui ne garde rien
+   ne mesure rien : on recommence sans savoir si l'on progresse. */
+function renderNiveaux(){
+  const el = $("#quizNiveaux"); if(!el) return;
+  const p = quizProgres();
+  let h = `<button data-niv="" class="${quiz.niveau?"":"on"}">Tous les cas
+      <span>${allCases().length}</span></button>`;
+  NIVEAUX.forEach(n=>{
+    const nb = casDuNiveau(n).length, e = p[n];
+    h += `<button data-niv="${n}" class="${quiz.niveau===n?"on":""}" title="${esc(NIVEAU_DIT[n])}">
+        ${esc(NIVEAU_NOM[n])}
+        <span>${nb} cas${e ? ` · meilleur ${e.meilleur}/${e.total}` : ""}</span>
+      </button>`;
+  });
+  el.innerHTML = h;
+  el.querySelectorAll("button").forEach(b=>{
+    b.onclick = ()=>{ quiz.niveau = b.dataset.niv; renderNiveaux(); startQuiz(); };
+  });
+}
+renderNiveaux();
+
 $("#quizModes").querySelectorAll("button").forEach(b=>{
   b.onclick=()=>{
     quiz.mode=b.dataset.mode;
