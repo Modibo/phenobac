@@ -81,6 +81,20 @@ jobs:
       - name: L'export de surveillance est conforme au manuel GLASS
         run: node outils/essai-glass.js
 
+      # Les conditions de réalisation déclarées sont confrontées à ce que le
+      # référentiel exige. Deux façons d'échouer, la seconde étant la pire :
+      # taire une non-conformité, ou alerter sur un champ non renseigné — ce
+      # qui apprend à fermer le panneau.
+      - name: Les conditions de réalisation sont confrontées au référentiel
+        run: node outils/essai-conditions.js
+
+      # Le raccord page ↔ porte HTTP ↔ moteur n'était couvert par rien. C'est
+      # pourtant là qu'une régression a un jour cassé TOUTES les
+      # interprétations sans qu'aucun banc ne bronche : le raisonnement était
+      # intact, c'est la jonction qui ne tenait plus.
+      - name: La page, la porte et le moteur se parlent encore
+        run: python3 outils/verifier-raccord.py
+
   deploy:
     name: Déploiement VPS
     needs: test

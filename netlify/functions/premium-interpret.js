@@ -11,12 +11,29 @@
 // Variables d'environnement : PHENOBAC_SECRET (même secret que verify-license.js)
 //
 // Appel : POST {
-//   license, organism, mode ("sir"|"mic"),
-//   results {ABX:"S|I|R"},  // si mode "sir"
-//   mic {ABX:"valeur mg/L"}, bpOverride {"group:ABX":{S,R}},  // si mode "mic"
-//   ctx {syn|dtest|mening}
+//   license,
+//   organism,                       // identifiant d'espèce, voir ORG dans moteur.js
+//   mode: "sir" | "mic" | "diam",   // catégories, CMI en mg/L, ou diamètres en mm
+//   results {ABX:"S|I|R"},          // si mode "sir"
+//   mic  {ABX:"valeur mg/L"},       // si mode "mic"
+//   diam {ABX:"valeur mm"},         // si mode "diam" — méthode des disques
+//   bpOverride {"groupe:ABX":{S,R}},// seuils propres au laboratoire, s'il en a
+//   ctx {...},                      // tests complémentaires, site, et § 9 :
+//                                   // conditions de réalisation déclarées
+//   ref: "eucast" | "casfm"         // référentiel appliqué ; défaut eucast
 // }
-// Réponse : { valid, plan, interpretation:{sev,name,mech,alerts,rules,comment}, categories }
+// Réponse 200 : {
+//   valid, plan,
+//   interpretation: { sev, name, mech, alerts, rules, comment, rendu, ... },
+//   categories,                     // catégorie retenue par antibiotique
+//   rendues,                        // catégories modifiées par la lecture interprétative
+//   referentiel                     // référentiel réellement appliqué
+// }
+// Réponse 402 : licence requise ou révoquée. Le client en fait « locked ».
+//
+// CE COMMENTAIRE EST VÉRIFIÉ. outils/verifier-raccord.py échoue s'il cesse de
+// décrire la requête que la page envoie réellement : un contrat périmé est
+// pire qu'absent, parce qu'il est cru.
 
 const crypto = require("crypto");
 
