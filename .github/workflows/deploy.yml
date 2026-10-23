@@ -95,6 +95,14 @@ jobs:
       - name: La page, la porte et le moteur se parlent encore
         run: python3 outils/verifier-raccord.py
 
+      # PhénoBac est écrite pour des laboratoires où la connexion est
+      # intermittente. Tout repose sur une liste de huit chemins, et
+      # cache.addAll() est ATOMIQUE : un seul 404 et rien n'est mis en cache,
+      # sans erreur visible. L'application marcherait jusqu'à la première
+      # coupure — c'est-à-dire jusqu'au jour où l'on en a besoin.
+      - name: L'application tient encore sans réseau
+        run: python3 outils/verifier-horsligne.py
+
   deploy:
     name: Déploiement VPS
     needs: test
