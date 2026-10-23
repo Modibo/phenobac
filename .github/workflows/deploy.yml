@@ -103,6 +103,14 @@ jobs:
       - name: L'application tient encore sans réseau
         run: python3 outils/verifier-horsligne.py
 
+      # « GRATUIT · SANS COMPTE · SANS LICENCE » n'est pas un argument de
+      # vente : c'est un engagement envers des laboratoires sans budget
+      # logiciel. L'infrastructure de licence existe toujours, dormante, pour
+      # d'éventuelles licences d'établissement — et une infrastructure
+      # dormante se réveille par accident.
+      - name: L'application tient la promesse qu'elle affiche
+        run: python3 outils/verifier-gratuite.py
+
   deploy:
     name: Déploiement VPS
     needs: test

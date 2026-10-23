@@ -1654,7 +1654,7 @@
       <button class="modal-close" id="modalClose" aria-label="Fermer">×</button>
     </div>
     <div class="modal-b">
-      <div class="modal-lead" id="modalLead">Cette fonctionnalité fait partie de PhénoBac Premium.</div>
+      <div class="modal-lead" id="modalLead">PhénoBac est gratuit, sans compte et sans licence. Cette fenêtre ne sert qu'à activer une licence d'établissement, s'il vous en a été remis une.</div>
       <ul class="modal-feat">
         <li><span class="ck">✓</span> Interprétation des 37 espèces et tous les phénotypes</li>
         <li><span class="ck">✓</span> Saisie par CMI et seuils paramétrables</li>
@@ -3066,7 +3066,11 @@ async function checkLicense(){
       setPlan("free");
       if(data.reason==="expired"){
         try{ localStorage.removeItem("phenobac_license"); }catch(e){}
-        openUpgrade("Votre licence a expiré. Renouvelez-la pour retrouver Premium.");
+        // Une licence d'établissement expirée ne retire RIEN : toutes les
+        // fonctions restent ouvertes. Alarmer l'utilisateur lui ferait croire
+        // qu'il a perdu quelque chose, et chercher à payer pour le retrouver.
+        openUpgrade("Votre licence d'établissement a expiré. Cela ne change rien à votre usage : "
+                  + "toutes les fonctions de PhénoBac restent gratuites et ouvertes.");
       }
     }
   }catch(e){
@@ -4528,7 +4532,7 @@ function renderInterpretView(A){
       // copie échoue, il doit le savoir, pas croire qu'elle a réussi.
       .catch(()=>{ rendre("Sélectionnez le texte"); selectionner($("#crTxt")); });
   };
-  $("#exportBtn").onclick=()=> isPremium() ? exportPDF() : openUpgrade("L'export PDF du compte-rendu est une fonction Premium.");
+  $("#exportBtn").onclick=()=> isPremium() ? exportPDF() : openUpgrade("L'export PDF est gratuit comme le reste. Si ce message s'affiche, signalez-le : c'est un défaut.");
   const sb = $("#survBtn"); if(sb) sb.onclick = ()=> ouvrirSurveillance(A);
   // Le raisonnement se déroule à la demande : l'afficher d'office noierait le
   // verdict, que la plupart des lectures cherchent d'abord.
@@ -4639,10 +4643,16 @@ async function renderInterpretRemote(){
 
     if(res.locked){
       setLive(null); state.lastA=null;
-      interpretEl.innerHTML=`<div class="interp-note"><b>Interprétation Premium requise.</b> Votre licence n'est pas valide ou a expiré.</div>`;
-      openUpgrade(state.mode === "mic"
-        ? "La saisie par CMI est une fonction Premium : une licence valide est requise."
-        : "Votre licence Premium n'est pas valide ou a expiré.");
+      // Branche inatteignable aujourd'hui : le serveur accorde l'interprétation
+      // à tous (FREE_SPECIES = null). Si elle s'allumait, ce serait une erreur
+      // de configuration du serveur — pas un défaut de l'utilisateur, et
+      // sûrement pas une licence à acheter.
+      interpretEl.innerHTML=`<div class="interp-note"><b>Le serveur a refusé l'interprétation.</b>
+        PhénoBac est gratuit et sans licence : ce refus vient d'une erreur de configuration du
+        serveur, pas de vous. L'application interprète de toute façon sur votre poste —
+        rechargez la page pour en retrouver le moteur.</div>`;
+      // Même remarque : rien de tout cela n'est payant. On n'ouvre donc plus
+      // de modale d'achat pour un refus qui ne vient pas de l'utilisateur.
       return;
     }
     // Catégories faisant foi : dès qu'une mesure est saisie, c'est le serveur
@@ -6514,7 +6524,7 @@ function renderBankManager(){
           <button class="bank-add" id="bankUpgrade">Passer à Premium</button>
         </div>
       </details>`;
-    const up=$("#bankUpgrade"); if(up) up.onclick=()=>openUpgrade("La banque d'entraînement extensible (créer, importer, exporter) est une fonction Premium.");
+    const up=$("#bankUpgrade"); if(up) up.onclick=()=>openUpgrade("La banque d'entraînement est gratuite comme le reste. Si ce message s'affiche, signalez-le : c'est un défaut.");
     return;
   }
 
@@ -6906,7 +6916,7 @@ function renderIdent(){
 }
 
 function useForAntibiogram(id){
-  if(!isPremium() && !especeLibre(id)){ openUpgrade("Cette espèce fait partie de PhénoBac Premium."); return; }
+  if(!isPremium() && !especeLibre(id)){ openUpgrade("Toutes les espèces couvertes sont gratuites. Si ce message s'affiche, signalez-le : c'est un défaut."); return; }
   state.org=id; state.results={}; state.mic={}; state.diam={}; state.ctx={};
   renderSpeciesOptions(); renderAll(); setView("work");
 }
@@ -7056,12 +7066,18 @@ if(_btnExamen) _btnExamen.onclick = ()=>{
 function renderPlanChip(){
   const chip=$("#planChip");
   if(isPremium()){
+    // isPremium() rend true sans condition : c'est l'état de TOUS les postes.
+    // Annoncer « Premium » à qui n'a rien payé, dans une application dont la
+    // page d'accueil dit « gratuit, sans compte, sans licence », laisserait
+    // croire à un privilège — et donc à son retrait possible.
     chip.className="plan-chip pro";
-    chip.innerHTML=`<span class="gi">◆</span> Premium`;
+    chip.innerHTML=`<span class="gi">◆</span> Gratuit`;
     chip.onclick=null;
   } else {
+    // Branche morte : isPremium() ne rend jamais false. « Débloquer »
+    // laisserait entendre qu'une fonction est fermée — aucune ne l'est.
     chip.className="plan-chip free";
-    chip.innerHTML=`<span class="gi">◆</span> Gratuit · Débloquer`;
+    chip.innerHTML=`<span class="gi">◆</span> Gratuit`;
     chip.onclick=()=>setView("offres");
   }
 }
@@ -7087,7 +7103,12 @@ function renderOffres(){
 
 /* modale */
 function openUpgrade(lead){
-  $("#modalLead").textContent = lead || "Cette fonctionnalité fait partie de PhénoBac Premium.";
+  // Aucune fonction n'est payante : plus aucun appel ne devrait parvenir ici.
+  // Le libellé par défaut le dit, pour qu'une modale ouverte par accident
+  // n'invente pas un verrou qui n'existe pas.
+  $("#modalLead").textContent = lead
+    || "PhénoBac est gratuit, sans compte et sans licence. Cette fenêtre ne sert qu'à activer "
+     + "une licence d'établissement, s'il vous en a été remis une.";
   $("#modalPrice").innerHTML = `<b>${PRICING.price}</b> ${PRICING.period} · ${PRICING.annual}`;
   $("#modalHint").innerHTML = PRICING.buyUrl
     ? `<a href="${PRICING.buyUrl}" target="_blank" rel="noopener">Payer par mobile money ou carte</a> — votre clé vous est envoyée par SMS dès le paiement confirmé. Collez-la ci-dessus.`
@@ -7172,7 +7193,7 @@ modeSeg.querySelectorAll("button").forEach(b=>{
   b.onclick=()=>{
     // La saisie en millimètres n'est pas réservée : c'est la méthode des
     // laboratoires sans automate, ceux pour qui cet outil a été écrit.
-    if(b.dataset.m==="mic" && !isPremium()){ openUpgrade("La saisie par CMI (avec seuils paramétrables) est une fonction Premium."); return; }
+    if(b.dataset.m==="mic" && !isPremium()){ openUpgrade("La saisie par CMI est gratuite comme le reste. Si ce message s'affiche, signalez-le : c'est un défaut."); return; }
     if(state.mode===b.dataset.m) return;
     state.mode=b.dataset.m;
     try{ localStorage.setItem("phenobac.mode", state.mode); }catch(e){ /* sans mémoire, tant pis */ }
@@ -7213,7 +7234,7 @@ speciesSel.onchange=()=>{
   const sel=speciesSel.value;
   if(!isPremium() && !especeLibre(sel)){
     speciesSel.value=state.org;               // revenir au germe précédent
-    openUpgrade("Cette espèce fait partie de PhénoBac Premium.");
+    openUpgrade("Toutes les espèces couvertes sont gratuites. Si ce message s'affiche, signalez-le : c'est un défaut.");
     return;
   }
   state.org=sel; state.results={}; state.mic={}; state.diam={}; state.ctx={}; renderAll();
