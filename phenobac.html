@@ -368,6 +368,21 @@
   .id-use:hover{background:#0a5960}
   .id-note{font-size:12px;color:#8098a1;line-height:1.5;margin-top:8px;background:#f4f8f9;border:1px solid #d6e0e3;
     border-left:3px solid #a9700a;border-radius:4px;padding:10px 12px}
+  /* Deux espèces au même score : leur ordre ne veut rien dire, et le taire
+     reviendrait à présenter la première comme la réponse. */
+  .id-exaequo{font-size:12.5px;line-height:1.55;color:#8a5a00;background:#fdf6e8;
+    border:1px solid #d9b26a;border-radius:4px;padding:10px 12px;margin-top:10px}
+  .id-exaequo b{color:#6d4700}
+  /* Le test à faire ensuite : c'est l'aide la plus utile qu'un module
+     d'identification puisse rendre. */
+  .id-separe{font-size:12.5px;line-height:1.55;color:#0a5960;background:#e9f4f5;
+    border:1px solid #a9d4d6;border-radius:4px;padding:10px 12px;margin-top:8px}
+  .id-separe > b{display:block;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;margin-bottom:6px}
+  .id-sep-l{display:flex;flex-wrap:wrap;gap:2px 10px;padding:3px 0;align-items:baseline}
+  .id-sep-n{font-weight:600;color:#0f2129;min-width:170px}
+  .id-sep-v{color:#4b6169;font-size:12px}
+  .id-sep-v b{font-family:'IBM Plex Mono';color:#0a5960}
   .id-note b{color:#0f2129}
   .offres-wrap{max-width:var(--maxw);margin:26px auto 0;padding:0 20px}
   /* Le bandeau d'ouverture : un seul bloc aligné à gauche sur grand écran,
@@ -1428,6 +1443,7 @@
       <span class="eyebrow"><span class="num">01</span>Registre local</span>
       <div style="margin-left:auto" class="toolbar">
         <button class="btn" id="survExport">Exporter (CSV)</button>
+        <button class="btn" id="survImprimer">Imprimer (PDF)</button>
         <button class="btn" id="survTransmettre">Transmettre les isolats en attente</button>
       </div>
     </div>
@@ -1442,6 +1458,13 @@
   <div class="card">
     <div class="card-h"><span class="eyebrow"><span class="num">03</span>Évolution</span></div>
     <div class="card-b" id="survTendance"></div>
+  </div>
+
+  <!-- § 13 — par service. Un taux global sert à publier ; un taux par service
+       sert à prescrire. -->
+  <div class="card">
+    <div class="card-h"><span class="eyebrow"><span class="num">04</span>Par service demandeur</span></div>
+    <div class="card-b" id="survCarteService"></div>
   </div>
 </div>
 
@@ -1630,6 +1653,19 @@
             <option value="INPAT">Hospitalisé</option>
             <option value="OUTPAT">Consultation externe</option>
           </select></label>
+        <!-- § 13 : le SERVICE demandeur. « Hospitalisé » ne suffit pas — la
+             résistance en réanimation n'est pas celle de la maternité, et
+             c'est précisément cette différence qui change une prescription
+             probabiliste. Le champ ne part PAS à l'OMS : GLASS ne le prévoit
+             pas, il ne sert qu'à l'antibiogramme cumulatif du laboratoire. -->
+        <label class="surv-ch"><span>Service demandeur</span>
+          <input id="survService" type="text" list="survServices" placeholder="Réanimation" autocomplete="off">
+          <datalist id="survServices">
+            <option value="Réanimation"></option><option value="Médecine interne"></option>
+            <option value="Chirurgie"></option><option value="Pédiatrie"></option>
+            <option value="Maternité"></option><option value="Urgences"></option>
+            <option value="Consultation externe"></option>
+          </datalist></label>
       </div>
 
       <div class="surv-avis" id="survAvis"></div>
@@ -4810,6 +4846,9 @@ function ouvrirSurveillance(A){
   const site = $("#specimen") ? $("#specimen").value : "";
   const n = Object.values(state.results).filter(Boolean).length;
 
+  // Le service change peu d'un prélèvement à l'autre dans une même garde :
+  // le retenir évite de le retaper, donc évite qu'on cesse de le remplir.
+  if($("#survService")) $("#survService").value = survMemoire("service");
   $("#survLabo").value = survMemoire("labo");
   $("#survPays").value = survMemoire("pays") || "MLI";
   const d = $("#survDate");
@@ -4841,6 +4880,7 @@ async function verserSurveillance(){
     $("#survLabo").focus(); return;
   }
   survMemoire("labo", labo);
+  if($("#survService")) survMemoire("service", $("#survService").value.trim());
   survMemoire("pays", $("#survPays").value.trim().toUpperCase() || "MLI");
 
   const isolat = {
@@ -4856,6 +4896,8 @@ async function verserSurveillance(){
     genre: $("#survGenre").value,
     age: $("#survAge").value,
     typePatient: $("#survType").value,
+    // Reste local : GLASS ne prévoit pas ce champ, et l'export ne l'emporte pas.
+    service: ($("#survService") ? $("#survService").value.trim() : "").slice(0,60),
     date: $("#survDate").value
   };
 
@@ -5062,6 +5104,38 @@ function survParPeriode(isolats){
 
 function survNomEspece(id){ return (ORG[id] && ORG[id].label) || id; }
 
+/* ---------- Antibiogramme cumulatif PAR SERVICE — § 13 ----------
+   Un taux global de sensibilité sert à publier ; un taux par service sert à
+   prescrire. L'entérobactérie de réanimation et celle de consultation externe
+   n'ont pas le même profil, et c'est au lit du malade que la différence
+   compte.
+
+   CLSI M39 demande au moins 30 isolats pour publier un taux. Les services
+   d'un hôpital de district en comptent rarement autant : on les montre quand
+   même — les taire priverait d'une information qui existe — mais l'effectif
+   est affiché à côté de chaque chiffre, et ceux qui n'atteignent pas le seuil
+   sont marqués. Un pourcentage sans son dénominateur est un mensonge poli.
+   Le seuil est SURV_MIN, déjà défini plus bas pour l'antibiogramme cumulatif
+   par espèce : deux constantes à 30 finiraient par diverger. */
+
+function survParService(isolats){
+  const out = {};
+  survDedupliquer(isolats).forEach(i=>{
+    const s = (i.service || "").trim() || "(service non renseigné)";
+    const e = out[s] || (out[s] = { n:0, especes:{}, abx:{} });
+    e.n++;
+    e.especes[i.organism] = (e.especes[i.organism] || 0) + 1;
+    Object.keys(i.resultats || {}).forEach(k=>{
+      const c = i.resultats[k];
+      if(["S","I","R"].indexOf(c) === -1) return;
+      const a = e.abx[k] || (e.abx[k] = { S:0, n:0 });
+      if(c === "S") a.S++;
+      a.n++;
+    });
+  });
+  return out;
+}
+
 function renderSurveillanceLocale(){
   const reg = survRegistre();
   const dedup = survDedupliquer(reg);
@@ -5157,7 +5231,7 @@ function renderSurveillanceLocale(){
 function survExporter(){
   const reg = survRegistre();
   if(!reg.length) return alert("Registre vide : rien à exporter.");
-  const col = ["Date","Laboratoire","Pays","CompteurPatient","Genre","Age","TypePatient",
+  const col = ["Date","Laboratoire","Pays","CompteurPatient","Genre","Age","TypePatient","Service",
                "Espece","Prelevement","Phenotype","Referentiel","Antibiotique","Code","Categorie",
                "PremierIsolat","Transmis"];
   const premiers = new Set(survDedupliquer(reg).map(i=>i.cle));
@@ -5169,6 +5243,7 @@ function survExporter(){
   reg.forEach(i=>{
     Object.keys(i.resultats||{}).forEach(k=>{
       lignes.push([i.date, i.laboratoire, i.pays, i.patient, i.genre, i.age, i.typePatient,
+                   i.service || "",
                    survNomEspece(i.organism), i.prelevement, i.phenotype, i.referentiel,
                    (ABX[k]?ABX[k].n:k), k, i.resultats[k],
                    premiers.has(i.cle) ? "oui" : "non",
@@ -5218,7 +5293,143 @@ function survMarquerTransmis(cle){
 $("#survClose").onclick = fermerSurveillance;
 $("#survModal").onclick = e => { if(e.target.id === "survModal") fermerSurveillance(); };
 $("#survEnvoyer").onclick = verserSurveillance;
+/* ---------- Rendu : l'antibiogramme cumulatif par service ---------- */
+function renderSurvParService(){
+  const hote = $("#survCarteService"); if(!hote) return;
+  const reg = survRegistre();
+  const par = survParService(reg);
+  const noms = Object.keys(par).sort((a,b)=> par[b].n - par[a].n);
+
+  if(!noms.length){
+    hote.innerHTML = `<div class="placeholder">Renseignez le <b>service demandeur</b> au moment de
+      verser un antibiogramme : les taux par service apparaîtront ici. C'est la ventilation qui
+      sert à prescrire — la résistance en réanimation n'est pas celle de la consultation externe.</div>`;
+    return;
+  }
+
+  let h = `<div class="bp-note">Un taux global sert à publier, un taux par service sert à
+    prescrire. Le CLSI M39 demande <b>${SURV_MIN} isolats</b> au moins pour qu'un taux soit
+    publiable ; les services en dessous sont montrés — les taire priverait d'une information qui
+    existe — mais marqués, et chaque pourcentage porte son effectif.</div>`;
+
+  noms.forEach(nom=>{
+    const s = par[nom];
+    const assez = s.n >= SURV_MIN;
+    const especes = Object.keys(s.especes).sort((a,b)=>s.especes[b]-s.especes[a])
+      .slice(0,3).map(id=>survNomEspece(id) + " (" + s.especes[id] + ")").join(", ");
+    h += `<div class="surv-esp"><div class="surv-esp-t">${esc(nom)}
+        <span class="surv-n">${s.n} isolat${s.n>1?"s":""}</span>
+        ${assez ? "" : `<span class="surv-faible">sous le seuil M39 — à lire avec prudence</span>`}</div>`;
+    if(especes) h += `<div class="det-vide" style="margin:2px 0 8px">Principales espèces : ${esc(especes)}.</div>`;
+    const codes = Object.keys(s.abx).sort((x,y)=>(ABX[x]?ABX[x].n:x).localeCompare(ABX[y]?ABX[y].n:y));
+    if(!codes.length){ h += `<div class="det-vide">Aucun antibiotique renseigné.</div></div>`; return; }
+    h += `<div class="tbl-cumul"><table><thead><tr>
+        <th>Antibiotique</th><th>Testés</th><th>Sensibles</th><th>% sensibles</th>
+      </tr></thead><tbody>`;
+    codes.forEach(k=>{
+      const a = s.abx[k];
+      const pct = a.n ? Math.round(100 * a.S / a.n) : 0;
+      h += `<tr><td>${esc(ABX[k]?ABX[k].n:k)}</td><td>${a.n}</td><td>${a.S}</td>
+            <td><b>${pct} %</b></td></tr>`;
+    });
+    h += `</tbody></table></div></div>`;
+  });
+  hote.innerHTML = h;
+}
+
+/* ---------- § 13 : l'export PDF de la surveillance ----------
+   Le CSV sert à recalculer, le PDF sert à transmettre. Un antibiogramme
+   cumulatif s'affiche en salle de garde et se discute en commission des
+   anti-infectieux : il lui faut une feuille, datée, qui porte ses effectifs
+   et ses réserves. */
+function survConstruireRapport(){
+  const reg = survRegistre();
+  if(!reg.length) return false;
+  const dedup = survDedupliquer(reg);
+  const dates = reg.map(i=>i.date).filter(Boolean).sort();
+  const now = new Date();
+  const labo = survMemoire("labo") || "";
+
+  const tableau = (titre, n, abx, assez, sous) => {
+    const codes = Object.keys(abx).sort((x,y)=>(ABX[x]?ABX[x].n:x).localeCompare(ABX[y]?ABX[y].n:y));
+    if(!codes.length) return "";
+    let s = `<div class="cqr-bloc"><div class="cqr-bloc-h"><b>${esc(titre)}</b>
+      <span class="cqr-etat ${assez?"ok":"hors"}">${n} isolat${n>1?"s":""}${assez?"":" — sous le seuil M39"}</span></div>`;
+    if(sous) s += `<div class="cqr-bloc-m">${esc(sous)}</div>`;
+    s += `<table class="rp-table"><thead><tr><th>Antibiotique</th><th>Testés</th>
+      <th>Sensibles</th><th>% sensibles</th></tr></thead><tbody>`;
+    codes.forEach(k=>{
+      const a = abx[k];
+      const S = (a.S !== undefined) ? a.S : 0;
+      const pct = a.n ? Math.round(100 * S / a.n) : 0;
+      s += `<tr><td>${esc(ABX[k]?ABX[k].n:k)}</td><td class="mic">${a.n}</td>
+            <td class="mic">${S}</td><td class="cat">${pct} %</td></tr>`;
+    });
+    return s + `</tbody></table></div>`;
+  };
+
+  const cum = survCumulatif(reg);
+  const parEspece = Object.keys(cum).sort((a,b)=>cum[b].n - cum[a].n)
+    .map(id=>tableau(survNomEspece(id), cum[id].n, cum[id].abx, cum[id].n >= SURV_MIN, "")).join("");
+
+  const par = survParService(reg);
+  const parService = Object.keys(par).sort((a,b)=>par[b].n - par[a].n).map(nom=>{
+    const s = par[nom];
+    const esp = Object.keys(s.especes).sort((a,b)=>s.especes[b]-s.especes[a])
+      .slice(0,3).map(id=>survNomEspece(id) + " (" + s.especes[id] + ")").join(", ");
+    return tableau(nom, s.n, s.abx, s.n >= SURV_MIN, esp ? "Principales espèces : " + esp + "." : "");
+  }).join("");
+
+  document.getElementById("report").innerHTML = "";
+  document.getElementById("cqReport").innerHTML = `
+    <div class="rp-head">
+      <div class="rp-brand">Phéno<b>Bac</b><span>Antibiogramme cumulatif — surveillance locale</span></div>
+      <div class="rp-date">Édité le ${esc(now.toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}))}</div>
+    </div>
+    <table class="rp-meta">
+      <tr><th>Laboratoire</th><td>${esc(labo) || "…………………………………………"}</td>
+          <th>Période couverte</th><td>${esc(dates[0]||"—")} au ${esc(dates[dates.length-1]||"—")}</td></tr>
+      <tr><th>Isolats</th><td>${reg.length} enregistrés, ${dedup.length} après déduplication</td>
+          <th>Référentiel</th><td>${esc(refLibelle())}</td></tr>
+    </table>
+    <div class="rp-legende">
+      <b>Comment lire ces taux.</b> La déduplication retient le <b>premier isolat par patient et
+      par espèce</b> sur l'année (CLSI M39) : sans elle, un patient prélevé chaque semaine pèserait
+      dix fois et ferait chuter les taux sans qu'aucune épidémie n'ait eu lieu. Le CLSI demande au
+      moins ${SURV_MIN} isolats pour qu'un taux soit publiable ; les séries en dessous sont portées
+      ici — les taire priverait d'une information qui existe — mais marquées. Chaque pourcentage
+      est accompagné de son effectif : un pourcentage sans dénominateur est un mensonge poli.
+    </div>
+    ${parEspece ? `<div class="rp-sect-t">Par espèce</div>${parEspece}` : ""}
+    ${parService ? `<div class="rp-sect-t">Par service demandeur</div>${parService}` : ""}
+    <div class="rp-sign">
+      <div class="rp-sig-line"><span class="rp-sig-lab">Biologiste responsable</span>
+        <span class="rp-sig-val">…………………………………………</span></div>
+      <div class="rp-sig-line"><span class="rp-sig-lab">Date / signature</span>
+        <span class="rp-sig-val">…………………………………………</span></div>
+    </div>
+    <div class="rp-foot">
+      <b class="rp-avert">&#9888; Avertissement</b>
+      Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.
+      Ces taux décrivent les souches isolées par ce laboratoire ; ils orientent une
+      antibiothérapie probabiliste, ils ne la prescrivent pas. Un antibiogramme cumulatif
+      ne remplace pas l'antibiogramme du malade.
+      <br>PhénoBac ${esc(PHENOBAC_VERSION)} · ${esc(refLibelle())} · base ${esc(baseVersion())}.
+    </div>`;
+  return true;
+}
+
+function survImprimer(){
+  if(!survConstruireRapport()){
+    const e = $("#survAvis");
+    if(e){ e.textContent = "Registre vide : rien à imprimer."; e.className = "surv-avis hors"; }
+    return;
+  }
+  window.print();
+}
+
 if($("#survExport")) $("#survExport").onclick = survExporter;
+if($("#survImprimer")) $("#survImprimer").onclick = survImprimer;
 if($("#refExport")) $("#refExport").onclick = refExporter;
 if($("#refQ")) $("#refQ").oninput = e => {
   // Le filtre se rejoue à chaque frappe : la table est en mémoire, il n'y a
@@ -6857,6 +7068,53 @@ function idScore(id){
   return { id, match, conflict, pct: denom?Math.round(100*match/denom):0, score: match-2*conflict, sup, con, answered:denom };
 }
 
+/* ============================================================
+   LE TEST QUI SÉPARE — § 4.A, point 4
+
+   Le cahier des charges demande que le moteur « demande les tests
+   discriminants manquants ». Il ne le faisait pas, et cela se voyait : trois
+   réponses suffisaient à afficher Escherichia coli ET Klebsiella oxytoca à
+   100 % toutes les deux. Le stagiaire lisait le premier de la liste et
+   s'arrêtait là — alors que l'ordre entre deux ex æquo ne veut rien dire.
+
+   Un test sépare s'il est ATTENDU DIFFÉREMMENT par les candidats en tête.
+   On le cherche parmi ceux qui n'ont pas encore été faits, et on préfère
+   celui qui coupe le groupe le plus près de la moitié : un test qui n'écarte
+   qu'un candidat sur six fait perdre une manipulation pour peu de chose.
+
+   « v » (variable) ne sépare rien, et un caractère absent de la fiche non
+   plus : on ne les propose pas. Proposer un test dont le résultat
+   n'apprendrait rien est la meilleure façon de faire cesser de les faire.
+   ============================================================ */
+function idTestsQuiSeparent(tete){
+  if(tete.length < 2) return [];
+  const faits = idState.tests;
+  const tests = idState.gram === "pos" ? ID_TESTS_POS : ID_TESTS_NEG;
+  const out = [];
+
+  tests.forEach(([k, libelle])=>{
+    if(faits[k] === "+" || faits[k] === "-") return;      // déjà répondu
+    const plus = [], moins = [];
+    tete.forEach(r=>{
+      const v = IDDB[r.id] && IDDB[r.id].t[k];
+      if(v === "+") plus.push(r.id);
+      else if(v === "-") moins.push(r.id);
+      // « v » et absent : ce test ne tranche pas pour ce candidat
+    });
+    if(!plus.length || !moins.length) return;             // ne sépare personne
+    // Le meilleur test coupe le groupe en deux parts égales.
+    const ecart = Math.abs(plus.length - moins.length);
+    out.push({ cle:k, libelle:libelle, plus:plus, moins:moins,
+               couvre: plus.length + moins.length, ecart: ecart });
+  });
+
+  // D'abord ceux qui se prononcent sur le plus de candidats, puis les plus
+  // équilibrés : un test qui ne connaît que deux des quatre candidats laisse
+  // les deux autres indécidés.
+  out.sort((a,b)=> b.couvre - a.couvre || a.ecart - b.ecart);
+  return out.slice(0, 3);
+}
+
 function renderIdent(){
   const shapes = idState.gram==="pos" ? [["cocci","Cocci"],["bacilli","Bacilles"]] : [["bacilli","Bacilles"],["coccobacilli","Coccobacilles"],["cocci","Cocci (diplocoques)"]];
   let g = `<div class="id-choice">
@@ -6909,6 +7167,35 @@ function renderIdent(){
     if(i===0) html += `<button class="id-use" data-id="${r.id}">Utiliser pour l'antibiogramme →</button>`;
     html += `</div>`;
   });
+  /* § 4.A, points 4 et 6. Deux candidats au même score ne se départagent pas
+     par leur place dans la liste : on le dit, et on dit quel test les sépare.
+     Taire l'ex æquo reviendrait à présenter comme acquise une identification
+     que les tests faits ne permettent pas de trancher. */
+  const meilleur = ranked[0];
+  const exaequo = meilleur ? ranked.filter(r => r.score === meilleur.score && r.pct === meilleur.pct) : [];
+  const tete = exaequo.length >= 2 ? exaequo : ranked.slice(0, 3);
+  const separateurs = idTestsQuiSeparent(tete);
+
+  if(exaequo.length >= 2){
+    const noms = exaequo.map(r => ORG[r.id].label).join(", ");
+    html += `<div class="id-exaequo"><b>${exaequo.length} espèces à égalité</b> — ${esc(noms)}.
+      Les tests saisis ne les départagent pas : leur ordre dans cette liste ne signifie rien.</div>`;
+  }
+
+  if(separateurs.length){
+    html += `<div class="id-separe"><b>Tests à faire pour trancher</b>`;
+    separateurs.forEach(s=>{
+      const dit = l => l.map(id => ORG[id].label).join(", ");
+      html += `<div class="id-sep-l"><span class="id-sep-n">${esc(s.libelle)}</span>
+        <span class="id-sep-v"><b>+</b> ${esc(dit(s.plus))} &nbsp;·&nbsp; <b>−</b> ${esc(dit(s.moins))}</span></div>`;
+    });
+    html += `</div>`;
+  } else if(tete.length >= 2 && exaequo.length >= 2){
+    html += `<div class="id-separe"><b>Aucun test disponible ne les sépare.</b>
+      Les caractères de cette application ne suffisent pas ici : il faut une galerie complète
+      ou une spectrométrie de masse.</div>`;
+  }
+
   html += `<div class="id-note">Identification <b>présumée</b>, fondée sur les tests saisis. À confirmer par une méthode de référence (galerie complète, spectrométrie MALDI-TOF) avant validation clinique.</div>`;
   $("#idResults").innerHTML=html;
   const ub=$("#idResults").querySelector(".id-use");
@@ -6948,7 +7235,7 @@ function setView(v){
   if(v==="quiz" && quiz.queue.length===0) startQuiz();
   if(v==="cq") renderCQ();
   if(v==="ref") renderReferentiels();
-  if(v==="surv") renderSurveillanceLocale();
+  if(v==="surv"){ renderSurveillanceLocale(); renderSurvParService(); }
   if(v==="offres") renderOffres();
 }
 $("#tabs").querySelectorAll("button").forEach(b=>{
