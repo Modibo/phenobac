@@ -429,6 +429,32 @@ publication ; la base porte la sienne (`BASE_VERSION`). `PhenoBacMoteur.regleDe(
 retrouve la règle employée par ses coordonnées — c'est elle que l'interface
 citera pour répondre à « pourquoi ? ».
 
+## Les contrôles sont-ils vrais ?
+
+Un banc qui passe ne prouve rien : il faut qu'il **échoue** quand le code se
+trompe, et cela, aucun banc ne le dit de lui-même. Quatre contrôles de ce
+dépôt ont affirmé, cette semaine, une protection qu'ils n'exerçaient pas —
+le dernier, la confrontation des arguments à l'antibiogramme, ne *pouvait*
+pas échouer. Les quatre ont été trouvés par hasard, en écrivant autre chose.
+
+`outils/muter.py` les cherche exprès. Il abîme le moteur d'une façon
+précise — un `&&` devenu `||`, une égalité inversée, un seuil décuplé — puis
+lance toute la suite. Si rien ne tombe, la mutation a **survécu** : il existe
+une façon de se tromper que personne ne verrait. Le dépôt n'est jamais
+modifié, tout se passe sur une copie, et l'outil s'arrête si la suite est
+déjà rouge — sinon chaque mutation paraîtrait détectée.
+
+```bash
+python3 outils/muter.py --n 60
+```
+
+La première campagne a rendu 57 % de détection et vingt-six survivants. Parmi
+eux : le niveau de **gravité**, que rien n'éprouvait, et le **D-test**, qui
+empêche de rendre une clindamycine sensible sur une souche MLSb inductible.
+`outils/essai-regles.js` est né de cette liste — et la liste a aussi révélé
+un vrai défaut : le rappel du D-test ne s'affichait que si l'on choisissait
+explicitement « Non fait », jamais dans l'état de départ où rien n'est coché.
+
 ## Ce qui se vérifie à la main se note
 
 Deux contrôles ne peuvent pas tourner en intégration continue :

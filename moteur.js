@@ -1733,7 +1733,13 @@ function staphInterpret(r, c, a) {
       A.alerts.push({ lvl: "warn", txt: "MLSb inductible (D-test positif) : la clindamycine est rendue R malgré une sensibilité apparente in vitro." });
       A.rules.push({ k: "→R", txt: "Clindamycine rendue R (résistance inductible démontrée)." });
       A.comment += " Résistance inductible à la clindamycine (MLSb, D-test positif) : clindamycine rendue résistante.";
-    } else if (!c || c.dtest === "Non fait") {
+    // « PAS ENCORE RÉPONDU » EST AUSSI UN D-TEST NON FAIT, et c'est même
+    // l'état de DÉPART de tout antibiogramme : la question s'affiche sans
+    // réponse cochée. La condition ne reconnaissait que « Non fait »
+    // explicitement choisi — si bien qu'au moment où le rappel compte le
+    // plus, personne ne le voyait. Pire : décocher une réponse déjà donnée
+    // faisait disparaître l'avertissement en silence.
+    } else if (!c || !c.dtest || c.dtest === "Non fait") {
       A.alerts.push({ lvl: "info", txt: "Érythromycine R et clindamycine S : réaliser un D-test avant de rendre la clindamycine." });
     }
   }
@@ -2072,7 +2078,13 @@ function strepInterpret(r, c, a) {
       A.alerts.push({ lvl: "warn", txt: "MLSb inductible (D-test positif) : clindamycine rendue R malgré une sensibilité apparente in vitro." });
       A.rules.push({ k: "→R", txt: "Clindamycine rendue R (résistance inductible démontrée)." });
       A.comment += " Résistance inductible à la clindamycine (MLSb, D-test positif).";
-    } else if (!c || c.dtest === "Non fait") {
+    // « PAS ENCORE RÉPONDU » EST AUSSI UN D-TEST NON FAIT, et c'est même
+    // l'état de DÉPART de tout antibiogramme : la question s'affiche sans
+    // réponse cochée. La condition ne reconnaissait que « Non fait »
+    // explicitement choisi — si bien qu'au moment où le rappel compte le
+    // plus, personne ne le voyait. Pire : décocher une réponse déjà donnée
+    // faisait disparaître l'avertissement en silence.
+    } else if (!c || !c.dtest || c.dtest === "Non fait") {
       A.alerts.push({ lvl: "info", txt: "Érythromycine R et clindamycine S : réaliser un D-test avant de rendre la clindamycine." });
     }
   } else if (isR(r.E) && isR(r.DA)) {

@@ -153,6 +153,15 @@ jobs:
       # catégorie « R » s'affiche quand elle est résistante, en expliquant
       # qu'elle est conservée. Le raisonnement garde son apparence de rigueur
       # et dit le contraire de ce qu'il observe.
+      # Ce banc n'a pas été écrit parce qu'on a pensé à ces règles : il a
+      # été écrit parce que outils/muter.py les a trouvées SANS DÉFENSE. Le
+      # niveau de gravité — celui qui colore le verdict et dit au biologiste
+      # s'il doit s'alarmer — n'était éprouvé par rien ; le D-test, qui
+      # empêche de rendre une clindamycine sensible sur une souche MLSb
+      # inductible, non plus.
+      - name: La gravité, le D-test et les règles du CA-SFM tiennent
+        run: node outils/essai-regles.js
+
       - name: Aucun argument ne contredit la catégorie qu'il explique
         run: python3 outils/verifier-arguments.py
 

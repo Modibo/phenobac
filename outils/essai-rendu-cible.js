@@ -89,6 +89,26 @@ verif(rc("ecoli", SAUVAGE, ctx({ typeIU: "Pyélonéphrite" })).tableau === "pyel
 verif(rc("ecoli", SAUVAGE, ctx({})).tableau === "sansRenseignement",
       "rien de renseigné : le tableau sans renseignement clinique");
 
+/* ---------- 3 bis. Chacune des trois C3G fait basculer la colonne ---------- */
+dire("\nLa colonne « C3G résistante » écoute les TROIS céphalosporines");
+(function () {
+  // muter.py a montré qu'en remplaçant un « ou » par un « et » dans ce choix,
+  // la ceftriaxone cessait d'être écoutée sans qu'aucun contrôle ne tombe :
+  // mes épreuves ne basculaient la colonne que par la céfotaxime. Une souche
+  // dont seule la ceftriaxone est testée serait rendue comme sensible aux C3G.
+  [["CTX", "céfotaxime"], ["CRO", "ceftriaxone"], ["CAZ", "ceftazidime"]].forEach(function (x) {
+    var res = { AMX: "R", AMC: "S", SXT: "S", GEN: "S", IPM: "S" };
+    res[x[0]] = "R";
+    var r = rc("ecoli", res, ctx({ typeIU: "Pyélonéphrite" }));
+    verif(r.colonne === "c3gRouBlse",
+          x[1] + " résistante à elle seule : la colonne bascule");
+  });
+  var sensibles = rc("ecoli", { AMX: "R", AMC: "S", SXT: "S", CTX: "S", CRO: "S", CAZ: "S" },
+                     ctx({ typeIU: "Pyélonéphrite" }));
+  verif(sensibles.colonne !== "c3gRouBlse",
+        "… et les trois conservées : la colonne ne bascule pas");
+})();
+
 /* ---------- 4. Ce que la cystite d'une souche sensible donne ---------- */
 dire("\nCystite à souche sensible : la raison d'être du dispositif");
 (function () {
