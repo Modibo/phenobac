@@ -5879,9 +5879,29 @@ function provenanceLigne(k, g, cat, chg){
     reserve.push("seuil non fixé par " + referentiel().nom + " : convention de laboratoire");
   // Un chiffre mesuré que rien ne permet de catégoriser doit se voir : sans
   // marque, il se lirait comme un résultat que l'on aurait omis de traduire.
-  if(brut && !cat)
-    reserve.push("aucune concentration critique applicable à ce couple dans "
-      + referentiel().nom + " : la catégorisation automatique n'est pas possible");
+  /* DEUX RAISONS DE NE PAS POUVOIR CATÉGORISER, et il faut les distinguer :
+     la seconde se corrige à la paillasse, la première non.
+
+       le référentiel ne fixe aucun seuil pour ce couple ;
+       le seuil existe, mais la MESURE est une borne qui ne tranche pas —
+       « ≥ 0,25 » peut valoir 0,25 comme 8.
+
+     Les confondre enverrait le biologiste chercher un seuil manquant alors
+     qu'il lui suffit de rendre la CMI exacte. */
+  if(brut && !cat){
+    const seuil = state.mode==="diam" ? getDZ(g,k) : getBP(g,k);
+    const borne = state.mode==="diam" ? parseDiam(brut) : parseMic(brut);
+    if(seuil && borne && borne.op !== "=")
+      reserve.push("« " + brut + " » est une borne : elle ne situe pas la souche de part "
+        + "et d'autre du seuil. Rendre la valeur exacte, ou la catégorie lue à la paillasse");
+    else if(seuil && !borne)
+      reserve.push("mesure illisible : " + (state.mode==="diam"
+        ? "un diamètre se note en millimètres, entre 6 et 60"
+        : "une concentration se note en mg/L"));
+    else
+      reserve.push("aucune concentration critique applicable à ce couple dans "
+        + referentiel().nom + " : la catégorisation automatique n'est pas possible");
+  }
   if(chg && !A_CONFIRMEE)
     reserve.push("catégorie modifiée sur un mécanisme présumé, non confirmé par un test");
 

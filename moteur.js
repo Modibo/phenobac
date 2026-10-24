@@ -2544,15 +2544,38 @@ function catFromMic(str, bp) {
   if (!bp) return null;
   const p = parseMic(str); if (!p) return null;
   const { op, v } = p, { S, R } = bp;
-  // S null : le référentiel ne prévoit AUCUNE catégorie « sensible » à posologie
-  // standard pour ce couple germe/antibiotique. La souche est au mieux
-  // « sensible à forte posologie » — donc I jusqu'à R, jamais S.
-  if (S === null || S === undefined) {
-    if ((op === ">" || op === ">=") && v >= R) return "R";
-    return v > R ? "R" : "I";
+  const sans = (S === null || S === undefined);   // aucune catégorie « sensible »
+
+  /* UNE BORNE NE DONNE PAS UNE VALEUR. « ≥ 0,25 » dit que la CMI vaut AU MOINS
+     0,25 : elle peut valoir 0,25, et elle peut valoir 8. Le code retombait sur
+     « v <= S » et rendait « S » — il déclarait active une molécule qui pouvait
+     être résistante, à partir d'une mesure qui ne le disait pas. C'est le sens
+     dangereux de l'erreur, et aucun banc ne le voyait.
+
+     Symétriquement, « ≤ 2 » sous un seuil S ≤ 0,5 ne dit pas « résistant » :
+     la CMI peut valoir 0,25. Le code rendait « R », privant le malade d'un
+     antibiotique peut-être actif.
+
+     La fonction jumelle des diamètres faisait déjà le bon choix, et l'écrivait :
+     « Mieux vaut ne rien rendre que deviner. » On ne conclut donc que si la
+     borne SUFFIT À ELLE SEULE, et l'on rend « null » sinon — ce que l'interface
+     sait déjà présenter comme une catégorisation impossible. */
+  if (op === "<=" || op === "<") {
+    // Borne supérieure : la pire valeur possible est v. Elle tranche si même
+    // elle reste sensible — ou, faute de catégorie « sensible », si elle
+    // reste en deçà de la résistance.
+    if (!sans && v <= S) return "S";
+    if (sans && v <= R) return "I";
+    return null;
   }
-  if ((op === "<=" || op === "<") && v <= S) return "S";
-  if ((op === ">" || op === ">=") && v >= R) return "R";
+  if (op === ">" || op === ">=") {
+    // Borne inférieure : la meilleure valeur possible est v (ou juste
+    // au-dessus). Elle tranche si même elle est déjà résistante.
+    if (op === ">=" ? v > R : v >= R) return "R";
+    return null;
+  }
+
+  if (sans) return v > R ? "R" : "I";
   if (v <= S) return "S";
   if (v > R) return "R";
   return "I";

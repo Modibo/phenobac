@@ -159,6 +159,14 @@ jobs:
       # s'il doit s'alarmer — n'était éprouvé par rien ; le D-test, qui
       # empêche de rendre une clindamycine sensible sur une souche MLSb
       # inductible, non plus.
+      # Quatre fonctions transforment un chiffre lu sur une boîte en S, I ou R.
+      # Tout le reste de PhénoBac en dépend — et aucun banc ne les appelait.
+      # muter.py l'a montré : on pouvait y inverser un « >= » sans qu'aucun
+      # contrôle ne tombe. Il y avait bien une faute, dans le sens dangereux :
+      # « ≥ 0,25 » était rendu « S » alors que la CMI pouvait valoir 8.
+      - name: Une mesure ne devient une catégorie que si elle la détermine
+        run: node outils/essai-categorisation.js
+
       - name: La gravité, le D-test et les règles du CA-SFM tiennent
         run: node outils/essai-regles.js
 
