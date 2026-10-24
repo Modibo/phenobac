@@ -239,6 +239,92 @@ dire("\nStreptococcus dysgalactiae — groupes C et G de Lancefield");
         "… et l'alerte dit que c'est exceptionnel — vérifier l'identification");
 })();
 
+/* ---------- 7. Les règles que muter.py a trouvées sans défense ---------- */
+dire("\nLes impasses thérapeutiques et les seuils de gravité");
+(function () {
+  function txt(A) { return texte(A); }
+
+  // Burkholderia : perdre les trois options d'un coup, c'est l'impasse.
+  var b = lire("burk", { SXT: "S", CAZ: "S", MEM: "S", MIN: "S" });
+  verif(b.sev === "high", "options conservées : gravité « high » — la multirésistance est naturelle");
+  var bKO = lire("burk", { SXT: "R", CAZ: "R", MEM: "R", MIN: "S" });
+  verif(bKO.sev === "crit", "cotrimoxazole, ceftazidime ET méropénème inactifs : « crit »");
+  verif(/impasse thérapeutique/i.test(txt(bKO)), "… et le mot est dit : impasse thérapeutique");
+  // Il en faut TROIS : deux ne suffisent pas, sinon l'alerte perdrait son sens.
+  verif(lire("burk", { SXT: "R", CAZ: "R", MEM: "S", MIN: "S" }).sev !== "crit",
+        "le méropénème encore actif : ce n'est pas l'impasse");
+
+  // Bacteroides fragilis : un carbapénème atteint évoque la cfiA.
+  var bf = lire("bfragilis", { MTZ: "S", AMC: "S", IPM: "R", DA: "S" });
+  verif(/cfiA/.test(txt(bf)), "B. fragilis, imipénème atteint : la carbapénémase cfiA est évoquée");
+  verif(!/cfiA/.test(txt(lire("bfragilis", { MTZ: "S", AMC: "S", IPM: "S", DA: "S" }))),
+        "… et pas quand les carbapénèmes sont actifs");
+  var mtz = lire("bfragilis", { MTZ: "R", AMC: "S", IPM: "S" });
+  verif(mtz.sev === "crit", "métronidazole résistant : « crit » — le traitement de référence tombe");
+
+  /* Acinetobacter : l'ORDRE des hypothèses compte autant que le compte des
+     familles. Mes deux premières épreuves se trompaient de branche — un
+     carbapénème atteint fait passer la suspicion de carbapénémase AVANT le
+     multirésistant, et un profil où seule la colistine reste active est un
+     toto-résistant, pas une carbapénémase. Le banc décrit le moteur. */
+  var deux = lire("acineto", { CAZ: "R", IPM: "S", CIP: "R", GEN: "S", COL: "S" });
+  verif(/partielle/i.test(deux.name || ""),
+        "deux familles atteintes, carbapénèmes actifs : résistance acquise partielle");
+  var trois = lire("acineto", { CAZ: "R", IPM: "S", CIP: "R", GEN: "R", COL: "S" });
+  verif(/multirésistant/i.test(trois.name || ""), "trois familles : multirésistant (MDR)");
+  var carba = lire("acineto", { CAZ: "R", IPM: "R", CIP: "S", GEN: "S", COL: "S" });
+  verif(/carbapénémase/i.test(carba.name || ""),
+        "carbapénème atteint : la carbapénémase passe devant le compte des familles");
+  var xdr = lire("acineto", { TZP: "R", CAZ: "R", FEP: "R", IPM: "R", MEM: "R",
+                              CIP: "R", GEN: "R", AMK: "R", SXT: "R", COL: "S" });
+  verif(/toto-résistant/i.test(xdr.name || ""),
+        "seule la colistine active : toto-résistant (XDR), et non carbapénémase");
+  verif(xdr.sev === "crit", "… au niveau de gravité le plus haut");
+})();
+
+/* ---------- 8. Deux règles du CA-SFM que rien n'éprouvait ---------- */
+dire("\nDeux règles françaises de plus");
+(function () {
+  function casfm(org, res, ctx) { return texte(lire(org, res, ctx || {}, "casfm")); }
+  function eucast(org, res, ctx) { return texte(lire(org, res, ctx || {}, "eucast")); }
+
+  // Lévofloxacine chez Pseudomonas : moins active que la ciprofloxacine.
+  var p = { TZP: "R", CAZ: "R", FEP: "R", LVX: "S", CIP: "R", GEN: "R" };
+  verif(/lévofloxacine à forte posologie/i.test(casfm("paeru", p)),
+        "Pseudomonas, lévofloxacine active : le CA-SFM la veut à forte posologie au minimum");
+  verif(!/lévofloxacine à forte posologie/i.test(
+          casfm("paeru", { TZP: "S", CAZ: "S", FEP: "S", LVX: "R", CIP: "R" })),
+        "… et pas quand elle est résistante");
+  verif(!/lévofloxacine à forte posologie/i.test(eucast("paeru", p)),
+        "… ni sous le référentiel EUCAST");
+  verif(!/lévofloxacine à forte posologie/i.test(
+          casfm("ecoli", { AMX: "S", CTX: "S", LVX: "S" })),
+        "… ni chez une entérobactérie : la règle ne déborde pas de son espèce");
+
+  // Anaérobies : gélose Brucella, et pas d'antibiogramme de routine pour
+  // C. difficile en France.
+  verif(/gélose Brucella/i.test(casfm("bfragilis", { MTZ: "S", AMC: "S" })),
+        "anaérobies : le CA-SFM travaille sur gélose Brucella, pas sur FAA");
+  verif(/n'est pas recommandé en France/i.test(casfm("cdifficile", { MTZ: "S", VA: "S" })),
+        "C. difficile : le CA-SFM ne recommande pas son antibiogramme sur selles");
+  verif(!/n'est pas recommandé en France/i.test(casfm("bfragilis", { MTZ: "S", AMC: "S" })),
+        "… et cette phrase-là ne vaut que pour lui");
+})();
+
+/* ---------- 9. Une carbapénémase confirmée efface la réserve ---------- */
+dire("\nUne confirmation doit retirer la réserve qu'elle lève");
+(function () {
+  var res = { AMX: "R", AMC: "R", CTX: "R", CAZ: "R", IPM: "R", MEM: "R", CIP: "R", GEN: "S" };
+  var sans = lire("ecloacae", res, {}, "casfm");
+  verif(/jusqu'à confirmation/i.test(texte(sans)),
+        "sans confirmation : les β-lactamines sont à interpréter avec prudence");
+  var avec = lire("ecloacae", res, { carba: "Oui" }, "casfm");
+  verif(!/jusqu'à confirmation/i.test(texte(avec)),
+        "confirmation au dossier : la réserve disparaît — elle n'a plus d'objet");
+  verif(/quelles que soient les CMI/i.test(texte(avec)),
+        "… et les carbapénèmes sont rendus résistants quelles que soient les CMI");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : la gravité, le D-test et les règles du CA-SFM"
                     + " ne peuvent plus changer sans que rien ne tombe."));

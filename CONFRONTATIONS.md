@@ -70,8 +70,16 @@ et les deux sont fermés :
   qu'elles diffèrent. La pénicilline G est à S ≤ 0,5 mg/L chez *Prevotella*,
   à 0,25 chez *B. fragilis*. Les confondre donnerait de faux « sensibles ».
 
-Il faut donc le classeur v16.1, obtenu à la main sur le site de l'EUCAST.
-Avec lui, l'ajout est mécanique.
+Il faut donc le classeur v16.1. **Son adresse est connue depuis le 24 octobre
+2026**, relevée sur la page officielle des tables — mes tentatives précédentes
+échouaient sur un chemin deviné, et non sur un refus du serveur :
+
+    https://www.eucast.org/fileadmin/eucast/pdf/breakpoints/v_16.1_Breakpoint_Tables.pdf    (4,4 Mo)
+    https://www.eucast.org/fileadmin/eucast/pdf/breakpoints/v_16.1_Breakpoint_Tables.xlsx   (2,7 Mo)
+
+Les deux répondent 200. Avec le classeur en main, trois dettes se referment
+d'un coup : les anaérobies manquants, la confrontation des ZIT ci-dessus, et
+une nouvelle confrontation des concentrations critiques.
 
 Les streptocoques des groupes C et G, eux, ont été ajoutés le même jour **sans
 document nouveau** : la table de l'EUCAST s'intitule « Streptococcus groups A,

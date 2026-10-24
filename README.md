@@ -448,7 +448,8 @@ déjà rouge — sinon chaque mutation paraîtrait détectée.
 python3 outils/muter.py --n 60
 ```
 
-La première campagne a rendu 57 % de détection et vingt-six survivants. Parmi
+La première campagne a rendu 57 % de détection et vingt-six survivants ; la
+suite en est à 70 % sur un échantillon de cent vingt. Parmi
 eux : le niveau de **gravité**, que rien n'éprouvait, et le **D-test**, qui
 empêche de rendre une clindamycine sensible sur une souche MLSb inductible.
 `outils/essai-regles.js` est né de cette liste — et la liste a aussi révélé
