@@ -14,7 +14,9 @@ COPY server.js ./
 # Le raisonnement, chargé par la fonction serveur (require("../../moteur"))
 # ET servi au navigateur depuis public/. Sans cette ligne, l'image démarre et
 # l'API tombe au premier appel.
-COPY base-connaissances.js moteur.js ./
+# Les DONNÉES du moteur autant que le moteur : il les charge par require,
+# et leur absence le fait planter au démarrage, pas à l'usage.
+COPY base-connaissances.js posologie.js moteur.js ./
 COPY netlify ./netlify
 COPY public ./public
 
