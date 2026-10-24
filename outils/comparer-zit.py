@@ -202,30 +202,33 @@ def zit_casfm(chemin):
 # --------------------------------------------------------------------------
 
 def tables_app(racine):
-    s = open(os.path.join(racine, 'netlify', 'functions', 'premium-interpret.js'),
-             encoding='utf-8').read()
+    """Les zones d'incertitude de PhénoBac, lues dans la base.
+
+    LE MÊME DÉFAUT QUE CELUI DE comparer-eucast.py, ET À LA MÊME CAUSE. Cet
+    outil cherchait « const ZIT = » dans netlify/functions/premium-interpret.js.
+    Le 3 octobre 2026, les règles sont devenues des données
+    (base-connaissances.js) et cette constante a disparu du fichier — qui
+    existe toujours, ce qui est pire : la lecture ne levait aucune erreur, elle
+    rendait une table VIDE. L'outil annonçait donc « ABSENTE de PhénoBac » pour
+    les sept zones d'incertitude de l'EUCAST, alors que PhénoBac les porte
+    toutes les sept, aux bonnes valeurs.
+
+    Un vérificateur qui lit le mauvais fichier ne se tait pas : il accuse.
+    """
+    s = importlib.util.spec_from_file_location(
+        "moteur_py", os.path.join(racine, "outils", "moteur_py.py"))
+    MP = importlib.util.module_from_spec(s)
+    s.loader.exec_module(MP)
+    brut = MP.tables(["ZIT", "ZIT_CASFM"])
     out = {}
-    for nom in ('ZIT', 'ZIT_CASFM'):
-        m = re.search(r'const %s\s*=\s*\{' % nom, s)
-        if not m:
-            out[nom] = {}
-            continue
-        j = s.index('{', m.start()); prof = 0
-        for k in range(j, len(s)):
-            if s[k] == '{':
-                prof += 1
-            elif s[k] == '}':
-                prof -= 1
-                if prof == 0:
-                    bloc = s[j:k + 1]
-                    break
-        bloc = re.sub(r'//[^\n]*', ' ', bloc)
-        table = {}
-        for mg in re.finditer(r'(\w+)\s*:\s*\{([^{}]*)\}', bloc):
-            for ma in re.finditer(r'(\w+)\s*:\s*([\d.]+)', mg.group(2)):
-                table[(mg.group(1), ma.group(1))] = float(ma.group(2))
-        out[nom] = table
+    for nom in ("ZIT", "ZIT_CASFM"):
+        plat = {}
+        for groupe, entrees in (brut.get(nom) or {}).items():
+            for code, val in entrees.items():
+                plat[(groupe, code)] = val
+        out[nom] = plat
     return out
+
 
 
 def main():
@@ -252,7 +255,19 @@ def main():
 
     print("\n=== CA-SFM — ZIT exprimées en CMI ===")
     if len(sys.argv) > 2 and sys.argv[2].lower().endswith('.pdf'):
-        for chapitre, agent, s_, r_, val, page in zit_casfm(sys.argv[2]):
+        lues = list(zit_casfm(sys.argv[2]))
+        if not lues:
+            # UNE SECTION VIDE NE DOIT PAS PASSER POUR UN RÉSULTAT. C'est la
+            # confusion qui a laissé dormir quatre seuils de Bacteroides
+            # fragilis dans l'outil voisin : « rien à signaler » et « je n'ai
+            # rien lu » s'écrivaient pareil.
+            print("\n  AUCUNE ZIT LUE DANS CE PDF — et ce n'est pas « aucune ZIT ».")
+            print("  Ce document est celui des DIFFÉRENCES CA-SFM / EUCAST (18 pages) :")
+            print("  ses zones d'incertitude y sont citées en prose, pas dans des")
+            print("  colonnes « S ≤ | R > | ZIT ». La lecture par position, qui fait la")
+            print("  sûreté de cet outil, n'a rien sur quoi s'appuyer.")
+            print("  Pour cette moitié-là, il faut les TABLES complètes du CA-SFM.")
+        for chapitre, agent, s_, r_, val, page in lues:
             groupes = CHAPITRE_GROUPES.get(chapitre, [])
             cible = ' / '.join(groupes) if groupes else 'chapitre hors PhénoBac'
             print("  p%-4d %-22s %-30s S≤%-7s R>%-7s ZIT %-6s  chapitre : %s"

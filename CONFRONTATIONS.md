@@ -158,12 +158,39 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 
 - **document** : EUCAST v16.1 (classeur xlsx) ET CA-SFM 2026 V1.0 (pdf)
 - **tables** : ZIT, ZIT_CASFM
-- **empreinte** : (jamais confrontée depuis l'ouverture de ce registre)
-- **date** : —
-- **résultat** : à confronter
+- **empreinte** : 9127c6a5b2cd1c8911ad2510299faf472a5fb51255dc6fcc94db5b5a2860a106
+- **date** : 2026-10-24
+- **résultat** : moitié EUCAST faite — **7 ATU sur 7 retenues**, aux bonnes valeurs.
+  Moitié CA-SFM : impossible avec le document que PhénoBac référence (voir plus bas).
 
-L'outil existe et fonctionne ; il n'a simplement pas encore été passé avec les
-deux documents depuis que ce registre existe. C'est une dette, elle est écrite,
+### L'outil lisait le mauvais fichier, et il ACCUSAIT
+
+Premier passage : « ABSENTE de PhénoBac » pour les sept zones d'incertitude de
+l'EUCAST. PhénoBac les porte toutes les sept, aux bonnes valeurs.
+
+C'est **le même défaut que celui de `comparer-eucast.py`, et à la même cause** :
+l'outil cherchait `const ZIT =` dans `netlify/functions/premium-interpret.js`.
+Le 3 octobre 2026, les règles sont devenues des données et cette constante a
+disparu — mais le fichier existe toujours, ce qui est pire : la lecture ne
+levait aucune erreur, elle rendait une table **vide**.
+
+Un vérificateur qui lit le mauvais fichier ne se tait pas : il accuse. Il lit
+désormais la base, par le même chemin que les autres.
+
+### La moitié CA-SFM demande un document que le projet n'utilise pas
+
+Le CA-SFM 2026 que PhénoBac référence est celui des **différences** avec
+l'EUCAST — 18 pages, dont les ZIT sont citées **en prose**. L'outil lit par
+POSITION dans des colonnes « S ≤ | R > | ZIT », et n'a rien sur quoi
+s'appuyer. Il le dit maintenant au lieu d'imprimer une section vide : « aucune
+ZIT lue dans ce PDF — et ce n'est pas *aucune ZIT* ».
+
+Les trois ZIT propres au CA-SFM que PhénoBac applique — daptomycine 4 chez
+l'entérocoque, colistine 4 chez *Pseudomonas*, vancomycine 2 chez le
+staphylocoque — restent donc non confrontées. Le texte du document les
+mentionne (« le CA-SFM propose un breakpoint à 2 mg/L, avec une ZIT à
+4 mg/L » pour la daptomycine), mais une lecture en prose ne vaut pas une
+lecture par position : il faut les tables complètes. C'est une dette, elle est écrite,
 et la chaîne la rappelle à chaque livraison sans bloquer : bloquer sur un
 document que personne n'a sous la main n'aiderait personne.
 
