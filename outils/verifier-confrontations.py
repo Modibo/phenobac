@@ -46,6 +46,13 @@ def entrees():
     out = []
     for bloc in re.split(r"\n## ", texte)[1:]:
         titre = bloc.split("\n", 1)[0].strip()
+        # Une entrée de registre NOMME SON OUTIL : « comparer-eucast.py — … ».
+        # Les autres sections sont de la prose — par exemple l'explication de
+        # ce qu'un document manquant empêche d'ajouter —, et les traiter comme
+        # des entrées à moitié remplies faisait échouer le contrôle sur un
+        # paragraphe. Un registre doit pouvoir s'expliquer.
+        if not re.match(r"^\S+\.py\b", titre):
+            continue
         champs = dict(re.findall(r"^- \*\*(\w+)\*\*\s*:\s*(.+?)\s*$", bloc, re.M))
         manquants = [c for c in ("document", "tables", "empreinte", "résultat")
                      if c not in champs]

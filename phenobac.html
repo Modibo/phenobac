@@ -2224,6 +2224,22 @@ const PRESENTATION = {
           opts:["Oui","Non"]}],
   },
 
+  /* Groupes C et G de Lancefield. La table de l'EUCAST s'intitule
+     « Streptococcus groups A, B, C and G » : les seuils existaient déjà, seule
+     l'espèce manquait. Jusqu'ici, une souche C ou G obligeait à choisir
+     S. pyogenes — à écrire une espèce fausse sur le compte rendu pour obtenir
+     les bons seuils. */
+  sdysgalactiae:{
+    label:"Streptococcus dysgalactiae (groupes C et G)", italic:false, group:"Cocci à Gram positif",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMX","CTX"]},
+      {t:"Macrolides / apparentés",abx:["E","DA"]},
+      {t:"Autres familles",abx:["LVX","VA","LZD"]}
+    ],
+    ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
+          opts:["Positif","Négatif","Non fait"],when:r=>isR(r.E)&&r.DA==="S"}],
+  },
+
   spyogenes:{
     label:"Streptococcus pyogenes (groupe A)", italic:false, group:"Cocci à Gram positif",
     panel:[

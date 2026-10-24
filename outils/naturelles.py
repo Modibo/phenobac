@@ -47,6 +47,9 @@ NATURELLES = {
  'efaecium':     ("4.9",  {'CAZ': "ceftazidime", 'CTX': "céphalosporines (hors ceftazidime)", 'FOX': "céphalosporines (hors ceftazidime)", 'FEP': "céphalosporines (hors ceftazidime)", 'GEN': "aminosides (bas niveau)", 'E': "macrolides", 'AZM': "macrolides"}),
  'spyogenes':    ("4.6",  {'CAZ': "ceftazidime", 'GEN': "aminosides"}),
  'sagalactiae':  ("4.6",  {'CAZ': "ceftazidime", 'GEN': "aminosides"}),
+ # Groupes C et G de Lancefield. La règle 4.6 vise « Streptococcus spp. » :
+ # elle les couvre comme elle couvre A et B.
+ 'sdysgalactiae':("4.6",  {'CAZ': "ceftazidime", 'GEN': "aminosides"}),
  'sviridans':    ("4.6",  {'CAZ': "ceftazidime", 'GEN': "aminosides"}),
  'pneumocoque':  ("4.6",  {'CAZ': "ceftazidime", 'GEN': "aminosides"}),
  'coryne':       ("4.10", {'FOS': "fosfomycine"}),

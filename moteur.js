@@ -195,6 +195,15 @@ const ORG = {
   slugdunensis:  { engine: "staph", args: { species: "Staphylococcus lugdunensis", coNS: true }, bpGroup: "scn", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.5."} },
   shaemolyticus: { engine: "staph", args: { species: "Staphylococcus haemolyticus", coNS: true }, bpGroup: "scn", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.5."} },
   spyogenes:   { engine: "strep", args: { species: "Streptococcus pyogenes", group: "A" }, bpGroup: "strepacg", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN: "Résistance naturelle attendue — aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."} },
+  /* Streptococcus dysgalactiae — groupes C et G de Lancefield. Aucun seuil
+     nouveau n'est nécessaire : la table de l'EUCAST s'intitule « Streptococcus
+     groups A, B, C and G », et le groupe « strepacg » de PhénoBac EST cette
+     table. Jusqu'ici, une souche C ou G obligeait à choisir S. pyogenes —
+     c'est-à-dire à écrire une espèce fausse sur le compte rendu pour obtenir
+     les bons seuils. La règle 4.6 des phénotypes attendus vise
+     « Streptococcus spp. » et les couvre donc aussi. */
+  sdysgalactiae: { engine: "strep", args: { species: "Streptococcus dysgalactiae", group: "CG" }, bpGroup: "strepacg",
+                intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN: "Résistance naturelle attendue — aminosides. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."} },
   sagalactiae: { engine: "strep", args: { species: "Streptococcus agalactiae", group: "B" }, bpGroup: "strepb", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN: "Résistance naturelle attendue — aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."} },
   sviridans:   { engine: "strep", args: { species: "Streptocoque du groupe viridans", group: "viridans" }, bpGroup: "viridans", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN: "Résistance naturelle attendue — aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."} },
   steno:      { engine: "stenoburk", args: { species: "Stenotrophomonas maltophilia", type: "steno" }, bpGroup: "steno",
@@ -2099,7 +2108,7 @@ function pneumoInterpret(r, c) {
 function strepInterpret(r, c, a) {
   const sp = (a && a.species) || "Streptococcus";
   const grp = (a && a.group) || "viridans";
-  const betaHem = grp === "A" || grp === "B";
+  const betaHem = grp === "A" || grp === "B" || grp === "CG";
   const A = { sev: "wild", name: "", mech: "", alerts: [], rules: [], comment: "" };
   const penRI = isRI(r.PEN) || isRI(r.AMX) || isRI(r.CTX);
 

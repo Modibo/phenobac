@@ -210,6 +210,35 @@ dire("\nUne règle qui survient après le verdict doit pouvoir élever la gravit
         "cotrimoxazole R : « crit » — le traitement de référence est tombé");
 })();
 
+/* ---------- 6. Les streptocoques C et G ---------- */
+dire("\nStreptococcus dysgalactiae — groupes C et G de Lancefield");
+(function () {
+  var res = { PEN: "S", AMX: "S", CTX: "S", E: "S", DA: "S", VA: "S" };
+  var A = lire("sdysgalactiae", res);
+  verif(/sensible à la pénicilline/i.test(A.name || ""),
+        "souche sauvage : la pénicilline reste la référence, comme pour le groupe A");
+  verif(A.sev === "wild", "gravité ordinaire");
+  verif((A.pour || []).length >= 2, "la grille d'arguments est présente");
+
+  // Le fond du sujet : les SEUILS doivent être ceux des groupes A, C et G,
+  // c'est-à-dire exactement ceux de S. pyogenes. Si les deux divergeaient,
+  // la nouvelle espèce serait pire que l'absence d'espèce.
+  var a = E.runInterpretation({ organism: "sdysgalactiae", mode: "mic",
+                               mic: { PEN: "0.25", CTX: "0.5", E: "0.25" }, ctx: {} });
+  var b = E.runInterpretation({ organism: "spyogenes", mode: "mic",
+                               mic: { PEN: "0.25", CTX: "0.5", E: "0.25" }, ctx: {} });
+  verif(JSON.stringify(a.categories) === JSON.stringify(b.categories),
+        "mêmes CMI, mêmes catégories que S. pyogenes : c'est la même table EUCAST");
+
+  // Une résistance à la pénicilline y est aussi exceptionnelle que dans le
+  // groupe A : le moteur doit le dire, et non la rendre banale.
+  var R = lire("sdysgalactiae", { PEN: "R", AMX: "R", CTX: "R", VA: "S" });
+  verif(R.sev === "high", "pénicilline R : gravité élevée");
+  verif(/inhabituel|exceptionnel/i.test(
+          (R.alerts || []).map(function (x) { return x.txt; }).join(" ")),
+        "… et l'alerte dit que c'est exceptionnel — vérifier l'identification");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : la gravité, le D-test et les règles du CA-SFM"
                     + " ne peuvent plus changer sans que rien ne tombe."));
