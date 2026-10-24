@@ -723,6 +723,124 @@ function conditionsTechniques(A, org, ctx, mode) {
   if (C.note && renseigne) ajoute("info", C.note);
 }
 
+/* ============================================================
+   LE COMMENTAIRE EN CINQ MOMENTS — § 15
+
+   Le § 15 veut un commentaire « court, professionnel et directement
+   copiable » qui DISTINGUE cinq choses : l'observation, l'interprétation,
+   l'hypothèse mécanistique, les limites, et l'éventuel test complémentaire.
+   Soixante commentaires sont rédigés dans ce fichier, phénotype par
+   phénotype, et ils sont bons — mais ils portent surtout l'interprétation et
+   la conduite. Les quatre autres moments existaient ailleurs, en pièces
+   détachées : A.pour, A.mech, A.contre, A.confiance, A.aConfirmerPar.
+
+   On les COMPOSE donc, plutôt que de réécrire soixante textes — ce qui en
+   abîmerait la clinique pour servir une mise en forme.
+
+   TROIS RÈGLES DE RÉDACTION, et la première est de sécurité :
+
+     — § 3 : tant qu'aucun test ne l'a tranchée, une hypothèse mécanistique
+       se dit « compatible avec », « évoque », « suggère ». Jamais
+       « confirmé ». Le moment 3 porte donc cette prudence dans sa formule
+       même, et non dans le bon vouloir de celui qui a rédigé le texte ;
+
+     — un moment sans matière est OMIS. Une rubrique vide — « Limites :
+       néant » — apprend à sauter les rubriques, et c'est celle des limites
+       qu'on sauterait ;
+
+     — le texte se termine par la validation biologique. C'est la dernière
+       phrase de l'exemple du § 15, et la seule qui doit toujours s'y
+       trouver.
+   ============================================================ */
+const COMMENT_MOMENTS = ["Observation", "Interprétation", "Hypothèse mécanistique",
+                         "Limites", "Test complémentaire"];
+
+function commentaireStructure(A) {
+  const m = [];
+
+  /* 1. OBSERVATION — ce qui a été lu, et rien de plus. Les arguments en
+     faveur SONT les observations : « céfotaxime R », « céfoxitine S ».
+     On reprend la molécule et sa catégorie, sans le commentaire qui les
+     explique — celui-ci relève déjà de l'interprétation. */
+  const vus = (A.pour || []).map(x => (ABXNAME[x.abx] || x.abx) + " " + x.cat);
+  if (vus.length) m.push({ moment: "Observation", texte: "Profil observé : " + vus.join(", ") + "." });
+
+  /* 2. INTERPRÉTATION — le texte rédigé pour ce phénotype. */
+  if (A.comment) m.push({ moment: "Interprétation", texte: A.comment });
+
+  /* 3. HYPOTHÈSE MÉCANISTIQUE — § 3 : prudente tant qu'elle n'est pas
+     confirmée, affirmée quand un test l'a tranchée. */
+  /* Un phénotype sauvage n'a pas d'hypothèse mécanistique : il n'y a pas de
+     mécanisme à supposer. « Profil compatible avec aucun mécanisme acquis »
+     est une contorsion, et le moment 2 l'a déjà dit mieux. Le § 15 veut
+     cinq moments distingués, pas cinq moments remplis de force. */
+  if (A.mech && !(A.sev === "wild" && !A.confirmation)) {
+    // Beaucoup de textes de mécanisme finissent déjà par « À confirmer
+    // (…) » : le moment 5 le redira mieux, avec la conduite. On retire donc
+    // cette queue ici, au lieu de la laisser dire deux fois — un commentaire
+    // qui se répète se fait sauter des lignes.
+    const mech = A.mech.replace(/\s*À confirmer[^.]*\.?\s*$/i, "").trim();
+    // Deux phrases plutôt qu'un deux-points enchâssé : « confirmé par X :
+    // β-lactamase : synergie positive » enchaîne deux fois le même signe de
+    // ponctuation et se lit mal.
+    m.push({ moment: "Hypothèse mécanistique",
+      texte: A.confirmation
+        ? majuscule(mech) + (/[.!?]$/.test(mech) ? "" : ".")
+          + " Mécanisme confirmé par " + minuscule(A.confirmation) + "."
+        : "Profil compatible avec " + minuscule(mech)
+          + (/[.!?]$/.test(mech) ? "" : ".") });
+  }
+
+  /* 4. LIMITES — ce qui empêche d'affirmer. Le niveau de confiance, les
+     éléments discordants, et les molécules clés non testées. */
+  const limites = [];
+  if (A.confiance === "possible") limites.push("hypothèse seulement possible en l'état");
+  if ((A.contre || []).length)
+    limites.push("élément(s) discordant(s) : " + A.contre.map(x => x.txt).join(" ; "));
+  if ((A.nonTeste || []).length)
+    limites.push("molécule(s) clé(s) non testée(s) : "
+      + A.nonTeste.map(x => ABXNAME[x.abx] || x.abx).join(", "));
+  if (!A.confirmation && A.aConfirmerPar)
+    limites.push("aucun test n'a confirmé le mécanisme");
+  if (limites.length) m.push({ moment: "Limites", texte: majuscule(limites.join(" ; ")) + "." });
+
+  /* 5. TEST COMPLÉMENTAIRE — seulement s'il reste quelque chose à trancher. */
+  // Le texte du test porte souvent sa propre condition (« …, si le profil
+  // surprend », « …, qui change la conduite »). L'enchâsser dans une phrase
+  // plus longue en casserait la syntaxe : on le laisse entier, et la réserve
+  // du § 15 vient APRÈS, dans une phrase à elle.
+  if (!A.confirmation && A.aConfirmerPar) {
+    const tst = A.aConfirmerPar.trim().replace(/\.$/, "");
+    m.push({ moment: "Test complémentaire",
+      texte: "Pour trancher : " + tst
+           + ". À apprécier selon le contexte et le référentiel du laboratoire." });
+  }
+
+  return m;
+}
+
+/* Changer la casse de la première lettre — mais SEULEMENT si c'est une
+   lettre latine. « β-lactamase » commence par un bêta grec, que
+   toUpperCase() transforme en « Β » : le mot devient méconnaissable, et
+   c'est l'un des plus fréquents de toute l'application. */
+const LATINE = /^[a-zA-ZÀ-ÖØ-öø-ÿ]/;
+function minuscule(s) {
+  return (s && LATINE.test(s)) ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+}
+function majuscule(s) {
+  return (s && LATINE.test(s)) ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+/* Le texte à copier : les cinq moments à la suite, puis la validation
+   biologique. Les étiquettes ne figurent PAS dans le texte copié — un
+   compte rendu de laboratoire ne porte pas « Observation : » en tête de
+   phrase. Elles servent à l'écran, où elles montrent que les cinq moments
+   sont distingués. */
+function commentaireCopiable(moments) {
+  const corps = (moments || []).map(x => x.texte.trim()).filter(Boolean).join(" ");
+  return (corps ? corps + " " : "") + "Validation biologique requise.";
+}
+
 function finalize(A, r) {
   const org = _activeOrg;
   if (org && org.intrinsic) {
@@ -742,6 +860,11 @@ function finalize(A, r) {
   // § 9 : les conditions de réalisation déclarées, confrontées au référentiel.
   conditionsTechniques(A, org, _ctx, _mode);
   reglesCasfm(A, r);
+  // § 15 : les cinq moments, composés APRÈS les règles CA-SFM — elles
+  // complètent parfois A.comment, et le composer avant figerait un texte
+  // tronqué.
+  A.moments = commentaireStructure(A);
+  A.commentaireCopiable = commentaireCopiable(A.moments);
 
   if (_depistageEchoue.length) {
     _depistageEchoue.forEach(d => {
@@ -2094,6 +2217,8 @@ const MOTEUR = {
   horsEucast, depistageSeuil, estCasfm,
   // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
   CONDITIONS, conditionsTechniques,
+  // § 15 : le commentaire en cinq moments
+  COMMENT_MOMENTS, commentaireStructure, commentaireCopiable,
   // tables, pour l'affichage des seuils et des aides de saisie
   REFERENTIELS, ORG, ABXNAME,
   BP, BP_MENINGE, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,

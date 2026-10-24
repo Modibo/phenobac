@@ -891,6 +891,18 @@
 
   .cr{background:var(--ink);color:#dfeaec;border-radius:var(--radius);padding:14px;position:relative}
   .cr .cr-txt{font-size:13px;line-height:1.62;white-space:pre-wrap}
+  /* § 15 — un moment par ligne, son étiquette en regard. L'étiquette est
+     sobre : elle classe, elle n'attire pas. Elle reste à l'écran et ne part
+     pas dans le presse-papier. */
+  .cr .cr-moments{display:block}
+  .cr-m{display:grid;grid-template-columns:120px minmax(0,1fr);gap:2px 12px;
+    padding:7px 0;border-top:1px solid var(--line)}
+  .cr-m:first-child{border-top:none;padding-top:0}
+  .cr-m-t{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--ink-faint);padding-top:3px}
+  .cr-m-x{font-size:13px;line-height:1.62;color:var(--ink)}
+  .cr-m-fin .cr-m-x{color:var(--ink-soft);font-style:italic}
+  @media(max-width:620px){ .cr-m{grid-template-columns:1fr} .cr-m-t{padding-top:0} }
   .cr .copy{position:absolute;top:10px;right:10px;font-family:'IBM Plex Mono';font-size:10.5px;
     letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.08);color:#bcd;
     border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:5px 11px;cursor:pointer;transition:.12s}
@@ -4586,9 +4598,26 @@ function renderInterpretView(A){
     html+=`</div>`;
   }
 
+  /* § 15 — les cinq moments, distingués à l'écran. Les étiquettes restent À
+     L'ÉCRAN et ne partent pas dans le presse-papier : un compte rendu de
+     laboratoire ne porte pas « Observation : » en tête de phrase. Elles
+     servent ici à montrer qu'une observation n'est pas une interprétation,
+     et qu'une hypothèse n'est pas un diagnostic. */
+  const moments = A.moments || [];
+  const copiable = A.commentaireCopiable || A.comment || "";
   html+=`<div class="sect"><div class="sect-t">Commentaire du compte-rendu</div>
-      <div class="cr"><button class="copy" id="copyBtn">Copier</button>
-      <div class="cr-txt" id="crTxt">${esc(A.comment)}</div></div></div>`;
+      <div class="cr"><button class="copy" id="copyBtn">Copier</button>`;
+  if(moments.length){
+    html += `<div class="cr-moments" id="crTxt">`
+      + moments.map(m=>`<div class="cr-m">
+          <span class="cr-m-t">${esc(m.moment)}</span>
+          <span class="cr-m-x">${esc(m.texte)}</span></div>`).join("")
+      + `<div class="cr-m cr-m-fin"><span class="cr-m-t">Validation</span>
+           <span class="cr-m-x">Validation biologique requise.</span></div></div>`;
+  } else {
+    html += `<div class="cr-txt" id="crTxt">${esc(A.comment)}</div>`;
+  }
+  html += `</div></div>`;
 
   // Le versement est un geste délibéré, après lecture : il vient donc après
   // le commentaire, jamais avant.
@@ -4609,7 +4638,9 @@ function renderInterpretView(A){
       bouton.textContent=txt; if(classe) bouton.classList.add(classe);
       setTimeout(()=>{ bouton.textContent="Copier"; bouton.classList.remove("done"); },1600);
     };
-    copierTexte(A.comment)
+    // C'est le texte SUIVI qui est copié, sans les étiquettes : c'est lui
+    // qui sera collé dans le SIL.
+    copierTexte(copiable)
       .then(()=> rendre("Copié ✓","done"))
       // Le commentaire est ce que le biologiste reporte dans son SIL : si la
       // copie échoue, il doit le savoir, pas croire qu'elle a réussi.
@@ -5722,7 +5753,7 @@ function buildReport(A){
 
     <div class="rp-sect-t">Commentaire d'interprétation
       <span class="rp-prov rp-prov-i">${esc(PROV_INTERP)}</span></div>
-    <div class="rp-comment">${esc(A.comment)}</div>
+    <div class="rp-comment">${esc(A.commentaireCopiable || A.comment)}</div>
 
     <div class="rp-sign">
       <div class="rp-sig-line">

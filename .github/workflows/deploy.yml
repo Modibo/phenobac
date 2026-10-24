@@ -111,6 +111,13 @@ jobs:
       - name: L'application tient la promesse qu'elle affiche
         run: python3 outils/verifier-gratuite.py
 
+      # § 15 : le commentaire distingue observation, interprétation,
+      # hypothèse, limites et test complémentaire. Et surtout, § 3 : une
+      # hypothèse que rien n'a tranchée ne se dit jamais « confirmée » —
+      # c'est la seule de ces règles qui puisse coûter un traitement.
+      - name: Le commentaire distingue ses cinq moments
+        run: node outils/essai-commentaire.js
+
   deploy:
     name: Déploiement VPS
     needs: test
