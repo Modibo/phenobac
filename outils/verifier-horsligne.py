@@ -79,6 +79,20 @@ def version_du_worker(sw):
     return m.group(1) if m else None
 
 
+def _bloc(sw, evenement):
+    """Le corps d'un écouteur du service worker, et lui seul."""
+    i = sw.find('addEventListener("%s"' % evenement)
+    if i < 0:
+        return ""
+    # S'arrêter au prochain écouteur découpait TROP LARGE : entre « activate »
+    # et « fetch » vivent la définition de prevenirOnglets() et revalidate(),
+    # tous deux porteurs du nom cherché. Le contrôle passait donc même quand
+    # l'appel avait disparu d'activate. On s'arrête à la fermeture de
+    # l'écouteur — « }); » en début de ligne.
+    j = sw.find("\n});", i)
+    return sw[i:j if j > 0 else len(sw)]
+
+
 def main():
     page, sw = lire(PAGE), lire(SW)
     ecarts, dits = [], []
@@ -172,6 +186,50 @@ def main():
             dits.append("les %d fichiers JavaScript de la racine sont déclarés dans le "
                         "Dockerfile ET dans install-caddy.sh (%s)."
                         % (len(racine_js), ", ".join(racine_js)))
+
+    # --- 3 ter. LE CHEMIN DE MISE À JOUR TIENT-IL ENCORE ? ---
+    #
+    # Une application installée qui n'apprend plus rien est pire qu'une
+    # application non installée : elle interprète avec des seuils périmés, avec
+    # l'assurance de la dernière version. Ce chemin tient à QUATRE maillons, et
+    # chacun se casse sans bruit — aucune erreur, aucun écran rouge, juste une
+    # correction qui n'arrive jamais sur la paillasse.
+    maillons = [
+        (sw, "self.skipWaiting()",
+         "le nouveau service worker attendrait la fermeture de tous les onglets"),
+        (sw, "clients.claim()",
+         "le nouveau service worker ne prendrait pas la main sur les onglets ouverts"),
+        # Chercher « prevenirOnglets » dans TOUT le fichier ne prouve rien :
+        # le nom y figure aussi par sa définition et par l'appel de
+        # revalidate(). Ce qui compte est l'appel depuis « activate », car
+        # c'est le seul signal sûr — le changement de VERSION — là où
+        # revalidate() retombe sur la taille du corps quand le serveur
+        # n'envoie ni etag ni last-modified. La mutation qui retirait cet
+        # appel passait inaperçue : le contrôle affirmait une protection
+        # qu'il ne vérifiait pas.
+        (_bloc(sw, "activate"), "prevenirOnglets",
+         "le passage à une nouvelle VERSION ne préviendrait aucun onglet ouvert"),
+        (page, "phenobac-maj",
+         "la page n'écouterait pas l'avertissement du service worker"),
+        (page, "majBar",
+         "la barre « Nouvelle version disponible » ne serait jamais affichée"),
+        (page, "r.update()",
+         "un onglet laissé ouvert ne re-vérifierait jamais : PhénoBac est un "
+         "outil de paillasse qu'on ouvre le matin et qu'on laisse ouvert, et "
+         "un seuil corrigé livré à dix heures n'arriverait pas avant la "
+         "fermeture de l'application"),
+        (page, "visibilitychange",
+         "le retour sur l'onglet — le moment où l'on reprend le travail — ne "
+         "déclencherait aucune vérification"),
+    ]
+    casses = [p for t, m, p in maillons if m not in t]
+    if casses:
+        ecarts.append("le chemin de mise à jour est rompu : %s."
+                      % " ; ".join(casses))
+    else:
+        dits.append("les %d maillons du chemin de mise à jour sont en place — "
+                    "un poste installé apprend les corrections de seuils, même "
+                    "onglet laissé ouvert." % len(maillons))
 
     # --- 4. Le moteur et la base sont-ils bien du voyage ? ---
     # Sans eux, l'application s'ouvrirait hors ligne sans pouvoir interpréter,

@@ -1790,7 +1790,7 @@
 
 
 <div class="maj-bar" id="majBar" role="status" aria-live="polite">
-  <span class="maj-txt"><b>Nouvelle version disponible.</b> Elle peut contenir des seuils corrigés.</span>
+  <span class="maj-txt"><b>Nouvelle version disponible<span id="majVer"></span>.</b> Elle peut contenir des seuils corrigés.</span>
   <button class="maj-recharger" id="majRecharger">Recharger</button>
   <button class="maj-plus-tard" id="majPlusTard" aria-label="Plus tard">&times;</button>
 </div>
@@ -8212,6 +8212,37 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/service-worker.js").catch(function () {});
   });
 
+  /* UN ONGLET QU'ON LAISSE OUVERT N'APPRENAIT RIEN.
+
+     Le service worker ne compare les fichiers au serveur qu'à l'occasion
+     d'une requête. Or PhénoBac est un outil de paillasse : on l'ouvre le
+     matin et on le laisse ouvert. Une page posée là ne demande plus rien au
+     réseau — un seuil corrigé et livré à dix heures n'atteignait donc pas le
+     biologiste avant qu'il ne ferme et rouvre l'application. C'est le défaut
+     que ces deux minuteries corrigent : on demande au navigateur de
+     RE-VÉRIFIER le service worker, ce qui ne coûte qu'une requête
+     conditionnelle sur un fichier de trois kilo-octets.
+
+     Deux moments, et pas un de plus : toutes les trente minutes, et au retour
+     sur l'onglet — c'est là qu'on reprend le travail, donc là qu'il importe
+     de savoir. Hors ligne, la vérification échoue en silence et l'application
+     continue : c'est pour cela qu'elle existe. */
+  var MAJ_PERIODE = 30 * 60 * 1000;
+  var majDernier = 0;
+  function majVerifier() {
+    var t = Date.now();
+    if (t - majDernier < 5 * 60 * 1000) return;     // ne pas marteler le serveur
+    majDernier = t;
+    if (!navigator.serviceWorker.getRegistration) return;
+    navigator.serviceWorker.getRegistration().then(function (r) {
+      if (r && r.update) r.update();
+    }).catch(function () {});
+  }
+  setInterval(majVerifier, MAJ_PERIODE);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) majVerifier();
+  });
+
   // Le service worker sert la page depuis le cache puis la rafraîchit derrière.
   // Sans avertissement, l'utilisateur reste donc sur la version précédente
   // jusqu'à ce qu'il recharge — y compris après une correction de seuils.
@@ -8220,7 +8251,11 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("message", function (e) {
     if (!e.data || e.data.type !== "phenobac-maj") return;
     var bar = document.getElementById("majBar");
-    if (bar) bar.classList.add("on");
+    if (!bar) return;
+    // Nommer la version : « recharger » sans savoir vers quoi se refuse.
+    var v = document.getElementById("majVer");
+    if (v && e.data.version) v.textContent = " (" + e.data.version + ")";
+    bar.classList.add("on");
   });
   document.addEventListener("click", function (e) {
     if (e.target && e.target.id === "majRecharger") location.reload();

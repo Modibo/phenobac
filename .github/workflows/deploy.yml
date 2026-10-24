@@ -137,6 +137,16 @@ jobs:
       # au rouge : il dort dans outils/, il donne l'impression que la chose
       # est vérifiée, et le jour où la règle qu'il protège se casse, personne
       # ne l'apprend. Ce dépôt en portait trois.
+      # PhénoBac s'installe comme application et sert ses fichiers depuis un
+      # cache. C'est ce qui lui permet de tenir quand la connexion tombe ;
+      # c'est aussi ce qui peut figer un laboratoire sur des seuils périmés,
+      # sans aucun signe. Un seuil corrigé qui n'arrive pas est pire qu'un
+      # seuil absent : on l'applique. Ce banc exécute le vrai service worker
+      # avec un faux navigateur — un cache en mémoire, des onglets, un réseau
+      # que l'on pilote — et regarde ce qu'il FAIT.
+      - name: Une correction de seuils atteint les postes installés
+        run: node outils/essai-service-worker.js
+
       - name: Aucun contrôle ne dort dans outils/
         run: python3 outils/verifier-ci.py
 

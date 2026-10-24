@@ -12,7 +12,7 @@
 // ni correctif d'interprétation, ni nouvelle espèce. C'est inacceptable pour un
 // produit payant : ne revenez pas à cette stratégie.
 
-const VERSION = "v48";                 // à incrémenter à chaque livraison
+const VERSION = "v49";                 // à incrémenter à chaque livraison
 const CACHE = "phenobac-" + VERSION;
 
 const SHELL = [
@@ -33,8 +33,20 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
+      .then((keys) => {
+        // Les caches PhénoBac d'une version antérieure. S'il y en a, c'est une
+        // MISE À JOUR ; s'il n'y en a pas, c'est une première installation, et
+        // annoncer « nouvelle version » à quelqu'un qui vient d'installer
+        // l'application serait absurde.
+        const vieux = keys.filter((k) => k.startsWith("phenobac-") && k !== CACHE);
+        return Promise.all(vieux.map((k) => caches.delete(k))).then(() => vieux.length > 0);
+      })
+      .then((misAJour) => self.clients.claim().then(() => {
+        // Le changement de VERSION est un signal SÛR : il ne dépend d'aucun
+        // en-tête HTTP, là où la comparaison de revalidate() retombe sur la
+        // taille du corps quand le serveur n'envoie ni etag ni last-modified.
+        if (misAJour) prevenirOnglets();
+      }))
   );
 });
 
@@ -43,7 +55,7 @@ self.addEventListener("activate", (e) => {
 // qu'il recharge de lui-même — or une livraison peut corriger des seuils.
 function prevenirOnglets() {
   self.clients.matchAll({ type: "window" }).then((cs) => {
-    cs.forEach((c) => c.postMessage({ type: "phenobac-maj" }));
+    cs.forEach((c) => c.postMessage({ type: "phenobac-maj", version: VERSION }));
   }).catch(() => {});
 }
 
