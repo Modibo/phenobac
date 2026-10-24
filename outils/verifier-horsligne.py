@@ -139,6 +139,40 @@ def main():
         dits.append("seules les polices sont extérieures ; hors ligne, le navigateur "
                     "retombe sur les siennes et aucune valeur n'en dépend.")
 
+    # --- 3 bis. Un fichier ajouté doit être déclaré PARTOUT ---
+    #
+    # Le 24 octobre 2026, posologie.js a été ajoutée à la page et au cache, mais
+    # oubliée dans le Dockerfile et dans install-caddy.sh. Le serveur a planté
+    # au démarrage sur MODULE_NOT_FOUND, Caddy n'a plus trouvé personne
+    # derrière, et le site a rendu 502. Le cache, lui, était impeccable.
+    #
+    # Un fichier de données vit donc en QUATRE endroits, et trois d'entre eux
+    # ne se voient pas depuis la page :
+    #   phenobac.html      la page le charge
+    #   service-worker.js  le cache hors ligne le garde
+    #   install-caddy.sh   le déploiement le recopie dans public/
+    #   Dockerfile         l'image le porte, pour que le serveur démarre
+    racine_js = sorted(r.lstrip("/") for r in internes if r.endswith(".js"))
+    if racine_js:
+        try:
+            install = lire(os.path.join(RACINE, "install-caddy.sh"))
+            docker = lire(os.path.join(RACINE, "Dockerfile"))
+        except OSError as e:
+            ecarts.append("impossible de lire install-caddy.sh ou Dockerfile : %s" % e)
+            install = docker = ""
+        for f in racine_js:
+            if install and f not in install:
+                ecarts.append("install-caddy.sh ne recopie pas %s dans public/ : "
+                              "le navigateur le demanderait en vain." % f)
+            if docker and f not in docker:
+                ecarts.append("le Dockerfile ne copie pas %s dans l'image : le serveur "
+                              "planterait au démarrage sur MODULE_NOT_FOUND, et le site "
+                              "rendrait 502." % f)
+        if install and docker and not [e for e in ecarts if "install-caddy" in e or "Dockerfile" in e]:
+            dits.append("les %d fichiers JavaScript de la racine sont déclarés dans le "
+                        "Dockerfile ET dans install-caddy.sh (%s)."
+                        % (len(racine_js), ", ".join(racine_js)))
+
     # --- 4. Le moteur et la base sont-ils bien du voyage ? ---
     # Sans eux, l'application s'ouvrirait hors ligne sans pouvoir interpréter,
     # c'est-à-dire sans faire ce pour quoi elle existe.
