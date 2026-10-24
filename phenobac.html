@@ -370,6 +370,25 @@
     border-left:3px solid #a9700a;border-radius:4px;padding:10px 12px}
   /* Deux espèces au même score : leur ordre ne veut rien dire, et le taire
      reviendrait à présenter la première comme la réponse. */
+  /* Les caractères qui soutiennent la proposition, nommés comme le sont ceux
+     qui la contredisent. Discrets : ils confirment, ils n'alertent pas. */
+  /* § 7 — les résistances naturelles, dans le raisonnement et non seulement
+     dans les alertes. */
+  .nat-dit{font-size:12px;line-height:1.55;color:var(--ink-faint);margin-bottom:9px}
+  .nat-l{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr) auto;gap:3px 12px;
+    align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
+  .nat-l:first-of-type{border-top:none}
+  .nat-n{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap}
+  .nat-c{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-faint);margin-left:5px}
+  .nat-e{font-size:12px;line-height:1.55;color:var(--ink-soft)}
+  .nat-s{font-family:'IBM Plex Mono';font-size:11px;font-weight:600;white-space:nowrap}
+  .nat-s.non{color:var(--ink-faint);font-weight:400}
+  .nat-s.cat-S{color:var(--s)} .nat-s.cat-I{color:var(--i)} .nat-s.cat-R{color:var(--r)}
+  @media(max-width:560px){ .nat-l{grid-template-columns:1fr auto} .nat-e{grid-column:1 / -1} }
+
+  .id-accord{font-size:11.5px;line-height:1.5;color:#4b6169;margin-top:4px}
+  .id-accord b{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:#0a5960;margin-right:5px}
   .id-exaequo{font-size:12.5px;line-height:1.55;color:#8a5a00;background:#fdf6e8;
     border:1px solid #d9b26a;border-radius:4px;padding:10px 12px;margin-top:10px}
   .id-exaequo b{color:#6d4700}
@@ -4533,6 +4552,34 @@ function renderInterpretView(A){
     html+=`</div>`;
   }
 
+  /* § 7, cinquième élément : LES RÉSISTANCES NATURELLES PERTINENTES.
+     Elles ne figuraient qu'en négatif — une alerte quand un résultat les
+     contredit. Or elles font partie du raisonnement même quand rien ne
+     cloche : c'est parce que l'espèce est naturellement résistante à telle
+     molécule qu'on ne s'étonne pas de la voir R, et qu'on ne la propose pas
+     au clinicien. Les taire oblige le lecteur à les connaître par cœur —
+     exactement ce que PhénoBac existe pour éviter.
+
+     Le § 17 veut en outre la SOURCE à côté de la règle : chaque texte la
+     porte déjà, tel qu'il vient de la base. */
+  const natur = (currentOrg() || {}).intrinsic || {};
+  const codesNat = Object.keys(natur).filter(k => ABX[k]);
+  if(codesNat.length){
+    html += `<div class="sect"><div class="sect-t">Résistances naturelles de cette espèce</div>`;
+    html += `<div class="nat-dit">Attendues, et donc non interprétables comme une résistance
+      acquise. Un résultat « sensible » sur l'une d'elles est signalé plus haut : il met en cause
+      l'identification avant la souche.</div>`;
+    codesNat.sort((x,y)=>(ABX[x]?ABX[x].n:x).localeCompare(ABX[y]?ABX[y].n:y)).forEach(k=>{
+      const teste = state.results[k];
+      html += `<div class="nat-l">
+        <span class="nat-n">${esc(ABX[k].n)}<span class="nat-c">${esc(ABX[k].code)}</span></span>
+        <span class="nat-e">${esc(natur[k])}</span>
+        <span class="nat-s ${teste ? "cat-"+classeCat(teste) : "non"}">${teste ? esc(lettreCat(teste)) : "non testé"}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
   if(A.rules && A.rules.length){
     html+=`<div class="sect"><div class="sect-t">Règles expertes appliquées</div>`;
     A.rules.forEach(rl=>{ html+=`<div class="rule"><span class="rk">${esc(rl.k)}</span><span>${esc(rl.txt)}</span></div>`; });
@@ -7164,6 +7211,18 @@ function renderIdent(){
       <div class="id-cand-h"><span class="nm">${nm}</span><span class="pct">${r.pct}%</span></div>
       <div class="id-bar"><span style="width:${r.pct}%"></span></div>
       <div class="id-meta">${r.match} test(s) concordant(s)${r.conflict?` · <span class="id-conflict">${r.conflict} discordant(s) : ${conflicts.join(", ")}</span>`:""}</div>`;
+    /* § 4.A, point 2 : AFFICHER les caractères concordants, et pas seulement
+       les compter. Les discordants étaient nommés, les concordants non — or
+       c'est sur eux que repose la proposition, et un stagiaire doit pouvoir
+       refaire le raisonnement caractère par caractère. Le signe est rappelé :
+       « indole + » et « indole − » ne soutiennent pas la même espèce. */
+    if(r.sup.length){
+      const accords = r.sup.map(k=>{
+        const v = idState.tests[k];
+        return esc(ID_LABELS[k] || k) + " " + (v === "+" ? "+" : "−");
+      });
+      html += `<div class="id-accord"><b>Concorde sur</b> ${accords.join(", ")}</div>`;
+    }
     if(i===0) html += `<button class="id-use" data-id="${r.id}">Utiliser pour l'antibiogramme →</button>`;
     html += `</div>`;
   });
