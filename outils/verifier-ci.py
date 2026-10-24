@@ -109,6 +109,30 @@ def main():
         else:
             hors.append("%s — %s" % (f, r))
 
+    # --- Un contrôle de la chaîne ne peut pas dépendre de macOS ---
+    #
+    # verifier-comptes.py appelait ce moteur directement. Il passait au vert sur le
+    # poste de développement et faisait tomber la chaîne sous Linux, où jsc
+    # n'existe pas — le même angle mort que essai-chargement.js surveille pour
+    # les bancs JavaScript, rouvert côté Python. moteur_py sait choisir node ou
+    # l'autre selon ce qui est présent : c'est le SEUL endroit qui ait le droit
+    # de connaître ce chemin.
+    # Le motif est ASSEMBLÉ : écrit d'une pièce, ce fichier se dénoncerait
+    # lui-même — et une liste d'exemptions se serait allongée toute seule.
+    JSC = "JavaScript" + "Core.framework"
+    for f in sorted(lances):
+        if not f.endswith(".py") or f == "moteur_py.py":
+            continue
+        p = os.path.join(ICI, f)
+        if not os.path.isfile(p):
+            continue
+        with open(p, encoding="utf-8") as fh:
+            if JSC in fh.read():
+                ecarts.append(
+                    "%s cite le chemin de JavaScriptCore : il ne tournera que sur "
+                    "macOS, et la chaîne tourne sous Linux. Passez par moteur_py, "
+                    "qui choisit node ou jsc selon ce qui est là." % f)
+
     # Un chemin cité par la chaîne mais absent du dépôt : l'étape échouerait,
     # mais autant le dire ici, avec le nom du fichier manquant.
     for f in sorted(lances):

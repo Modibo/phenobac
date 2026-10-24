@@ -21,16 +21,13 @@ Morganella et Providencia ont les premiers, pas le second.
 
     python3 outils/verifier-comptes.py
 """
-import json
 import os
 import re
-import subprocess
 import sys
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.dirname(ICI)
 PAGE = os.path.join(RACINE, "phenobac.html")
-JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
 
 # Ce qu'on refuse : un nombre collé à l'un de ces noms, dans du texte DESTINÉ
 # À ÊTRE LU. Les commentaires du code racontent l'histoire du défaut et ont le
@@ -74,17 +71,18 @@ def hors_commentaire(src):
 
 
 def nombres_du_moteur():
-    js = ('var m={exports:{}};(new Function("module","exports",readFile("base-connaissances.js")))(m,m.exports);'
-          'var p={exports:{}};(new Function("module","exports",readFile("posologie.js")))(p,p.exports);'
-          'var r={exports:{}};(new Function("module","exports",readFile("rendu-cible.js")))(r,r.exports);'
-          'var e={exports:{}};(new Function("module","exports","require",readFile("moteur.js")))(e,e.exports,'
-          'function(n){return /posologie/.test(n)?p.exports:(/rendu-cible/.test(n)?r.exports:m.exports);});'
-          'print(JSON.stringify({org:Object.keys(e.exports.ORG).length}));')
-    out = subprocess.run([JSC, "-e", js], capture_output=True, text=True, cwd=RACINE)
-    if out.returncode or not out.stdout.strip():
-        raise SystemExit("CONTRÔLE IMPOSSIBLE — le moteur n'a pas pu être évalué :\n"
-                         + (out.stderr or "")[:400])
-    return json.loads(out.stdout)
+    """Le nombre d'espèces, pris sur le moteur tel qu'il s'exécute.
+
+    PREMIÈRE VERSION : un appel direct à jsc, qui n'existe que sur macOS.
+    Elle passait au vert sur le poste et faisait tomber la chaîne sous Linux,
+    où jsc n'existe pas — exactement l'angle mort que essai-chargement.js
+    surveille pour les bancs JavaScript, et que je venais de rouvrir côté
+    Python. moteur_py sait choisir node ou jsc selon ce qui est là ; on passe
+    par lui."""
+    sys.path.insert(0, ICI)
+    import moteur_py as MP                                   # noqa: E402
+    orgs = MP.tables(["ORG"])["ORG"]
+    return {"org": len(orgs)}
 
 
 def main():
