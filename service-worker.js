@@ -12,7 +12,7 @@
 // ni correctif d'interprétation, ni nouvelle espèce. C'est inacceptable pour un
 // produit payant : ne revenez pas à cette stratégie.
 
-const VERSION = "v51";                 // à incrémenter à chaque livraison
+const VERSION = "v52";                 // à incrémenter à chaque livraison
 const CACHE = "phenobac-" + VERSION;
 
 const SHELL = [

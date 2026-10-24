@@ -127,6 +127,86 @@ dire("\nUne alerte ne modifie aucune donnée");
   verif(r.interpretation.alerts.length > 0, "… alors qu'une alerte a bien été levée");
 })();
 
+/* ------------------------------------------------------------
+   LE PRÉLÈVEMENT DÉCLARÉ ET LE SITE DES SEUILS
+
+   Le champ « Prélèvement » paraissait sur le compte rendu et partait à la
+   surveillance, mais il ne commandait rien : le site des seuils venait de
+   questions séparées. On pouvait déclarer « LCR », ne pas répondre à la
+   question méningée, et obtenir des seuils de site ordinaire sur un isolat
+   de liquide céphalo-rachidien — avec « Prélèvement : LCR » imprimé juste à
+   côté. Les deux champs se contredisaient sans que rien ne le dise.
+
+   PhénoBac ne tranche pas à la place du biologiste : lui seul sait si le
+   prélèvement relève du cadre méningé ou de la cystite simple. Il confronte.
+   ------------------------------------------------------------ */
+dire("\nLe prélèvement déclaré et le site des seuils disent-ils la même chose ?");
+var DESACCORD = /Prélèvement déclaré|Contexte «/;
+(function () {
+  var pn = { PEN: "S", CTX: "S", E: "S", VA: "S" };
+  verif(porte("pneumocoque", pn, DESACCORD, { prelevement: "LCR" }),
+        "LCR déclaré sans contexte méningé : le désaccord est signalé");
+  verif(/pénicilline|céfotaxime/i.test(
+          (alertes("pneumocoque", pn, { prelevement: "LCR" })
+            .filter(function (a) { return DESACCORD.test(a.txt); })[0] || {}).txt || ""),
+        "… en NOMMANT les molécules dont le seuil change, pas en termes vagues");
+  verif(!porte("pneumocoque", pn, DESACCORD, { prelevement: "LCR", mening: "Oui" }),
+        "LCR déclaré ET contexte méningé renseigné : rien à dire");
+
+  // Le désaccord vaut dans les DEUX SENS : le compte rendu porterait l'un et
+  // les seuils l'autre.
+  verif(porte("pneumocoque", pn, DESACCORD, { prelevement: "Hémoculture", mening: "Oui" }),
+        "contexte méningé renseigné sur une hémoculture : signalé aussi");
+
+  var urines = { AMX: "S", MEC: "S", NIT: "S", TMP: "S" };
+  verif(porte("ecoli", urines, DESACCORD, { prelevement: "ECBU (urines)" }),
+        "ECBU déclaré sans cystite renseignée : signalé");
+  verif(!porte("ecoli", urines, DESACCORD, { prelevement: "ECBU (urines)", urin: "Oui" }),
+        "… et plus rien une fois la cystite renseignée");
+
+  /* UN AVERTISSEMENT SANS CONSÉQUENCE FINIT PAR ÊTRE IGNORÉ, y compris le
+     jour où il en a une. Il ne paraît donc que si une molécule dont le site
+     change le seuil a réellement été saisie. */
+  verif(!porte("pneumocoque", { E: "S", VA: "S" }, DESACCORD, { prelevement: "LCR" }),
+        "LCR, mais aucune molécule à seuil méningé saisie : on se tait");
+  verif(!porte("ecoli", { AMX: "S", CTX: "S", GEN: "S" }, DESACCORD,
+               { prelevement: "ECBU (urines)" }),
+        "ECBU, mais aucune molécule à seuil urinaire saisie : on se tait");
+
+  // Les prélèvements qui n'appellent aucun site particulier ne disent rien.
+  ["Pus / plaie", "Prélèvement respiratoire", "Cathéter", "Autre"].forEach(function (p) {
+    verif(!porte("pneumocoque", pn, DESACCORD, { prelevement: p }),
+          "« " + p + " » : aucun site propre dans les référentiels, aucun avertissement");
+  });
+  verif(!porte("pneumocoque", pn, DESACCORD, {}),
+        "prélèvement non renseigné : rien à confronter");
+})();
+
+/* ------------------------------------------------------------
+   Les deux entérobactéries de groupe 3 que la HAS nommait et qu'on ne
+   pouvait pas choisir.
+   ------------------------------------------------------------ */
+dire("\nMorganella et Providencia — leurs résistances naturelles parlent");
+(function () {
+  var NATURELLE = /[Rr]ésistance naturelle attendue/;
+  [["mmorganii", "Morganella morganii"], ["providencia", "Providencia spp."]].forEach(function (x) {
+    verif(porte(x[0], { COL: "S", AMX: "R", CTX: "S" }, NATURELLE),
+          x[1] + " : colistine rendue S → incohérence signalée");
+    verif(porte(x[0], { NIT: "S", AMX: "R", CTX: "S" }, NATURELLE),
+          x[1] + " : nitrofurantoïne rendue S → incohérence signalée");
+    verif(!porte(x[0], { AMX: "R", AMC: "R", CTX: "S", CIP: "S" }, NATURELLE),
+          x[1] + " : profil attendu → aucune incohérence");
+  });
+
+  // Le défaut que ce contrôle vient de révéler chez les Proteae : la
+  // nitrofurantoïne est arrivée au panel urinaire sans être déclarée
+  // résistante naturelle, sur le prélèvement où la question se pose le plus.
+  verif(porte("proteus", { NIT: "S", AMX: "S", CTX: "S" }, NATURELLE),
+        "Proteus mirabilis : nitrofurantoïne rendue S → incohérence signalée");
+  verif(porte("pvulgaris", { NIT: "S", CTX: "S" }, NATURELLE),
+        "Proteus vulgaris : idem");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles, les alertes de cohérence se déclenchent quand il faut, et seulement alors."));
 if (KO && typeof process === "object" && process.exit) process.exit(1);

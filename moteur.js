@@ -230,7 +230,7 @@ const ORG = {
   efaecium:   { engine: "enterococcus", args: { species: "E. faecium", ampExpectedS: false }, bpGroup: "enteroc", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.9.", CTX: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.9.", FOX: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.9.", FEP: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.9.", GEN: "Résistance naturelle attendue — aminosides (bas niveau). EUCAST, phénotypes résistants attendus v1.2, règle 4.9.", E: "Résistance naturelle attendue — macrolides. EUCAST, phénotypes résistants attendus v1.2, règle 4.9.", AZM: "Résistance naturelle attendue — macrolides. EUCAST, phénotypes résistants attendus v1.2, règle 4.9."} },
   paeru:      { engine: "pseudo", bpGroup: "pseudo", intrinsic: {AMX: "Résistance naturelle attendue — aminopénicillines. EUCAST, phénotypes résistants attendus v1.2, règle 2.7.", AMC: "Résistance naturelle attendue — aminopénicilline + inhibiteur. EUCAST, phénotypes résistants attendus v1.2, règle 2.7.", CTX: "Résistance naturelle attendue — céfotaxime / ceftriaxone. EUCAST, phénotypes résistants attendus v1.2, règle 2.7.", ETP: "Résistance naturelle attendue — ertapénème. EUCAST, phénotypes résistants attendus v1.2, règle 2.7.", CAF: "Résistance naturelle attendue — chloramphénicol. EUCAST, phénotypes résistants attendus v1.2, règle 2.7.", DOX: "Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 2.7."} },
   acineto:    { engine: "acineto", bpGroup: "acineto", intrinsic: {AMX: "Résistance naturelle attendue — aminopénicillines. EUCAST, phénotypes résistants attendus v1.2, règle 2.1.", AMC: "Résistance naturelle attendue — aminopénicilline + inhibiteur. EUCAST, phénotypes résistants attendus v1.2, règle 2.1.", CTX: "Résistance naturelle attendue — céfotaxime / ceftriaxone. EUCAST, phénotypes résistants attendus v1.2, règle 2.1.", ETP: "Résistance naturelle attendue — ertapénème. EUCAST, phénotypes résistants attendus v1.2, règle 2.1.", FOS: "Résistance naturelle attendue — fosfomycine. EUCAST, phénotypes résistants attendus v1.2, règle 2.1.", DOX: "Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 2.1."} },
-  proteus:    { engine: "proteus", bpGroup: "morganella", intrinsic: {DOX: "Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 1.12.", COL: "Résistance naturelle attendue — polymyxines. EUCAST, phénotypes résistants attendus v1.2, règle 1.12."} },
+  proteus:    { engine: "proteus", bpGroup: "morganella", intrinsic: {DOX: "Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 1.12.", COL: "Résistance naturelle attendue — polymyxines. EUCAST, phénotypes résistants attendus v1.2, règle 1.12.", NIT: "Résistance naturelle attendue — nitrofurantoïne. EUCAST, phénotypes résistants attendus v1.2, règle 1.12."} },
   salmonella: { engine: "salmonella", bpGroup: "salmonella", intrinsic: {} },
   pneumocoque:{ engine: "pneumo", bpGroup: "pneumo", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.6.", GEN: "Résistance naturelle attendue — aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise. EUCAST, phénotypes résistants attendus v1.2, règle 4.6."} },
 
@@ -254,8 +254,24 @@ const ORG = {
                   AMC: "Résistance naturelle (AmpC non inhibée par le clavulanate).",
                   FOX: "Résistance naturelle (AmpC)." } },
   pvulgaris:  { engine: "proteus", args: { species: "Proteus vulgaris" }, bpGroup: "morganella",
-                intrinsic: {AMX: "Résistance naturelle (céphalosporinase chromosomique K1) aux aminopénicillines.", DOX: "Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 1.14.", COL: "Résistance naturelle attendue — polymyxines. EUCAST, phénotypes résistants attendus v1.2, règle 1.14."} },
-  shigella:   { engine: "entero", args: { amino: "AMX", species: "Shigella spp." }, bpGroup: "entero", intrinsic: {} }
+                intrinsic: {AMX: "Résistance naturelle (céphalosporinase chromosomique K1) aux aminopénicillines.", DOX: "Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 1.14.", COL: "Résistance naturelle attendue — polymyxines. EUCAST, phénotypes résistants attendus v1.2, règle 1.14.", NIT: "Résistance naturelle attendue — nitrofurantoïne. EUCAST, phénotypes résistants attendus v1.2, règle 1.14."} },
+  shigella:   { engine: "entero", args: { amino: "AMX", species: "Shigella spp." }, bpGroup: "entero", intrinsic: {} },
+
+  /* Morganella et Providencia — entérobactéries du GROUPE 3 au sens de la note
+     (A) des tableaux d'antibiogramme ciblé de la HAS. Elles y étaient nommées
+     depuis que ces tableaux sont appliqués, mais PhénoBac ne permettait pas de
+     les choisir : une règle écrite pour des espèces qu'on ne pouvait pas
+     saisir. Elles partagent le groupe de seuils des Proteae (« morganella »)
+     et le moteur à AmpC inductible d'Enterobacter — c'est ce que leur
+     classement en groupe 3 veut dire.
+
+     La céfoxitine n'est PAS déclarée résistante pour elles : le document la
+     coche pour Citrobacter freundii et Enterobacter, pas pour celles-ci. On
+     transcrit ce qui est écrit. */
+  mmorganii:  { engine: "enterobacter", args: { species: "Morganella morganii" }, bpGroup: "morganella",
+                intrinsic: {AMX: "Résistance naturelle (céphalosporinase AmpC chromosomique inductible) aux aminopénicillines. EUCAST, phénotypes résistants attendus v1.2, règle 1.10.", AMC: "Résistance naturelle — l'acide clavulanique n'inhibe pas l'AmpC. EUCAST, phénotypes résistants attendus v1.2, règle 1.10.", DOX: "Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 1.10.", COL: "Résistance naturelle attendue — polymyxines. EUCAST, phénotypes résistants attendus v1.2, règle 1.10.", NIT: "Résistance naturelle attendue — nitrofurantoïne. EUCAST, phénotypes résistants attendus v1.2, règle 1.10."} },
+  providencia:{ engine: "enterobacter", args: { species: "Providencia spp." }, bpGroup: "morganella",
+                intrinsic: {AMX: "Résistance naturelle (céphalosporinase AmpC chromosomique inductible) aux aminopénicillines. EUCAST, phénotypes résistants attendus v1.2, règle 1.15.", AMC: "Résistance naturelle — l'acide clavulanique n'inhibe pas l'AmpC. EUCAST, phénotypes résistants attendus v1.2, règle 1.15.", DOX: "Résistance naturelle attendue — tétracyclines. EUCAST, phénotypes résistants attendus v1.2, règle 1.15.", COL: "Résistance naturelle attendue — polymyxines. EUCAST, phénotypes résistants attendus v1.2, règle 1.15.", NIT: "Résistance naturelle attendue — nitrofurantoïne. EUCAST, phénotypes résistants attendus v1.2, règle 1.15."} }
 };
 
 // organisme actif pour finalize (défini juste avant l'appel, calcul synchrone)
@@ -591,8 +607,67 @@ const COUPLES_INHIBITEUR = [
   ["AMP", "AMC", "l'acide clavulanique ne retire qu'un obstacle"]
 ];
 
+/* Les prélèvements que l'interface propose, et le site de seuils que chacun
+   appelle. Les référentiels ne distinguent que TROIS sites — ordinaire,
+   urinaire, méningé — et seuls deux prélèvements en appellent un autre que
+   l'ordinaire. Les autres n'ont rien à dire au moteur, et c'est écrit ici
+   plutôt que supposé. */
+const PRELEVEMENT_SITE = {
+  "LCR": { ctx: "mening", dit: "méningé", table: "mening",
+           quoi: "les seuils méningés, plus stricts" },
+  "ECBU (urines)": { ctx: "urin", dit: "cystite simple", table: "urin",
+           quoi: "les seuils urinaires" }
+};
+
+/* Les molécules saisies dont le SITE change le seuil. Sans elles,
+   l'avertissement n'aurait aucune conséquence — et un avertissement sans
+   conséquence finit par être ignoré, y compris le jour où il en a une. */
+function moleculesDuSite(table, groupe, r) {
+  const src = table === "mening" ? BP_MENINGE : BP_URIN;
+  const t = (src || {})[groupe] || {};
+  return Object.keys(t).filter(function (k) {
+    return r[k] !== undefined && r[k] !== "";
+  });
+}
+
 function coherence(A, r, org, c) {
   const ajoute = (lvl, txt) => A.alerts.push({ lvl: lvl, txt: txt });
+
+  /* --- 0. LE PRÉLÈVEMENT DÉCLARÉ ET LE CONTEXTE DISENT-ILS LA MÊME CHOSE ? ---
+
+     Le champ « Prélèvement » paraît sur le compte rendu et part à la
+     surveillance, mais il ne commandait RIEN. Le site des seuils vient de
+     questions séparées. On pouvait donc choisir « LCR », ne pas répondre à la
+     question méningée, et obtenir des seuils de site ordinaire sur un isolat
+     de liquide céphalo-rachidien — avec « Prélèvement : LCR » imprimé juste à
+     côté. Les deux champs pouvaient se contredire sans que rien ne le dise.
+
+     On ne décide pas à la place du biologiste : c'est lui qui sait si le
+     prélèvement relève du cadre méningé ou de la cystite simple. On le
+     CONFRONTE, ce qui est le rôle même du § 9. */
+  const prel = c && c.prelevement;
+  if (prel) {
+    const attendu = PRELEVEMENT_SITE[prel];
+    if (attendu && c[attendu.ctx] !== "Oui") {
+      const vises = moleculesDuSite(attendu.table, org && org.bpGroup, r);
+      if (vises.length) {
+        ajoute("warn", "Prélèvement déclaré « " + prel + " », mais le contexte « "
+          + attendu.dit + " » n'est pas renseigné : "
+          + vises.map(function (k) { return ABXNAME[k] || k; }).join(", ")
+          + (vises.length > 1 ? " sont catégorisé" : " est catégorisé")
+          + (vises.length > 1 ? "s" : "") + " sur les seuils de site ordinaire, et non sur "
+          + attendu.quoi + ".");
+      }
+    }
+    Object.keys(PRELEVEMENT_SITE).forEach(function (p) {
+      const d = PRELEVEMENT_SITE[p];
+      if (p !== prel && c[d.ctx] === "Oui") {
+        ajoute("warn", "Contexte « " + d.dit + " » renseigné, mais le prélèvement déclaré "
+          + "est « " + prel + " » : le compte rendu portera l'un et les seuils l'autre. "
+          + "Corrigez l'un des deux.");
+      }
+    });
+  }
 
   /* --- 1. L'association moins active que la molécule seule --- */
   const inductible = org && AMPC_INDUCTIBLE.indexOf(org.engine) !== -1;
@@ -1042,8 +1117,8 @@ const RC_GROUPE3_ORG = {
   "Klebsiella aerogenes": "kaerogenes",
   "Citrobacter freundii complex": "cfreundii",
   "Serratia marcescens": "serratia",
-  "Morganella morganii": null,
-  "Providencia spp": null,
+  "Morganella morganii": "mmorganii",
+  "Providencia spp": "providencia",
   "Pantoea agglomerans": null,
   "Hafnia spp": null
 };
@@ -1356,7 +1431,7 @@ function finalize(A, r) {
     _depistage.alerts.forEach(x => A.alerts.push(x));
     if (_depistage.sev && A.sev === "wild") A.sev = _depistage.sev;
   }
-  coherence(A, r, org, null);
+  coherence(A, r, org, _ctx);
   // § 9 : les conditions de réalisation déclarées, confrontées au référentiel.
   conditionsTechniques(A, org, _ctx, _mode);
   reglesCasfm(A, r);

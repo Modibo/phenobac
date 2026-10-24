@@ -2,7 +2,7 @@
 
 Lecture interprétative de l'antibiogramme. Application web installable (PWA),
 utilisable hors-ligne pour les germes courants, avec un moteur d'interprétation
-expert couvrant 37 espèces réservé aux licences payantes.
+expert couvrant 39 espèces réservé aux licences payantes.
 
 Le raisonnement expert — détection des phénotypes de résistance, catégorisation
 des CMI, commentaire de compte-rendu — vit **côté serveur** et n'est rendu qu'à
