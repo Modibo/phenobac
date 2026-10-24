@@ -10,6 +10,12 @@ seuil de l'application, la ou les lignes EUCAST correspondantes et leurs valeurs
 Le classeur officiel se télécharge sur
 https://www.eucast.org/bacteria/clinical-breakpoints-and-interpretation/clinical-breakpoint-tables/
 
+HORS INTÉGRATION CONTINUE : le classeur de l'EUCAST n'est pas dans le dépôt et
+n'y sera pas — il est publié sous la licence de l'EUCAST, et le serveur refuse
+les téléchargements automatiques (403). Cette confrontation se fait à la main,
+le document sous les yeux, et son résultat est consigné dans CONFRONTATIONS.md ;
+verifier-confrontations.py arrête la livraison si un seuil a bougé depuis.
+
 Deux pièges traités ici, et c'est la raison d'être de cet outil :
 
   1. Les renvois de notes sont des exposants COLLÉS à la valeur. Lus naïvement,

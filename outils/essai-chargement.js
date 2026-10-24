@@ -22,7 +22,11 @@
    éprouver l'autre. C'est l'erreur que j'ai commise en écrivant ce fichier.
 
    Sans Node, sur macOS :  …/jsc outils/essai-chargement.js
-   (sous Node, il ne sert à rien : la CI éprouve déjà la vraie branche.)
+
+HORS INTÉGRATION CONTINUE : ce banc n'a de sens QUE sous jsc, où il simule Node
+pour éprouver la branche que le poste de développement n'emprunte jamais. Sous
+Node, la chaîne exécute déjà cette branche pour de vrai, à chaque banc : le
+lancer là-bas ne vérifierait rien de plus.
    ============================================================ */
 
 if (typeof readFile !== "function") {

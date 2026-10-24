@@ -132,6 +132,23 @@ jobs:
       - name: Le rendu ciblé ne masque que dans son périmètre
         run: node outils/essai-rendu-cible.js
 
+      # Écrire un banc coûte une heure ; le brancher ici coûte deux lignes,
+      # et c'est la partie qu'on oublie. Un banc non branché ne tombe jamais
+      # au rouge : il dort dans outils/, il donne l'impression que la chose
+      # est vérifiée, et le jour où la règle qu'il protège se casse, personne
+      # ne l'apprend. Ce dépôt en portait trois.
+      - name: Aucun contrôle ne dort dans outils/
+        run: python3 outils/verifier-ci.py
+
+      # Deux outils confrontent les tables au document officiel et ne peuvent
+      # pas tourner ici : le document n'est pas redistribuable, et le serveur
+      # de l'EUCAST refuse les téléchargements automatiques. Ces
+      # confrontations se font à la main — donc elles s'oublient. Ce contrôle
+      # recalcule l'empreinte des tables confrontées : si un seuil a bougé
+      # depuis la dernière confrontation, la livraison s'arrête.
+      - name: Aucun seuil n'a changé sans être reconfronté au référentiel
+        run: python3 outils/verifier-confrontations.py
+
   deploy:
     name: Déploiement VPS
     needs: test

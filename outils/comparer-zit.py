@@ -25,6 +25,10 @@ Où trouver les sources :
   EUCAST  https://www.eucast.org/bacteria/clinical-breakpoints-and-interpretation/clinical-breakpoint-tables/
   CA-SFM  page du groupe « Comité de l'Antibiogramme » du site de la SFM,
           fichier wp-content/uploads/<année>/<mois>/CASFM<année>_V1.0-<MOIS>-<année>.pdf
+
+HORS INTÉGRATION CONTINUE : il faut DEUX documents officiels, aucun des deux
+n'étant redistribuable dans ce dépôt. La confrontation se fait à la main et se
+consigne dans CONFRONTATIONS.md, que verifier-confrontations.py surveille.
 """
 import sys, os, re, importlib.util
 

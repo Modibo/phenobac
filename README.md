@@ -429,6 +429,32 @@ publication ; la base porte la sienne (`BASE_VERSION`). `PhenoBacMoteur.regleDe(
 retrouve la règle employée par ses coordonnées — c'est elle que l'interface
 citera pour répondre à « pourquoi ? ».
 
+## Ce qui se vérifie à la main se note
+
+Deux contrôles ne peuvent pas tourner en intégration continue :
+`comparer-eucast.py` et `comparer-zit.py` confrontent les tables de PhénoBac au
+**document officiel**, et ce document n'est pas dans le dépôt — il n'est pas
+redistribuable, et le serveur de l'EUCAST refuse les téléchargements
+automatiques. Ces confrontations se font donc à la main, le document sous les
+yeux.
+
+Ce qui se fait à la main s'oublie, et l'oubli ne se voit pas : la chaîne reste
+verte, les bancs passent, et un seuil modifié six mois plus tôt n'a jamais été
+relu sur le tableau officiel. [`CONFRONTATIONS.md`](CONFRONTATIONS.md) note
+donc contre quel document chaque table a été confrontée, quand, avec quel
+résultat, et l'**empreinte** des tables de ce jour-là.
+`outils/verifier-confrontations.py` la recalcule à chaque livraison : si elle a
+bougé, la livraison s'arrête. L'empreinte porte sur les tables telles que le
+moteur les bâtit, et non sur le texte du fichier — un commentaire retouché ne
+réclame pas de nouvelle confrontation, un seuil déplacé d'un facteur dix, si.
+
+Et `outils/verifier-ci.py` veille sur le reste : **tout outil de contrôle doit
+être lancé par la chaîne, ou dire dans son propre en-tête pourquoi il ne peut
+pas l'être.** Écrire un banc coûte une heure, le brancher coûte deux lignes, et
+c'est la partie qu'on oublie — un banc non branché ne tombe jamais au rouge, et
+donne l'impression que la chose est vérifiée. Ce dépôt en portait trois, tous
+pour de bonnes raisons, mais aucune n'était écrite.
+
 ## Où vit le raisonnement
 
 `moteur.js` porte l'intégralité du raisonnement phénotypique, et **rien
