@@ -191,13 +191,51 @@ def main():
         lignes = c.lignes(feuille)
         section = SECTIONS.get(groupe)
         if section:
+            """UN TITRE DE SECTION EST LA PREMIÈRE LIGNE D'UN BLOC.
+
+            Les feuilles d'anaérobies empilent plusieurs tableaux — Bacteroides,
+            Prevotella, Fusobacterium — chacun précédé d'un titre, parfois suivi
+            d'une phrase d'explication : « Breakpoints for Bacteroides spp. are
+            also valid for Parabacteroides spp. … ».
+
+            Le découpage prenait TOUTE ligne où seule la colonne A est remplie
+            pour un titre. Cette phrase refermait donc la section aussitôt
+            ouverte, et le groupe se comparait à RIEN — sans rien dire, puisque
+            « aucune ligne correspondante » est aussi ce que l'on voit quand le
+            document ne porte pas l'antibiotique.
+
+            On repère donc les en-têtes de tableau (la ligne « S ≤ »), on
+            remonte la suite de lignes seules qui les précède, et l'on ne retient
+            que la PREMIÈRE : les autres sont de la prose."""
+            entetes = [i for i, cel in enumerate(lignes)
+                       if any("S ≤" in str(v) for v in cel.values())]
+            seule = lambda cel: (cel.get('A', '').strip()
+                                 and len([k for k in cel if k != 'A']) == 0)
+            titres = {}
+            for h in entetes:
+                # Entre le titre et la ligne « S ≤ » s'intercale la ligne
+                # « Antimicrobial agent », qui n'est PAS une ligne seule : la
+                # remontée s'y arrêtait net et ne trouvait aucun titre.
+                i = h - 1
+                while i >= 0 and "Antimicrobial agent" in lignes[i].get('A', ''):
+                    i -= 1
+                fin = i
+                while i >= 0 and seule(lignes[i]):
+                    i -= 1
+                if i + 1 <= fin and seule(lignes[i + 1]):
+                    titres[i + 1] = lignes[i + 1]['A'].replace("\n", " ").strip()
+
             garde, dedans = [], False
-            for cel in lignes:
-                nom = cel.get('A', '').replace("\n", " ").strip()
-                seul = nom and len([k for k in cel if k != 'A']) == 0
-                if seul:
-                    dedans = (nom == section); continue
-                if dedans: garde.append(cel)
+            for i, cel in enumerate(lignes):
+                if i in titres:
+                    dedans = (titres[i] == section); continue
+                if seule(cel):
+                    continue                     # prose : n'ouvre ni ne ferme
+                if dedans:
+                    garde.append(cel)
+            if not garde:
+                print("   section « %s » introuvable ou vide sur cette feuille — "
+                      "titres repérés : %s" % (section, ", ".join(sorted(titres.values()))))
             lignes = garde
         for code in sorted(bp[groupe]):
             sA, rA = bp[groupe][code]

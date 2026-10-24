@@ -29,11 +29,57 @@ pour obtenir la nouvelle empreinte.
 - **tables** : BP, BP_URIN
 - **empreinte** : bb17d1006bd360e0901bdb4b25800a0d15dfbe7a772824e3d7dcb02ae2d2c5e3
 - **date** : 2026-10-24
-- **résultat** : 212 seuils confrontés — 212 identiques, 0 différent.
+- **résultat** : 218 seuils confrontés — 214 identiques, **4 DIFFÉRENTS**, 91 non comparés.
 
 La confrontation porte sur les concentrations critiques de l'EUCAST. Les
 seuils méningés (BP_MENINGE) et ceux du CA-SFM ont leurs propres documents et
 ne sont pas couverts par cette entrée.
+
+### ⚠ Quatre divergences, en attente de validation
+
+Elles concernent *Bacteroides fragilis*, et **toutes vont dans le sens
+permissif** : PhénoBac rend « sensible » à des concentrations que l'EUCAST
+v16.1 tient pour résistantes.
+
+| antibiotique | PhénoBac | EUCAST v16.1 |
+|---|---|---|
+| amoxicilline-ac. clavulanique | S ≤ 4 · R > 8 | **S ≤ 2 · R > 2** |
+| imipénème | S ≤ 2 · R > 8 | **S ≤ 1 · R > 1** |
+| méropénème | S ≤ 2 · R > 8 | **S ≤ 1 · R > 1** |
+| pipéracilline-tazobactam | S ≤ 8 · R > 16 | **S ≤ 2 · R > 2** |
+
+Concrètement : un *B. fragilis* dont la CMI d'imipénème vaut 2 mg/L est rendu
+**sensible** par PhénoBac et **résistant** par le référentiel qu'il déclare
+appliquer.
+
+**Rien n'a été corrigé.** Changer une concentration critique est une décision
+de biologiste, et l'outil l'écrit depuis toujours : « Aucun fichier n'a été
+modifié. Toute correction doit être validée par un biologiste avant d'être
+portée dans le code. »
+
+### Et une cinquième question, d'une autre nature
+
+PhénoBac porte pour *B. fragilis* un seuil de **pénicilline G** (S ≤ 0,25 ·
+R > 0,5) et de **vancomycine** (S ≤ 2) que la v16.1 ne donne pas : son tableau
+des anaérobies à Gram négatif ne comporte ni l'une ni l'autre. Ce ne sont pas
+des divergences — ce sont des seuils dont la source actuelle est à retrouver.
+La moxifloxacine, elle, vient du CA-SFM, qui la retient pour l'ensemble des
+anaérobies.
+
+### Pourquoi c'était invisible
+
+Le découpage en sections prenait TOUTE ligne où seule la première colonne est
+remplie pour un titre de tableau. Or les feuilles d'anaérobies empilent
+plusieurs tableaux — Bacteroides, Prevotella, Fusobacterium — et une phrase
+d'explication suit le titre : « Breakpoints for Bacteroides spp. are also
+valid for Parabacteroides spp. … ». Elle refermait la section aussitôt
+ouverte, et le groupe se comparait à **rien**.
+
+Le rapport disait alors « aucune ligne EUCAST correspondante » — exactement ce
+qu'il affiche aussi quand le document ne porte pas l'antibiotique. Les deux
+situations se confondaient, et c'est ainsi que quatre seuils divergents sont
+restés invisibles. L'outil distingue désormais les titres de la prose, et
+signale une section vide au lieu de la taire.
 
 ---
 
