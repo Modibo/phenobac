@@ -125,33 +125,71 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Le déploiement automatique demande quatre secrets de dépôt. Tant
+      # qu'ils ne sont pas renseignés, cette tâche ÉCHOUAIT à chaque poussée —
+      # alors que les dix-huit contrôles passaient. Une croix rouge permanente
+      # sur une chaîne qui va bien apprend à ne plus la regarder, et le jour où
+      # un contrôle casse vraiment, personne ne le voit. On passe donc son
+      # chemin proprement, en DISANT pourquoi.
+      - name: Le déploiement automatique est-il configuré ?
+        id: config
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
+            echo "configure=non" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Déploiement automatique non configuré::Les contrôles sont passés, mais les secrets SSH_HOST, SSH_USER et SSH_KEY ne sont pas renseignés : rien n'a été déployé. Déployez à la main (cd /opt/phenobac && git pull && bash install-caddy.sh), ou renseignez ces secrets dans Settings > Secrets and variables > Actions."
+          else
+            echo "configure=oui" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Préparer la clé SSH
+        if: steps.config.outputs.configure == 'oui'
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p "${{ secrets.SSH_PORT || '22' }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
+      # DEUX DÉFAUTS CORRIGÉS ICI, qui auraient cassé le site le jour où les
+      # secrets auraient été renseignés :
+      #
+      #   1. la recopie vers public/ oubliait base-connaissances.js et
+      #      moteur.js. La page servie aurait été la nouvelle et le MOTEUR
+      #      l'ancien — exactement la divergence que tout ce dépôt combat ;
+      #   2. « docker compose up -d --build » sort le conteneur du réseau de
+      #      Caddy : le site serait tombé en 502.
+      #
+      # install-caddy.sh fait les deux correctement, il est idempotent, et
+      # c'est la procédure documentée. On l'appelle au lieu de la réécrire :
+      # deux procédures de déploiement finissent toujours par diverger.
       - name: Synchroniser le code et redéployer
+        if: steps.config.outputs.configure == 'oui'
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
         run: |
-          # 1) envoyer le code (on préserve .env et les données du serveur)
           rsync -az --delete \
             --exclude '.git' --exclude '.github' --exclude '.env' \
-            --exclude 'data' --exclude 'node_modules' \
+            --exclude 'data' --exclude 'node_modules' --exclude 'public' \
             -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
             ./ "$SSH_USER@$SSH_HOST:/opt/phenobac/"
-
-          # 2) reconstruire et relancer le conteneur sur le VPS
           ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" '
             set -e
             cd /opt/phenobac
-            mkdir -p public
-            cp -f phenobac.html success.html public/
-            cp -f manifest.webmanifest service-worker.js public/ 2>/dev/null || true
-            cp -f icon-192.png icon-512.png icon-maskable-512.png apple-touch-icon.png public/ 2>/dev/null || true
-            docker compose up -d --build
-            docker image prune -f'
+            bash install-caddy.sh'
+
+      # Ne jamais annoncer un déploiement sans l'avoir constaté. Quatre
+      # livraisons sont restées à quai en croyant le contraire.
+      - name: Vérifier que la version annoncée est bien servie
+        if: steps.config.outputs.configure == 'oui'
+        env:
+          SITE: ${{ secrets.SITE_URL || 'https://phenobac.komodi-labo.org' }}
+        run: |
+          attendu=$(grep -m1 -oE 'v[0-9]+' service-worker.js)
+          servi=$(curl -fsS --max-time 20 "$SITE/service-worker.js" | grep -m1 -oE 'v[0-9]+' || echo "injoignable")
+          echo "attendu $attendu — servi $servi"
+          [ "$attendu" = "$servi" ] || { echo "::error::Le site sert $servi alors que cette livraison porte $attendu."; exit 1; }
