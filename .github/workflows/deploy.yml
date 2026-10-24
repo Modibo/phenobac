@@ -147,6 +147,15 @@ jobs:
       - name: Une correction de seuils atteint les postes installés
         run: node outils/essai-service-worker.js
 
+      # Un argument du moteur est un triplet : la molécule, la catégorie
+      # ATTENDUE, et la phrase affichée au biologiste. Rien n'empêchait les
+      # deux derniers de se contredire — « céfoxitine conservée » sous une
+      # catégorie « R » s'affiche quand elle est résistante, en expliquant
+      # qu'elle est conservée. Le raisonnement garde son apparence de rigueur
+      # et dit le contraire de ce qu'il observe.
+      - name: Aucun argument ne contredit la catégorie qu'il explique
+        run: python3 outils/verifier-arguments.py
+
       - name: Aucun contrôle ne dort dans outils/
         run: python3 outils/verifier-ci.py
 

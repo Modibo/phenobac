@@ -4642,7 +4642,13 @@ function renderInterpretView(A){
      demande que le raisonnement soit lisible par un technicien ou un étudiant.
      Cette section est placée juste sous le verdict, avant les alertes : on lit
      d'abord pourquoi, ensuite ce qu'il faut surveiller. */
-  if((A.pour && A.pour.length) || (A.contre && A.contre.length) || A.confiance){
+  /* Une conclusion SANS arguments doit dire pourquoi elle n'en a pas. Le seul
+     cas légitime aujourd'hui est Clostridioides difficile, qu'on ne met pas sur
+     un antibiogramme : laisser la section vide ferait croire à une panne. */
+  if(A.sansGrille){
+    html += `<div class="sect"><div class="sect-t">Pourquoi ce phénotype</div>
+      <div class="rc-dit">Aucune grille d'arguments ici : ${esc(A.sansGrille)}.</div></div>`;
+  } else if((A.pour && A.pour.length) || (A.contre && A.contre.length) || A.confiance){
     const NIV = {
       "confirmé": ["conf", "Un test de confirmation figure au dossier."],
       "probable": ["prob", "Le profil est complet et rien ne le contredit."],

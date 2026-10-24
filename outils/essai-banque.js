@@ -221,7 +221,7 @@ QUIZ_BANK.forEach(function (c, i) {
    ------------------------------------------------------------ */
 dire("\nLes arguments correspondent-ils à l'antibiogramme ?");
 (function () {
-  var avecGrille = 0, sansGrille = [], discordants = 0, niveaux = {};
+  var avecGrille = 0, sansGrille = [], discordants = 0, niveaux = {}, declarees = {};
   var NIVEAUX = ["confirmé", "probable", "possible"];
 
   QUIZ_BANK.forEach(function (c, i) {
@@ -230,7 +230,26 @@ dire("\nLes arguments correspondent-ils à l'antibiogramme ?");
     if (!cas.res) return;
     var A = E.runInterpretation({ organism: cas.org, mode: "sir",
                                   results: cas.res, ctx: cas.ctx || {} }).interpretation;
-    if (!A.pour && !A.contre) { sansGrille.push(cas.org); return; }
+    /* UNE CONCLUSION SANS ARGUMENTS EST DÉSORMAIS UNE FAUTE, sauf à dire
+       pourquoi. Trente-deux phénotypes nommaient un mécanisme sans rien
+       justifier ; le § 7 demande, POUR CHAQUE hypothèse, les arguments en
+       faveur, les éléments discordants et un niveau de confiance. Il reste
+       un cas légitime — Clostridioides difficile, qu'on ne met pas sur un
+       antibiogramme — et il le déclare dans A.sansGrille. Déclarer coûte une
+       phrase ; oublier ne coûte rien, et c'est bien le problème. */
+    if (!A.pour && !A.contre) {
+      sansGrille.push(cas.org);
+      if (A.sansGrille) {
+        OK++;
+        declarees[cas.org] = A.sansGrille;
+      } else {
+        KO++;
+        dire("  ÉCHEC  cas " + (i + 1) + " (" + cas.org + ") : « " + A.name +
+             " » est conclu sans aucun argument, et sans dire pourquoi. " +
+             "Ajoutez une grille parce(), ou déclarez A.sansGrille avec la raison.");
+      }
+      return;
+    }
     avecGrille++;
 
     (A.pour || []).concat(A.contre || []).forEach(function (x) {
@@ -256,9 +275,9 @@ dire("\nLes arguments correspondent-ils à l'antibiogramme ?");
        " portent une grille d'arguments.");
   dire("  niveaux : " + NIVEAUX.map(function (n) { return (niveaux[n] || 0) + " " + n; }).join(", ") + ".");
   if (discordants) dire("  " + discordants + " élément(s) discordant(s) signalé(s) — ce n'est pas une faute.");
-  if (sansGrille.length)
-    dire("  sans grille, et donc sans explication affichée : " +
-         sansGrille.filter(function (v, k, s) { return s.indexOf(v) === k; }).join(", ") + ".");
+  Object.keys(declarees).forEach(function (org) {
+    dire("  sans grille, et le dit : " + org + " — " + declarees[org] + ".");
+  });
 })();
 
 dire("\n" + QUIZ_BANK.length + " cas dans la banque — " + exacts + " sur le titre du phénotype, "
