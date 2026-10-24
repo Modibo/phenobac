@@ -20,7 +20,11 @@
 //   bpOverride {"groupe:ABX":{S,R}},// seuils propres au laboratoire, s'il en a
 //   ctx {...},                      // tests complémentaires, site, et § 9 :
 //                                   // conditions de réalisation déclarées
-//   ref: "eucast" | "casfm"         // référentiel appliqué ; défaut eucast
+//   ref: "eucast" | "casfm",        // référentiel appliqué ; défaut eucast
+//   renduCible: true | false        // politique du laboratoire : rendre une
+//                                   // partie seulement des antibiotiques testés
+//                                   // (HAS 2023). Défaut false — sans décision,
+//                                   // tout est rendu.
 // }
 // Réponse 200 : {
 //   valid, plan,

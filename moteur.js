@@ -365,6 +365,10 @@ let _depistageEchoue = [];
 // les conditions de réalisation à ce que le référentiel exige.
 let _mode = "sir";
 let _ctx = {};
+// Le rendu ciblé est une POLITIQUE DU LABORATOIRE : il voyage avec la demande,
+// il n'est pas un réglage du moteur. Un laboratoire qui ne l'a pas choisi rend
+// tout, et c'est l'état par défaut.
+let _renduCibleActif = false;
 
 /* ------------------------------------------------------------
    Lecture interprétative — rendre R ce qui a été lu S ou SFP.
@@ -909,6 +913,141 @@ function posologiePour(code, cat, ctx) {
   }).filter(function (x) { return x.schema || x.note; });
 }
 
+/* ============================================================
+   RENDU CIBLÉ — recommandation HAS du 5 octobre 2023
+
+   Rendre une partie seulement des antibiotiques testés, pour épargner les
+   molécules « critiques » — fluoroquinolones et carbapénèmes en premier lieu.
+   C'est le levier de maîtrise des antibiotiques le plus puissant dont dispose
+   un laboratoire : il ne coûte rien et agit sur chaque prescription.
+
+   MASQUER EST UN ACTE GRAVE. Cinq garde-fous, tous tirés du document :
+
+     1. DÉSACTIVÉ par défaut. Sans décision du laboratoire, tout est rendu.
+     2. PÉRIMÈTRE ÉTROIT, et s'en écarter n'est pas une approximation :
+        entérobactéries, ECBU, patiente de 12 ans ou plus. Hors de là la
+        recommandation n'est pas validée, et le rendu reste complet.
+     3. UNE MOLÉCULE RÉSISTANTE EST TOUJOURS RENDUE. Le document l'écrit :
+        « en plus des molécules prévues dans le rendu ciblé, il est
+        recommandé de rendre également les autres antibiotiques testés pour
+        lesquels la souche est catégorisée résistante ».
+     4. RIEN N'EST EFFACÉ. Les molécules masquées restent dans l'état, dans
+        les exports et dans la surveillance — le document le demande aussi :
+        « l'antibiogramme complet reste disponible sur demande ».
+     5. UNE ALERTE NE SE MASQUE JAMAIS. Une molécule qui porte une alerte de
+        cohérence est rendue visible, alerte comprise. Taire un signal de
+        danger pour économiser une ligne serait indéfendable.
+   ============================================================ */
+const RC = (typeof module !== "undefined" && module.exports)
+  ? require("./rendu-cible")
+  : (racine.PhenoBacRenduCible || { RENDU_CIBLE: {}, RENDU_CIBLE_SOURCE: null });
+
+// Les groupes de seuils qui SONT des entérobactéries. Salmonella et Shigella
+// en font partie, mais un ECBU n'en isole pas : le périmètre les écarte de
+// lui-même, par le prélèvement.
+const RC_GROUPES = ["entero", "morganella", "salmonella", "serratia"];
+
+/* Les molécules « de première intention » de la cystite ne sont pas une liste
+   que j'écris : ce sont celles que le tableau rend dans sa première colonne.
+   La donnée définit sa propre condition, et aucune liste parallèle ne peut
+   diverger d'elle. */
+function rcPremiereIntention() {
+  const tb = RC.RENDU_CIBLE.cystite;
+  if (!tb) return [];
+  const col = tb.colonnes[0];
+  const out = [];
+  tb.lignes.forEach(function (l) {
+    if (l.rendre.indexOf(col) !== -1) l.codes.forEach(function (c) {
+      if (out.indexOf(c) === -1) out.push(c);
+    });
+  });
+  return out;
+}
+
+/* « Sensible » au sens du document : « sensible à posologie standard ou
+   sensible à forte posologie » — donc S ou I. Le lire autrement ferait
+   basculer de colonne, et masquerait des molécules actives. */
+function rcActif(v) { return v === "S" || v === "I"; }
+
+/* La colonne du tableau, choisie par le phénotype. On va du plus résistant au
+   moins résistant : un profil BLSE relève de la dernière colonne même si
+   l'amoxicilline y est accessoirement résistante. */
+function rcColonne(cle, r, A) {
+  const tb = RC.RENDU_CIBLE[cle];
+  if (!tb) return null;
+  if (cle === "cystite") {
+    const prem = rcPremiereIntention().filter(function (c) { return r[c] !== undefined; });
+    const uneActive = prem.some(function (c) { return rcActif(r[c]); });
+    if (uneActive) return "premiereIntentionS";
+    if (!rcActif(r.AMC) && !rcActif(r.CFM)) return "premiereEtAmcEtCfmR";
+    return "premiereIntentionR";
+  }
+  // Tableaux « sans renseignement » et « pyélonéphrite » : mêmes colonnes.
+  const blse = /BLSE/i.test(A && A.name || "");
+  const c3gAtteinte = (r.CTX !== undefined && !rcActif(r.CTX))
+                   || (r.CRO !== undefined && !rcActif(r.CRO))
+                   || (r.CAZ !== undefined && !rcActif(r.CAZ));
+  if (blse || c3gAtteinte) return "c3gRouBlse";
+  if (r.AMC !== undefined && !rcActif(r.AMC)
+      && r.SXT !== undefined && !rcActif(r.SXT)) return "amcEtSxtR";
+  if (r.AMX !== undefined && !rcActif(r.AMX)) return "amoxR";
+  return "amoxS";
+}
+
+function renduCible(A, r, ctx, org, actif) {
+  const c = ctx || {};
+  if (!actif) return null;                         // garde-fou 1
+
+  // Garde-fou 2 : le périmètre. Chaque refus est NOMMÉ — « non applicable »
+  // sans motif laisserait croire à une panne.
+  if (!org || RC_GROUPES.indexOf(org.bpGroup) === -1)
+    return { applique: false, motif: "la recommandation ne vaut que pour les entérobactéries" };
+  if (c.urin !== "Oui")
+    return { applique: false, motif: "la recommandation ne vaut que pour les ECBU ; "
+           + "renseignez le prélèvement urinaire" };
+  if (c.patiente !== "Oui")
+    return { applique: false, motif: "la recommandation n'est validée que chez la femme adulte "
+           + "à partir de 12 ans ; hors de ce cadre le rendu reste complet" };
+
+  const cle = c.typeIU === "Cystite" ? "cystite"
+            : c.typeIU === "Pyélonéphrite" ? "pyelonephrite"
+            : "sansRenseignement";
+  const tb = RC.RENDU_CIBLE[cle];
+  if (!tb) return { applique: false, motif: "tableau décisionnel absent" };
+  const colonne = rcColonne(cle, r, A);
+
+  // Ce que le tableau prévoit de rendre dans cette colonne.
+  const prevues = [];
+  tb.lignes.forEach(function (l) {
+    if (l.rendre.indexOf(colonne) !== -1) l.codes.forEach(function (x) {
+      if (prevues.indexOf(x) === -1) prevues.push(x);
+    });
+  });
+
+  // Les molécules qui portent une alerte : jamais masquées (garde-fou 5).
+  const alertees = {};
+  (A.alerts || []).forEach(function (al) {
+    Object.keys(r).forEach(function (k) {
+      if (al.txt && ABXNAME[k] && al.txt.indexOf(ABXNAME[k]) !== -1) alertees[k] = true;
+    });
+  });
+
+  const masquees = [], rendues = [];
+  Object.keys(r).forEach(function (k) {
+    if (r[k] === undefined || r[k] === "") return;
+    if (prevues.indexOf(k) !== -1) { rendues.push(k); return; }
+    if (!rcActif(r[k])) { rendues.push(k); return; }   // garde-fou 3 : R toujours rendu
+    if (alertees[k]) { rendues.push(k); return; }      // garde-fou 5
+    masquees.push(k);
+  });
+
+  return {
+    applique: true, tableau: cle, titre: tb.titre, colonne: colonne,
+    rendues: rendues.sort(), masquees: masquees.sort(),
+    source: RC.RENDU_CIBLE_SOURCE
+  };
+}
+
 function finalize(A, r) {
   const org = _activeOrg;
   if (org && org.intrinsic) {
@@ -938,6 +1077,10 @@ function finalize(A, r) {
     const p = posologiePour(k, r[k], _ctx);
     if (p && p.length) A.posologies[k] = p;
   });
+
+  // Le rendu ciblé se calcule APRÈS les alertes : une molécule qui en porte
+  // une ne doit jamais être masquée, et il faut donc les connaître.
+  A.renduCible = renduCible(A, r, _ctx, org, _renduCibleActif);
 
   A.moments = commentaireStructure(A);
   A.commentaireCopiable = commentaireCopiable(A.moments);
@@ -2304,6 +2447,7 @@ function runInterpretation(input) {
   _activeOrg = org; _activeId = organism;      // fixés juste avant le calcul (synchrone)
   _mode = input.mode || "sir";
   _ctx = input.ctx || {};
+  _renduCibleActif = input.renduCible === true;
   const A = ENGINE[org.engine](results, input.ctx || {}, org.args || {});
   // Lecture interprétative : les catégories rendues peuvent différer des
   // catégories brutes. Le client doit recevoir les deux, jamais l'une à la
@@ -2325,6 +2469,9 @@ const MOTEUR = {
   horsEucast, depistageSeuil, estCasfm,
   // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
   CONDITIONS, conditionsTechniques,
+  // rendu ciblé (HAS 2023)
+  RENDU_CIBLE: RC.RENDU_CIBLE, RENDU_CIBLE_SOURCE: RC.RENDU_CIBLE_SOURCE,
+  renduCible, rcColonne, rcPremiereIntention,
   // posologies qui fondent les seuils
   POSOLOGIE: POSO.POSOLOGIE, POSOLOGIE_VERSION: POSO.POSOLOGIE_VERSION, posologiePour,
   // § 15 : le commentaire en cinq moments

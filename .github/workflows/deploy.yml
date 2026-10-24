@@ -125,6 +125,13 @@ jobs:
       - name: La posologie suit le contexte et n'est jamais inventée
         run: node outils/essai-posologie.js
 
+      # Masquer un résultat est un acte grave : le défaut qu'on redoute n'est
+      # pas qu'une molécule de trop s'affiche, c'est qu'une molécule ACTIVE
+      # disparaisse de la feuille du clinicien. Le banc éprouve donc d'abord
+      # les cinq garde-fous, la mécanique ensuite.
+      - name: Le rendu ciblé ne masque que dans son périmètre
+        run: node outils/essai-rendu-cible.js
+
   deploy:
     name: Déploiement VPS
     needs: test

@@ -376,6 +376,15 @@
      dans les alertes. */
   /* Posologies — § « rendu et posologie ». Sobres : elles informent, elles
      ne prescrivent pas, et ne doivent pas avoir l'air d'une ordonnance. */
+  /* Rendu ciblé — ce qui est masqué doit se voir. */
+  .rc-dit{font-size:12.5px;line-height:1.6;color:var(--ink-soft)}
+  .rc-dit b{color:var(--ink)}
+  .rc-masq{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:10px}
+  .rc-m{display:inline-flex;align-items:baseline;gap:6px;font-size:12.5px;color:var(--ink-soft);
+    background:var(--surface-2);border:1px solid var(--line);border-radius:100px;padding:3px 11px}
+  .rc-m b{font-weight:500;color:var(--ink)}
+  .rc-src{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);margin-top:10px}
+
   .poso-dit{font-size:12px;line-height:1.55;color:var(--ink-faint);margin-bottom:9px}
   .poso-dit b{color:var(--i-deep,#8a5b00)}
   .poso-l{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr) auto;gap:3px 12px;
@@ -1410,6 +1419,17 @@
           </div>
           <span class="hint" id="refHint"></span>
         </div>
+        <!-- Rendu ciblé : c'est une POLITIQUE DU LABORATOIRE, pas un réglage
+             d'affichage. Elle se discute avec les cliniciens, et l'interface
+             le dit — § 6 : une règle locale est signalée comme telle. -->
+        <div class="refpick rc-pick">
+          <span class="lbl">Rendu ciblé</span>
+          <div class="refseg" id="rcSeg">
+            <button data-rc="non">Complet</button>
+            <button data-rc="oui">Ciblé</button>
+          </div>
+          <span class="hint" id="rcHint"></span>
+        </div>
         <div id="abxGrid"></div>
         <div id="ctxWrap"></div>
         <!-- § 9 — les conditions de réalisation. Repliées : elles ne
@@ -1773,6 +1793,7 @@
      seul exemplaire des règles et du raisonnement existe, et c'est lui qui
      permet d'interpréter sans réseau une fois l'application installée. -->
 <script src="posologie.js"></script>
+<script src="rendu-cible.js"></script>
 <script src="base-connaissances.js"></script>
 <script src="moteur.js"></script>
 <script>
@@ -4150,13 +4171,20 @@ function questionMeninge(){
 
 // p. 6 — le cotrimoxazole garde un seuil à 2 mg/L dans l'urine.
 function questionUrinaire(){
-  if(!estCasfm()) return null;
-  const g = bpGroup(), tbl = BP_CASFM_URIN[g];
+  // Cette question ne valait QUE pour le CA-SFM. Depuis l'ajout des molécules
+  // urinaires, l'EUCAST a lui aussi des seuils propres à la cystite simple —
+  // pivmécillinam, céfixime, nitrofurantoïne, triméthoprime — et sans cette
+  // question ils ne pouvaient JAMAIS être catégorisés : les molécules
+  // apparaissaient au panel et restaient muettes.
+  const g = bpGroup();
+  const tbl = estCasfm() ? BP_CASFM_URIN[g] : (_M.BP_URIN || {})[g];
   if(!tbl) return null;
   const codes = Object.keys(tbl);
   return {
     id:"urin",
-    q:"Infection urinaire sans signe de gravité ? Le CA-SFM y retient un seuil de cotrimoxazole plus élevé.",
+    q: estCasfm()
+      ? "Infection urinaire sans signe de gravité ? Le CA-SFM y retient un seuil de cotrimoxazole plus élevé."
+      : "Cystite simple ? L'EUCAST ne chiffre le pivmécillinam, le céfixime, la nitrofurantoïne et le triméthoprime que pour cette indication.",
     opts:["Oui","Non"],
     when:r=>state.ctx.mening!=="Oui" &&
             codes.some(k=>r[k]!==undefined || mesureSaisie(k))
@@ -4278,13 +4306,72 @@ function renderConditions(){
   hote.innerHTML = ""; hote.appendChild(det);
 }
 
+/* ============================================================
+   RENDU CIBLÉ — ce que le laboratoire doit renseigner
+
+   La recommandation de la HAS n'est validée que pour les ECBU à
+   entérobactéries chez la femme adulte à partir de 12 ans. PhénoBac ne
+   connaît ni l'âge ni le sexe du malade, et ne doit pas les deviner : il
+   demande. Sans réponse, le rendu reste complet — refuser de masquer est
+   toujours le choix sûr.
+   ============================================================ */
+/* Le nom de colonne du tableau est une clé de données (« premiereIntentionS ») :
+   elle n'a pas à paraître à l'écran. Le phénotype, lui, se dit en français. */
+const RC_COLONNE_DIT = {
+  amoxS: "souche sensible à l'amoxicilline",
+  amoxR: "souche résistante à l'amoxicilline",
+  amcEtSxtR: "résistante à l'amoxicilline-acide clavulanique ET au cotrimoxazole",
+  c3gRouBlse: "résistante aux C3G, ou BLSE",
+  premiereIntentionS: "au moins une molécule de première intention active",
+  premiereIntentionR: "résistante aux molécules de première intention",
+  premiereEtAmcEtCfmR: "résistante à la première intention, à l'amoxicilline-acide clavulanique et au céfixime"
+};
+
+const RENDU_CIBLE_CLE = "phenobac.renduCible";
+function renduCibleActif(){
+  try{ return localStorage.getItem(RENDU_CIBLE_CLE) === "oui"; }catch(e){ return false; }
+}
+function renduCibleBasculer(v){
+  try{ localStorage.setItem(RENDU_CIBLE_CLE, v ? "oui" : "non"); }catch(e){}
+}
+const RC_GROUPES_PAGE = ["entero","morganella","salmonella","serratia"];
+
+function questionsRenduCible(){
+  if(!renduCibleActif()) return [];
+  if(RC_GROUPES_PAGE.indexOf(bpGroup()) === -1) return [];
+  if(state.ctx.urin !== "Oui") return [];       // la question urinaire d'abord
+  return [
+    { id:"patiente",
+      q:"Patiente de 12 ans ou plus ? La recommandation de rendu ciblé n'est validée que dans ce cadre.",
+      opts:["Oui","Non"] },
+    { id:"typeIU",
+      q:"Type d'infection urinaire, si le prescripteur l'a renseigné ?",
+      opts:["Cystite","Pyélonéphrite","Non précisé"] }
+  ];
+}
+
+function renderRenduCible(){
+  const seg = $("#rcSeg"); if(!seg) return;
+  const actif = renduCibleActif();
+  seg.querySelectorAll("button").forEach(b=>
+    b.classList.toggle("on", (b.dataset.rc === "oui") === actif));
+  const h = $("#rcHint");
+  if(h) h.innerHTML = actif
+    ? `<b style="color:var(--i-deep,#8a5b00)">Règle locale du laboratoire</b> — une partie des
+       antibiotiques testés n'est pas rendue (HAS 2023, ECBU à entérobactéries, femme ≥ 12 ans).
+       Rien n'est effacé, et une résistance est toujours rendue.`
+    : `Tous les antibiotiques testés sont rendus. Le rendu ciblé épargne les molécules critiques —
+       c'est une décision à prendre avec les cliniciens, pas un réglage d'affichage.`;
+}
+
 function renderCtx(){
   const org=currentOrg();
   ctxWrap.innerHTML="";
   // la question méningée d'abord, sauf si le germe la déclare déjà lui-même
   const propres=(org.ctx||[]);
   const qm=propres.some(q=>q.id==="mening") ? null : questionMeninge();
-  const qCasfm=[questionUrinaire(), questionCarbapenemase()].filter(Boolean)
+  const qCasfm=[questionUrinaire(), questionCarbapenemase()]
+    .concat(questionsRenduCible()).filter(Boolean)
     .filter(q=>!propres.some(o=>o.id===q.id));
   (qm ? [qm].concat(propres) : propres).concat(qCasfm).forEach(q=>{
     if(q.when && !q.when(state.results)) { delete state.ctx[q.id]; return; }
@@ -4640,6 +4727,29 @@ function renderInterpretView(A){
     html += `<div class="poso-src">${esc(_M.POSOLOGIE_VERSION || "")}</div></div>`;
   }
 
+  /* ---------- Rendu ciblé (HAS 2023) ----------
+     Ce qui est masqué doit se VOIR : un compte rendu amputé sans mention
+     laisserait croire que les molécules n'ont pas été testées. Le document
+     l'exige aussi — « l'antibiogramme complet reste disponible sur demande ». */
+  const rcib = A.renduCible;
+  if(rcib && rcib.applique){
+    html += `<div class="sect"><div class="sect-t">Rendu ciblé appliqué</div>`;
+    html += `<div class="rc-dit">${esc(rcib.titre)} — ${esc(RC_COLONNE_DIT[rcib.colonne] || rcib.colonne)}.
+      <b>${rcib.masquees.length}</b> molécule${rcib.masquees.length>1?"s":""} testée${rcib.masquees.length>1?"s":""}
+      non rendue${rcib.masquees.length>1?"s":""} sur l'antibiogramme ciblé. Rien n'est effacé :
+      les résultats restent dans l'export, dans la surveillance et ci-dessous.</div>`;
+    if(rcib.masquees.length){
+      html += `<div class="rc-masq">` + rcib.masquees.map(k=>
+        `<span class="rc-m"><b>${esc(ABX[k]?ABX[k].n:k)}</b>
+          <span class="lc lc-${classeCat(state.results[k])}">${esc(lettreCat(state.results[k])||"")}</span></span>`
+      ).join("") + `</div>`;
+    }
+    html += `<div class="rc-src">Règle locale du laboratoire, fondée sur : ${esc(rcib.source||"")}</div></div>`;
+  } else if(rcib && !rcib.applique && renduCibleActif()){
+    html += `<div class="sect"><div class="sect-t">Rendu ciblé</div>
+      <div class="rc-dit">Non appliqué : ${esc(rcib.motif)}. L'antibiogramme est rendu en entier.</div></div>`;
+  }
+
   if(A.rules && A.rules.length){
     html+=`<div class="sect"><div class="sect-t">Règles expertes appliquées</div>`;
     A.rules.forEach(rl=>{ html+=`<div class="rule"><span class="rk">${esc(rl.k)}</span><span>${esc(rl.txt)}</span></div>`; });
@@ -4787,9 +4897,9 @@ async function renderInterpretRemote(){
     // jamais l'autorité. Le référentiel voyage avec la demande, le moteur
     // devant savoir sous lequel il est interrogé.
     const envoi =
-      state.mode==="mic"  ? { organism:state.org, mode:"mic",  mic:state.mic,   bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF } :
-      state.mode==="diam" ? { organism:state.org, mode:"diam", diam:state.diam, bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF } :
-                            { organism:state.org, mode:"sir",  results:state.results, ctx:state.ctx, ref:REF_ACTIF };
+      state.mode==="mic"  ? { organism:state.org, mode:"mic",  mic:state.mic,   bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF, renduCible:renduCibleActif() } :
+      state.mode==="diam" ? { organism:state.org, mode:"diam", diam:state.diam, bpOverride:state.bpOverride, ctx:state.ctx, ref:REF_ACTIF, renduCible:renduCibleActif() } :
+                            { organism:state.org, mode:"sir",  results:state.results, ctx:state.ctx, ref:REF_ACTIF, renduCible:renduCibleActif() };
     const moteur = (typeof self !== "undefined") && self.PhenoBacMoteur;
     let res;
     if(moteur && moteur.runInterpretation){
@@ -5747,6 +5857,21 @@ function buildReport(A){
       return `<span class="rp-cond-i"><b>${esc(COND_DIT[k])}</b> ${esc(dit)}</span>`;
     }).join("");
 
+  /* Le rendu ciblé, au compte rendu. Un document amputé SANS MENTION
+     laisserait croire que les molécules n'ont pas été testées — et le
+     clinicien ne saurait pas qu'il peut en demander davantage. */
+  const rcR = A.renduCible;
+  const rcLigne = (rcR && rcR.applique)
+    ? `<div class="rp-sect-t">Rendu ciblé</div>
+       <div class="rp-legende"><b>Antibiogramme ciblé</b>
+       ${esc(rcR.titre)} — ${esc(RC_COLONNE_DIT[rcR.colonne] || rcR.colonne)}.
+       ${rcR.masquees.length} molécule${rcR.masquees.length>1?"s":""} testée${rcR.masquees.length>1?"s":""}
+       n'${rcR.masquees.length>1?"ont":"a"} pas été rendue${rcR.masquees.length>1?"s":""} :
+       ${esc(rcR.masquees.map(k=>ABX[k]?ABX[k].n:k).join(", "))}.
+       <b>L'antibiogramme complet reste disponible sur demande auprès du laboratoire.</b>
+       Règle locale du laboratoire, fondée sur : ${esc(rcR.source||"")}.</div>`
+    : "";
+
   const sevLbl = SEV_LBL[A.sev];
   const modeLbl = state.mode==="mic"  ? "CMI (mg/L) → catégorisation automatique"
                 : state.mode==="diam" ? "Diamètres (mm), méthode des disques → catégorisation automatique"
@@ -5793,6 +5918,7 @@ function buildReport(A){
       <tbody>${rows}</tbody>
     </table>
 
+    ${rcLigne}
     ${condLigne ? `<div class="rp-sect-t">Conditions de réalisation déclarées</div>
       <div class="rp-cond">${condLigne}</div>` : ""}
     ${lect?`<div class="rp-sect-t">Lecture interprétative — catégories modifiées</div><ul class="rp-list">${lect}</ul>`:""}
@@ -7379,6 +7505,14 @@ function setView(v){
 $("#tabs").querySelectorAll("button").forEach(b=>{
   b.onclick=()=>setView(b.dataset.view);
 });
+
+if($("#rcSeg")) $("#rcSeg").querySelectorAll("button").forEach(b=>{
+  b.onclick=()=>{
+    renduCibleBasculer(b.dataset.rc === "oui");
+    renderRenduCible(); renderCtx(); renderInterpret();
+  };
+});
+renderRenduCible();
 /* Les niveaux, avec ce qu'on y a déjà fait. Un entraînement qui ne garde rien
    ne mesure rien : on recommence sans savoir si l'on progresse. */
 function renderNiveaux(){
@@ -7653,7 +7787,7 @@ if(refSeg){
 }
 
 /* --- changements globaux --- */
-function renderAll(){ renderRefToggle(); renderModeToggle(); renderAbx(); renderCtx(); renderConditions(); renderInterpret(); }
+function renderAll(){ renderRefToggle(); renderModeToggle(); renderAbx(); renderCtx(); renderConditions(); renderRenduCible(); renderInterpret(); }
 
 speciesSel.onchange=()=>{
   const sel=speciesSel.value;
