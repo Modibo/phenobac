@@ -135,8 +135,9 @@ def seuils_phenobac(racine):
         "moteur_py", os.path.join(racine, "outils", "moteur_py.py"))
     MP = importlib.util.module_from_spec(s)
     s.loader.exec_module(MP)
-    tables = MP.tables(["BP", "BP_URIN"])
+    tables = MP.tables(["BP", "BP_URIN", "HORS_EUCAST"])
     BP, URIN = tables["BP"], tables.get("BP_URIN") or {}
+    globals()["HORS_EUCAST"] = tables.get("HORS_EUCAST") or {}
     # Les seuils de cystite simple vivent dans leur propre table : ne lire que
     # BP laisserait le pivmécillinam, le céfixime, la nitrofurantoïne et le
     # triméthoprime HORS de la comparaison — non comparés, donc non vérifiés,
@@ -178,6 +179,18 @@ def main():
 
     total = {'identique': 0, 'different': 0, 'arbitrer': 0, 'absent': 0}
     non_comparables = []
+    drapeaux = []
+
+    def convention(groupe, code):
+        v = HORS_EUCAST.get(groupe)
+        if v is True:
+            return True
+        if isinstance(v, (list, tuple)):
+            return code in v
+        if isinstance(v, dict):
+            return bool(v.get(code))
+        return False
+
     for groupe in sorted(bp):
         germes, feuilles = GROUPES.get(groupe, ([], []))
         if len(feuilles) > 1:
@@ -241,6 +254,13 @@ def main():
             sA, rA = bp[groupe][code]
             motif = AGENTS.get(code)
             cands = []
+            # POURQUOI un couple n'est pas comparé. « Aucune ligne
+            # correspondante » recouvrait cinq situations très différentes —
+            # de « le document ne le porte pas » à « il le porte, et nous ne
+            # l'avons pas vu ». Les confondre a laissé dormir quatre seuils
+            # divergents de Bacteroides fragilis. On note donc chaque mise à
+            # l'écart, et le rapport la restitue.
+            ecartes = []
             if motif:
                 # Deux groupes partagent la feuille des staphylocoques : on ne
                 # retient que les lignes de l'espèce concernée, sinon celles de
@@ -268,10 +288,22 @@ def main():
                     # voyait une fin de mot là où il y avait un trait d'union.
                     nom = re.sub(r'\s+', ' ', cel.get('A', '')).strip()
                     if re.search(PARTICULIER, nom, re.I) and not re.search(r'other than|all indications|including', nom, re.I):
+                        if re.search(motif, nom, re.I):
+                            ecartes.append(("dépistage" if re.search(r'screen only', nom, re.I)
+                                            else "indication particulière", nom))
                         continue
                     if re.search(motif, nom, re.I):
                         bruts = (cel.get('B'), cel.get('C'))
                         sE, rE = nombre(bruts[0]), nombre(bruts[1])
+                        if sE is None and rE is None:
+                            # La ligne EXISTE mais ne porte aucun chiffre :
+                            # l'EUCAST y écrit « IE » (preuves insuffisantes),
+                            # « NA » ou un tiret. Ce n'est ni une absence ni un
+                            # désaccord — c'est un refus de trancher, et la
+                            # valeur que PhénoBac applique est alors une
+                            # convention de laboratoire qui doit le dire.
+                            ecartes.append(("sans valeur chiffrée (%s)"
+                                            % (str(bruts[0] or bruts[1] or "–").strip()[:12]), nom))
                         if sE is not None or rE is not None:
                             # EUCAST met certains seuils entre parenthèses. La
                             # valeur reste la bonne, mais la parenthèse est une
@@ -325,7 +357,12 @@ def main():
             if not motif:
                 etat, detail = 'absent', "aucun motif de recherche défini pour ce code"
             elif not cands:
-                etat, detail = 'absent', "aucune ligne EUCAST correspondante sur cette feuille"
+                if ecartes:
+                    quoi = sorted({e[0] for e in ecartes})
+                    etat, detail = 'absent', ("écarté — %s : %s"
+                        % (", ".join(quoi), "; ".join(e[1][:48] for e in ecartes[:2])))
+                else:
+                    etat, detail = 'absent', "le document ne porte pas ce couple sur cette feuille"
             elif len(cands) == 1:
                 nom, sE, rE = cands[0]
                 if sE == 0.001: sE = None      # « pas de catégorie S » <-> S: null
@@ -336,6 +373,26 @@ def main():
             else:
                 etat = 'arbitrer'
                 detail = "%d lignes possibles :" % len(cands)
+            # LE DRAPEAU « CONVENTION DE LABORATOIRE » DOIT DIRE VRAI.
+            #
+            # Il signifie « le référentiel ne fixe RIEN pour ce couple », et
+            # l'interface l'affiche au biologiste pour qu'il se méfie du
+            # chiffre. Il se périme donc tout seul : le jour où l'EUCAST fixe
+            # un seuil, la mention devient un mensonge, et elle conseille de se
+            # méfier d'une valeur officielle.
+            #
+            # C'est ce qui était arrivé à six couples de Bacteroides fragilis.
+            # On vérifie donc l'équivalence DANS LES DEUX SENS, à chaque
+            # confrontation : marqué convention si et seulement si le document
+            # ne donne aucun chiffre.
+            conv = convention(groupe, code)
+            chiffre = (etat in ('identique', 'different'))
+            if conv and chiffre:
+                drapeaux.append((groupe, code, "marqué « convention de laboratoire » "
+                                 "alors que le document FIXE ce couple"))
+            elif not conv and not chiffre:
+                drapeaux.append((groupe, code, "non marqué, alors que le document "
+                                 "ne donne aucun chiffre pour ce couple"))
             total[etat] += 1
             marque = {'identique': ' ok ', 'different': '!!!!', 'arbitrer': ' ?? ', 'absent': ' -- '}[etat]
             print("  [%s] %-4s application S<=%-7s R>%-7s  %s" % (marque, code, sA, rA, detail))
@@ -358,6 +415,11 @@ def main():
     print("  DIFFÉRENTS         : %d   <- à corriger après validation" % total['different'])
     print("  à arbitrer         : %d   <- plusieurs voies/indications possibles" % total['arbitrer'])
     print("  non comparés       : %d" % total['absent'])
+    print("  drapeau incohérent : %d   <- « convention » qui ne dit plus vrai" % len(drapeaux))
+    if drapeaux:
+        print("\nLE DRAPEAU « CONVENTION DE LABORATOIRE » NE DIT PLUS VRAI :")
+        for g, k, pourquoi in drapeaux:
+            print("  - %s / %s : %s" % (g, k, pourquoi))
     print("\nAucun fichier n'a été modifié. Toute correction doit être validée")
     print("par un biologiste avant d'être portée dans le code.")
 

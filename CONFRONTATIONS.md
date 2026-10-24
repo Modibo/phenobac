@@ -74,6 +74,38 @@ preuve clinique en monothérapie fait généralement défaut ». La base n'a pas
 colonne pour cette distinction : la valeur est juste, la réserve n'est pas
 affichée. La réserve est écrite ici, faute d'une colonne pour la porter.
 
+### Les 91 couples « non comparés », triés
+
+« Non comparé » recouvrait cinq situations très différentes, et c'est cette
+confusion qui a laissé dormir les quatre seuils de *B. fragilis*. L'outil les
+distingue désormais, et le relevé du 24 octobre 2026 donne :
+
+| | |
+|---|---|
+| le document ne porte pas ce couple | 38 |
+| la ligne existe, sans valeur chiffrée — « IE », « Note », « – » | 44 |
+| écarté : dépistage (*screen only*) | 7 + 3 |
+| écarté : indication particulière (méningite, endocardite) | 2 |
+
+Les **82 premiers** sont des seuils que le référentiel ne fixe pas. Tous les 82
+portent la marque « convention de laboratoire », et l'interface le dit. Aucun
+ne se fait passer pour officiel.
+
+Les seuils **méningés** ne sont couverts par aucune entrée de ce registre :
+l'outil les écarte volontairement (ils vivent dans BP_MENINGE) et rien ne les
+confronte. C'est une dette de plus, à ouvrir.
+
+### Le drapeau « convention » est désormais vérifié des deux côtés
+
+Il signifie « le référentiel ne fixe RIEN pour ce couple ». Il se périme donc
+tout seul : le jour où l'EUCAST fixe un seuil, la mention devient un mensonge
+et conseille de se méfier d'une valeur officielle. C'est ce qui était arrivé à
+six couples de *B. fragilis*.
+
+`comparer-eucast.py` vérifie maintenant l'équivalence à chaque confrontation —
+marqué convention **si et seulement si** le document ne donne aucun chiffre —
+et compte les écarts dans son bilan. Au 24 octobre 2026 : **0**.
+
 ### Pourquoi c'était invisible
 
 Le découpage en sections prenait TOUTE ligne où seule la première colonne est
