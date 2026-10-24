@@ -94,6 +94,176 @@ MOLECULES = [
 ]
 
 
+# ===========================================================================
+#   LA SECONDE MOITIÉ DE LA RECOMMANDATION : LES NOTES ET LE § 2.1.3
+# ===========================================================================
+#
+# Les couleurs des cases ne disent pas tout. Sous chaque tableau, trois notes
+# (A) (B) (C) retirent des molécules que la case avait rendues, et le § 2.1.3
+# pose sept règles de plus. Prendre les couleurs sans les notes, c'est rendre
+# un carbapénème là où le document l'interdit.
+#
+# Ce texte-là se lit à plat, mais le document le CASSE : la justification est
+# dessinée lettre par lettre et quelques mots y portent une espace parasite —
+# « ca rbapénèmes », « no uvelles ». Les deux décodeurs la voient, donc elle
+# est dans le document, pas dans l'extraction.
+#
+# On la répare par le document lui-même : deux mots se recollent si le mot
+# obtenu est PLUS FRÉQUENT dans la recommandation que chacun des deux
+# fragments. « carbapénèmes » y est partout, « rbapénèmes » une seule fois.
+# Aucun dictionnaire extérieur, aucune correction écrite à la main — et
+# chaque recollage est annoncé sur la sortie d'erreur, pour être relu.
+
+
+def _pypdf():
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        try:
+            from PyPDF2 import PdfReader
+        except ImportError:
+            raise SystemExit(
+                "EXTRACTION INTERROMPUE — pypdf est absent. Les notes (A)(B)(C) et le "
+                "§ 2.1.3 en dépendent, et sans elles le rendu ciblé laisserait passer "
+                "des carbapénèmes que le document écarte. Installez-le : pip3 install pypdf")
+    return PdfReader
+
+
+def _brut(page):
+    t = page.extract_text() or ""
+    for c in ("\u2011", "\u00ad"):
+        t = t.replace(c, "-")
+    t = t.replace("\u0fd7", " ")                      # espace fine exotique du document
+    t = re.sub(r"HAS\s*•\s*Antibiogrammes ciblés.*?tobre 2023\s*\d+", " ", t, flags=re.S)
+    t = re.sub(r"\s+", " ", t)
+    t = re.sub(r"(\w)-\s+(\w)", r"\1\2", t)          # césures de fin de ligne
+    t = re.sub(r"(\w)\s*-\s*(\w)", r"\1-\2", t)      # « ceftazidime - avibactam »
+    t = re.sub(r"\(\s+", "(", t)
+    t = re.sub(r"\s+([.,)])", r"\1", t)
+    t = re.sub(r"\s*([;:!?»])", r" \1", t)             # ponctuation double à la française
+    t = re.sub(r"«\s*", "« ", t)
+    t = re.sub(r"(\d)\s+e\s+génération", r"\1e génération", t)
+    return t.strip()
+
+
+_MOT = re.compile(r"(?<![A-Za-zÀ-ÿ])([A-Za-zÀ-ÿ]+) ([A-Za-zÀ-ÿ]+)(?![A-Za-zÀ-ÿ])")
+
+
+def recoller(txt, freq, journal):
+    """Recolle les mots que la mise en page a coupés, et seulement ceux-là."""
+    i = 0
+    while True:
+        m = _MOT.search(txt, i)
+        if not m:
+            return txt
+        a, b = m.group(1), m.group(2)
+        j = (a + b).lower()
+        if freq[j] > freq[a.lower()] and freq[j] > freq[b.lower()]:
+            journal.append("« %s %s » → « %s »" % (a, b, a + b))
+            txt = txt[:m.start()] + a + b + txt[m.end():]
+            i = m.start()
+        else:
+            i = m.end(1)
+
+
+def liste_entre_parentheses(txt, amorce):
+    """Les listes du document — espèces du groupe 3, β-lactamines de spectre
+    étroit, nouvelles associations — sont lues DANS la note qui les cite, et
+    jamais recopiées ici : une liste écrite à la main peut diverger du texte
+    qu'elle prétend appliquer."""
+    m = re.search(amorce + r"\s*\(([^)]*)\)", txt)
+    if not m:
+        return []
+    out = []
+    for e in re.split(r",|\bet\b|\bou\b", m.group(1)):
+        e = re.sub(r"^\s*(comme le|ex\.)\s*", "", e.strip(), flags=re.I)
+        e = e.strip(" .…")
+        if e:
+            out.append(e)
+    return out
+
+
+def notes_et_restrictions(chemin):
+    from collections import Counter
+    PdfReader = _pypdf()
+    pages = [_brut(p) for p in PdfReader(chemin).pages]
+    freq = Counter()
+    for t in pages:
+        freq.update(w.lower() for w in re.findall(r"[A-Za-zÀ-ÿ]+", t))
+    journal = []
+
+    # --- les notes (A) (B) (C), sous chaque tableau ---
+    notes = {}
+    for tb in TABLEAUX:
+        suite = min(tb["pages"][-1] + 1, len(pages) - 1)
+        t = " ".join(pages[i] for i in sorted(set(tb["pages"] + [suite])))
+        k = t.find("Notes à destination des laboratoires")
+        if k < 0:
+            raise SystemExit(
+                "EXTRACTION INTERROMPUE — tableau « %s » : le bloc de notes est "
+                "introuvable. Les notes retirent des molécules que les couleurs "
+                "rendaient ; sans elles le tableau est faux." % tb["cle"])
+        bloc = re.split(r"3\.\d\.2\.", t[k:])[0]
+        notes[tb["cle"]] = {}
+        for lettre in "ABC":
+            m = re.search(r"\(%s\)\s*(.*?)(?=\s*\([A-C]\)\s|$)" % lettre, bloc)
+            if not m:
+                raise SystemExit(
+                    "EXTRACTION INTERROMPUE — tableau « %s » : note (%s) introuvable."
+                    % (tb["cle"], lettre))
+            notes[tb["cle"]][lettre] = recoller(m.group(1).strip(), freq, journal)
+
+    # --- le § 2.1.3, sept règles qui ne sont dans aucune case ---
+    t = " ".join(pages[7:10])
+    a = t.find("2.1.3. Quelles sont les molécules")
+    b = t.find("2.1.4. Quels sont les commentaires", a)
+    if a < 0 or b < 0:
+        raise SystemExit("EXTRACTION INTERROMPUE — le § 2.1.3 est introuvable.")
+    sec = re.sub(r"\d+ (Recommandations du Comité|Lettres d’information|"
+                 r"Société de pathologie|Fiche Mémo HAS|https)\S*.*?(?=‒ |• |$)",
+                 " ", t[a:b])
+    sec = sec.replace("Certains antibiotiques sont positionnés comme des molécules "
+                      "de dernier recours.", "")
+    restrictions = []
+    for part in re.split(r"\s*‒\s*", sec)[1:]:
+        part = re.sub(r"\s+", " ", part).strip()
+        if not part:
+            continue
+        morceaux = re.split(r"\s*•\s*", part)
+        restrictions.append({
+            "regle": recoller(morceaux[0].strip(), freq, journal),
+            "motif": recoller(" ".join(m.strip() for m in morceaux[1:]).strip(),
+                              freq, journal) or None})
+    if len(restrictions) != 7:
+        raise SystemExit(
+            "EXTRACTION INTERROMPUE — § 2.1.3 : %d règles lues, 7 attendues. "
+            "Une règle perdue, c'est une molécule rendue que le document écarte."
+            % len(restrictions))
+
+    # --- les listes que les notes citent elles-mêmes ---
+    noteA = notes["pyelonephrite"]["A"]
+    noteB = notes["pyelonephrite"]["B"]
+    noteC = notes["pyelonephrite"]["C"]
+    listes = {
+        "groupe3": liste_entre_parentheses(noteA, "Enterobacterales du groupe 3"),
+        "c3g": liste_entre_parentheses(noteA, "céphalosporines de 3e génération"),
+        "carbapenemes": liste_entre_parentheses(noteB, "ces molécules"),
+        "betalactaminesEtroites": [
+            e.strip() for e in re.split(
+                r",", re.search(r"posologie\s*»\s*:\s*(.*?),\s*ii\)", noteB).group(1))
+            if e.strip()] if re.search(r"posologie\s*»\s*:\s*(.*?),\s*ii\)", noteB) else [],
+        "nouvelles": (liste_entre_parentheses(noteC, "associations avec inhibiteurs")
+                      + liste_entre_parentheses(noteC, "nouvelles céphalosporines")),
+    }
+    for cle, v in listes.items():
+        if not v:
+            raise SystemExit(
+                "EXTRACTION INTERROMPUE — la liste « %s » n'a pas été lue dans les "
+                "notes. Elle commande un masquage ; l'écrire à la main serait "
+                "inventer une règle." % cle)
+    return notes, restrictions, listes, journal
+
+
 def page(objs, pg, ip):
     brut = PDF.contenu(objs, pg[ip])
     lignes = [(y, " ".join(s for _, s in f).strip())
@@ -149,7 +319,7 @@ def extraire(chemin):
             # sur une ligne, « (cystite) » sur la suivante. Sans cela les deux
             # lignes d'AMC du premier tableau portent le même nom, et la
             # seconde écrase la première — une décision perdue en silence.
-            ancres = []
+            ancres, appels = [], {}
             for i, (ly, lab) in enumerate(lignes):
                 if not lab or molecule(propre(lab))[0] is None:
                     continue
@@ -169,6 +339,10 @@ def extraire(chemin):
                         entier += " " + s
                     else:
                         break
+                # Les appels de note — « Céfépime (A) » — sont DANS la case.
+                # propre() les retire du libellé ; on les garde ici, car ils
+                # désignent les lignes que les notes viennent restreindre.
+                appels[ly] = sorted(set(re.findall(r"\(\s*([A-C])\s*\)", entier)))
                 ancres.append((ly, propre(entier)))
             # TROIS INVARIANTS, parce que « autant de cases que de colonnes »
             # ne suffit pas : j'ai éprouvé ce contrôle seul par mutation, et il
@@ -228,7 +402,8 @@ def extraire(chemin):
 
             vu = {}
             for (ly, nom), cols in sorted(par_lab.items()):
-                d = tuple(sorted((i, c) for i, c in cols.items()))
+                d = (tuple(sorted((i, c) for i, c in cols.items())),
+                     tuple(appels.get(ly, [])))
                 if nom in vu and vu[nom] != d:
                     raise SystemExit(
                         "EXTRACTION INTERROMPUE — tableau « %s » : deux lignes « %s » "
@@ -247,6 +422,7 @@ def extraire(chemin):
                         % (tb["cle"], nom[:46], len(cols), len(tb["x"])))
                 decision[nom] = {
                     "codes": codes, "variante": variante,
+                    "notes": appels.get(_ly, []),
                     "rendre": [tb["colonnes"][i] for i in sorted(cols)
                                if cols[i] == ORANGE]}
         # Le nombre de lignes est RELEVÉ SUR LE DOCUMENT et vérifié ici. Sans
@@ -279,6 +455,7 @@ def main():
               file=sys.stderr)
         return 2
     tables = extraire(sys.argv[1])
+    notes, restrictions, listes, journal = notes_et_restrictions(sys.argv[1])
 
     print("/* rendu-cible.js — engendré par outils/extraire-rendu-cible.py.")
     print("   NE PAS ÉDITER À LA MAIN.")
@@ -293,6 +470,11 @@ def main():
     print("   rendue — SAUF si la souche y est résistante, règle que le document pose")
     print("   explicitement et qui ne souffre aucune exception.")
     print("")
+    print("   LES COULEURS NE DISENT PAS TOUT. Sous chaque tableau, les notes (A) (B)")
+    print("   (C) retirent des molécules que la case avait rendues, et le § 2.1.3 en")
+    print("   pose sept règles de plus. « notes » dit quels appels de note portent la")
+    print("   ligne ; RENDU_CIBLE_NOTES et RENDU_CIBLE_RESTRICTIONS en donnent le texte.")
+    print("")
     print("   PÉRIMÈTRE, et il est étroit : ECBU à entérobactéries, femme adulte à")
     print("   partir de 12 ans. Hors de là, ces tableaux ne sont pas validés. */")
     print("(function (racine) {")
@@ -304,17 +486,58 @@ def main():
         print("    colonnes: %s," % js(tb["colonnes"]))
         print("    lignes: [")
         for nom, d in tb["lignes"].items():
-            print("      { molecule: %s, codes: %s, variante: %s, rendre: %s },"
-                  % (js(nom), js(d["codes"]), js(d["variante"]), js(d["rendre"])))
+            print("      { molecule: %s, codes: %s, variante: %s, notes: %s, rendre: %s },"
+                  % (js(nom), js(d["codes"]), js(d["variante"]), js(d["notes"]),
+                     js(d["rendre"])))
         print("    ]")
         print("  },")
     print("};")
+
+    # Les notes, verbatim. Elles sont AFFICHÉES au biologiste : c'est le
+    # document qui justifie le masquage, pas PhénoBac.
+    print("/* Les notes sous chaque tableau, mot pour mot. */")
+    print("var RENDU_CIBLE_NOTES = {")
+    for cle in notes:
+        print("  %s: {" % cle)
+        for lettre in "ABC":
+            print("    %s: %s," % (lettre, js(notes[cle][lettre])))
+        print("  },")
+    print("};")
+
+    print("/* Le § 2.1.3 — « Quelles sont les molécules qui ne doivent pas figurer de")
+    print("   façon systématique sur le rendu de l'antibiogramme ciblé ? » */")
+    print("var RENDU_CIBLE_RESTRICTIONS = [")
+    for r in restrictions:
+        print("  { regle: %s," % js(r["regle"]))
+        print("    motif: %s }," % js(r["motif"]))
+    print("];")
+
+    print("/* Les listes que les notes citent elles-mêmes. Aucune n'est écrite ici à")
+    print("   la main : une liste recopiée peut diverger du texte qu'elle applique. */")
+    print("var RENDU_CIBLE_LISTES = {")
+    for cle in sorted(listes):
+        print("  %s: %s," % (cle, js(listes[cle])))
+    print("};")
+
     print('var RENDU_CIBLE_SOURCE = "HAS 2023-10-05 — antibiogrammes ciblés, ECBU à '
           'entérobactéries, femme adulte ≥ 12 ans";')
-    print("var R = { RENDU_CIBLE: RENDU_CIBLE, RENDU_CIBLE_SOURCE: RENDU_CIBLE_SOURCE };")
+    print("var R = { RENDU_CIBLE: RENDU_CIBLE, RENDU_CIBLE_SOURCE: RENDU_CIBLE_SOURCE,")
+    print("          RENDU_CIBLE_NOTES: RENDU_CIBLE_NOTES,")
+    print("          RENDU_CIBLE_RESTRICTIONS: RENDU_CIBLE_RESTRICTIONS,")
+    print("          RENDU_CIBLE_LISTES: RENDU_CIBLE_LISTES };")
     print('if (typeof module !== "undefined" && module.exports) module.exports = R;')
     print("else racine.PhenoBacRenduCible = R;")
     print('})(typeof self !== "undefined" ? self : this);')
+
+    if journal:
+        print("\n%d mot(s) recollé(s) — la mise en page du document les avait coupés :"
+              % len(set(journal)), file=sys.stderr)
+        for j in sorted(set(journal)):
+            print("   ", j, file=sys.stderr)
+    print("\n%d règles lues au § 2.1.3 ; listes citées : %s."
+          % (len(restrictions),
+             ", ".join("%s (%d)" % (k, len(v)) for k, v in sorted(listes.items()))),
+          file=sys.stderr)
 
     n = sum(len(t["lignes"]) for t in tables.values())
     print("\n%d lignes décodées sur %d tableaux." % (n, len(tables)), file=sys.stderr)

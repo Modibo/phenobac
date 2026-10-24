@@ -227,7 +227,8 @@ RENDU = {
 
 ## B.6 Vérification
 
-`outils/essai-rendu-selectif.js` :
+*Écrit avant d'avoir le document ; la vérification réellement construite est
+décrite en B.7.*
 
 1. désactivé par défaut : aucun masquage sans configuration ;
 2. toutes les premières lignes R → la cascade libère le palier suivant, et lui
@@ -240,6 +241,57 @@ RENDU = {
    surveillance — éprouvé par comparaison champ à champ ;
 7. le compte-rendu porte la mention du masquage et le nombre de molécules
    concernées.
+
+## B.7 Ce qui a été construit — et ce que le cahier n'avait pas prévu
+
+Le document de la HAS a été obtenu le 24 octobre 2026. Il a déplacé deux choses.
+
+**La cascade imaginée en B.3 n'existe pas.** La HAS ne raisonne pas par paliers
+mais par TABLEAUX : trois tableaux (sans renseignement clinique, cystite,
+pyélonéphrite), une colonne par phénotype, une case coloriée par molécule. Le
+rendu sélectif de PhénoBac lit donc ces cases, et le fichier `rendu-cible.js` en
+est l'extraction mécanique — `outils/extraire-rendu-cible.py` décode les
+rectangles remplis du flux PDF, puisque la décision EST la couleur.
+
+**Les couleurs ne sont que la moitié de la recommandation.** Sous chaque tableau,
+trois notes (A) (B) (C) retirent des molécules que la case avait rendues, et le
+§ 2.1.3 en pose sept règles de plus. Elles sont extraites et appliquées :
+
+| Règle | Source | Ce que PhénoBac fait |
+|---|---|---|
+| Molécules de la cystite seule hors pyélonéphrite | § 2.1.3 | le tableau ne les porte pas ; un contrôle garantit qu'il continue |
+| Pas de fluoroquinolone si AMX-R et AMC-S | § 2.1.3 | appliqué en cystite et en pyélonéphrite |
+| … ni « lorsque d'autres antibiotiques per os sont actifs » | § 2.1.3 | **NON appliqué** — voir plus bas |
+| Céfépime plutôt que C3G pour le groupe 3 | note (A) | appliqué, si le céfépime est actif |
+| Pas de céfixime en cystite à groupe 3 résistante | note (A) cystite | appliqué |
+| Carbapénèmes seulement si aucune β-lactamine plus étroite n'est S/I | note (B) | appliqué |
+| Carbapénèmes en cystite : sur demande du clinicien | note (B) cystite | appliqué, par une question |
+| Nouvelles associations : sur demande, après avis spécialisé | note (C) | appliqué, par la même question |
+
+**La moitié de règle qu'on n'applique pas, et pourquoi on le dit.** « Ne pas
+rendre les fluoroquinolones lorsque d'autres antibiotiques per os sont actifs »
+suppose de savoir quelles molécules se prennent par la bouche. La table de
+posologies de l'EUCAST ne couvre ni le pivmécillinam, ni la nitrofurantoïne, ni
+le triméthoprime, ni le céfixime. Inventer leur voie d'administration pour
+masquer davantage serait précisément ce que le § 26 interdit. PhénoBac applique
+donc l'autre moitié et ÉCRIT, à l'écran, qu'une fluoroquinolone peut figurer là
+où le document la retirerait.
+
+**Le plancher de sécurité, qui est de PhénoBac et non de la HAS.** Le document
+suppose un dialogue — « sur demande du clinicien », « l'antibiogramme complet
+reste disponible sur demande ». Une feuille imprimée dans un laboratoire de
+Mopti n'a pas ce dialogue. Si l'application des notes laissait une feuille où
+aucune molécule active ne figure, le masquage est levé, en commençant par les
+molécules qui ne sont pas de dernier recours, et la feuille le dit. Ce n'est pas
+une règle scientifique : c'est le refus de rendre un antibiogramme qui ne soigne
+personne.
+
+**Vérification réelle** : `outils/essai-rendu-cible.js`, 112 contrôles, éprouvé
+par quinze mutations — toutes détectées. Deux d'entre elles ne changeaient rien
+au rendu : elles sont surveillées par un invariant sur la DONNÉE (le céfixime
+n'est jamais prévu en première intention sensible ; aucune molécule nouvelle n'a
+de ligne dans les tableaux), et le banc le dit au lieu de faire semblant de les
+éprouver.
 
 ---
 
@@ -255,4 +307,7 @@ RENDU = {
 
 *Sources : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026, p. 9-13 —
 <https://www.eucast.org/fileadmin/eucast/pdf/breakpoints/v_16.1_Breakpoint_Tables.pdf>.
-HAS, « Antibiogrammes ciblés — Recommandation », à obtenir.*
+HAS, « Antibiogrammes ciblés pour les infections urinaires à Entérobactéries
+dans la population féminine adulte (à partir de 12 ans) », validée par le Collège
+le 5 octobre 2023 — tableaux décisionnels de la SFM et de la SPILF, § 2.1.3 et
+notes (A) (B) (C) sous chaque tableau.*

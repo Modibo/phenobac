@@ -384,6 +384,13 @@
     background:var(--surface-2);border:1px solid var(--line);border-radius:100px;padding:3px 11px}
   .rc-m b{font-weight:500;color:var(--ink)}
   .rc-src{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);margin-top:10px}
+  .rc-note{font-size:12.5px;line-height:1.6;color:var(--ink-soft);margin-top:10px;
+    padding-left:10px;border-left:2px solid var(--line)}
+  .rc-note b{color:var(--ink)}
+  .rc-cit{display:block;margin-top:4px;font-size:11.5px;font-style:italic;color:var(--ink-faint)}
+  .rc-plan{font-size:12.5px;line-height:1.6;margin-top:10px;padding:8px 10px;border-radius:6px;
+    background:var(--warn-bg,rgba(255,192,0,.10));color:var(--ink)}
+  .rc-hp{font-size:11.5px;line-height:1.55;color:var(--ink-faint);margin-top:10px}
 
   .poso-dit{font-size:12px;line-height:1.55;color:var(--ink-faint);margin-bottom:9px}
   .poso-dit b{color:var(--i-deep,#8a5b00)}
@@ -4346,7 +4353,14 @@ function questionsRenduCible(){
       opts:["Oui","Non"] },
     { id:"typeIU",
       q:"Type d'infection urinaire, si le prescripteur l'a renseigné ?",
-      opts:["Cystite","Pyélonéphrite","Non précisé"] }
+      opts:["Cystite","Pyélonéphrite","Non précisé"] },
+    /* Les notes (B) et (C) ne rendent les carbapénèmes et les molécules
+       nouvelles que « sur demande du clinicien ». PhénoBac ne peut pas le
+       savoir : il DEMANDE, et sans réponse il ne les rend pas — ce que le
+       document prescrit. */
+    { id:"demandeRecours",
+      q:"Le clinicien a-t-il demandé les molécules de dernier recours (carbapénèmes, nouvelles associations) ?",
+      opts:["Oui","Non"] }
   ];
 }
 
@@ -4735,15 +4749,39 @@ function renderInterpretView(A){
   if(rcib && rcib.applique){
     html += `<div class="sect"><div class="sect-t">Rendu ciblé appliqué</div>`;
     html += `<div class="rc-dit">${esc(rcib.titre)} — ${esc(RC_COLONNE_DIT[rcib.colonne] || rcib.colonne)}.
-      <b>${rcib.masquees.length}</b> molécule${rcib.masquees.length>1?"s":""} testée${rcib.masquees.length>1?"s":""}
-      non rendue${rcib.masquees.length>1?"s":""} sur l'antibiogramme ciblé. Rien n'est effacé :
-      les résultats restent dans l'export, dans la surveillance et ci-dessous.</div>`;
+      ${rcib.masquees.length
+        ? `<b>${rcib.masquees.length}</b> molécule${rcib.masquees.length>1?"s":""} testée${rcib.masquees.length>1?"s":""}
+           non rendue${rcib.masquees.length>1?"s":""} sur l'antibiogramme ciblé.`
+        : `Dans ce profil, <b>aucune</b> molécule testée n'est retirée de la feuille.`}
+      Rien n'est effacé : les résultats restent dans l'export, dans la surveillance
+      et ci-dessous.</div>`;
     if(rcib.masquees.length){
       html += `<div class="rc-masq">` + rcib.masquees.map(k=>
         `<span class="rc-m"><b>${esc(ABX[k]?ABX[k].n:k)}</b>
           <span class="lc lc-${classeCat(state.results[k])}">${esc(lettreCat(state.results[k])||"")}</span></span>`
       ).join("") + `</div>`;
     }
+    /* POURQUOI chaque molécule est absente. Un masquage sans motif
+       affichable est un masquage qu'on ne peut pas discuter — et le
+       biologiste doit pouvoir le confronter au document, mot pour mot. */
+    const citees = {};        // une note, une citation : la répéter serait du bruit
+    (rcib.restrictions||[]).forEach(j=>{
+      const noms = j.codes.map(k=>ABX[k]?ABX[k].n:k).join(", ");
+      const titre = j.note ? `Note (${esc(j.note)})` : "§ 2.1.3";
+      const cite = j.texte && !citees[j.note];
+      if(j.note) citees[j.note] = true;
+      html += `<div class="rc-note"><b>${titre}</b> — ${esc(noms)} :
+        ${j.sens === "ajouté" ? "sur la feuille" : "hors de la feuille"}, car ${esc(j.motif)}
+        ${cite ? `<span class="rc-cit">« ${esc(j.texte)} »</span>` : ""}</div>`;
+    });
+    if(rcib.plancher){
+      html += `<div class="rc-plan"><b>⚠ Masquage levé</b> — ${esc(rcib.plancher)}
+        Ce plancher est propre à PhénoBac : la recommandation suppose un appel au
+        laboratoire que la feuille imprimée n'a pas.</div>`;
+    }
+    (rcib.horsPortee||[]).forEach(h=>{
+      html += `<div class="rc-hp"><b>Règle appliquée à moitié</b> — ${esc(h)}</div>`;
+    });
     html += `<div class="rc-src">Règle locale du laboratoire, fondée sur : ${esc(rcib.source||"")}</div></div>`;
   } else if(rcib && !rcib.applique && renduCibleActif()){
     html += `<div class="sect"><div class="sect-t">Rendu ciblé</div>
@@ -5865,10 +5903,13 @@ function buildReport(A){
     ? `<div class="rp-sect-t">Rendu ciblé</div>
        <div class="rp-legende"><b>Antibiogramme ciblé</b>
        ${esc(rcR.titre)} — ${esc(RC_COLONNE_DIT[rcR.colonne] || rcR.colonne)}.
-       ${rcR.masquees.length} molécule${rcR.masquees.length>1?"s":""} testée${rcR.masquees.length>1?"s":""}
-       n'${rcR.masquees.length>1?"ont":"a"} pas été rendue${rcR.masquees.length>1?"s":""} :
-       ${esc(rcR.masquees.map(k=>ABX[k]?ABX[k].n:k).join(", "))}.
+       ${rcR.masquees.length
+          ? `${rcR.masquees.length} molécule${rcR.masquees.length>1?"s":""} testée${rcR.masquees.length>1?"s":""}
+             n'${rcR.masquees.length>1?"ont":"a"} pas été rendue${rcR.masquees.length>1?"s":""} :
+             ${esc(rcR.masquees.map(k=>ABX[k]?ABX[k].n:k).join(", "))}.`
+          : `Dans ce profil, toutes les molécules testées figurent sur la feuille.`}
        <b>L'antibiogramme complet reste disponible sur demande auprès du laboratoire.</b>
+       ${rcR.plancher ? `<br><b>Masquage levé :</b> ${esc(rcR.plancher)}` : ""}
        Règle locale du laboratoire, fondée sur : ${esc(rcR.source||"")}.</div>`
     : "";
 

@@ -56,6 +56,13 @@ const has = (r, k) => r[k] !== undefined && r[k] !== null && r[k] !== "";
 // noms utilisés dans les messages d'incohérence (résistances naturelles)
 const ABXNAME = {
   AMX: "Amoxicilline", AMP: "Ampicilline", AMC: "Amoxicilline + ac. clavulanique",
+  // Molécules de l'antibiogramme ciblé urinaire. Elles manquaient ici alors
+  // qu'elles existaient dans la page : tout ce qui passe par ABXNAME les
+  // désignait par leur sigle. Le garde-fou 5 du rendu ciblé — « une molécule
+  // nommée par une alerte n'est jamais masquée » — les cherche par leur NOM
+  // dans le texte de l'alerte : absentes d'ici, elles n'étaient pas protégées.
+  MEC: "Pivmécillinam", NIT: "Nitrofurantoïne", TMP: "Triméthoprime",
+  CFM: "Céfixime", CRO: "Ceftriaxone", OFX: "Ofloxacine", ATM: "Aztréonam",
   TZP: "Pipéracilline + tazobactam", FOX: "Céfoxitine", CTX: "Céfotaxime (C3G)",
   CAZ: "Ceftazidime (C3G)", FEP: "Céfépime (C4G)", ETP: "Ertapénème", IPM: "Imipénème",
   MEM: "Méropénème", CIP: "Ciprofloxacine", GEN: "Gentamicine", AMK: "Amikacine",
@@ -994,6 +1001,207 @@ function rcColonne(cle, r, A) {
   return "amoxS";
 }
 
+/* ============================================================
+   § 2.1.3 ET LES NOTES (A) (B) (C) — CE QUE LES COULEURS NE DISENT PAS
+
+   Les cases coloriées ne sont que la moitié de la recommandation. Sous
+   chaque tableau, trois notes retirent des molécules que la case avait
+   rendues, et le § 2.1.3 en pose sept règles de plus. Rendre le tableau
+   sans les notes, c'est mettre un carbapénème sur la feuille là où le
+   document l'écarte — l'inverse exact de ce qu'on cherche.
+
+   Les listes viennent du document (RENDU_CIBLE_LISTES, lues DANS les notes
+   qui les citent). Ne restent ici que deux choses, et elles sont dites :
+   la correspondance entre un nom français et un code PhénoBac, et la
+   condition de chaque règle.
+   ============================================================ */
+
+/* Nom du document → codes PhénoBac. Une famille en vaut plusieurs ; une
+   molécule que PhénoBac ne teste pas vaut la liste vide, et c'est une
+   réponse, pas un oubli. La vérification plus bas refuse tout nom absent
+   d'ici : un nom non traduit serait une règle silencieusement sautée. */
+const RC_NOM_CODES = {
+  "amoxicilline-acide clavulanique": ["AMC"],
+  "céphalosporines": null,                 // famille : résolue sur les tableaux
+  "témocilline": ["TEM"],
+  "pipéracilline-tazobactam": ["TZP"],
+  "aztréonam": ["ATM"],
+  "imipénème": ["IPM"], "méropénème": ["MEM"], "ertapénème": ["ETP"],
+  "céfixime": ["CFM"], "céfotaxime": ["CTX"], "ceftriaxone": ["CRO"],
+  "céfidérocol": ["FDC"],
+  "ceftolozane-tazobactam": [], "ceftazidime-avibactam": [],
+  "imipénème-relebactam": [], "méropénème-vaborbactam": []
+};
+
+/* Les entérobactéries du groupe 3, nommées par la note (A). PhénoBac n'en
+   connaît que quatre ; les quatre autres valent null, ce qui est une
+   réponse vérifiable — le banc refuse qu'une espèce du groupe 3 entre dans
+   PhénoBac sans être classée ici. */
+const RC_GROUPE3_ORG = {
+  "Enterobacter cloacae complex": "ecloacae",
+  "Klebsiella aerogenes": "kaerogenes",
+  "Citrobacter freundii complex": "cfreundii",
+  "Serratia marcescens": "serratia",
+  "Morganella morganii": null,
+  "Providencia spp": null,
+  "Pantoea agglomerans": null,
+  "Hafnia spp": null
+};
+
+/* La famille « céphalosporines » de la note (B) n'est pas une liste que
+   j'écris : ce sont les lignes de céphalosporine DES TABLEAUX eux-mêmes. */
+function rcCephalosporines() {
+  const out = [];
+  Object.keys(RC.RENDU_CIBLE || {}).forEach(function (cle) {
+    RC.RENDU_CIBLE[cle].lignes.forEach(function (l) {
+      if (/^c[ée]f|^ceft/i.test(l.molecule)) l.codes.forEach(function (c) {
+        if (out.indexOf(c) === -1) out.push(c);
+      });
+    });
+  });
+  if (out.length < 5) throw new Error(
+    "rendu ciblé : " + out.length + " céphalosporine(s) trouvée(s) dans les tableaux. "
+    + "La note (B) s'appuie sur cette famille ; incomplète, elle laisserait rendre un "
+    + "carbapénème alors qu'une céphalosporine reste active.");
+  return out;
+}
+
+/* Traduit une liste du document en codes PhénoBac, et s'arrête sur un nom
+   qu'elle ne sait pas traduire. */
+function rcCodes(noms) {
+  const out = [];
+  (noms || []).forEach(function (nom) {
+    const cle = nom.toLowerCase().trim();
+    if (!(cle in RC_NOM_CODES)) throw new Error(
+      "rendu ciblé : « " + nom + " » est cité par une note de la HAS mais n'a pas de "
+      + "correspondance dans RC_NOM_CODES. La règle qui s'appuie sur cette liste serait "
+      + "appliquée à côté, sans rien dire.");
+    const codes = RC_NOM_CODES[cle] === null ? rcCephalosporines() : RC_NOM_CODES[cle];
+    codes.forEach(function (c) { if (out.indexOf(c) === -1) out.push(c); });
+  });
+  return out;
+}
+
+/* Les codes d'une ligne du tableau, désignée par son libellé. Encore une
+   fois : la donnée, pas une liste parallèle. */
+function rcCodesLigne(cle, motif) {
+  const tb = RC.RENDU_CIBLE[cle];
+  const out = [];
+  if (tb) tb.lignes.forEach(function (l) {
+    if (motif.test(l.molecule)) l.codes.forEach(function (c) {
+      if (out.indexOf(c) === -1) out.push(c);
+    });
+  });
+  return out;
+}
+
+function rcGroupe3() {
+  for (const esp in RC_GROUPE3_ORG) if (RC_GROUPE3_ORG[esp] === _activeId) return esp;
+  return null;
+}
+
+/* Applique les notes et le § 2.1.3 à la liste des molécules que la couleur
+   avait prévues. Retourne la liste corrigée, et le JOURNAL de ce qui a été
+   retiré ou ajouté — car un masquage sans motif affichable est un masquage
+   qu'on ne peut pas discuter. */
+function rcRestreindre(cle, colonne, prevues, r, c, A) {
+  const notes = (RC.RENDU_CIBLE_NOTES || {})[cle] || {};
+  const listes = RC.RENDU_CIBLE_LISTES || {};
+  const demande = c.demandeRecours === "Oui";
+  const esp3 = rcGroupe3();
+  const journal = [], horsPortee = [];
+  const actif = function (k) { return r[k] === "S" || r[k] === "I"; };
+
+  function oter(codes, lettre, pourquoi) {
+    const pris = [];
+    codes.forEach(function (k) {
+      const i = prevues.indexOf(k);
+      if (i !== -1) { prevues.splice(i, 1); pris.push(k); }
+    });
+    if (pris.length) journal.push({ sens: "retiré", codes: pris, note: lettre,
+                                    texte: notes[lettre] || null, motif: pourquoi });
+  }
+  function mettre(codes, lettre, pourquoi) {
+    const pris = [];
+    codes.forEach(function (k) {
+      if (r[k] !== undefined && r[k] !== "" && prevues.indexOf(k) === -1) {
+        prevues.push(k); pris.push(k);
+      }
+    });
+    if (pris.length) journal.push({ sens: "ajouté", codes: pris, note: lettre,
+                                    texte: notes[lettre] || null, motif: pourquoi });
+  }
+
+  /* --- Note (A) — le céfépime plutôt que les C3G, pour le groupe 3 ---
+     « En l'absence de BLSE ou de résistance aux C3G » : c'est exactement
+     toute colonne autre que « C3G résistante ou BLSE ». */
+  const c3g = rcCodes(listes.c3g);
+  // « PRIVILÉGIER le rendu du céfépime PLUTÔT QUE » : c'est une substitution,
+  // pas un retrait. Sans céfépime actif il n'y a rien à préférer, et retirer
+  // les C3G laisserait la feuille sans céphalosporine utilisable.
+  if (esp3 && cle !== "cystite" && colonne !== "c3gRouBlse" && actif("FEP")
+      && c3g.some(function (k) { return prevues.indexOf(k) !== -1; })) {
+    oter(c3g, "A", esp3 + " appartient au groupe 3 : la HAS fait préférer le céfépime "
+                 + "aux céphalosporines de 3e génération.");
+    mettre(["FEP"], "A", "il remplace les céphalosporines de 3e génération.");
+  }
+
+  /* --- Note (A) de la cystite — autre texte, autre règle --- */
+  if (esp3 && cle === "cystite" && colonne !== "premiereIntentionS") {
+    oter(["CFM"], "A", esp3 + " appartient au groupe 3, et la souche résiste aux "
+                     + "molécules de première intention.");
+  }
+
+  /* --- Note (B) — les carbapénèmes, molécules de dernier recours --- */
+  const carba = rcCodes(listes.carbapenemes);
+  const etroites = rcCodes(listes.betalactaminesEtroites);
+  if (demande) {
+    mettre(carba, "B", "demandés par le clinicien.");
+  } else if (cle === "cystite") {
+    oter(carba, "B", "en cystite, le document ne les rend que sur demande du clinicien.");
+  } else {
+    const restent = etroites.filter(actif);
+    if (restent.length) {
+      oter(carba, "B", "une β-lactamine de spectre plus étroit reste active ("
+                     + restent.map(function (k) { return ABXNAME[k] || k; }).join(", ") + ").");
+    }
+  }
+
+  /* --- Note (C) — nouvelles associations et nouvelles céphalosporines --- */
+  const nouvelles = rcCodes(listes.nouvelles);
+  if (nouvelles.length) {
+    if (demande) mettre(nouvelles, "C", "demandées par le clinicien.");
+    else oter(nouvelles, "C", "rendues sur demande du clinicien, après avis spécialisé.");
+  }
+
+  /* --- § 2.1.3 — les fluoroquinolones ---
+     Le document écarte les fluoroquinolones dans DEUX cas. Le premier se
+     lit sur l'antibiogramme : amoxicilline résistante, association sensible.
+     Le second — « lorsque d'autres antibiotiques per os sont actifs » —
+     suppose de savoir quelles molécules se prennent par la bouche, et
+     PhénoBac n'a pas cette donnée : la table de posologies de l'EUCAST ne
+     couvre ni le pivmécillinam, ni la nitrofurantoïne, ni le triméthoprime,
+     ni le céfixime. Inventer la voie d'administration de quatre molécules
+     pour masquer davantage serait exactement ce que le § 26 interdit. La
+     règle est donc appliquée à MOITIÉ, et la moitié qui manque est dite. */
+  const fq = rcCodesLigne(cle, /^Fluoroquinolones/i);
+  if (cle !== "sansRenseignement" && fq.length) {
+    if (r.AMX !== undefined && !actif("AMX") && actif("AMC")) {
+      oter(fq, null, "§ 2.1.3 : souche résistante à l'amoxicilline mais sensible à "
+                   + "l'association — le document écarte alors les fluoroquinolones.");
+    }
+    if (fq.some(function (k) { return prevues.indexOf(k) !== -1 && actif(k); }))
+      horsPortee.push("§ 2.1.3 écarte aussi les fluoroquinolones « lorsque d'autres "
+        + "antibiotiques per os sont actifs ». PhénoBac ne connaît pas la voie "
+        + "d'administration de toutes les molécules urinaires — la table de posologies "
+        + "de l'EUCAST ne couvre ni le pivmécillinam, ni la nitrofurantoïne, ni le "
+        + "triméthoprime, ni le céfixime — et n'applique pas cette moitié de la règle. "
+        + "Une fluoroquinolone figure donc ici là où le document pourrait la retirer.");
+  }
+
+  return { prevues: prevues, journal: journal, horsPortee: horsPortee };
+}
+
 function renduCible(A, r, ctx, org, actif) {
   const c = ctx || {};
   if (!actif) return null;                         // garde-fou 1
@@ -1017,12 +1225,16 @@ function renduCible(A, r, ctx, org, actif) {
   const colonne = rcColonne(cle, r, A);
 
   // Ce que le tableau prévoit de rendre dans cette colonne.
-  const prevues = [];
+  let prevues = [];
   tb.lignes.forEach(function (l) {
     if (l.rendre.indexOf(colonne) !== -1) l.codes.forEach(function (x) {
       if (prevues.indexOf(x) === -1) prevues.push(x);
     });
   });
+
+  // … puis ce que les notes et le § 2.1.3 en retirent, ou y ajoutent.
+  const restr = rcRestreindre(cle, colonne, prevues, r, c, A);
+  prevues = restr.prevues;
 
   // Les molécules qui portent une alerte : jamais masquées (garde-fou 5).
   const alertees = {};
@@ -1041,9 +1253,52 @@ function renduCible(A, r, ctx, org, actif) {
     masquees.push(k);
   });
 
+  /* GARDE-FOU 6 — LE PLANCHER DE SÉCURITÉ, ET IL EST DE PHÉNOBAC, PAS DE LA HAS.
+     Le document suppose un dialogue : « l'antibiogramme complet reste disponible
+     sur demande », « sur demande du clinicien ». Une feuille imprimée dans un
+     laboratoire de Mopti n'a pas ce dialogue. Si l'application des notes laissait
+     une feuille où AUCUNE molécule active ne figure, alors que la souche en a une,
+     le masquage est levé en entier et la feuille le dit. Ce n'est pas une règle
+     scientifique — c'est le refus de rendre une feuille qui ne soigne personne. */
+  const estActif = function (k) { return r[k] === "S" || r[k] === "I"; };
+  let plancher = null;
+  if (!rendues.some(estActif) && masquees.some(estActif)) {
+    // On lève le strict nécessaire, et dans l'ordre que le document lui-même
+    // donne : les molécules de dernier recours restent en dernier.
+    const listes = RC.RENDU_CIBLE_LISTES || {};
+    const recours = rcCodes(listes.carbapenemes || []).concat(rcCodes(listes.nouvelles || []));
+    let lever = masquees.filter(function (k) {
+      return estActif(k) && recours.indexOf(k) === -1;
+    });
+    if (!lever.length) lever = masquees.filter(estActif);
+    lever.forEach(function (k) {
+      rendues.push(k);
+      masquees.splice(masquees.indexOf(k), 1);
+    });
+    plancher = "Aucune molécule active ne figurait sur la feuille une fois le rendu "
+             + "ciblé appliqué. Le masquage a été levé pour "
+             + lever.map(function (k) { return ABXNAME[k] || k; }).join(", ")
+             + " : rendre un antibiogramme sans aucun antibiotique utilisable n'aide "
+             + "personne.";
+  }
+
+  /* Le journal ne doit affirmer que ce qui s'est produit. Une molécule retirée
+     par une note puis rendue parce qu'elle est résistante, ou relevée par le
+     plancher, n'a PAS été masquée : le dire serait faux. */
+  const journal = [];
+  restr.journal.forEach(function (j) {
+    const vus = j.codes.filter(function (k) {
+      return j.sens === "retiré" ? masquees.indexOf(k) !== -1 : rendues.indexOf(k) !== -1;
+    });
+    if (vus.length) journal.push({ sens: j.sens, codes: vus, note: j.note,
+                                   texte: j.texte, motif: j.motif });
+  });
+
   return {
     applique: true, tableau: cle, titre: tb.titre, colonne: colonne,
     rendues: rendues.sort(), masquees: masquees.sort(),
+    restrictions: journal, horsPortee: restr.horsPortee,
+    plancher: plancher, notes: (RC.RENDU_CIBLE_NOTES || {})[cle] || null,
     source: RC.RENDU_CIBLE_SOURCE
   };
 }
@@ -2471,7 +2726,10 @@ const MOTEUR = {
   CONDITIONS, conditionsTechniques,
   // rendu ciblé (HAS 2023)
   RENDU_CIBLE: RC.RENDU_CIBLE, RENDU_CIBLE_SOURCE: RC.RENDU_CIBLE_SOURCE,
-  renduCible, rcColonne, rcPremiereIntention,
+  RENDU_CIBLE_NOTES: RC.RENDU_CIBLE_NOTES, RENDU_CIBLE_LISTES: RC.RENDU_CIBLE_LISTES,
+  RENDU_CIBLE_RESTRICTIONS: RC.RENDU_CIBLE_RESTRICTIONS,
+  renduCible, rcColonne, rcPremiereIntention, rcCodes, rcCephalosporines,
+  RC_GROUPE3_ORG, RC_NOM_CODES,
   // posologies qui fondent les seuils
   POSOLOGIE: POSO.POSOLOGIE, POSOLOGIE_VERSION: POSO.POSOLOGIE_VERSION, posologiePour,
   // § 15 : le commentaire en cinq moments
