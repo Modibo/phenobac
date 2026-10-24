@@ -123,6 +123,37 @@ signale une section vide au lieu de la taire.
 
 ---
 
+## comparer-eucast.py --meninge — concentrations critiques des méningites
+
+- **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
+- **tables** : BP_MENINGE
+- **empreinte** : f1184083a29ee2fe7bae4e955ba10efa3df94d59345aefb0c9878337d8c937cb
+- **date** : 2026-10-24
+- **résultat** : 21 seuils confrontés — 21 identiques, 0 différent, 0 manquant.
+
+Ces seuils-là n'étaient confrontés par **rien**. L'outil écartait volontairement
+les lignes « (meningitis) » du document — le rendu courant se fait hors
+méningite — et personne ne regardait l'autre moitié. Or c'est celle qui fait
+passer une pénicilline de « I » à « R » sur un liquide céphalo-rachidien.
+
+Le mode `--meninge` retourne le filtre : il ne retient QUE les lignes de
+méningite, et les confronte à BP_MENINGE.
+
+### Et la question inverse : ce que PhénoBac ne porte pas
+
+Comparer les seuils présents ne dit rien de ceux qui manquent. Un seuil méningé
+absent n'est pas inoffensif : c'est le seuil **ordinaire** qui s'applique
+alors, et il est plus permissif. L'outil parcourt donc aussi le document dans
+l'autre sens.
+
+Il ne signale que les manques qui **changent quelque chose** — ni ceux où
+PhénoBac n'a pas non plus de seuil ordinaire (rien ne s'applique, la molécule
+n'est pas catégorisée, et c'est juste), ni ceux où le seuil ordinaire porte
+déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une ligne
+« all indications, including meningitis ». Au 24 octobre 2026 : aucun.
+
+---
+
 ## comparer-zit.py — zones d'incertitude technique
 
 - **document** : EUCAST v16.1 (classeur xlsx) ET CA-SFM 2026 V1.0 (pdf)

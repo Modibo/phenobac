@@ -3,6 +3,7 @@
 comparer-eucast.py — confronte les seuils de PhénoBac au tableau EUCAST officiel.
 
     python3 outils/comparer-eucast.py chemin/vers/v_16.1_Breakpoint_Tables.xlsx
+    python3 outils/comparer-eucast.py …xlsx --meninge   (seuils de méningite)
 
 Ne modifie RIEN. Produit un rapport à valider par un biologiste : pour chaque
 seuil de l'application, la ou les lignes EUCAST correspondantes et leurs valeurs.
@@ -115,7 +116,11 @@ AGENTS = {
     'CFM': r'^cefixime', 'ATM': r'^aztreonam\b(?!-)', 'OFX': r'^ofloxacin',
     # La ceftriaxone a deux lignes ; celle du contexte ordinaire fait foi ici,
     # la méningée étant comparée par sa propre table.
-    'CRO': r'^ceftriaxone \(indications other than',
+    # Le motif portait l'indication — « ceftriaxone (indications other than » —
+    # et ne pouvait donc JAMAIS trouver la ligne de méningite. Un motif nomme
+    # l'antibiotique ; c'est le filtre d'indication qui choisit la ligne, et il
+    # garde déjà « other than » en mode ordinaire.
+    'CRO': r'^ceftriaxone\b(?!-)',
 }
 
 
@@ -135,9 +140,18 @@ def seuils_phenobac(racine):
         "moteur_py", os.path.join(racine, "outils", "moteur_py.py"))
     MP = importlib.util.module_from_spec(s)
     s.loader.exec_module(MP)
-    tables = MP.tables(["BP", "BP_URIN", "HORS_EUCAST"])
-    BP, URIN = tables["BP"], tables.get("BP_URIN") or {}
+    tables = MP.tables(["BP", "BP_URIN", "BP_MENINGE", "HORS_EUCAST"])
     globals()["HORS_EUCAST"] = tables.get("HORS_EUCAST") or {}
+    if MENINGE:
+        # LES SEUILS MÉNINGÉS N'ÉTAIENT CONFRONTÉS PAR RIEN. L'outil écarte
+        # volontairement les lignes « (meningitis) » du document, puisque le
+        # rendu courant se fait hors méningite — et personne ne regardait
+        # l'autre moitié. Or c'est celle qui fait passer une pénicilline de
+        # « I » à « R » sur un liquide céphalo-rachidien.
+        BP, URIN = tables.get("BP_MENINGE") or {}, {}
+        globals()["BP_ORDINAIRE"] = tables.get("BP") or {}
+    else:
+        BP, URIN = tables["BP"], tables.get("BP_URIN") or {}
     # Les seuils de cystite simple vivent dans leur propre table : ne lire que
     # BP laisserait le pivmécillinam, le céfixime, la nitrofurantoïne et le
     # triméthoprime HORS de la comparaison — non comparés, donc non vérifiés,
@@ -170,7 +184,12 @@ def nombre(txt):
     return float(m.group(1)) if m else None
 
 
+MENINGE = False
+
+
 def main():
+    global MENINGE
+    MENINGE = "--meninge" in sys.argv
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -283,11 +302,21 @@ def main():
                 # table BP_MENINGE et sont contrôlés à part.
                 PARTICULIER = r'\bscreen only\b|endocarditis|meningitis'
                 for cel in lignes:
+                    if MENINGE:
+                        # En mode méningé, on ne retient QUE les lignes de
+                        # méningite — et jamais celles qui s'en excluent
+                        # (« indications other than … meningitis »).
+                        brut = re.sub(r'\s+', ' ', cel.get('A', '')).strip()
+                        if (not re.search(r'mening', brut, re.I)
+                                or re.search(r'other than', brut, re.I)):
+                            continue
                     # Un retour à la ligne dans le libellé faisait passer
                     # « Cefepime-\nenmetazobactam » pour du céfépime : le motif
                     # voyait une fin de mot là où il y avait un trait d'union.
                     nom = re.sub(r'\s+', ' ', cel.get('A', '')).strip()
-                    if re.search(PARTICULIER, nom, re.I) and not re.search(r'other than|all indications|including', nom, re.I):
+                    if (not MENINGE
+                            and re.search(PARTICULIER, nom, re.I)
+                            and not re.search(r'other than|all indications|including', nom, re.I)):
                         if re.search(motif, nom, re.I):
                             ecartes.append(("dépistage" if re.search(r'screen only', nom, re.I)
                                             else "indication particulière", nom))
@@ -385,9 +414,14 @@ def main():
             # On vérifie donc l'équivalence DANS LES DEUX SENS, à chaque
             # confrontation : marqué convention si et seulement si le document
             # ne donne aucun chiffre.
+            # Le drapeau « convention » ne concerne que la table ordinaire :
+            # un seuil méningé absent de PhénoBac n'est pas une convention,
+            # c'est un manque, et il se compte ailleurs.
             conv = convention(groupe, code)
             chiffre = (etat in ('identique', 'different'))
-            if conv and chiffre:
+            if MENINGE:
+                pass
+            elif conv and chiffre:
                 drapeaux.append((groupe, code, "marqué « convention de laboratoire » "
                                  "alors que le document FIXE ce couple"))
             elif not conv and not chiffre:
@@ -409,6 +443,60 @@ def main():
             print("\n  %s — %s" % (g, ", ".join(germes)))
             print("      feuilles concernées : %s" % ", ".join(feuilles))
             print("      seuils en attente   : %d" % len(bp.get(g, {})))
+
+    # L'AUTRE MOITIÉ DE LA QUESTION. Comparer les seuils que PhénoBac porte ne
+    # dit rien de ceux qu'il NE PORTE PAS. Or un seuil méningé manquant n'est
+    # pas une absence inoffensive : c'est le seuil ORDINAIRE qui s'applique
+    # alors, et il est plus permissif. Un méropénème à 1 mg/L sur un LCR à
+    # pneumocoque serait rendu sensible là où le document le dit résistant.
+    if MENINGE:
+        manques = []
+        # Parcourir les groupes QUI ONT UNE FEUILLE, et non ceux qui ont déjà
+        # un seuil méningé : un groupe qui n'en porte aucun — Haemophilus,
+        # méningocoque — serait sinon sauté, et c'est précisément celui dont
+        # le manque est total.
+        for groupe in sorted(FEUILLES):
+            feuille = FEUILLES.get(groupe)
+            if not feuille or feuille not in c.feuilles:
+                continue
+            for cel in c.lignes(feuille):
+                nom = re.sub(r'\s+', ' ', cel.get('A', '')).strip()
+                if not re.search(r'mening', nom, re.I) or re.search(r'other than', nom, re.I):
+                    continue
+                sE, rE = nombre(cel.get('B')), nombre(cel.get('C'))
+                if sE is None and rE is None:
+                    continue                      # « IE », « Note » : rien à porter
+                for code, motif in AGENTS.items():
+                    if not re.search(motif, nom, re.I) or code in bp.get(groupe, {}):
+                        continue
+                    # UN MANQUE SANS CONSÉQUENCE N'EN EST PAS UN. Deux cas :
+                    #   · PhénoBac n'a pas non plus de seuil ORDINAIRE — rien
+                    #     ne s'applique, la molécule n'est pas catégorisée, et
+                    #     c'est le bon comportement ;
+                    #   · le seuil ordinaire porte DÉJÀ la valeur méningée —
+                    #     c'est le cas quand le document ne donne qu'une ligne
+                    #     (« all indications, including meningitis »).
+                    # Les signaler ferait du bruit, et le bruit apprend à
+                    # ignorer les signalements qui comptent.
+                    ord_ = (BP_ORDINAIRE.get(groupe) or {}).get(code)
+                    if not ord_:
+                        break
+                    sO = ord_.get("S"); rO = ord_.get("R")
+                    if sO == 0.001: sO = None
+                    if (sO, rO) == (sE, rE):
+                        break
+                    manques.append((groupe, code, nom, sE, rE, sO, rO))
+                    break
+        if manques:
+            print("\n=== SEUILS MÉNINGÉS DU DOCUMENT QUE PHÉNOBAC NE PORTE PAS ===")
+            print("Sans eux, c'est le seuil ORDINAIRE qui s'applique sur un LCR,")
+            print("et il est plus permissif. Chacun est à ajouter après validation.")
+            for g, k, nom, sE, rE, sO, rO in sorted(set(manques)):
+                print("  %-12s %-5s  méningé S<=%-7s R>%-7s   appliqué aujourd'hui : S<=%-7s R>%s"
+                      % (g, k, sE, rE, sO, rO))
+                print("               %s" % nom[:70])
+        else:
+            print("\nAucun seuil méningé du document ne manque à PhénoBac.")
 
     print("\n=== bilan ===")
     print("  identiques         : %d" % total['identique'])
