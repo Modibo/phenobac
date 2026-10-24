@@ -374,6 +374,20 @@
      qui la contredisent. Discrets : ils confirment, ils n'alertent pas. */
   /* § 7 — les résistances naturelles, dans le raisonnement et non seulement
      dans les alertes. */
+  /* Posologies — § « rendu et posologie ». Sobres : elles informent, elles
+     ne prescrivent pas, et ne doivent pas avoir l'air d'une ordonnance. */
+  .poso-dit{font-size:12px;line-height:1.55;color:var(--ink-faint);margin-bottom:9px}
+  .poso-dit b{color:var(--i-deep,#8a5b00)}
+  .poso-l{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr) auto;gap:3px 12px;
+    align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
+  .poso-l:first-of-type{border-top:none}
+  .poso-n{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap}
+  .poso-c{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-faint);margin-left:6px}
+  .poso-s{font-family:'IBM Plex Mono';font-size:12px;line-height:1.5;color:var(--ink-soft)}
+  .poso-m{font-size:10.5px;color:var(--ink-faint);white-space:nowrap}
+  .poso-src{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);margin-top:9px}
+  @media(max-width:620px){ .poso-l{grid-template-columns:1fr} }
+
   .nat-dit{font-size:12px;line-height:1.55;color:var(--ink-faint);margin-bottom:9px}
   .nat-l{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr) auto;gap:3px 12px;
     align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
@@ -1758,6 +1772,7 @@
      tables au moteur. Les deux fichiers sont aussi ceux que sert l'API : un
      seul exemplaire des règles et du raisonnement existe, et c'est lui qui
      permet d'interpréter sans réseau une fois l'application installée. -->
+<script src="posologie.js"></script>
 <script src="base-connaissances.js"></script>
 <script src="moteur.js"></script>
 <script>
@@ -4590,6 +4605,29 @@ function renderInterpretView(A){
       </div>`;
     });
     html += `</div>`;
+  }
+
+  /* La posologie qui fonde chaque seuil. Une catégorie I sans sa dose est
+     inexploitable : le clinicien prescrira la dose habituelle, celle dont le
+     seuil dit justement qu'elle ne suffira pas. */
+  const poso = A.posologies || {};
+  const codesPoso = Object.keys(poso).filter(k => ABX[k]);
+  if(codesPoso.length){
+    html += `<div class="sect"><div class="sect-t">Posologies qui fondent ces seuils</div>`;
+    html += `<div class="poso-dit">Schémas employés par l'EUCAST pour établir les
+      concentrations critiques, dans le contexte déclaré. <b>Ce n'est pas une
+      prescription</b> : l'adaptation au malade — poids, fonction rénale, âge,
+      grossesse — relève du prescripteur.</div>`;
+    codesPoso.sort((x,y)=>ABX[x].n.localeCompare(ABX[y].n)).forEach(k=>{
+      poso[k].forEach(p=>{
+        html += `<div class="poso-l">
+          <span class="poso-n">${esc(ABX[k].n)}<span class="poso-c">${esc(state.results[k]||"")}</span></span>
+          <span class="poso-s">${p.schema ? esc(p.schema) : `<i>${esc(p.note)}</i>`}</span>
+          <span class="poso-m">${esc(p.motif)}</span>
+        </div>`;
+      });
+    });
+    html += `<div class="poso-src">${esc(_M.POSOLOGIE_VERSION || "")}</div></div>`;
   }
 
   if(A.rules && A.rules.length){

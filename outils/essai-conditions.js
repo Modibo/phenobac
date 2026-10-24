@@ -31,9 +31,15 @@ if (typeof require === "function" && typeof module === "object" && module.export
 } else {
   var modB = { exports: {} };
   (new Function("module", "exports", readFile("base-connaissances.js")))(modB, modB.exports);
+  // Le moteur réclame DEUX fichiers de données : la base de règles et les
+  // posologies. Un require qui rendrait toujours le même les confondrait, et
+  // le moteur chercherait des posologies dans la base.
+  var modP = { exports: {} };
+  (new Function("module", "exports", readFile("posologie.js")))(modP, modP.exports);
   var mod = { exports: {} };
-  (new Function("module", "exports", "require",
-                readFile("moteur.js")))(mod, mod.exports, function () { return modB.exports; });
+  (new Function("module", "exports", "require", readFile("moteur.js")))(
+    mod, mod.exports,
+    function (nom) { return /posologie/.test(nom) ? modP.exports : modB.exports; });
   E = mod.exports;
 }
 

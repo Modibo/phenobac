@@ -88,6 +88,13 @@ const ABXNAME = {
 const BASE = (typeof module !== "undefined" && module.exports)
   ? require("./base-connaissances")
   : racine.PhenoBacBase;
+
+/* Les posologies qui fondent les seuils. Fichier de données séparé, comme la
+   base de règles : le § 18 veut qu'on puisse les mettre à jour sans toucher au
+   code, et qu'une version passée reste rejouable. */
+const POSO = (typeof module !== "undefined" && module.exports)
+  ? require("./posologie")
+  : (racine.PhenoBacPosologie || { POSOLOGIE: {}, POSOLOGIE_VERSION: null });
 if (!BASE || !BASE.regles)
   throw new Error("base-connaissances.js doit être chargé avant moteur.js");
 
@@ -841,6 +848,51 @@ function commentaireCopiable(moments) {
   return (corps ? corps + " " : "") + "Validation biologique requise.";
 }
 
+/* ============================================================
+   LA POSOLOGIE QUI FONDE LE SEUIL — § 15 du cahier « rendu et posologie »
+
+   Une catégorie S ou I n'est valide que pour un schéma d'administration
+   précis. « Sensible à forte posologie » sans la dose est inexploitable : le
+   clinicien prescrira la dose habituelle, c'est-à-dire précisément celle dont
+   le seuil dit qu'elle ne suffira pas.
+
+   CE QUE CETTE FONCTION NE FAIT PAS. Elle ne prescrit rien. Elle rapporte le
+   schéma que l'EUCAST a employé pour établir le seuil, pour le contexte
+   déclaré. Aucune adaptation au poids, à la fonction rénale, à l'âge ou à la
+   grossesse : le § 13 l'interdit, et ce serait de la prescription.
+   ============================================================ */
+function posologiePour(code, cat, ctx) {
+  const schemas = POSO.POSOLOGIE[code];
+  if (!schemas || !schemas.length) return null;
+  const c = ctx || {};
+
+  return schemas.map(function (e) {
+    // Le contexte choisit la colonne, exactement comme il choisit le seuil.
+    // Rendre un seuil méningé avec une dose ordinaire serait incohérent.
+    if (c.mening === "Oui" && e.particulier && /^Meningitis/i.test(e.particulier)) {
+      // La colonne « situations particulières » peut en contenir PLUSIEURS :
+      // le céfotaxime y porte la méningite puis une note sur S. aureus. On
+      // coupe au repère suivant, faute de quoi on rendrait deux consignes
+      // collées comme si c'en était une seule.
+      const m = e.particulier.replace(/^Meningitis\s*:?\s*/i, "")
+                             .split(/\s(?=[A-Z][A-Za-z.\s]{2,20}:)/)[0].trim();
+      return { voie: e.voie, schema: m, motif: "contexte méningé" };
+    }
+    if (c.urin === "Oui" && e.urinaire)
+      return { voie: e.voie, schema: e.urinaire, motif: "cystite simple" };
+
+    // Catégorie I : c'est la posologie FORTE qui fonde le seuil. Quand
+    // l'EUCAST n'en définit pas, on le dit — on n'en invente pas (§ 26).
+    if (cat === "I") {
+      return e.forte
+        ? { voie: e.voie, schema: e.forte, motif: "sensible à forte posologie" }
+        : { voie: e.voie, schema: null, motif: "forte",
+            note: "l'EUCAST ne définit pas de posologie forte pour cette molécule" };
+    }
+    return { voie: e.voie, schema: e.standard, motif: "posologie standard" };
+  }).filter(function (x) { return x.schema || x.note; });
+}
+
 function finalize(A, r) {
   const org = _activeOrg;
   if (org && org.intrinsic) {
@@ -863,6 +915,14 @@ function finalize(A, r) {
   // § 15 : les cinq moments, composés APRÈS les règles CA-SFM — elles
   // complètent parfois A.comment, et le composer avant figerait un texte
   // tronqué.
+  // La posologie de chaque molécule catégorisée, pour l'écran et le rendu.
+  A.posologies = {};
+  Object.keys(r || {}).forEach(function (k) {
+    if (r[k] !== "S" && r[k] !== "I") return;
+    const p = posologiePour(k, r[k], _ctx);
+    if (p && p.length) A.posologies[k] = p;
+  });
+
   A.moments = commentaireStructure(A);
   A.commentaireCopiable = commentaireCopiable(A.moments);
 
@@ -2217,6 +2277,8 @@ const MOTEUR = {
   horsEucast, depistageSeuil, estCasfm,
   // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
   CONDITIONS, conditionsTechniques,
+  // posologies qui fondent les seuils
+  POSOLOGIE: POSO.POSOLOGIE, POSOLOGIE_VERSION: POSO.POSOLOGIE_VERSION, posologiePour,
   // § 15 : le commentaire en cinq moments
   COMMENT_MOMENTS, commentaireStructure, commentaireCopiable,
   // tables, pour l'affichage des seuils et des aides de saisie

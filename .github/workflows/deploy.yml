@@ -118,6 +118,13 @@ jobs:
       - name: Le commentaire distingue ses cinq moments
         run: node outils/essai-commentaire.js
 
+      # La catégorie I signifie « marche à condition d'augmenter l'exposition ».
+      # Sans la dose, le clinicien prescrit la dose habituelle — celle dont le
+      # seuil dit justement qu'elle ne suffira pas. Et là où l'EUCAST ne
+      # définit aucune posologie forte, il faut le DIRE, pas en inventer une.
+      - name: La posologie suit le contexte et n'est jamais inventée
+        run: node outils/essai-posologie.js
+
   deploy:
     name: Déploiement VPS
     needs: test

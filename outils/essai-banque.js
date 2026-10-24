@@ -44,9 +44,14 @@ function lire(chemin) {
     // La base d'abord : le moteur y reconstruit ses tables au chargement.
     var modB = { exports: {} };
     (new Function("module", "exports", lire("base-connaissances.js")))(modB, modB.exports);
+    // Le moteur réclame DEUX fichiers de données : la base de règles et les
+    // posologies. Un require qui rendrait toujours le même les confondrait.
+    var modP = { exports: {} };
+    (new Function("module", "exports", lire("posologie.js")))(modP, modP.exports);
     var mod = { exports: {} };
-    (new Function("module", "exports", "require",
-                  lire("moteur.js")))(mod, mod.exports, function () { return modB.exports; });
+    (new Function("module", "exports", "require", lire("moteur.js")))(
+      mod, mod.exports,
+      function (nom) { return /posologie/.test(nom) ? modP.exports : modB.exports; });
     E = mod.exports;
   }
 
