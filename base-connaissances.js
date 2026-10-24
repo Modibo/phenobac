@@ -56,7 +56,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.11";
+const BASE_VERSION = "2026.12";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece"];
 
@@ -128,14 +128,14 @@ const REGLES = [
 ["eucast","acineto","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","acineto","SXT","disque","standard",16,16,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","acineto","TZP","cmi","standard",16,16,undefined,undefined,undefined,undefined,true,true,undefined],
-["eucast","bfragilis","AMC","cmi","standard",4,8,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","bfragilis","DA","cmi","standard",4,4,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","bfragilis","IPM","cmi","standard",2,8,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","bfragilis","MEM","cmi","standard",2,8,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","bfragilis","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,true,undefined,undefined],
+["eucast","bfragilis","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","bfragilis","DA","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","bfragilis","IPM","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","bfragilis","MEM","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","bfragilis","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","bfragilis","MXF","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,true,undefined],
 ["eucast","bfragilis","PEN","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","bfragilis","TZP","cmi","standard",8,16,undefined,undefined,undefined,undefined,true,undefined,undefined],
+["eucast","bfragilis","TZP","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","bfragilis","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","burk","AMK","cmi","standard",16,16,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","burk","CAZ","cmi","standard",8,8,undefined,undefined,undefined,undefined,true,undefined,undefined],

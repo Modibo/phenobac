@@ -27,44 +27,52 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : bb17d1006bd360e0901bdb4b25800a0d15dfbe7a772824e3d7dcb02ae2d2c5e3
+- **empreinte** : b392ac453e476efb02dc0e48beb4eb05bffa8e663af3a040276822c350dc441a
 - **date** : 2026-10-24
-- **résultat** : 218 seuils confrontés — 214 identiques, **4 DIFFÉRENTS**, 91 non comparés.
+- **résultat** : 218 seuils confrontés — **218 identiques, 0 différent**, 91 non comparés.
 
 La confrontation porte sur les concentrations critiques de l'EUCAST. Les
 seuils méningés (BP_MENINGE) et ceux du CA-SFM ont leurs propres documents et
 ne sont pas couverts par cette entrée.
 
-### ⚠ Quatre divergences, en attente de validation
+### Quatre divergences trouvées, et corrigées après validation
 
-Elles concernent *Bacteroides fragilis*, et **toutes vont dans le sens
-permissif** : PhénoBac rend « sensible » à des concentrations que l'EUCAST
-v16.1 tient pour résistantes.
+Elles concernaient *Bacteroides fragilis*, et **toutes allaient dans le sens
+permissif** : PhénoBac rendait « sensible » à des concentrations que l'EUCAST
+v16.1 tient pour résistantes. Corrigées le 24 octobre 2026, base 2026.12.
 
-| antibiotique | PhénoBac | EUCAST v16.1 |
+| antibiotique | avant | **v16.1, appliqué** |
 |---|---|---|
 | amoxicilline-ac. clavulanique | S ≤ 4 · R > 8 | **S ≤ 2 · R > 2** |
 | imipénème | S ≤ 2 · R > 8 | **S ≤ 1 · R > 1** |
 | méropénème | S ≤ 2 · R > 8 | **S ≤ 1 · R > 1** |
 | pipéracilline-tazobactam | S ≤ 8 · R > 16 | **S ≤ 2 · R > 2** |
 
-Concrètement : un *B. fragilis* dont la CMI d'imipénème vaut 2 mg/L est rendu
-**sensible** par PhénoBac et **résistant** par le référentiel qu'il déclare
-appliquer.
+Un *B. fragilis* dont la CMI d'imipénème vaut 2 mg/L était rendu **sensible** ;
+il est désormais rendu **résistant**, comme le veut le référentiel.
 
-**Rien n'a été corrigé.** Changer une concentration critique est une décision
-de biologiste, et l'outil l'écrit depuis toujours : « Aucun fichier n'a été
-modifié. Toute correction doit être validée par un biologiste avant d'être
-portée dans le code. »
+### Un drapeau devenu faux
 
-### Et une cinquième question, d'une autre nature
+Les neuf seuils de *B. fragilis* portaient le drapeau « convention de
+laboratoire » — l'interface disait donc « seuil non fixé par l'EUCAST ».
+C'était vrai quand ces lignes ont été écrites ; la v16.1 en fixe six. Le
+drapeau a été retiré pour l'amoxicilline-acide clavulanique, la clindamycine,
+l'imipénème, le méropénème, le métronidazole et la pipéracilline-tazobactam.
 
-PhénoBac porte pour *B. fragilis* un seuil de **pénicilline G** (S ≤ 0,25 ·
-R > 0,5) et de **vancomycine** (S ≤ 2) que la v16.1 ne donne pas : son tableau
-des anaérobies à Gram négatif ne comporte ni l'une ni l'autre. Ce ne sont pas
-des divergences — ce sont des seuils dont la source actuelle est à retrouver.
-La moxifloxacine, elle, vient du CA-SFM, qui la retient pour l'ensemble des
-anaérobies.
+Il reste, à juste titre, sur trois :
+
+- **pénicilline G** (S ≤ 0,25 · R > 0,5) et **vancomycine** (S ≤ 2) — le
+  tableau des anaérobies à Gram négatif de la v16.1 ne les porte pas ;
+- **moxifloxacine** — elle vient du CA-SFM, qui la retient pour l'ensemble des
+  anaérobies.
+
+### Une nuance que la base ne sait pas encore porter
+
+L'EUCAST donne la clindamycine **entre parenthèses** : le seuil repose sur
+l'ECOFF et non sur des données cliniques, et le document avertit que « la
+preuve clinique en monothérapie fait généralement défaut ». La base n'a pas de
+colonne pour cette distinction : la valeur est juste, la réserve n'est pas
+affichée. La réserve est écrite ici, faute d'une colonne pour la porter.
 
 ### Pourquoi c'était invisible
 
