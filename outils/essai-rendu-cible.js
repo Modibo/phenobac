@@ -504,6 +504,115 @@ dire("\nLe journal des restrictions ne ment pas");
   });
 })();
 
+/* ============================================================
+   § 2.1.4 — LES COMMENTAIRES QUI DOIVENT FIGURER AU COMPTE RENDU
+
+   « Il est recommandé de faire figurer sur le compte rendu un commentaire
+   précisant que… » : le document ne dit pas seulement quoi rendre, il dit
+   quoi écrire à côté. Un antibiogramme ciblé sans ces phrases laisse le
+   clinicien devant une liste plus courte sans savoir qu'une colonisation ne
+   se traite pas, ni qu'il peut demander le reste.
+
+   Le risque ici n'est pas de masquer : c'est de TAIRE, ou d'uniformiser
+   trois listes que le document a écrites différentes.
+   ============================================================ */
+dire("\n§ 2.1.4 — les commentaires du compte rendu");
+function textes(r) { return (r.commentaires || []).map(function (c) { return c.texte; }); }
+function porte(r, motif) { return textes(r).some(function (t) { return motif.test(t); }); }
+
+(function () {
+  var cys = rc("ecoli", SAUVAGE, ctx({ typeIU: "Cystite" }));
+  var pye = rc("ecoli", SAUVAGE, ctx({ typeIU: "Pyélonéphrite" }));
+  var sans = rc("ecoli", SAUVAGE, ctx({}));
+
+  verif(textes(cys).length >= 5, textes(cys).length + " commentaires en cystite");
+  verif(textes(pye).length >= 4, textes(pye).length + " commentaires en pyélonéphrite");
+  verif(textes(sans).length >= 6, textes(sans).length + " commentaires sans renseignement");
+
+  // Les deux phrases que le § 2.1.4 veut PARTOUT.
+  [["cystite", cys], ["pyélonéphrite", pye], ["sans renseignement", sans]].forEach(function (x) {
+    verif(porte(x[1], /colonisations.*ne doivent pas être traitées/),
+          x[0] + " : « tout ECBU positif ne nécessite pas obligatoirement de traitement »");
+    verif(porte(x[1], /antibiogramme complet reste disponible sur demande/),
+          x[0] + " : « l'antibiogramme complet reste disponible sur demande »");
+    verif(porte(x[1], /alertes de l’ANSM/), x[0] + " : le rappel bénéfice/risque et l'ANSM");
+  });
+
+  // LES TROIS LISTES DIFFÈRENT, et c'est le document qui le veut. Les
+  // uniformiser serait écrire sur un compte rendu de pyélonéphrite un conseil
+  // que la HAS réserve à la cystite.
+  verif(porte(cys, /En cas de cystite simple/),
+        "cystite : « en cas de cystite simple, … ne nécessite pas la réalisation d'un ECBU »");
+  verif(!porte(pye, /En cas de cystite simple/),
+        "… et cette phrase ne figure PAS sur le compte rendu d'une pyélonéphrite");
+  verif(!porte(pye, /privilégier le triméthoprime seul/),
+        "… ni le conseil sur le triméthoprime seul, que le document n'y met pas");
+  verif(/pyélonéphrite/.test(textes(pye)[0] || ""),
+        "la première phrase nomme bien le traitement d'une pyélonéphrite");
+  verif(/d’une cystite/.test(textes(cys)[0] || ""), "… et celle de la cystite, une cystite");
+})();
+
+/* ---------- Un commentaire numéroté suit SA molécule ---------- */
+dire("\nUn conseil ne paraît que si la molécule qu'il vise est rendue");
+(function () {
+  var cys = rc("ecoli", SAUVAGE, ctx({ typeIU: "Cystite" }));
+  verif(porte(cys, /privilégier le triméthoprime seul/),
+        "cotrimoxazole rendu : le conseil « privilégier le triméthoprime seul » paraît");
+  var c1 = (cys.commentaires || []).filter(function (c) { return c.appel; })[0];
+  verif(c1 && (c1.molecules || []).indexOf("SXT") !== -1,
+        "… et il nomme les molécules concernées, tirées des lignes du tableau");
+
+  // Le même profil SANS cotrimoxazole ni triméthoprime testés : plus de conseil.
+  var sans = {}; for (var k in SAUVAGE) sans[k] = SAUVAGE[k];
+  delete sans.SXT; delete sans.TMP;
+  verif(!porte(rc("ecoli", sans, ctx({ typeIU: "Cystite" })), /privilégier le triméthoprime seul/),
+        "ni cotrimoxazole ni triméthoprime testés : le conseil ne paraît pas");
+
+  // Sans renseignement clinique, le document ajoute « (1) l'indication de ces
+  // molécules est limitée aux cystites » — celui-là compte double, car c'est
+  // la seule mise en garde qui dise au clinicien qu'elles ne couvrent pas une
+  // pyélonéphrite qu'il n'a pas renseignée.
+  var s0 = rc("ecoli", SAUVAGE, ctx({}));
+  verif(porte(s0, /limitée au traitement des cystites/),
+        "sans renseignement : « l'indication de ces molécules est limitée aux cystites »");
+  var sansCys = {}; for (var k2 in SAUVAGE) sansCys[k2] = SAUVAGE[k2];
+  ["MEC", "FOS", "NIT", "TMP"].forEach(function (k3) { delete sansCys[k3]; });
+  verif(!porte(rc("ecoli", sansCys, ctx({})), /limitée au traitement des cystites/),
+        "… et pas quand aucune de ces quatre molécules n'est rendue");
+})();
+
+/* ---------- La donnée : appels de note, et propreté du texte ---------- */
+dire("\nLes commentaires sont extraits, pas recopiés");
+(function () {
+  var C = E.RENDU_CIBLE_COMMENTAIRES || {};
+  verif(Object.keys(C).length === 3, "les trois tableaux ont leur section de commentaires");
+  var tous = [];
+  Object.keys(C).forEach(function (k) { C[k].forEach(function (c) { tous.push(c.texte); }); });
+  verif(tous.length >= 18, tous.length + " phrases lues dans le document");
+  // Une note de bas de page restée dans une phrase partirait telle quelle au
+  // compte rendu : « La liste inclut également les 7 Pour rappel : … 8 https://… »
+  verif(!tous.some(function (t) { return /https?\s*:|medmal|\.pdf\b|Pour r? ?appel/.test(t); }),
+        "aucune note de bas de page n'a survécu dans une phrase du compte rendu");
+  verif(!tous.some(function (t) { return /\s\)|\(\s|\s,|\s\./.test(t); }),
+        "aucune ponctuation décollée");
+  verif(tous.every(function (t) { return /[.»]$/.test(t); }),
+        "chaque phrase est complète — elle se termine par un point");
+
+  // Les appels numérotés doivent être ATTACHÉS à des lignes du tableau,
+  // sans quoi la condition « si la molécule est rendue » ne mordrait jamais.
+  Object.keys(C).forEach(function (cle) {
+    C[cle].forEach(function (c) {
+      if (!c.appel) return;
+      var n = 0;
+      E.RENDU_CIBLE[cle].lignes.forEach(function (l) {
+        if ((l.notes || []).indexOf(c.appel) !== -1) n += l.codes.length;
+      });
+      verif(n > 0, cle + " : le commentaire (" + c.appel + ") est porté par "
+            + n + " molécule(s) du tableau");
+    });
+  });
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : le rendu ciblé ne masque que dans son périmètre,"
                     + " jamais une résistance, jamais une alerte."));

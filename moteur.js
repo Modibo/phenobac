@@ -1202,6 +1202,43 @@ function rcRestreindre(cle, colonne, prevues, r, c, A) {
   return { prevues: prevues, journal: journal, horsPortee: horsPortee };
 }
 
+/* ============================================================
+   § 2.1.4 — LES COMMENTAIRES QUI DOIVENT FIGURER AU COMPTE RENDU
+
+   « Il est recommandé de faire figurer sur le compte rendu un commentaire
+   précisant que tout ECBU positif ne nécessite pas obligatoirement de
+   traitement antibiotique… » Le document ne se contente pas de dire quoi
+   rendre : il dit quoi ÉCRIRE à côté. Une feuille amputée sans ces phrases
+   laisse le clinicien devant une liste plus courte, sans savoir pourquoi,
+   ni qu'une colonisation ne se traite pas, ni qu'il peut demander le reste.
+
+   Chaque tableau a ses propres commentaires et ils DIFFÈRENT : la
+   pyélonéphrite ne porte ni « en cas de cystite simple », ni le conseil sur
+   le triméthoprime seul. Les commentaires numérotés, eux, sont attachés à
+   des lignes du tableau — « (1) » sur le pivmécillinam, « (2) » sur le
+   cotrimoxazole — et ne valent que si la molécule est effectivement rendue :
+   conseiller le triméthoprime seul sur un compte rendu qui ne porte pas le
+   cotrimoxazole n'aiderait personne.
+   ============================================================ */
+function commentairesCible(cle, rendues) {
+  const tous = (RC.RENDU_CIBLE_COMMENTAIRES || {})[cle] || [];
+  const tb = RC.RENDU_CIBLE[cle];
+  const out = [];
+  tous.forEach(function (c) {
+    if (!c.appel) { out.push({ texte: c.texte, appel: null }); return; }
+    // La condition est DANS la donnée : quelles lignes portent cet appel.
+    const concernes = [];
+    if (tb) tb.lignes.forEach(function (l) {
+      if ((l.notes || []).indexOf(c.appel) !== -1)
+        l.codes.forEach(function (k) { if (concernes.indexOf(k) === -1) concernes.push(k); });
+    });
+    if (concernes.some(function (k) { return rendues.indexOf(k) !== -1; }))
+      out.push({ texte: c.texte, appel: c.appel, molecules: concernes.filter(function (k) {
+        return rendues.indexOf(k) !== -1; }) });
+  });
+  return out;
+}
+
 function renduCible(A, r, ctx, org, actif) {
   const c = ctx || {};
   if (!actif) return null;                         // garde-fou 1
@@ -1298,6 +1335,7 @@ function renduCible(A, r, ctx, org, actif) {
     applique: true, tableau: cle, titre: tb.titre, colonne: colonne,
     rendues: rendues.sort(), masquees: masquees.sort(),
     restrictions: journal, horsPortee: restr.horsPortee,
+    commentaires: commentairesCible(cle, rendues),
     plancher: plancher, notes: (RC.RENDU_CIBLE_NOTES || {})[cle] || null,
     source: RC.RENDU_CIBLE_SOURCE
   };
@@ -2727,6 +2765,7 @@ const MOTEUR = {
   // rendu ciblé (HAS 2023)
   RENDU_CIBLE: RC.RENDU_CIBLE, RENDU_CIBLE_SOURCE: RC.RENDU_CIBLE_SOURCE,
   RENDU_CIBLE_NOTES: RC.RENDU_CIBLE_NOTES, RENDU_CIBLE_LISTES: RC.RENDU_CIBLE_LISTES,
+  RENDU_CIBLE_COMMENTAIRES: RC.RENDU_CIBLE_COMMENTAIRES, commentairesCible,
   RENDU_CIBLE_RESTRICTIONS: RC.RENDU_CIBLE_RESTRICTIONS,
   renduCible, rcColonne, rcPremiereIntention, rcCodes, rcCephalosporines,
   RC_GROUPE3_ORG, RC_NOM_CODES,

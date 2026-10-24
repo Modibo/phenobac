@@ -286,8 +286,23 @@ molécules qui ne sont pas de dernier recours, et la feuille le dit. Ce n'est pa
 une règle scientifique : c'est le refus de rendre un antibiogramme qui ne soigne
 personne.
 
-**Vérification réelle** : `outils/essai-rendu-cible.js`, 112 contrôles, éprouvé
-par quinze mutations — toutes détectées. Deux d'entre elles ne changeaient rien
+**Le § 2.1.4 : ce qu'il faut ÉCRIRE à côté.** Le document ne dit pas seulement
+quelles molécules rendre, il dit quelles phrases doivent figurer sur le compte
+rendu. Chaque tableau porte sa propre section de commentaires (3.1.2, 3.2.2,
+3.3.2) et elles DIFFÈRENT : la pyélonéphrite ne porte ni « en cas de cystite
+simple, … ne nécessite pas la réalisation d'un ECBU », ni le conseil sur le
+triméthoprime seul. Les trois listes sont extraites mot pour mot et sortent à
+l'écran comme au compte rendu. Les commentaires NUMÉROTÉS — « (1) » sur le
+pivmécillinam, « (2) » sur le cotrimoxazole — sont attachés à des lignes du
+tableau et ne paraissent que si la molécule visée est effectivement rendue.
+
+Deux phrases comptent plus que les autres, et elles figurent sur les trois
+listes : une colonisation ne se traite pas, sauf à partir du 4e mois de
+grossesse ou avant un geste invasif ; et l'antibiogramme complet reste
+disponible sur demande auprès du laboratoire.
+
+**Vérification réelle** : `outils/essai-rendu-cible.js`, 142 contrôles, éprouvé
+par vingt-deux mutations — toutes détectées. Deux d'entre elles ne changeaient rien
 au rendu : elles sont surveillées par un invariant sur la DONNÉE (le céfixime
 n'est jamais prévu en première intention sensible ; aucune molécule nouvelle n'a
 de ligne dans les tableaux), et le banc le dit au lieu de faire semblant de les

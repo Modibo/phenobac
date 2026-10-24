@@ -26,18 +26,19 @@ var RENDU_CIBLE = {
     colonnes: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"],
     lignes: [
       { molecule: "Amoxicilline", codes: ["AMX"], variante: null, notes: [], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Pivmécillinam", codes: ["MEC"], variante: null, notes: [], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Fosfomycine-trométamol", codes: ["FOS"], variante: null, notes: [], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Nitrofurantoïne", codes: ["NIT"], variante: null, notes: [], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Triméthoprime", codes: ["TMP"], variante: null, notes: [], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Triméthoprime-sulfaméthoxazole", codes: ["SXT"], variante: null, notes: [], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Amoxicilline-acide clavulanique", codes: ["AMC"], variante: null, notes: [], rendre: ["amoxR", "amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Pivmécillinam", codes: ["MEC"], variante: null, notes: ["1"], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Fosfomycine-trométamol", codes: ["FOS"], variante: null, notes: ["1"], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Nitrofurantoïne", codes: ["NIT"], variante: null, notes: ["1"], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Triméthoprime", codes: ["TMP"], variante: null, notes: ["1", "2"], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Triméthoprime-sulfaméthoxazole", codes: ["SXT"], variante: null, notes: ["2"], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Amoxicilline-acide clavulanique (cystite)", codes: ["AMC"], variante: "cystite", notes: [], rendre: ["amoxR", "amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Amoxicilline-acide clavulanique ( py é lonéphrite )", codes: ["AMC"], variante: null, notes: [], rendre: ["amoxR", "amcEtSxtR", "c3gRouBlse"] },
       { molecule: "Céfixime", codes: ["CFM"], variante: null, notes: ["A"], rendre: ["amcEtSxtR", "c3gRouBlse"] },
       { molecule: "Céfotaxime, ceftriaxone", codes: ["CTX", "CRO"], variante: null, notes: ["A"], rendre: ["amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Fluoroquinolones (ofloxacine, cipro-", codes: ["CIP", "OFX", "LVX"], variante: null, notes: [], rendre: ["amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Fluoroquinolones (ofloxacine, cipro-floxacine, lévofloxacine)", codes: ["CIP", "OFX", "LVX"], variante: null, notes: [], rendre: ["amcEtSxtR", "c3gRouBlse"] },
       { molecule: "Témocilline", codes: ["TEM"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
       { molecule: "Céfoxitine", codes: ["FOX"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
-      { molecule: "Pipéracilline-tazobactam HAS • Antibiogrammes ciblés pour les infections urinaires à Entérobactéries dans la population féminine adulte (à partir de 12 ans). • oc-tobre 2023 11", codes: ["TZP"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
+      { molecule: "Pipéracilline-tazobactam", codes: ["TZP"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
       { molecule: "Ceftazidime", codes: ["CAZ"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
       { molecule: "Céfépime", codes: ["FEP"], variante: null, notes: ["A"], rendre: ["c3gRouBlse"] },
       { molecule: "Aztréonam", codes: ["ATM"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
@@ -54,9 +55,9 @@ var RENDU_CIBLE = {
       { molecule: "Pivmécillinam", codes: ["MEC"], variante: null, notes: [], rendre: ["premiereIntentionS", "premiereIntentionR", "premiereEtAmcEtCfmR"] },
       { molecule: "Fosfomycine-trométamol", codes: ["FOS"], variante: null, notes: [], rendre: ["premiereIntentionS", "premiereIntentionR", "premiereEtAmcEtCfmR"] },
       { molecule: "Nitrofurantoïne", codes: ["NIT"], variante: null, notes: [], rendre: ["premiereIntentionS", "premiereIntentionR", "premiereEtAmcEtCfmR"] },
-      { molecule: "Triméthoprime", codes: ["TMP"], variante: null, notes: [], rendre: ["premiereIntentionS", "premiereIntentionR", "premiereEtAmcEtCfmR"] },
-      { molecule: "Triméthoprime-sulfamé-", codes: ["SXT"], variante: null, notes: [], rendre: ["premiereIntentionS", "premiereIntentionR", "premiereEtAmcEtCfmR"] },
-      { molecule: "Amoxicilline-acide clavula-", codes: ["AMC"], variante: null, notes: [], rendre: ["premiereIntentionR", "premiereEtAmcEtCfmR"] },
+      { molecule: "Triméthoprime", codes: ["TMP"], variante: null, notes: ["1"], rendre: ["premiereIntentionS", "premiereIntentionR", "premiereEtAmcEtCfmR"] },
+      { molecule: "Triméthoprime-sulfamé-thoxazole", codes: ["SXT"], variante: null, notes: ["1"], rendre: ["premiereIntentionS", "premiereIntentionR", "premiereEtAmcEtCfmR"] },
+      { molecule: "Amoxicilline-acide clavula-nique (cystite)", codes: ["AMC"], variante: "cystite", notes: [], rendre: ["premiereIntentionR", "premiereEtAmcEtCfmR"] },
       { molecule: "Céfixime", codes: ["CFM"], variante: null, notes: ["A"], rendre: ["premiereIntentionR", "premiereEtAmcEtCfmR"] },
       { molecule: "Céfotaxime, ceftriaxone", codes: ["CTX", "CRO"], variante: null, notes: [], rendre: ["premiereEtAmcEtCfmR"] },
       { molecule: "Fluoroquinolones (ofloxacine, cipro-floxacine, lévofloxacine)", codes: ["CIP", "OFX", "LVX"], variante: null, notes: [], rendre: ["premiereEtAmcEtCfmR"] },
@@ -65,7 +66,7 @@ var RENDU_CIBLE = {
       { molecule: "Pipéracilline-tazobactam", codes: ["TZP"], variante: null, notes: [], rendre: ["premiereEtAmcEtCfmR"] },
       { molecule: "Ceftazidime", codes: ["CAZ"], variante: null, notes: [], rendre: ["premiereEtAmcEtCfmR"] },
       { molecule: "Céfépime", codes: ["FEP"], variante: null, notes: [], rendre: ["premiereEtAmcEtCfmR"] },
-      { molecule: "Aztréonam HAS • Antibiogrammes ciblés pour les infections urinaires à Entérobactéries dans la population féminine adulte (à partir de 12 ans). • oc-tobre 2023 13", codes: ["ATM"], variante: null, notes: [], rendre: ["premiereEtAmcEtCfmR"] },
+      { molecule: "Aztréonam", codes: ["ATM"], variante: null, notes: [], rendre: ["premiereEtAmcEtCfmR"] },
       { molecule: "Amikacine, gentamicine", codes: ["AMK", "GEN"], variante: null, notes: [], rendre: ["premiereEtAmcEtCfmR"] },
       { molecule: "Carbapénèmes (imipé-nème, ertapénème, méro-pénème)", codes: ["ETP", "IPM", "MEM"], variante: null, notes: ["B"], rendre: ["premiereEtAmcEtCfmR"] },
       { molecule: "Autres molécules (ex. nou-velles associations avec inhibiteurs)", codes: [], variante: null, notes: ["C"], rendre: ["premiereEtAmcEtCfmR"] },
@@ -77,10 +78,10 @@ var RENDU_CIBLE = {
     lignes: [
       { molecule: "Amoxicilline", codes: ["AMX"], variante: null, notes: [], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
       { molecule: "Triméthoprime-sulfaméthoxazole", codes: ["SXT"], variante: null, notes: [], rendre: ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Amoxicilline-acide clavulanique ( pyé-", codes: ["AMC"], variante: null, notes: [], rendre: ["amoxR", "amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Amoxicilline-acide clavulanique ( pyé-lonéphrite )", codes: ["AMC"], variante: null, notes: [], rendre: ["amoxR", "amcEtSxtR", "c3gRouBlse"] },
       { molecule: "Céfixime", codes: ["CFM"], variante: null, notes: ["A"], rendre: ["amcEtSxtR", "c3gRouBlse"] },
       { molecule: "Céfotaxime et ceftriaxone", codes: ["CTX", "CRO"], variante: null, notes: ["A"], rendre: ["amcEtSxtR", "c3gRouBlse"] },
-      { molecule: "Fluoroquinolones (ofloxacine, cipro-", codes: ["CIP", "OFX", "LVX"], variante: null, notes: [], rendre: ["amcEtSxtR", "c3gRouBlse"] },
+      { molecule: "Fluoroquinolones (ofloxacine, cipro-floxacine, lévofloxacine)", codes: ["CIP", "OFX", "LVX"], variante: null, notes: [], rendre: ["amcEtSxtR", "c3gRouBlse"] },
       { molecule: "Témocilline", codes: ["TEM"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
       { molecule: "Céfoxitine", codes: ["FOX"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
       { molecule: "Pipéracilline-tazobactam", codes: ["TZP"], variante: null, notes: [], rendre: ["c3gRouBlse"] },
@@ -129,6 +130,38 @@ var RENDU_CIBLE_RESTRICTIONS = [
   { regle: "Il est recommandé de rendre les nouvelles associations d’antibiotiques avec inhibiteurs (ceftolozane-tazobactam, ceftazidime-avibactam, imipénème-relebactam, méropénème-vaborbactam…) ou les nouvelles céphalosporines (comme le céfidérocol) uniquement sur demande du clinicien, après avis spécialisé ; en effet, ces molécules ne doivent pas être utilisées en épargne des carbapénèmes.",
     motif: null },
 ];
+/* Les commentaires associés au rendu, section 3.x.2 de chaque tableau.
+   Le § 2.1.4 les veut SUR LE COMPTE RENDU. Ils diffèrent d'un tableau à
+   l'autre : la pyélonéphrite ne porte ni « en cas de cystite simple », ni
+   le conseil sur le triméthoprime seul. */
+var RENDU_CIBLE_COMMENTAIRES = {
+  sansRenseignement: [
+    { appel: null, texte: "La liste des molécules rendues correspond à un antibiogramme « ciblé » pour le traitement d’une cystite ou d’une pyélonéphrite, incluant les antibiotiques les plus adaptés aux recommandations en vigueur et privilégiant les antibiotiques à faible impact écologique." },
+    { appel: null, texte: "La liste inclut également les antibiotiques testés et catégorisés « résistant »." },
+    { appel: null, texte: "L’antibiogramme complet reste disponible sur demande auprès du laboratoire." },
+    { appel: null, texte: "En cas de cystite simple, le traitement repose sur une antibiothérapie probabiliste et ne nécessite pas la réalisation d’un ECBU." },
+    { appel: null, texte: "Tout ECBU positif (leucocyturie et bactériurie) ne nécessite pas obligatoirement de traitement antibiotique : les colonisations (= absence de signes cliniques) ne doivent pas être traitées par antibiotiques, sauf à partir du 4e mois de grossesse ou avant un geste invasif sur les voies urinaires." },
+    { appel: "1", texte: "L’indication des molécules suivantes est limitée au traitement des cystites : pivmécillinam, nitrofurantoïne, fosfomycine-trométamol et triméthoprime." },
+    { appel: "2", texte: "Si le triméthoprime-sulfaméthoxazole est envisagé pour le traitement d’une cystite, privilégier le triméthoprime seul en l’absence de résistance, en raison d’un risque moindre d’effets secondaires." },
+    { appel: null, texte: "Il est rappelé que la prescription doit tenir compte des recommandations en vigueur et de l'analyse bénéfice/risque en fonction des dernières données scientifiques et des alertes de l’ANSM." },
+  ],
+  cystite: [
+    { appel: null, texte: "La liste des molécules rendues correspond à un antibiogramme « ciblé » pour le traitement d’une cystite, incluant les antibiotiques les plus adaptés aux recommandations en vigueur et privilégiant les antibiotiques à faible impact écologique." },
+    { appel: null, texte: "La liste inclut également les antibiotiques testés et catégorisés « résistant »." },
+    { appel: null, texte: "L’antibiogramme complet reste disponible sur demande auprès du laboratoire (notamment si le diagnostic finalement retenu est celui d’une pyélonéphrite)." },
+    { appel: null, texte: "En cas de cystite simple, le traitement repose sur une antibiothérapie probabiliste et ne nécessite pas la réalisation d’un ECBU." },
+    { appel: null, texte: "Tout ECBU positif (leucocyturie et bactériurie) ne nécessite pas obligatoirement de traitement antibiotique : les colonisations (= absence de signes cliniques) ne doivent pas être traitées par antibiotiques, sauf à partir du 4e mois de grossesse ou avant un geste invasif sur les voies urinaires." },
+    { appel: "1", texte: "Si le triméthoprime-sulfaméthoxazole est envisagé pour le traitement d’une cystite, privilégier le triméthoprime seul en l’absence de résistance, en raison d’un risque moindre d’effets secondaires." },
+    { appel: null, texte: "Il est rappelé que la prescription doit tenir compte des recommandations en vigueur et de l'analyse bénéfice/risque en fonction des dernières données scientifiques et des alertes de l’ANSM." },
+  ],
+  pyelonephrite: [
+    { appel: null, texte: "La liste des molécules rendues correspond à un antibiogramme « ciblé » pour le traitement d’une pyélonéphrite, incluant les antibiotiques les plus adaptés aux recommandations en vigueur, et privilégiant les antibiotiques à faible impact écologique." },
+    { appel: null, texte: "La liste inclut également les antibiotiques testés et catégorisés « résistant »." },
+    { appel: null, texte: "L’antibiogramme complet reste disponible sur demande auprès du laboratoire (notamment si le diagnostic finalement retenu n’est pas celui d’une pyélonéphrite)." },
+    { appel: null, texte: "Tout ECBU positif (leucocyturie et bactériurie) ne nécessite pas obligatoirement de traitement antibiotique : les colonisations (= absence de signes cliniques) ne doivent pas être traitées par antibiotiques, sauf à partir du 4e mois de grossesse ou avant un geste invasif sur les voies urinaires." },
+    { appel: null, texte: "Il est rappelé que la prescription doit tenir compte des recommandations en vigueur et de l'analyse bénéfice/risque en fonction des dernières données scientifiques et des alertes de l’ANSM." },
+  ],
+};
 /* Les listes que les notes citent elles-mêmes. Aucune n'est écrite ici à
    la main : une liste recopiée peut diverger du texte qu'elle applique. */
 var RENDU_CIBLE_LISTES = {
@@ -142,6 +175,7 @@ var RENDU_CIBLE_SOURCE = "HAS 2023-10-05 — antibiogrammes ciblés, ECBU à ent
 var R = { RENDU_CIBLE: RENDU_CIBLE, RENDU_CIBLE_SOURCE: RENDU_CIBLE_SOURCE,
           RENDU_CIBLE_NOTES: RENDU_CIBLE_NOTES,
           RENDU_CIBLE_RESTRICTIONS: RENDU_CIBLE_RESTRICTIONS,
+          RENDU_CIBLE_COMMENTAIRES: RENDU_CIBLE_COMMENTAIRES,
           RENDU_CIBLE_LISTES: RENDU_CIBLE_LISTES };
 if (typeof module !== "undefined" && module.exports) module.exports = R;
 else racine.PhenoBacRenduCible = R;

@@ -50,7 +50,12 @@ GRIS = (0.933, 0.925, 0.882)        # à ne pas rendre, sauf si résistant
 # document ; un contrôle plus bas vérifie que chaque ligne en trouve bien le
 # compte, de sorte qu'une remise en page se signale au lieu de décaler.
 TABLEAUX = [
-    {"cle": "sansRenseignement", "attendu": 19, "pages": [10, 11], "x": [236, 299, 363, 477],
+    # Vingt lignes, dont DEUX d'amoxicilline-acide clavulanique : « (cystite) »
+    # et « (pyélonéphrite) ». Elles valaient dix-neuf tant qu'une ligne vide
+    # tronquait le second libellé et faisait fondre les deux ; depuis que la
+    # recollection enjambe le vide, le document est lu tel qu'il est écrit.
+    # Les deux portent la même décision, et l'engin ne voit qu'un code AMC.
+    {"cle": "sansRenseignement", "attendu": 20, "pages": [10, 11], "x": [236, 299, 363, 477],
      "titre": "ECBU positif, sans renseignement clinique",
      "colonnes": ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"]},
     {"cle": "cystite", "attendu": 19, "pages": [12, 13], "x": [178, 281, 364],
@@ -129,7 +134,7 @@ def _pypdf():
     return PdfReader
 
 
-def _brut(page):
+def _aplatir(page):
     t = page.extract_text() or ""
     for c in ("\u2011", "\u00ad"):
         t = t.replace(c, "-")
@@ -137,13 +142,43 @@ def _brut(page):
     t = re.sub(r"HAS\s*•\s*Antibiogrammes ciblés.*?tobre 2023\s*\d+", " ", t, flags=re.S)
     t = re.sub(r"\s+", " ", t)
     t = re.sub(r"(\w)-\s+(\w)", r"\1\2", t)          # césures de fin de ligne
+    return t
+
+
+def _typo(t):
     t = re.sub(r"(\w)\s*-\s*(\w)", r"\1-\2", t)      # « ceftazidime - avibactam »
     t = re.sub(r"\(\s+", "(", t)
     t = re.sub(r"\s+([.,)])", r"\1", t)
     t = re.sub(r"\s*([;:!?»])", r" \1", t)             # ponctuation double à la française
     t = re.sub(r"«\s*", "« ", t)
-    t = re.sub(r"(\d)\s+e\s+génération", r"\1e génération", t)
+    t = re.sub(r"(\d)\s+e\s+(génération|mois)", r"\1e \2", t)
+    t = re.sub(r"([A-Za-zÀ-ÿ])\s+’", r"\1’", t)
     return t.strip()
+
+
+# Les notes de BAS DE PAGE sont intercalées dans le fil du texte : « La liste
+# inclut également les ⟨7 Pour rappel : … 8 https://… ⟩ antibiotiques testés ».
+# Les laisser, c'est publier au compte rendu une phrase coupée par une URL.
+# Leurs formes sont stables ; on les retire par leur début et leur fin, et le
+# découpage en phrases qui suit se charge de dire si le recollement a tenu.
+APPELS_BAS_DE_PAGE = [
+    r"\d{1,2}\s*Pour\s+r\s*appel\s*:.*?«\s*résistante\s*»\s*\.",
+    r"\d{1,2}\s*Société de pathologie infectieuse.*?medmal\.2018\.03\.005\.",
+    r"Société de pathologie infectieuse de langue française \(SPILF\)\..*?medmal\.2018\.03\.005\.",
+    r"\d{1,2}\s*Fiche Mémo HAS.*?\.pdf\.",
+    r"\d{1,2}\s*Recommandations du Comité.*?casfm/\s*\.",
+    r"\d{1,2}\s*Lettres d’information\s*ANSM\s*:.*?fluoroquinolones\.",
+    r"\d{0,2}\s*https?\s*://\S+(?:\s*[;.]\s*https?\s*://\S+)*\s*\.?",
+]
+
+
+def sans_appels(t):
+    for motif in APPELS_BAS_DE_PAGE:
+        t = re.sub(motif, " ", t, flags=re.S)
+    # L'appel collé au mot : « en vigueur 8 », « vigueur10 », « vigueur12, ».
+    # Le chiffre suit une LETTRE ; « du 4e mois » suit une espace, et survit.
+    t = re.sub(r"(?<=[A-Za-zÀ-ÿ»])\s?\d{1,2}(?=[\s,.;])", "", t)
+    return re.sub(r"\s+", " ", t).strip()
 
 
 _MOT = re.compile(r"(?<![A-Za-zÀ-ÿ])([A-Za-zÀ-ÿ]+) ([A-Za-zÀ-ÿ]+)(?![A-Za-zÀ-ÿ])")
@@ -183,10 +218,64 @@ def liste_entre_parentheses(txt, amorce):
     return out
 
 
+# Où commence et où finit la section de commentaires de chaque tableau. Le
+# § 2.1.4 dit QUOI écrire ; les sections 3.x.2 sont l'endroit où le document
+# l'écrit, tableau par tableau — et elles DIFFÈRENT : la pyélonéphrite ne
+# porte ni « en cas de cystite simple » ni le conseil sur le triméthoprime.
+# Les recopier à la main, c'est les uniformiser par mégarde.
+COMMENTAIRES = [
+    ("sansRenseignement", "3.1.2.", "3.2. Antibiogramme"),
+    ("cystite", "3.2.2.", "3.3. Antibiogramme"),
+    ("pyelonephrite", "3.3.2.", "Participants"),
+]
+
+
+def commentaires_des_tableaux(pages, freq, journal):
+    t = " ".join(pages[11:17])
+    out = {}
+    for cle, deb, fin in COMMENTAIRES:
+        a = t.find(deb)
+        b = t.find(fin, a)
+        if a < 0:
+            raise SystemExit(
+                "EXTRACTION INTERROMPUE — la section « %s » de commentaires est "
+                "introuvable. Le § 2.1.4 veut que ces phrases FIGURENT sur le compte "
+                "rendu : les perdre, c'est rendre un antibiogramme ciblé muet." % deb)
+        sec = _typo(sans_appels(t[a:b if b > 0 else a + 2800]))
+        sec = re.sub(r"^3\.\d\.2\.\s*Commentaires associés au rendu de "
+                     r"l’antibiogramme ciblé\s*", "", sec)
+        phrases = []
+        for ph in re.split(r"(?<=\.)\s+(?=[A-ZÀ-Þ(])", sec):
+            ph = recoller(ph.strip(), freq, journal)
+            if len(ph) < 20:
+                continue
+            m = re.match(r"^\((\d)\)\s*(.*)$", ph)
+            phrases.append({"appel": m.group(1) if m else None,
+                            "texte": m.group(2) if m else ph})
+        # Une URL ou un appel de note resté dans une phrase signerait un
+        # recollement manqué — et cette phrase part au compte rendu.
+        for p in phrases:
+            if re.search(r"https?\s*:|medmal|\.pdf\b", p["texte"]):
+                raise SystemExit(
+                    "EXTRACTION INTERROMPUE — tableau « %s » : une note de bas de page "
+                    "est restée dans le commentaire « %s… ». Cette phrase figurerait "
+                    "telle quelle sur le compte rendu." % (cle, p["texte"][:70]))
+        if len(phrases) < 4:
+            raise SystemExit(
+                "EXTRACTION INTERROMPUE — tableau « %s » : %d commentaire(s) lus, "
+                "au moins 4 attendus." % (cle, len(phrases)))
+        out[cle] = phrases
+    return out
+
+
 def notes_et_restrictions(chemin):
     from collections import Counter
     PdfReader = _pypdf()
-    pages = [_brut(p) for p in PdfReader(chemin).pages]
+    # Deux lectures de la même page. Les notes et le § 2.1.3 se lisent sur le
+    # texte mis en français ; les commentaires des tableaux ont d'abord besoin
+    # qu'on leur retire les notes de bas de page, qui y sont INTERCALÉES.
+    plates = [_aplatir(p) for p in PdfReader(chemin).pages]
+    pages = [_typo(p) for p in plates]
     freq = Counter()
     for t in pages:
         freq.update(w.lower() for w in re.findall(r"[A-Za-zÀ-ÿ]+", t))
@@ -261,7 +350,8 @@ def notes_et_restrictions(chemin):
                 "EXTRACTION INTERROMPUE — la liste « %s » n'a pas été lue dans les "
                 "notes. Elle commande un masquage ; l'écrire à la main serait "
                 "inventer une règle." % cle)
-    return notes, restrictions, listes, journal
+    commentaires = commentaires_des_tableaux(plates, freq, journal)
+    return notes, restrictions, listes, commentaires, journal
 
 
 def page(objs, pg, ip):
@@ -282,6 +372,10 @@ def page(objs, pg, ip):
 
 
 def propre(lab):
+    # Le titre courant du document se glisse dans les libellés quand la ligne
+    # tombe en bas de page. Il ne porte aucune décision ; le garder ne ferait
+    # qu'enlaidir le fichier engendré.
+    lab = re.sub(r"\s*HAS\s*•\s*Antibiogrammes ciblés.*", "", lab)
     lab = re.sub(r"\s*\(\s*[0-9A-C]\s*\)", "", lab)     # appels de note (1) (A)
     lab = re.sub(r"\s*-\s*", "-", lab)
     return re.sub(r"\s+", " ", lab).strip()
@@ -331,9 +425,18 @@ def extraire(chemin):
                 if re.search(r"\b(Sensible|Résistant|Résistance)\b", lab, re.I):
                     continue
                 entier = lab
-                for suite in lignes[i + 1:i + 3]:
+                # UNE LIGNE VIDE N'EST PAS UNE FIN DE LIBELLÉ. Le tableau de la
+                # cystite en intercale une entre « Triméthoprime-sulfamé- » et
+                # « thoxazole ( 1 ) » : on s'arrêtait là, et l'appel de note (1)
+                # du cotrimoxazole était perdu — avec lui, le conseil « privilégier
+                # le triméthoprime seul » ne serait jamais sorti sur un compte rendu
+                # qui rend le cotrimoxazole. On enjambe le vide ; tout le reste
+                # arrête toujours la recollection.
+                for suite in lignes[i + 1:i + 5]:
                     s = (suite[1] or "").strip()
-                    if not s or molecule(propre(s))[0] is not None:
+                    if not s:
+                        continue
+                    if molecule(propre(s))[0] is not None:
                         break
                     if s.startswith("(") or s.endswith("-") or re.match(r"^[a-zé]", s):
                         entier += " " + s
@@ -342,7 +445,7 @@ def extraire(chemin):
                 # Les appels de note — « Céfépime (A) » — sont DANS la case.
                 # propre() les retire du libellé ; on les garde ici, car ils
                 # désignent les lignes que les notes viennent restreindre.
-                appels[ly] = sorted(set(re.findall(r"\(\s*([A-C])\s*\)", entier)))
+                appels[ly] = sorted(set(re.findall(r"\(\s*([0-9A-C])\s*\)", entier)))
                 ancres.append((ly, propre(entier)))
             # TROIS INVARIANTS, parce que « autant de cases que de colonnes »
             # ne suffit pas : j'ai éprouvé ce contrôle seul par mutation, et il
@@ -455,7 +558,7 @@ def main():
               file=sys.stderr)
         return 2
     tables = extraire(sys.argv[1])
-    notes, restrictions, listes, journal = notes_et_restrictions(sys.argv[1])
+    notes, restrictions, listes, commentaires, journal = notes_et_restrictions(sys.argv[1])
 
     print("/* rendu-cible.js — engendré par outils/extraire-rendu-cible.py.")
     print("   NE PAS ÉDITER À LA MAIN.")
@@ -512,6 +615,22 @@ def main():
         print("    motif: %s }," % js(r["motif"]))
     print("];")
 
+    # Les commentaires que le § 2.1.4 veut voir FIGURER sur le compte rendu.
+    # « appel » renvoie au chiffre que porte la ligne du tableau : un conseil
+    # sur le triméthoprime n'a rien à faire sur un compte rendu où il n'est
+    # pas rendu.
+    print("/* Les commentaires associés au rendu, section 3.x.2 de chaque tableau.")
+    print("   Le § 2.1.4 les veut SUR LE COMPTE RENDU. Ils diffèrent d'un tableau à")
+    print("   l'autre : la pyélonéphrite ne porte ni « en cas de cystite simple », ni")
+    print("   le conseil sur le triméthoprime seul. */")
+    print("var RENDU_CIBLE_COMMENTAIRES = {")
+    for cle in commentaires:
+        print("  %s: [" % cle)
+        for c in commentaires[cle]:
+            print("    { appel: %s, texte: %s }," % (js(c["appel"]), js(c["texte"])))
+        print("  ],")
+    print("};")
+
     print("/* Les listes que les notes citent elles-mêmes. Aucune n'est écrite ici à")
     print("   la main : une liste recopiée peut diverger du texte qu'elle applique. */")
     print("var RENDU_CIBLE_LISTES = {")
@@ -524,6 +643,7 @@ def main():
     print("var R = { RENDU_CIBLE: RENDU_CIBLE, RENDU_CIBLE_SOURCE: RENDU_CIBLE_SOURCE,")
     print("          RENDU_CIBLE_NOTES: RENDU_CIBLE_NOTES,")
     print("          RENDU_CIBLE_RESTRICTIONS: RENDU_CIBLE_RESTRICTIONS,")
+    print("          RENDU_CIBLE_COMMENTAIRES: RENDU_CIBLE_COMMENTAIRES,")
     print("          RENDU_CIBLE_LISTES: RENDU_CIBLE_LISTES };")
     print('if (typeof module !== "undefined" && module.exports) module.exports = R;')
     print("else racine.PhenoBacRenduCible = R;")
@@ -534,6 +654,10 @@ def main():
               % len(set(journal)), file=sys.stderr)
         for j in sorted(set(journal)):
             print("   ", j, file=sys.stderr)
+    print("%d commentaires lus : %s."
+          % (sum(len(v) for v in commentaires.values()),
+             ", ".join("%s (%d)" % (k, len(v)) for k, v in commentaires.items())),
+          file=sys.stderr)
     print("\n%d règles lues au § 2.1.3 ; listes citées : %s."
           % (len(restrictions),
              ", ".join("%s (%d)" % (k, len(v)) for k, v in sorted(listes.items()))),
