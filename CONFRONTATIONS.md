@@ -27,9 +27,9 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : b392ac453e476efb02dc0e48beb4eb05bffa8e663af3a040276822c350dc441a
+- **empreinte** : cdcae852b51e8200d058db409d72916503ac2da8f00c62a98254b5b667ef4380
 - **date** : 2026-10-24
-- **résultat** : 218 seuils confrontés — **218 identiques, 0 différent**, 91 non comparés.
+- **résultat** : 244 seuils confrontés — **244 identiques, 0 différent**, 91 non comparés.
 
 La confrontation porte sur les concentrations critiques de l'EUCAST. Les
 seuils méningés (BP_MENINGE) et ceux du CA-SFM ont leurs propres documents et
@@ -169,7 +169,26 @@ document que personne n'a sous la main n'aiderait personne.
 
 ---
 
-## Ce que l'absence de document bloque
+## Les anaérobies manquants, ajoutés
+
+Le 24 octobre 2026, le classeur v16.1 obtenu, *Prevotella* spp.,
+*Fusobacterium necrophorum* et *F. nucleatum* ont été ajoutés — **51 règles**,
+lues par `outils/extraire-anaerobies.py` et jamais recopiées à la main :
+quatre seuils de *B. fragilis* s'étaient révélés faux le matin même.
+
+**Deux groupes pour *Fusobacterium***, et c'est le document qui l'impose : il
+chiffre l'amoxicilline-acide clavulanique et la pipéracilline-tazobactam pour
+*F. necrophorum*, et les renvoie à une note pour *F. nucleatum*. Un seul
+groupe aurait appliqué les seuils de l'un à l'autre — « un chiffre juste au
+mauvais endroit ».
+
+Plusieurs couples n'ont qu'un seuil **au disque** : l'EUCAST renvoie à une
+note pour la CMI. C'est fidèle — la lecture au disque conclut, la CMI non.
+
+*Cutibacterium acnes* n'a pas été ajouté : il relève de la feuille des
+anaérobies à Gram positif, qui reste à traiter.
+
+## Ce que l'absence de document avait bloqué
 
 Le 24 octobre 2026, trois anaérobies manquants ont été demandés — *Prevotella*,
 *Fusobacterium*, *Cutibacterium acnes*. Ils n'ont **pas** été ajoutés, et la

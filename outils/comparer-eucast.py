@@ -70,6 +70,9 @@ GROUPES = {
     'campylo':  (["C. jejuni"],                              ['C.jejuni_C.coli']),
     'vibrio':   (["V. cholerae"],                            ['Vibrio']),
     'bfragilis':(["B. fragilis"],                            ['Anaerobic bacteria_G-negative']),
+    'prevotella':(["Prevotella spp."],                       ['Anaerobic bacteria_G-negative']),
+    'fnecrophorum':(["F. necrophorum"],                      ['Anaerobic bacteria_G-negative']),
+    'fnucleatum':(["F. nucleatum"],                          ['Anaerobic bacteria_G-negative']),
     'cperfringens':(["C. perfringens"],                      ['Anaerobic bacteria_G-positive']),
     'cdifficile':(["C. difficile"],                          ['Anaerobic bacteria_G-positive']),
 }
@@ -79,6 +82,9 @@ GROUPES = {
 # correspondance, on compare un Clostridium aux seuils d'un Bacteroides.
 SECTIONS = {
     'bfragilis':    'Bacteroides spp.',
+    'prevotella':   'Prevotella spp.',
+    'fnecrophorum': 'Fusobacterium necrophorum and Fusobacterium nucleatum',
+    'fnucleatum':   'Fusobacterium necrophorum and Fusobacterium nucleatum',
     'cperfringens': 'Clostridium perfringens',
     'cdifficile':   'Clostridioides difficile',
 }
@@ -291,7 +297,13 @@ def main():
                            'scn':      r'[Cc]oagulase-negative',
                            'strepacg': r'groups A, C and G',
                            'strepb':   r'S\.\s*agalactiae',
-                           'campylo':  r'C\. jejuni'}
+                           'campylo':  r'C\. jejuni',
+                           # Les deux Fusobacterium partagent une section et
+                           # se séparent sur deux molécules : sans ce filtre,
+                           # les seuils de F. necrophorum s'appliqueraient à
+                           # F. nucleatum, que le document renvoie à une note.
+                           'fnecrophorum': r'F\. necrophorum',
+                           'fnucleatum':   r'F\. nucleatum'}
                 espece = ESPECES.get(groupe)
                 # Indications particulières : le rendu courant se fait hors
                 # méningite, hors endocardite, et un « screen only » n'est pas

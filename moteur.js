@@ -233,6 +233,20 @@ const ORG = {
   bfragilis:  { engine: "anaerobe", args: { species: "Bacteroides fragilis", type: "bfragilis" }, bpGroup: "bfragilis", intrinsic: {} },
   cperfringens:{ engine: "anaerobe", args: { species: "Clostridium perfringens", type: "cperfringens" }, bpGroup: "cperfringens", intrinsic: {} },
   cdifficile: { engine: "anaerobe", args: { species: "Clostridioides difficile", type: "cdifficile" }, bpGroup: "cdifficile", intrinsic: {} },
+
+  /* Anaérobies à Gram négatif. Le tableau 5 des phénotypes attendus les dit
+     « usually resistant to aztreonam, aminoglycosides, polymyxin B/colistin » —
+     c'est une phrase de préambule, qui ne porte pas de numéro de règle et ne
+     vise aucune espèce en particulier. Elle n'est donc pas transcrite en
+     résistance naturelle, comme pour les anaérobies déjà présents : ces
+     molécules ne figurent simplement pas au panel.
+
+     Fusobacterium a DEUX entrées parce que le document sépare les deux
+     espèces sur l'amoxicilline-acide clavulanique et la
+     pipéracilline-tazobactam. */
+  prevotella: { engine: "anaerobe", args: { species: "Prevotella spp.", type: "prevotella" }, bpGroup: "prevotella", intrinsic: {} },
+  fnecrophorum: { engine: "anaerobe", args: { species: "Fusobacterium necrophorum", type: "fusobacterium" }, bpGroup: "fnecrophorum", intrinsic: {} },
+  fnucleatum: { engine: "anaerobe", args: { species: "Fusobacterium nucleatum", type: "fusobacterium" }, bpGroup: "fnucleatum", intrinsic: {} },
   campylobacter:{ engine: "curved", args: { species: "Campylobacter jejuni", type: "campylobacter" }, bpGroup: "campylo", intrinsic: {} },
   vibrio:     { engine: "curved", args: { species: "Vibrio cholerae", type: "vibrio" }, bpGroup: "vibrio", intrinsic: {} },
   efaecalis:  { engine: "enterococcus", args: { species: "E. faecalis", ampExpectedS: true }, bpGroup: "enteroc", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", CTX: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", FOX: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", FEP: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", GEN: "Résistance naturelle attendue — aminosides (bas niveau). EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", E: "Résistance naturelle attendue — macrolides. EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", AZM: "Résistance naturelle attendue — macrolides. EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", DA: "Résistance naturelle attendue — lincosamides. EUCAST, phénotypes résistants attendus v1.2, règle 4.7."} },
@@ -2464,6 +2478,35 @@ function anaerobeInterpret(r, c, a) {
     });
     A.comment = "Clostridium perfringens : pénicilline G = traitement de référence, associée à la clindamycine (effet antitoxine) dans les formes graves.";
     if (isRI(r.PEN)) { A.sev = "high"; A.alerts.push({ lvl: "warn", txt: "Pénicilline non sensible : inhabituel — vérifier l'identification et la CMI." }); }
+  }
+  else if (type === "prevotella" || type === "fusobacterium") {
+    const gn = type === "prevotella" ? "Prevotella" : "Fusobacterium";
+    A.sev = "mod"; A.name = sp;
+    A.mech = "Anaérobie à Gram négatif. La β-lactamase est fréquente chez "
+           + gn + " : les pénicillines seules ne sont pas fiables, les associations "
+           + "avec inhibiteur et les carbapénèmes le sont.";
+    A.rules.push({ k: "✕", txt: "Aminosides, aztréonam et colistine naturellement inactifs sur les anaérobies — ne pas les rendre sensibles." });
+    A.rules.push({ k: "✚", txt: "Métronidazole = référence ; alternatives : amoxicilline-acide clavulanique, pipéracilline-tazobactam, carbapénèmes." });
+    parce(A, r, {
+      pour: [["MTZ", "S", "métronidazole actif — c'est le traitement de référence des anaérobies"],
+             ["AMC", "S", "l'inhibiteur restaure l'activité : la β-lactamase est inhibée"],
+             ["MEM", "S", "méropénème actif"]],
+      contre: [["MTZ", "RI", "métronidazole non sensible : rare et grave chez un anaérobie, à confirmer avant de le rendre"],
+               ["PEN", "RI", "pénicilline atteinte : β-lactamase, attendue dans ce genre"]]
+    });
+    A.comment = sp + " : anaérobie à Gram négatif. Métronidazole = traitement de référence ; "
+              + "β-lactamase fréquente, d'où des pénicillines seules peu fiables. "
+              + "Aminosides et colistine naturellement inactifs.";
+    if (isRI(r.MTZ)) {
+      A.sev = "crit";
+      A.alerts.push({ lvl: "crit", txt: "Résistance au métronidazole chez un anaérobie : rare et grave — confirmer et avis référent." });
+    }
+    if (isRI(r.IPM) || isRI(r.MEM)) {
+      A.alerts.push({ lvl: "warn", txt: "Sensibilité diminuée aux carbapénèmes chez un anaérobie : confirmer le mécanisme." });
+    }
+    if (type === "fusobacterium" && /nucleatum/.test(sp)) {
+      A.alerts.push({ lvl: "info", txt: "F. nucleatum : l'EUCAST ne chiffre ni l'amoxicilline-acide clavulanique ni la pipéracilline-tazobactam pour cette espèce — elles ne sont pas catégorisées." });
+    }
   }
   else {
     A.sev = "mod"; A.name = "Clostridioides difficile — pas d'antibiogramme de routine";

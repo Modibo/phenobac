@@ -56,7 +56,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.12";
+const BASE_VERSION = "2026.13";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece"];
 
@@ -198,6 +198,72 @@ const REGLES = [
 ["eucast","cperfringens","TZP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","cperfringens","TZP","disque","standard",24,24,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","cperfringens","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+
+// Anaérobies à Gram négatif ajoutés le 24 octobre 2026, lus dans le classeur
+// EUCAST v16.1 par outils/extraire-anaerobies.py — jamais recopiés à la main :
+// quatre seuils de Bacteroides fragilis s'étaient révélés faux le matin même,
+// plus permissifs que le document, depuis on ne sait quand.
+//
+// DEUX GROUPES POUR FUSOBACTERIUM, et c'est le document qui l'impose : il
+// chiffre l'amoxicilline-acide clavulanique et la pipéracilline-tazobactam
+// pour F. necrophorum, et les renvoie à une note pour F. nucleatum. Un seul
+// groupe appliquerait les seuils de l'un à l'autre.
+//
+// Plusieurs couples n'ont qu'un seuil AU DISQUE : l'EUCAST y renvoie à une
+// note pour la CMI. C'est fidèle — la lecture au disque conclut, la CMI non.
+["eucast","prevotella","PEN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","PEN","disque","standard",20,20,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","AMP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","AMP","disque","standard",25,25,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","AMX","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","AMC","disque","standard",24,24,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","TZP","disque","standard",26,26,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","ETP","disque","standard",29,29,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","IPM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","IPM","disque","standard",35,35,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","MEM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","MEM","disque","standard",34,34,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","DA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","DA","disque","standard",31,31,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","prevotella","MTZ","disque","standard",22,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","PEN","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","PEN","disque","standard",25,25,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","AMP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","AMP","disque","standard",27,27,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","AMX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+// Les deux lignes qui suivent sont propres à F. necrophorum : le document renvoie
+// F. nucleatum à une note pour ces deux molécules.
+["eucast","fnecrophorum","AMC","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","AMC","disque","standard",23,23,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","TZP","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","TZP","disque","standard",35,35,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","ETP","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","ETP","disque","standard",35,35,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","IPM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","IPM","disque","standard",36,36,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","MEM","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","MEM","disque","standard",35,35,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","DA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","DA","disque","standard",30,30,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","MTZ","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnecrophorum","MTZ","disque","standard",30,30,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","PEN","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","PEN","disque","standard",25,25,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","AMP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","AMP","disque","standard",27,27,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","AMX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","ETP","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","ETP","disque","standard",35,35,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","IPM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","IPM","disque","standard",36,36,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","MEM","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","MEM","disque","standard",35,35,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","DA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","DA","disque","standard",30,30,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","MTZ","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","fnucleatum","MTZ","disque","standard",30,30,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","cperfringens","VA","disque","standard",12,12,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","entero","AMC","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","entero","AMC","disque","standard",19,19,"20-10",[19,20],undefined,undefined,undefined,undefined,undefined],

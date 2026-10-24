@@ -2146,6 +2146,38 @@ const PRESENTATION = {
     ctx:[],
   },
 
+  /* Anaérobies à Gram négatif ajoutés le 24 octobre 2026. Les panels ne
+     portent QUE les molécules que l'EUCAST v16.1 chiffre pour chaque espèce —
+     F. nucleatum n'a ni amoxicilline-acide clavulanique ni
+     pipéracilline-tazobactam, le document les renvoyant à une note. Les
+     afficher laisserait croire qu'elles se catégorisent. */
+  prevotella:{
+    label:"Prevotella spp.", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["DA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  fnecrophorum:{
+    label:"Fusobacterium necrophorum", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["DA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  fnucleatum:{
+    label:"Fusobacterium nucleatum", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["DA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
   bfragilis:{
     label:"Bacteroides fragilis", italic:true, group:"Anaérobies",
     panel:[

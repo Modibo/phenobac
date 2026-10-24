@@ -325,6 +325,57 @@ dire("\nUne confirmation doit retirer la réserve qu'elle lève");
         "… et les carbapénèmes sont rendus résistants quelles que soient les CMI");
 })();
 
+/* ---------- 10. Les anaérobies à Gram négatif ---------- */
+dire("\nPrevotella et Fusobacterium — et la ligne que le document trace entre eux");
+(function () {
+  function cat(org, mic) {
+    return E.runInterpretation({ organism: org, mode: "mic", mic: mic, ctx: {} }).categories;
+  }
+  // Chaque espèce a SES seuils : le même chiffre ne dit pas la même chose.
+  verif(cat("prevotella", { MTZ: "2" }).MTZ === "S",
+        "métronidazole 2 mg/L chez Prevotella : sensible (seuil à 4)");
+  verif(cat("fnecrophorum", { MTZ: "2" }).MTZ === "R",
+        "… et RÉSISTANT chez Fusobacterium, dont le seuil est à 1");
+  verif(cat("prevotella", { MEM: "0.125" }).MEM === "S", "méropénème 0,125 chez Prevotella : sensible");
+  verif(cat("fnecrophorum", { MEM: "0.125" }).MEM === "R",
+        "… et résistant chez Fusobacterium (seuil 0,06)");
+
+  /* LA LIGNE QUE LE DOCUMENT TRACE ENTRE LES DEUX FUSOBACTERIUM. Il chiffre
+     l'amoxicilline-acide clavulanique et la pipéracilline-tazobactam pour
+     F. necrophorum, et les renvoie à une note pour F. nucleatum. Un seul
+     groupe de seuils aurait appliqué les premiers aux secondes. */
+  verif(cat("fnecrophorum", { AMC: "0.25" }).AMC === "S",
+        "amoxicilline-acide clavulanique chez F. necrophorum : catégorisée");
+  verif(cat("fnucleatum", { AMC: "0.25" }).AMC === undefined,
+        "… et PAS chez F. nucleatum : le document l'y renvoie à une note");
+  verif(cat("fnecrophorum", { TZP: "0.06" }).TZP === "S",
+        "pipéracilline-tazobactam chez F. necrophorum : catégorisée");
+  verif(cat("fnucleatum", { TZP: "0.06" }).TZP === undefined, "… et pas chez F. nucleatum");
+
+  // Un seuil au disque sans seuil en CMI : c'est fidèle au document.
+  verif(cat("prevotella", { AMC: "0.25" }).AMC === undefined,
+        "Prevotella, amoxicilline-acide clavulanique en CMI : aucune catégorie — le document renvoie à une note");
+  verif(E.runInterpretation({ organism: "prevotella", mode: "diam",
+                             diam: { AMC: "26" }, ctx: {} }).categories.AMC === "S",
+        "… alors que le MÊME couple se catégorise au disque, que le document chiffre");
+
+  // Le phénotype et ses règles.
+  var A = lire("prevotella", { MTZ: "S", AMC: "S", MEM: "S", PEN: "R" });
+  verif(/Prevotella/.test(A.name || ""), "le phénotype nomme l'espèce");
+  verif(/aminosides|aztréonam|colistine/i.test(texte(A)),
+        "les familles naturellement inactives sur les anaérobies sont rappelées");
+  verif(/[Mm]étronidazole = référence/.test(texte(A)), "le métronidazole est donné pour référence");
+  verif((A.pour || []).length >= 2, "la grille d'arguments est présente");
+
+  var ko = lire("fnecrophorum", { MTZ: "R", AMC: "S", MEM: "S" });
+  verif(ko.sev === "crit", "métronidazole résistant chez un anaérobie : gravité maximale");
+  verif(/rare et grave/i.test(texte(ko)), "… et l'alerte le dit");
+
+  var nu = lire("fnucleatum", { MTZ: "S", MEM: "S", PEN: "R" });
+  verif(/ne chiffre ni l'amoxicilline/i.test(texte(nu)),
+        "F. nucleatum : PhénoBac explique pourquoi deux molécules manquent");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : la gravité, le D-test et les règles du CA-SFM"
                     + " ne peuvent plus changer sans que rien ne tombe."));
