@@ -2693,7 +2693,12 @@ function getBP(bpOverride, group, k, ctx) {
   // chez E. coli — un chiffre juste au mauvais endroit.
   if (c.urin === "Oui" && BP_URIN[group] && BP_URIN[group][k] && especeAutorisee(group, k))
     return BP_URIN[group][k];
-  // Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas.
+  /* Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas.
+     Cette ligne est une ceinture par-dessus des bretelles, et l'épreuve par
+     mutation l'a montré : la retirer ne change rien, puisque le retour final
+     rend déjà « null » quand BP[group][k] n'existe pas. Elle reste parce
+     qu'elle DIT l'intention — et que la table ordinaire pourrait un jour
+     recevoir un seuil pour l'une de ces molécules sans qu'on y pense. */
   if (BP_URIN[group] && BP_URIN[group][k] && !(BP[group] && BP[group][k])) return null;
   return (BP[group] && BP[group][k]) || null;
 }

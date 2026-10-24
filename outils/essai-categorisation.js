@@ -159,6 +159,84 @@ dire("\nLe même refus, vu depuis l'interprétation complète");
         "une borne qui ne tranche pas ne produit pas de catégorie, même au bout de la chaîne");
 })();
 
+/* ---------- 8. LE SITE CHOISIT LA TABLE ----------
+
+   Savoir LIRE une mesure ne sert à rien si l'on se trompe de table. Le même
+   0,5 mg/L de pénicilline vaut « I » sur une hémoculture et « R » sur un
+   LCR — les seuils méningés sont plus stricts parce que l'antibiotique y
+   diffuse mal. Se tromper de site, c'est rendre sensible une souche qui
+   tuera le malade.
+
+   muter.py a montré que ce choix n'était éprouvé par rien : on pouvait
+   inverser « c.mening === "Oui" » sans qu'aucun contrôle ne tombe. */
+dire("\nLe site choisit la table de seuils");
+function categ(org, mic, ctx, ref) {
+  return E.runInterpretation({ organism: org, mode: "mic", mic: mic,
+                               ctx: ctx || {}, ref: ref || "eucast" }).categories;
+}
+(function () {
+  // Pénicilline sur pneumocoque : la même CMI, deux catégories.
+  verif(categ("pneumocoque", { PEN: "0.5" }, {}).PEN === "I",
+        "pénicilline 0,5 mg/L, site ordinaire : intermédiaire");
+  verif(categ("pneumocoque", { PEN: "0.5" }, { mening: "Oui" }).PEN === "R",
+        "la MÊME CMI en contexte méningé : RÉSISTANT — le seuil y est plus strict");
+  verif(categ("pneumocoque", { CTX: "1" }, {}).CTX === "I",
+        "céfotaxime 1 mg/L, site ordinaire : intermédiaire");
+  verif(categ("pneumocoque", { CTX: "1" }, { mening: "Oui" }).CTX === "R",
+        "… et résistant sur un LCR");
+  verif(categ("pneumocoque", { PEN: "0.5" }, { mening: "Oui" }, "casfm").PEN === "R",
+        "le CA-SFM dit la même chose, par sa propre table méningée");
+
+  /* LA TABLE MÉNINGÉE DU CA-SFM DOIT ÊTRE LA SIENNE. Ma première épreuve ne
+     le montrait pas : sur le pneumocoque, les deux comités tombent d'accord,
+     et retirer la ligne du CA-SFM laissait la table de l'EUCAST donner la
+     même réponse. Le méningocoque les sépare — le CA-SFM chiffre
+     l'amoxicilline en contexte méningé, l'EUCAST non. */
+  verif(categ("nmeningitidis", { AMX: "0.5" }, { mening: "Oui" }, "casfm").AMX === "R",
+        "méningocoque, amoxicilline 0,5 : résistant par la table méningée du CA-SFM");
+  verif(categ("nmeningitidis", { AMX: "0.5" }, { mening: "Oui" }, "eucast").AMX === "I",
+        "… intermédiaire sous l'EUCAST, qui n'a pas de table méningée pour ce couple");
+  verif(categ("nmeningitidis", { AMX: "0.5" }, {}, "casfm").AMX === "I",
+        "… et intermédiaire aussi hors contexte méningé : c'est bien le site qui tranche");
+
+  // Le méningé l'emporte sur l'urinaire : un LCR n'est pas une urine.
+  verif(categ("pneumocoque", { PEN: "0.5" }, { mening: "Oui", urin: "Oui" }).PEN === "R",
+        "les deux contextes cochés : c'est le méningé qui tranche");
+})();
+
+/* ---------- 9. Les molécules qui n'existent QUE pour la cystite ---------- */
+dire("\nCertaines molécules n'ont de seuil que pour la cystite simple");
+(function () {
+  // L'EUCAST ne chiffre le pivmécillinam, la nitrofurantoïne, le
+  // triméthoprime et le céfixime QUE pour cette indication. Hors d'elle, il
+  // n'y a pas de seuil — et dire « sensible » serait appliquer le seuil d'une
+  // autre indication à un prélèvement qui n'en relève pas.
+  ["MEC", "NIT", "TMP", "CFM"].forEach(function (k) {
+    var m = {}; m[k] = k === "NIT" ? "32" : "1";
+    verif(categ("ecoli", m, {})[k] === undefined,
+          k + " hors cystite : AUCUNE catégorie — le référentiel n'en chiffre pas");
+    verif(categ("ecoli", m, { urin: "Oui" })[k] === "S",
+          k + " en cystite simple : catégorisé");
+  });
+  verif(categ("ecoli", { FOS: "8" }, {}).FOS === "S",
+        "la fosfomycine, elle, a un seuil hors cystite : toutes ne sont pas urinaires");
+})();
+
+/* ---------- 10. La restriction d'espèce ---------- */
+dire("\nUn seuil validé pour une espèce ne vaut pas pour sa voisine");
+(function () {
+  // L'EUCAST ne valide la nitrofurantoïne que chez E. coli. Chez Klebsiella,
+  // le même chiffre n'a pas de seuil — « un chiffre juste au mauvais
+  // endroit », dit le moteur, et c'est exactement cela.
+  verif(categ("ecoli", { NIT: "32" }, { urin: "Oui" }).NIT === "S",
+        "nitrofurantoïne chez E. coli, en cystite : catégorisée");
+  verif(categ("kpneu", { NIT: "32" }, { urin: "Oui" }).NIT === undefined,
+        "la MÊME mesure chez Klebsiella : aucune catégorie — le seuil n'y est pas validé");
+  // Les autres molécules urinaires, elles, ne sont pas restreintes.
+  verif(categ("kpneu", { MEC: "1" }, { urin: "Oui" }).MEC === "S",
+        "le pivmécillinam, lui, vaut pour les deux : la restriction n'est pas globale");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : une mesure ne devient une catégorie que"
                     + " lorsqu'elle la détermine."));
