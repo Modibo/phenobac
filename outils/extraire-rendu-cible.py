@@ -1,0 +1,328 @@
+# -*- coding: utf-8 -*-
+"""
+extraire-rendu-cible.py — les tableaux décisionnels de l'antibiogramme ciblé.
+
+SOURCE
+    HAS, « Antibiogrammes ciblés pour les infections urinaires à
+    Entérobactéries dans la population féminine adulte (à partir de 12 ans) »,
+    recommandation validée par le Collège le 5 octobre 2023. Tableaux
+    décisionnels élaborés par la SFM (CA-SFM) et la SPILF, labellisés par la
+    HAS à la demande de la DGS.
+
+CE QUI REND CETTE EXTRACTION PARTICULIÈRE
+
+La décision n'est PAS dans le texte. Chaque case du tableau est une
+couleur, et la légende du document dit :
+
+    « Cases orange = molécules à rendre sur l'antibiogramme ciblé »
+    « Cases gris clair = molécules à ne pas rendre sur l'antibiogramme
+      ciblé sauf en cas de résistance »
+
+On décode donc les RECTANGLES REMPLIS du flux PDF, avec leur couleur et
+leur position, et on les rattache aux libellés de lignes par l'ordonnée.
+Le texte seul ne porte rien : aplati, il donne la liste des molécules et
+celle des phénotypes, sans jamais dire quelle molécule va avec quel
+phénotype.
+
+PRUDENCE. Masquer un résultat d'antibiogramme est un acte grave : se
+tromper de colonne, c'est cacher au clinicien la seule molécule active.
+L'outil s'interrompt donc plutôt que de produire un tableau douteux —
+toute ligne dont le nombre de cases ne correspond pas au nombre de
+colonnes attendu arrête l'extraction.
+
+    python3 outils/extraire-rendu-cible.py <recommandation.pdf> > rendu-cible.js
+"""
+import importlib.util
+import os
+import re
+import sys
+
+ICI = os.path.dirname(os.path.abspath(__file__))
+_s = importlib.util.spec_from_file_location("pdfpos", os.path.join(ICI, "pdfpos.py"))
+PDF = importlib.util.module_from_spec(_s)
+_s.loader.exec_module(PDF)
+
+ORANGE = (1.0, 0.753, 0.0)          # à rendre
+GRIS = (0.933, 0.925, 0.882)        # à ne pas rendre, sauf si résistant
+
+# Les trois tableaux : pages (indices 0), abscisses des colonnes, et le nom
+# que PhénoBac donnera à chaque colonne. Les abscisses sont relevées sur le
+# document ; un contrôle plus bas vérifie que chaque ligne en trouve bien le
+# compte, de sorte qu'une remise en page se signale au lieu de décaler.
+TABLEAUX = [
+    {"cle": "sansRenseignement", "attendu": 19, "pages": [10, 11], "x": [236, 299, 363, 477],
+     "titre": "ECBU positif, sans renseignement clinique",
+     "colonnes": ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"]},
+    {"cle": "cystite", "attendu": 19, "pages": [12, 13], "x": [178, 281, 364],
+     "titre": "ECBU positif, cystite",
+     "colonnes": ["premiereIntentionS", "premiereIntentionR", "premiereEtAmcEtCfmR"]},
+    {"cle": "pyelonephrite", "attendu": 15, "pages": [14, 15], "x": [221, 285, 354, 470],
+     "titre": "ECBU positif, pyélonéphrite",
+     "colonnes": ["amoxS", "amoxR", "amcEtSxtR", "c3gRouBlse"]},
+]
+
+# Libellé du document → codes PhénoBac. Une ligne peut porter plusieurs
+# molécules (« Céfotaxime, ceftriaxone ») : la décision vaut pour toutes.
+# « Autres molécules » n'a pas de code : c'est une consigne, pas un couple.
+MOLECULES = [
+    # L'ORDRE COMPTE, et la troncature aussi. La mise en page coupe les
+    # libellés : « Amoxicilline-acide clavula- » doit rester de l'AMC. Il
+    # tombait sur « ^Amoxicilline » et recevait AMX — la décision d'une
+    # molécule appliquée à une autre, le pire défaut possible pour un
+    # rendu sélectif.
+    (r"^Amoxicilline\s*-\s*acide clavula.*\(\s*cystite", ["AMC"], "cystite"),
+    (r"^Amoxicilline\s*-\s*acide clavula.*\(\s*pyélon", ["AMC"], "pyelonephrite"),
+    (r"^Amoxicilline\s*-\s*acide clavula", ["AMC"], None),
+    (r"^Amoxicilline(?!\s*-\s*acide)", ["AMX"], None),
+    (r"^Pivmécillinam", ["MEC"], None),
+    (r"^Fosfomycine", ["FOS"], None),
+    (r"^Nitrofuranto", ["NIT"], None),
+    (r"^Triméthoprime\s*-\s*sulfam", ["SXT"], None),
+    (r"^Triméthoprime", ["TMP"], None),
+    (r"^Céfixime", ["CFM"], None),
+    (r"^Céfotaxime", ["CTX", "CRO"], None),
+    (r"^Fluoroquinolones", ["CIP", "OFX", "LVX"], None),
+    (r"^Témocilline", ["TEM"], None),
+    (r"^Céfoxitine", ["FOX"], None),
+    (r"^Pipéracilline", ["TZP"], None),
+    (r"^Ceftazidime", ["CAZ"], None),
+    (r"^Céfépime", ["FEP"], None),
+    (r"^Aztréonam", ["ATM"], None),
+    (r"^Amikacine", ["AMK", "GEN"], None),
+    (r"^Carbapénèmes", ["ETP", "IPM", "MEM"], None),
+    (r"^Autres molécules", [], None),
+]
+
+
+def page(objs, pg, ip):
+    brut = PDF.contenu(objs, pg[ip])
+    lignes = [(y, " ".join(s for _, s in f).strip())
+              for y, f in PDF.lignes(PDF.extraire(brut, PDF.polices(objs, pg[ip]), "latin-1"))]
+    flux = brut.decode("latin-1")
+    coul, cells = None, []
+    for t in re.finditer(r"([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+(?:rg|sc|scn)"
+                         r"|([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+re\s+f", flux):
+        if t.group(1):
+            coul = tuple(round(float(t.group(i)), 3) for i in (1, 2, 3))
+        else:
+            x, y, w, h = (float(t.group(i)) for i in (4, 5, 6, 7))
+            if w > 40 and 8 < h < 30 and coul in (ORANGE, GRIS):
+                cells.append((x, y + h / 2.0, coul))
+    return lignes, cells
+
+
+def propre(lab):
+    lab = re.sub(r"\s*\(\s*[0-9A-C]\s*\)", "", lab)     # appels de note (1) (A)
+    lab = re.sub(r"\s*-\s*", "-", lab)
+    return re.sub(r"\s+", " ", lab).strip()
+
+
+def molecule(lab):
+    for motif, codes, variante in MOLECULES:
+        if re.match(motif, lab, re.I):
+            return codes, variante, motif
+    return None, None, None
+
+
+def extraire(chemin):
+    data = open(chemin, "rb").read()
+    objs = PDF.deplier_objstm(PDF.objets(data))
+    pg = PDF.pages(data, objs)
+    out = {}
+    for tb in TABLEAUX:
+        decision = {}
+        for ip in tb["pages"]:
+            lignes, cells = page(objs, pg, ip)
+            # Regrouper les cases par ordonnée : une ligne du tableau.
+            # L'ANCRE EST LE LIBELLÉ, pas l'ordonnée des cases.
+            #
+            # Deux regroupements ont échoué avant celui-ci, et la raison vaut
+            # d'être écrite : quand un libellé passe à la ligne, la case orange
+            # d'une colonne et les cases grises des autres sont dessinées à
+            # DOUZE POINTS d'écart, alors que deux lignes voisines n'en font
+            # que vingt. Aucun seuil vertical ne sépare proprement les deux
+            # situations.
+            #
+            # On rattache donc chaque case au libellé de molécule le plus
+            # proche. Les libellés, eux, sont bien un par ligne.
+            # Recoller les libellés coupés : « Amoxicilline-acide clavulanique »
+            # sur une ligne, « (cystite) » sur la suivante. Sans cela les deux
+            # lignes d'AMC du premier tableau portent le même nom, et la
+            # seconde écrase la première — une décision perdue en silence.
+            ancres = []
+            for i, (ly, lab) in enumerate(lignes):
+                if not lab or molecule(propre(lab))[0] is None:
+                    continue
+                # La LIGNE D'EN-TÊTE cite des molécules elle aussi
+                # (« Sensible amoxicilline », « Résistant amoxicilline-acide
+                # clavulanique ET … ») et se faisait prendre pour une ligne de
+                # données. Elle n'a capté aucune case ici, mais une mise en
+                # page un peu différente lui en aurait donné.
+                if re.search(r"\b(Sensible|Résistant|Résistance)\b", lab, re.I):
+                    continue
+                entier = lab
+                for suite in lignes[i + 1:i + 3]:
+                    s = (suite[1] or "").strip()
+                    if not s or molecule(propre(s))[0] is not None:
+                        break
+                    if s.startswith("(") or s.endswith("-") or re.match(r"^[a-zé]", s):
+                        entier += " " + s
+                    else:
+                        break
+                ancres.append((ly, propre(entier)))
+            # TROIS INVARIANTS, parce que « autant de cases que de colonnes »
+            # ne suffit pas : j'ai éprouvé ce contrôle seul par mutation, et il
+            # laissait passer une colonne oubliée dans le cadrage comme des
+            # cases rattachées à la mauvaise ligne. Dans les deux cas le COMPTE
+            # restait juste et le tableau était faux.
+            #   1. chaque case tombe PRÈS de l'abscisse d'une colonne ;
+            #   2. chaque case est affectée une fois et une seule ;
+            #   3. aucune ancre de la zone du tableau ne reste sans cases.
+            par_lab = {}
+            affectees = 0
+            for x, y, c in cells:
+                if not ancres:
+                    break
+                ly, lab = min(ancres, key=lambda a: abs(a[0] - y))
+                if abs(ly - y) > 20:
+                    continue                       # trop loin : pas cette ligne
+                col = min(range(len(tb["x"])), key=lambda i: abs(x - tb["x"][i]))
+                if abs(x - tb["x"][col]) > 30:
+                    raise SystemExit(
+                        "EXTRACTION INTERROMPUE — tableau « %s » : une case à x=%.0f ne "
+                        "tombe sous aucune colonne déclarée (%s). Le cadrage du tableau "
+                        "ne correspond plus au document."
+                        % (tb["cle"], x, ", ".join(str(v) for v in tb["x"])))
+                affectees += 1
+                # Clé : l'ORDONNÉE de l'ancre, unique par ligne. Deux lignes
+                # peuvent porter le même texte une fois recollées.
+                par_lab.setdefault((ly, lab), {})[col] = c   # dédoublonne x et x+5
+
+            # Deux lignes peuvent porter le MÊME libellé une fois la mise en
+            # page retirée — l'amoxicilline-acide clavulanique du premier
+            # tableau en a deux, « (cystite) » et « (pyélonéphrite) », dont la
+            # parenthèse vit sur la ligne suivante. Les fondre est acceptable
+            # SI ET SEULEMENT SI elles portent la même décision ; sinon l'une
+            # effacerait l'autre sans bruit.
+            # Chaque case doit avoir trouvé sa place. Les cases sont dessinées
+            # en double (fond et bordure) : on compare donc au nombre de
+            # couples (ligne, colonne) attendus, pas au nombre de rectangles.
+            attendu = sum(len(c) for c in par_lab.values())
+            if affectees < attendu:
+                raise SystemExit(
+                    "EXTRACTION INTERROMPUE — tableau « %s » : %d cases affectées pour %d "
+                    "couples ligne/colonne. Des cases se sont écrasées l'une l'autre."
+                    % (tb["cle"], affectees, attendu))
+            # Une ancre sans aucune case signale un rattachement parti ailleurs.
+            if par_lab:
+                basses = min(ly for ly, _ in par_lab)
+                hautes = max(ly for ly, _ in par_lab)
+                orphelines = [lab for ly, lab in ancres
+                              if basses <= ly <= hautes
+                              and not any(k[0] == ly for k in par_lab)]
+                if orphelines:
+                    raise SystemExit(
+                        "EXTRACTION INTERROMPUE — tableau « %s » : %d ligne(s) sans aucune "
+                        "case (%s). Les cases d'une ligne sont parties sur une autre."
+                        % (tb["cle"], len(orphelines), ", ".join(o[:28] for o in orphelines[:3])))
+
+            vu = {}
+            for (ly, nom), cols in sorted(par_lab.items()):
+                d = tuple(sorted((i, c) for i, c in cols.items()))
+                if nom in vu and vu[nom] != d:
+                    raise SystemExit(
+                        "EXTRACTION INTERROMPUE — tableau « %s » : deux lignes « %s » "
+                        "portent des décisions DIFFÉRENTES, et la mise en page ne permet "
+                        "pas de les distinguer. Les fondre en effacerait une."
+                        % (tb["cle"], nom[:46]))
+                vu[nom] = d
+
+            for (_ly, nom), cols in par_lab.items():
+                codes, variante, _ = molecule(nom)
+                if len(cols) != len(tb["x"]):
+                    raise SystemExit(
+                        "EXTRACTION INTERROMPUE — tableau « %s », ligne « %s » : %d cases "
+                        "pour %d colonnes. Se tromper de colonne, c'est cacher au clinicien "
+                        "la seule molécule active ; mieux vaut ne rien produire."
+                        % (tb["cle"], nom[:46], len(cols), len(tb["x"])))
+                decision[nom] = {
+                    "codes": codes, "variante": variante,
+                    "rendre": [tb["colonnes"][i] for i in sorted(cols)
+                               if cols[i] == ORANGE]}
+        # Le nombre de lignes est RELEVÉ SUR LE DOCUMENT et vérifié ici. Sans
+        # cela, oublier une page de continuation ampute le tableau en silence :
+        # les lignes restantes sont justes, et les molécules manquantes ne sont
+        # simplement jamais rendues. Le premier tableau compte vingt lignes de
+        # molécules dont deux d'amoxicilline-acide clavulanique, fondues parce
+        # qu'elles portent la même décision — d'où dix-neuf.
+        if len(decision) != tb["attendu"]:
+            raise SystemExit(
+                "EXTRACTION INTERROMPUE — tableau « %s » : %d lignes décodées, %d "
+                "attendues. Une page de continuation manque, ou le document a changé."
+                % (tb["cle"], len(decision), tb["attendu"]))
+        out[tb["cle"]] = {"titre": tb["titre"], "colonnes": tb["colonnes"],
+                          "lignes": decision}
+    return out
+
+
+def js(v):
+    if v is None:
+        return "null"
+    if isinstance(v, list):
+        return "[" + ", ".join(js(x) for x in v) + "]"
+    return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def main():
+    if len(sys.argv) < 2:
+        print("usage : python3 outils/extraire-rendu-cible.py <recommandation.pdf>",
+              file=sys.stderr)
+        return 2
+    tables = extraire(sys.argv[1])
+
+    print("/* rendu-cible.js — engendré par outils/extraire-rendu-cible.py.")
+    print("   NE PAS ÉDITER À LA MAIN.")
+    print("")
+    print("   Source : HAS, « Antibiogrammes ciblés pour les infections urinaires à")
+    print("   Entérobactéries dans la population féminine adulte (à partir de 12 ans) »,")
+    print("   validée par le Collège le 5 octobre 2023. Tableaux de la SFM et de la")
+    print("   SPILF, labellisés par la HAS.")
+    print("")
+    print("   « rendre » liste les colonnes où la case est ORANGE, c'est-à-dire où la")
+    print("   molécule figure sur l'antibiogramme ciblé. Partout ailleurs elle n'est pas")
+    print("   rendue — SAUF si la souche y est résistante, règle que le document pose")
+    print("   explicitement et qui ne souffre aucune exception.")
+    print("")
+    print("   PÉRIMÈTRE, et il est étroit : ECBU à entérobactéries, femme adulte à")
+    print("   partir de 12 ans. Hors de là, ces tableaux ne sont pas validés. */")
+    print("(function (racine) {")
+    print('"use strict";')
+    print("var RENDU_CIBLE = {")
+    for cle, tb in tables.items():
+        print("  %s: {" % cle)
+        print("    titre: %s," % js(tb["titre"]))
+        print("    colonnes: %s," % js(tb["colonnes"]))
+        print("    lignes: [")
+        for nom, d in tb["lignes"].items():
+            print("      { molecule: %s, codes: %s, variante: %s, rendre: %s },"
+                  % (js(nom), js(d["codes"]), js(d["variante"]), js(d["rendre"])))
+        print("    ]")
+        print("  },")
+    print("};")
+    print('var RENDU_CIBLE_SOURCE = "HAS 2023-10-05 — antibiogrammes ciblés, ECBU à '
+          'entérobactéries, femme adulte ≥ 12 ans";')
+    print("var R = { RENDU_CIBLE: RENDU_CIBLE, RENDU_CIBLE_SOURCE: RENDU_CIBLE_SOURCE };")
+    print('if (typeof module !== "undefined" && module.exports) module.exports = R;')
+    print("else racine.PhenoBacRenduCible = R;")
+    print('})(typeof self !== "undefined" ? self : this);')
+
+    n = sum(len(t["lignes"]) for t in tables.values())
+    print("\n%d lignes décodées sur %d tableaux." % (n, len(tables)), file=sys.stderr)
+    for cle, tb in tables.items():
+        print("  %-20s %d lignes, %d colonnes" % (cle, len(tb["lignes"]), len(tb["colonnes"])),
+              file=sys.stderr)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
