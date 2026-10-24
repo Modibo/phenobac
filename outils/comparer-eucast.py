@@ -22,6 +22,7 @@ Deux pièges traités ici, et c'est la raison d'être de cet outil :
      plusieurs lignes correspondent, l'outil les affiche toutes et demande un
      arbitrage au lieu de trancher tout seul.
 """
+import importlib.util
 import sys, os, re, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -103,25 +104,32 @@ AGENTS = {
 
 
 def seuils_phenobac(racine):
-    """Extrait la table BP du moteur serveur, sans exécuter de JavaScript."""
-    p = os.path.join(racine, 'netlify', 'functions', 'premium-interpret.js')
-    s = open(p, encoding='utf-8').read()
-    i = s.index('const BP ='); j = s.index('{', i); prof = 0
-    for k in range(j, len(s)):
-        if s[k] == '{': prof += 1
-        elif s[k] == '}':
-            prof -= 1
-            if prof == 0:
-                bloc = s[j:k + 1]; break
+    """Les seuils de CMI EUCAST, lus dans la base de connaissances.
+
+    CET OUTIL A ÉTÉ MUET TROIS SEMAINES. Il lisait « const BP = » dans le
+    moteur serveur ; le 3 octobre 2026 les seuils sont devenus des données
+    (base-connaissances.js) et cette constante a disparu. L'outil levait donc
+    une exception à chaque lancement — et comme rien ne le lançait, personne
+    ne l'a su. Un vérificateur qui ne tourne pas ne vérifie rien, et il est
+    pire qu'absent : on croit le contrôle fait.
+
+    Il lit désormais la base, par le même chemin que verifier-tables.py.
+    """
+    s = importlib.util.spec_from_file_location(
+        "moteur_py", os.path.join(racine, "outils", "moteur_py.py"))
+    MP = importlib.util.module_from_spec(s)
+    s.loader.exec_module(MP)
+    BP = MP.tables(["BP"])["BP"]
     table = {}
-    for mg in re.finditer(r'(\w+)\s*:\s*\{((?:[^{}]|\{[^{}]*\})*)\}', bloc):
-        groupe, corps = mg.group(1), mg.group(2)
-        entrees = {}
-        for ma in re.finditer(r'(\w+)\s*:\s*\{\s*S:\s*([\d.]+|null)\s*,\s*R:\s*([\d.]+|null)\s*\}', corps):
-            lire = lambda t: None if t == 'null' else float(t)
-            entrees[ma.group(1)] = (lire(ma.group(2)), lire(ma.group(3)))
-        if entrees:
-            table[groupe] = entrees
+    for groupe, entrees in BP.items():
+        garde = {}
+        for abx, v in entrees.items():
+            if not isinstance(v, dict) or "S" not in v or "R" not in v:
+                continue
+            nb = lambda x: None if x is None else float(x)
+            garde[abx] = (nb(v.get("S")), nb(v.get("R")))
+        if garde:
+            table[groupe] = garde
     return table
 
 
