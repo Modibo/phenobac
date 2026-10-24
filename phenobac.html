@@ -1042,6 +1042,12 @@
     .rp-list li.al-warn{color:#8a5a00}
     .rp-com{margin:6px 0 0;padding-left:16pt;font-size:9pt;color:#333}
     .rp-com li{margin-bottom:3px;break-inside:avoid}
+    /* La posologie qui fonde le seuil, sous la catégorie. Discrète pour un
+       « S », appuyée pour un « I » : sans elle, « I » se lit comme un demi-S. */
+    .rp-poso{font-size:8pt;color:#555;margin-top:2px;line-height:1.35}
+    .rp-poso-i{color:#8a5a00}
+    .rp-poso-i b{color:#8a5a00}
+    .rp-poso-note{margin-top:6px}
 
     .rp-comment{border:1px solid #999;background:#f6f6f4;padding:10px 12px;font-size:10pt;
       line-height:1.6;color:#111;break-inside:avoid}
@@ -5907,6 +5913,13 @@ function buildReport(A){
 
   // lignes de l'antibiogramme (uniquement les molécules renseignées)
   let rows="";
+  /* Le rendu ciblé est consulté DÈS LES LIGNES du tableau : une molécule que
+     la feuille ne porte pas ne doit pas recevoir de posologie. Il était
+     déclaré plus bas, et le lire avant sa déclaration aurait planté la
+     construction du compte rendu — en silence pour qui n'ouvre pas la
+     console. */
+  const rcR = A.renduCible;
+
   panelComplet(org).forEach(grp=>{
     grp.abx.forEach(k=>{
       const cat=state.results[k];
@@ -5924,11 +5937,34 @@ function buildReport(A){
         ? libelleCat(chg.rendu) + " <i>(lu " + esc(lettreCat(chg.brut)) + ")</i>"
         : libelleCat(cat);
       const prov = provenanceLigne(k, g, cat, chg);
+      /* LA POSOLOGIE QUI FONDE LE SEUIL, au compte rendu et non plus seulement
+         à l'écran. Le cahier l'exige depuis le premier jour : « pour une
+         molécule rendue I, la mention est OBLIGATOIRE et visible — la catégorie
+         I sans sa posologie est inexploitable ». Elle ne l'était pas : le
+         biologiste la voyait, le prescripteur non. Or « I » veut dire « marche
+         à condition d'augmenter l'exposition » : sans la dose, le clinicien
+         prescrit la dose habituelle, celle dont le seuil dit justement qu'elle
+         ne suffira pas.
+         Une molécule non rendue par l'antibiogramme ciblé n'en reçoit pas :
+         elle ne figure pas sur la feuille. */
+      const masquee = rcR && rcR.applique && rcR.masquees.indexOf(k) !== -1;
+      const poso = (!masquee && (A.posologies||{})[k]) || [];
+      /* Le schéma PORTE DÉJÀ sa voie — « … x 3 iv », « … x 2 oral ». Ma
+         première version tentait d'en extraire une étiquette à partir du nom
+         EUCAST de la molécule, et rendait « acid iv(1 g amoxicillin… » sur la
+         ligne de l'amoxicilline-acide clavulanique. Le schéma suffit, et il
+         reste VERBATIM : une posologie reformulée n'est plus celle du
+         référentiel. */
+      const posoTxt = poso.map(x => esc(x.schema || x.note || ""))
+                          .filter(Boolean).join(" · ");
+      const posoLigne = posoTxt
+        ? `<div class="rp-poso${cle==="I"?" rp-poso-i":""}">${cle==="I"?"<b>Forte posologie : </b>":"Schéma du seuil : "}${posoTxt}</div>`
+        : "";
       rows+=`<tr>
         <td>${esc(ABX[k].n)} <span class="rc">${esc(ABX[k].code)}</span></td>
         <td class="mic">${mesure?esc(mesure)+unite:"—"}</td>
         <td class="cat cat-${classeCat(cle)}">${cle?esc(lettreCat(cle)):"—"}</td>
-        <td class="catf">${catFull}</td>
+        <td class="catf">${catFull}${posoLigne}</td>
         <td class="prov">${pastillesProv(prov)}</td>
       </tr>`;
     });
@@ -5973,7 +6009,6 @@ function buildReport(A){
   /* Le rendu ciblé, au compte rendu. Un document amputé SANS MENTION
      laisserait croire que les molécules n'ont pas été testées — et le
      clinicien ne saurait pas qu'il peut en demander davantage. */
-  const rcR = A.renduCible;
   const rcLigne = (rcR && rcR.applique)
     ? `<div class="rp-sect-t">Rendu ciblé</div>
        <div class="rp-legende"><b>Antibiogramme ciblé</b>
@@ -6038,6 +6073,13 @@ function buildReport(A){
       <tbody>${rows}</tbody>
     </table>
 
+    ${rows.indexOf("rp-poso") !== -1 ? `<div class="rp-legende rp-poso-note">
+      <b>Posologies.</b> Chaque schéma est celui pour lequel la concentration
+      critique a été établie, repris mot pour mot du référentiel.
+      <b>Seuil établi pour ce schéma : l'adaptation au malade — poids, fonction
+      rénale, âge, grossesse — relève du prescripteur.</b> PhénoBac n'est pas un
+      outil de prescription : il ne choisit pas entre deux molécules et ne
+      propose aucune durée de traitement.</div>` : ""}
     ${rcLigne}
     ${condLigne ? `<div class="rp-sect-t">Conditions de réalisation déclarées</div>
       <div class="rp-cond">${condLigne}</div>` : ""}

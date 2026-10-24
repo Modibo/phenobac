@@ -168,6 +168,13 @@ jobs:
       # « 37 espèces » était écrit à la main en dix endroits. Le jour où deux
       # entérobactéries sont arrivées, les dix sont devenus faux en même temps
       # — et personne ne l'aurait vu : un texte ne tombe jamais au rouge.
+      # Le compte rendu est ce que le clinicien reçoit ; l'écran n'est vu que
+      # du biologiste. Tout ce que PhénoBac calcule et n'imprime pas n'existe
+      # pas pour celui qui prescrit — c'est arrivé à la posologie, calculée,
+      # affichée, et absente du compte rendu pendant des semaines.
+      - name: Le compte rendu porte ce qu'il doit porter
+        run: python3 outils/verifier-compte-rendu.py
+
       - name: Aucun compte affiché n'est écrit à la main
         run: python3 outils/verifier-comptes.py
 
