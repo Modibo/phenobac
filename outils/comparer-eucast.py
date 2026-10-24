@@ -100,6 +100,16 @@ AGENTS = {
     # « Minocycline (prophylaxis only) » chez le méningocoque n'est pas un
     # seuil de catégorisation : le motif s'arrête au nom seul.
     'MIN': r'^minocycline\b(?!\s*\()', 'MXF': r'^moxifloxacin',
+    # Molécules de l'antibiogramme ciblé urinaire, ajoutées le 2026-10-24.
+    # Les quatre premières ne sont chiffrées QUE pour la cystite simple :
+    # leur ligne EUCAST porte « (uncomplicated UTI only) », et le motif doit
+    # donc l'accepter — s'arrêter au nom seul les laisserait non comparées,
+    # c'est-à-dire non vérifiées, ce qui est le pire des deux mondes.
+    'MEC': r'^mecillinam', 'NIT': r'^nitrofurantoin', 'TMP': r'^trimethoprim\b(?!-)',
+    'CFM': r'^cefixime', 'ATM': r'^aztreonam\b(?!-)', 'OFX': r'^ofloxacin',
+    # La ceftriaxone a deux lignes ; celle du contexte ordinaire fait foi ici,
+    # la méningée étant comparée par sa propre table.
+    'CRO': r'^ceftriaxone \(indications other than',
 }
 
 
@@ -119,9 +129,19 @@ def seuils_phenobac(racine):
         "moteur_py", os.path.join(racine, "outils", "moteur_py.py"))
     MP = importlib.util.module_from_spec(s)
     s.loader.exec_module(MP)
-    BP = MP.tables(["BP"])["BP"]
+    tables = MP.tables(["BP", "BP_URIN"])
+    BP, URIN = tables["BP"], tables.get("BP_URIN") or {}
+    # Les seuils de cystite simple vivent dans leur propre table : ne lire que
+    # BP laisserait le pivmécillinam, le céfixime, la nitrofurantoïne et le
+    # triméthoprime HORS de la comparaison — non comparés, donc non vérifiés,
+    # alors même qu'ils viennent d'être ajoutés. On les joint ici ; aucune
+    # molécule n'est dans les deux tables, la fusion ne masque donc rien.
+    fusion = {}
+    for source in (BP, URIN):
+        for g, e in source.items():
+            fusion.setdefault(g, {}).update(e)
     table = {}
-    for groupe, entrees in BP.items():
+    for groupe, entrees in fusion.items():
         garde = {}
         for abx, v in entrees.items():
             if not isinstance(v, dict) or "S" not in v or "R" not in v:

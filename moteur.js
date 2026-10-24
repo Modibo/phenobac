@@ -98,9 +98,16 @@ const POSO = (typeof module !== "undefined" && module.exports)
 if (!BASE || !BASE.regles)
   throw new Error("base-connaissances.js doit être chargé avant moteur.js");
 
-const BP = {}, BP_MENINGE = {}, BP_CASFM = {}, BP_CASFM_URIN = {}, BP_MENINGE_CASFM = {},
-      DZ = {}, DZ_MENINGE = {}, DZ_CASFM = {}, DZ_CASFM_URIN = {},
+const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
+      BP_MENINGE_CASFM = {},
+      DZ = {}, DZ_MENINGE = {}, DZ_URIN = {}, DZ_CASFM = {}, DZ_CASFM_URIN = {},
       DZ_TEMOIN = {}, DZ_CASFM_ESPECE = {},
+      // Le même objet sous un nom exact : la colonne « espece » de la base se
+      // remplit quel que soit le référentiel, et l'EUCAST en a désormais
+      // besoin (nitrofurantoïne chez E. coli, triméthoprime chez E. coli et
+      // Klebsiella). Un second TABLEAU aurait fini par diverger du premier ;
+      // un second NOM ne le peut pas.
+      ESPECE_LIMITE = DZ_CASFM_ESPECE,
       DISQUE = {}, DISQUE_CASFM = {},
       ZIT = {}, ZIT_CASFM = {}, ZIT_ZONE = {}, ZIT_ZONE_CASFM = {},
       HORS_EUCAST = {}, CASFM_COUVRE = {}, CASFM_COUVRE_ESPECE = {},
@@ -113,16 +120,25 @@ const BP = {}, BP_MENINGE = {}, BP_CASFM = {}, BP_CASFM_URIN = {}, BP_MENINGE_CA
   // Où va un seuil, selon ses coordonnées.
   const SEUILS = {
     "eucast:cmi:standard": BP,        "eucast:cmi:meninge":  BP_MENINGE,
+    "eucast:cmi:urinaire": BP_URIN,
     "casfm:cmi:standard":  BP_CASFM,  "casfm:cmi:urinaire":  BP_CASFM_URIN,
     "casfm:cmi:meninge":   BP_MENINGE_CASFM,
     "eucast:disque:standard": DZ,       "eucast:disque:meninge":  DZ_MENINGE,
+    "eucast:disque:urinaire": DZ_URIN,
     "casfm:disque:standard":  DZ_CASFM, "casfm:disque:urinaire":  DZ_CASFM_URIN
   };
 
   BASE.regles.forEach(function (r) {
     if (r.S !== undefined || r.R !== undefined) {
       const t = SEUILS[r.ref + ":" + r.meth + ":" + r.site];
-      if (t) met(t, r.groupe, r.abx, { S: r.S, R: r.R });
+      // Une règle dont les coordonnées n'ont pas de table de destination
+      // était SILENCIEUSEMENT IGNORÉE : on pouvait ajouter un seuil à la base,
+      // le voir dans le fichier, et l'application ne jamais en tenir compte.
+      // Le défaut le plus coûteux est celui qui ne se signale pas.
+      if (!t) throw new Error(
+        "base-connaissances : aucune table pour « " + r.ref + ":" + r.meth + ":" + r.site
+        + " » (" + r.groupe + "/" + r.abx + "). Le seuil serait ignoré sans rien dire.");
+      met(t, r.groupe, r.abx, { S: r.S, R: r.R });
     }
     if (r.charge !== undefined)
       met(r.ref === "casfm" ? DISQUE_CASFM : DISQUE, r.groupe, r.abx, r.charge);
@@ -1869,6 +1885,19 @@ function getBP(bpOverride, group, k, ctx) {
     if (c.urin === "Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]) return BP_CASFM_URIN[group][k];
     if (BP_CASFM[group] && BP_CASFM[group][k]) return BP_CASFM[group][k];
   }
+  // L'EUCAST a lui aussi des seuils propres à la cystite simple : le
+  // pivmécillinam, le céfixime, la nitrofurantoïne et le triméthoprime n'y
+  // sont chiffrés QUE pour cette indication. Hors contexte urinaire ils
+  // n'ont pas de seuil du tout, et l'application doit le dire plutôt que
+  // d'appliquer un seuil d'une autre indication.
+  // La restriction d'espèce vaut pour la CMI comme pour le disque. Elle ne
+  // valait d'abord que pour le disque, et la nitrofurantoïne se trouvait
+  // catégorisée en CMI chez Klebsiella alors que l'EUCAST ne la valide que
+  // chez E. coli — un chiffre juste au mauvais endroit.
+  if (c.urin === "Oui" && BP_URIN[group] && BP_URIN[group][k] && especeAutorisee(group, k))
+    return BP_URIN[group][k];
+  // Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas.
+  if (BP_URIN[group] && BP_URIN[group][k] && !(BP[group] && BP[group][k])) return null;
   return (BP[group] && BP[group][k]) || null;
 }
 
@@ -2030,7 +2059,26 @@ function getDZ(dzOverride, group, k, ctx) {
     if (DZ_MENINGE[group] && DZ_MENINGE[group][k]) return DZ_MENINGE[group][k];
     if (BP_MENINGE[group] && BP_MENINGE[group][k]) return null;
   }
+  // Cystite simple : l'EUCAST chiffre quelques molécules POUR CETTE
+  // INDICATION SEULEMENT, et parfois pour quelques espèces seulement — la
+  // nitrofurantoïne chez E. coli, le triméthoprime chez E. coli et
+  // Klebsiella. Appliquer ces seuils ailleurs donnerait un chiffre juste au
+  // mauvais endroit, le défaut le plus difficile à repérer.
+  if (c.urin === "Oui" && DZ_URIN[group] && DZ_URIN[group][k]
+      && especeAutorisee(group, k)) return DZ_URIN[group][k];
+  // Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas :
+  // ne pas retomber sur un seuil d'une autre indication.
+  if (DZ_URIN[group] && DZ_URIN[group][k] && !(DZ[group] && DZ[group][k])) return null;
   return (DZ[group] && DZ[group][k]) || null;
+}
+
+/* La restriction d'espèce d'un seuil, s'il en porte une. Sert aux seuils
+   urinaires de l'EUCAST comme à ceux du CA-SFM : une seule règle, une seule
+   place où elle peut être oubliée. */
+function especeAutorisee(group, k) {
+  const limite = ESPECE_LIMITE[group + ":" + k];
+  if (!limite) return true;
+  return !!_activeId && limite.indexOf(_activeId) !== -1;
 }
 
 /* ---------- Diamètre -> S/I/R ---------- */
@@ -2283,8 +2331,8 @@ const MOTEUR = {
   COMMENT_MOMENTS, commentaireStructure, commentaireCopiable,
   // tables, pour l'affichage des seuils et des aides de saisie
   REFERENTIELS, ORG, ABXNAME,
-  BP, BP_MENINGE, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
-  DZ, DZ_MENINGE, DZ_CASFM, DZ_CASFM_URIN, DZ_CASFM_ESPECE, DZ_TEMOIN,
+  BP, BP_MENINGE, BP_URIN, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
+  DZ, DZ_MENINGE, DZ_URIN, DZ_CASFM, DZ_CASFM_URIN, DZ_CASFM_ESPECE, DZ_TEMOIN,
   DISQUE, DISQUE_CASFM, OXA_PNEUMO, DEPISTAGE_CASFM,
   ZIT, ZIT_CASFM, ZIT_ZONE, ZIT_ZONE_CASFM,
   HORS_EUCAST, CASFM_COUVRE, CASFM_COUVRE_ESPECE,

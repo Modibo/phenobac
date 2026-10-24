@@ -56,7 +56,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.10";
+const BASE_VERSION = "2026.11";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece"];
 
@@ -640,6 +640,75 @@ const REGLES = [
 ["eucast","viridans","TEC","disque","standard",16,16,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","viridans","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","viridans","VA","disque","standard",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+
+// --- Molécules urinaires, ajoutées le 2026-10-24 ----------------------------
+// Source : EUCAST, Clinical Breakpoint Tables v16.1 (classeur officiel),
+// feuille « Enterobacterales ». Nécessaires à l'antibiogramme ciblé de la
+// HAS, qui repose sur elles : masquer les céphalosporines sans pouvoir
+// proposer les molécules de première ligne retirerait sans rien offrir.
+//
+// LES RÉSERVES DU RÉFÉRENTIEL SONT PORTÉES, PAS COMMENTÉES :
+//   site « urinaire »  pivmécillinam, céfixime, nitrofurantoïne et
+//                      triméthoprime ne sont chiffrés QUE pour la cystite
+//                      simple. Hors de cette indication ils n'ont aucun
+//                      seuil, et l'application le dit.
+//   espece            la nitrofurantoïne n'est validée que chez E. coli,
+//                      le triméthoprime chez E. coli et Klebsiella. Chez
+//                      Proteus, le classeur porte « Note » : aucune valeur,
+//                      donc aucune ligne ici.
+["eucast","entero","ATM","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","ATM","disque","standard",26,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","OFX","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","OFX","disque","standard",24,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","CRO","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","CRO","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","CRO","cmi","meninge",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","CRO","disque","meninge",27,27,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","MEC","cmi","urinaire",8,8,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli","cfreundii","kpneu","koxytoca","kaerogenes","ecloacae","proteus"]],
+["eucast","entero","MEC","disque","urinaire",15,15,"10",undefined,undefined,undefined,undefined,undefined,["ecoli","cfreundii","kpneu","koxytoca","kaerogenes","ecloacae","proteus"]],
+["eucast","entero","CFM","cmi","urinaire",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","CFM","disque","urinaire",17,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","ATM","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","ATM","disque","standard",26,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","OFX","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","OFX","disque","standard",24,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","CRO","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","CRO","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","CRO","cmi","meninge",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","CRO","disque","meninge",27,27,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","MEC","cmi","urinaire",8,8,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli","cfreundii","kpneu","koxytoca","kaerogenes","ecloacae","proteus"]],
+["eucast","morganella","MEC","disque","urinaire",15,15,"10",undefined,undefined,undefined,undefined,undefined,["ecoli","cfreundii","kpneu","koxytoca","kaerogenes","ecloacae","proteus"]],
+["eucast","morganella","CFM","cmi","urinaire",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","CFM","disque","urinaire",17,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","ATM","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","ATM","disque","standard",26,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","OFX","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","OFX","disque","standard",24,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","CRO","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","CRO","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","CRO","cmi","meninge",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","CRO","disque","meninge",27,27,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","MEC","cmi","urinaire",8,8,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli","cfreundii","kpneu","koxytoca","kaerogenes","ecloacae","proteus"]],
+["eucast","salmonella","MEC","disque","urinaire",15,15,"10",undefined,undefined,undefined,undefined,undefined,["ecoli","cfreundii","kpneu","koxytoca","kaerogenes","ecloacae","proteus"]],
+["eucast","salmonella","CFM","cmi","urinaire",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","CFM","disque","urinaire",17,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","ATM","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","ATM","disque","standard",26,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","OFX","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","OFX","disque","standard",24,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","CRO","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","CRO","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","CRO","cmi","meninge",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","CRO","disque","meninge",27,27,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","MEC","cmi","urinaire",8,8,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli","cfreundii","kpneu","koxytoca","kaerogenes","ecloacae","proteus"]],
+["eucast","serratia","MEC","disque","urinaire",15,15,"10",undefined,undefined,undefined,undefined,undefined,["ecoli","cfreundii","kpneu","koxytoca","kaerogenes","ecloacae","proteus"]],
+["eucast","serratia","CFM","cmi","urinaire",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","CFM","disque","urinaire",17,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli"]],
+["eucast","entero","NIT","disque","urinaire",11,11,"100",undefined,undefined,undefined,undefined,undefined,["ecoli"]],
+["eucast","entero","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli","kpneu","koxytoca"]],
+["eucast","entero","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,["ecoli","kpneu","koxytoca"]],
+
 ];
 
 /* Chaque ligne redevient un objet nommé : le moteur n'a pas à connaître

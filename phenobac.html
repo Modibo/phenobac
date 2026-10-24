@@ -1790,6 +1790,16 @@ const ABX = {
   AMP:{n:"Ampicilline",code:"AMP"},
   AMC:{n:"Amoxicilline + ac. clavulanique",code:"AMC"},
   TZP:{n:"Pipéracilline + tazobactam",code:"TZP"},
+  // Molécules de l'antibiogramme ciblé urinaire (HAS/SFM 2023). Les quatre
+  // premières ne sont chiffrées par l'EUCAST que pour la cystite simple :
+  // hors de cette indication elles restent non catégorisables, et c'est juste.
+  MEC:{n:"Pivmécillinam",code:"MEC"},
+  NIT:{n:"Nitrofurantoïne",code:"NIT"},
+  TMP:{n:"Triméthoprime",code:"TMP"},
+  CFM:{n:"Céfixime",code:"CFM"},
+  CRO:{n:"Ceftriaxone",code:"CRO"},
+  OFX:{n:"Ofloxacine",code:"OFX"},
+  ATM:{n:"Aztréonam",code:"ATM"},
   FOX:{n:"Céfoxitine",code:"FOX"},
   CTX:{n:"Céfotaxime (C3G)",code:"CTX"},
   CAZ:{n:"Ceftazidime (C3G)",code:"CAZ"},
@@ -1879,8 +1889,8 @@ const PRESENTATION = {
   ecoli:{
     label:"Escherichia coli", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","TZP","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","TEM","FDC"]},
-      {t:"Autres familles",abx:["CIP","GEN","AMK","SXT","FOS","COL"]}
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","TZP","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","TEM","FDC"]},
+      {t:"Autres familles",abx:["CIP","OFX","GEN","AMK","SXT","TMP","NIT","FOS","COL"]}
     ],
     
     ctx:[{id:"syn",q:"Test de synergie C3G + ac. clavulanique (image en bouchon de champagne) ?",
@@ -1890,8 +1900,8 @@ const PRESENTATION = {
   kpneu:{
     label:"Klebsiella pneumoniae", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","TZP","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","TEM","FDC"]},
-      {t:"Autres familles",abx:["CIP","GEN","AMK","SXT","FOS","COL"]}
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","TZP","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","TEM","FDC"]},
+      {t:"Autres familles",abx:["CIP","OFX","GEN","AMK","SXT","TMP","NIT","FOS","COL"]}
     ],
     
     ctx:[{id:"syn",q:"Test de synergie C3G + ac. clavulanique ?",
@@ -1901,8 +1911,8 @@ const PRESENTATION = {
   ecloacae:{
     label:"Enterobacter cloacae", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","FDC"]},
-      {t:"Autres familles",abx:["CIP","GEN","AMK","SXT","COL"]}
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","FDC"]},
+      {t:"Autres familles",abx:["CIP","OFX","GEN","AMK","SXT","NIT","TMP","COL"]}
     ],
     
     ctx:[{id:"syn",q:"Synergie C3G + ac. clavulanique (recherche de BLSE surajoutée) ?",
@@ -2143,7 +2153,7 @@ const PRESENTATION = {
   proteus:{
     label:"Proteus mirabilis", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","TZP","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","TEM","FDC"]},
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","TZP","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","TEM","FDC"]},
       {t:"Autres familles",abx:["CIP","GEN","AMK","SXT"]}
     ],
     
@@ -2214,8 +2224,8 @@ const PRESENTATION = {
   koxytoca:{
     label:"Klebsiella oxytoca", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","TZP","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","TEM","FDC"]},
-      {t:"Autres familles",abx:["CIP","GEN","AMK","SXT","FOS","COL"]}
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","TZP","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","TEM","FDC"]},
+      {t:"Autres familles",abx:["CIP","OFX","GEN","AMK","SXT","TMP","NIT","FOS","COL"]}
     ],
     
     ctx:[{id:"syn",q:"Test de synergie C3G + ac. clavulanique ?",
@@ -2225,8 +2235,8 @@ const PRESENTATION = {
   kaerogenes:{
     label:"Klebsiella aerogenes", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","FDC"]},
-      {t:"Autres familles",abx:["CIP","GEN","AMK","SXT","COL"]}
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","FDC"]},
+      {t:"Autres familles",abx:["CIP","OFX","GEN","AMK","SXT","NIT","TMP","COL"]}
     ],
     
     ctx:[{id:"syn",q:"Synergie C3G + ac. clavulanique (BLSE surajoutée) ?",
@@ -2236,8 +2246,8 @@ const PRESENTATION = {
   serratia:{
     label:"Serratia marcescens", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","FDC"]},
-      {t:"Autres familles",abx:["CIP","GEN","AMK","SXT","COL"]}
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","FDC"]},
+      {t:"Autres familles",abx:["CIP","OFX","GEN","AMK","SXT","NIT","TMP","COL"]}
     ],
     
     ctx:[{id:"syn",q:"Synergie C3G + ac. clavulanique (BLSE surajoutée) ?",
@@ -2247,8 +2257,8 @@ const PRESENTATION = {
   cfreundii:{
     label:"Citrobacter freundii", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","FDC"]},
-      {t:"Autres familles",abx:["CIP","GEN","AMK","SXT","COL"]}
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","FDC"]},
+      {t:"Autres familles",abx:["CIP","OFX","GEN","AMK","SXT","NIT","TMP","COL"]}
     ],
     
     ctx:[{id:"syn",q:"Synergie C3G + ac. clavulanique (BLSE surajoutée) ?",
@@ -2258,8 +2268,8 @@ const PRESENTATION = {
   pvulgaris:{
     label:"Proteus vulgaris", italic:true, group:"Entérobactéries",
     panel:[
-      {t:"β-lactamines",abx:["AMX","AMC","TZP","FOX","CTX","CAZ","FEP","ETP","IPM","MEM","FDC"]},
-      {t:"Autres familles",abx:["CIP","GEN","AMK","SXT"]}
+      {t:"β-lactamines",abx:["AMX","AMC","MEC","TZP","FOX","CFM","CTX","CRO","CAZ","FEP","ATM","ETP","IPM","MEM","FDC"]},
+      {t:"Autres familles",abx:["CIP","OFX","GEN","AMK","SXT","NIT","TMP"]}
     ],
     
     ctx:[{id:"syn",q:"Test de synergie C3G + ac. clavulanique ?",
