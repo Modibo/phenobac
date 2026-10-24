@@ -146,7 +146,8 @@ def seuils_phenobac(racine):
         "moteur_py", os.path.join(racine, "outils", "moteur_py.py"))
     MP = importlib.util.module_from_spec(s)
     s.loader.exec_module(MP)
-    tables = MP.tables(["BP", "BP_URIN", "BP_MENINGE", "HORS_EUCAST"])
+    tables = MP.tables(["BP", "BP_URIN", "BP_MENINGE", "HORS_EUCAST", "ECOFF"])
+    globals()["ECOFF"] = tables.get("ECOFF") or {}
     globals()["HORS_EUCAST"] = tables.get("HORS_EUCAST") or {}
     if MENINGE:
         # LES SEUILS MÉNINGÉS N'ÉTAIENT CONFRONTÉS PAR RIEN. L'outil écarte
@@ -205,6 +206,7 @@ def main():
     total = {'identique': 0, 'different': 0, 'arbitrer': 0, 'absent': 0}
     non_comparables = []
     drapeaux = []
+    entre_parentheses = set()
 
     def convention(groupe, code):
         v = HORS_EUCAST.get(groupe)
@@ -407,6 +409,15 @@ def main():
             elif len(cands) == 1:
                 nom, sE, rE = cands[0]
                 if sE == 0.001: sE = None      # « pas de catégorie S » <-> S: null
+                # LA PARENTHÈSE SE LIT SUR LA LIGNE RETENUE, pas sur une
+                # candidate. L'amoxicilline des entérobactéries n'est entre
+                # parenthèses que sur « oral (other indications) » ; la ligne
+                # intraveineuse, celle que PhénoBac applique, ne l'est pas.
+                # Marquer au moment de la collecte faisait entrer les deux
+                # molécules les plus courantes du panel urinaire dans une
+                # réserve qui ne les concerne pas.
+                if "parenthèses" in nom:
+                    entre_parentheses.add((groupe, code))
                 if sE == sA and rE == rA:
                     etat, detail = 'identique', nom
                 else:
@@ -509,6 +520,30 @@ def main():
                 print("               %s" % nom[:70])
         else:
             print("\nAucun seuil méningé du document ne manque à PhénoBac.")
+
+    if entre_parentheses:
+        # LA PARENTHÈSE EST UNE RÉSERVE DU RÉFÉRENTIEL, pas une coquetterie
+        # typographique. La note 12 du classeur : « clinical evidence as
+        # monotherapy is usually lacking […] Reporting S or I should be
+        # avoided and if considered necessary, there should be a comment ».
+        print("\n=== SEUILS DONNÉS ENTRE PARENTHÈSES PAR L'EUCAST (%d) ==="
+              % len(entre_parentheses))
+        print("Fondés sur l'ECOFF : ils séparent le sauvage de l'acquis, et NE")
+        print("PRÉDISENT PAS la sensibilité clinique. L'EUCAST demande d'éviter")
+        print("de rendre « S » ou « I » sans commentaire (note 12).")
+        # LE DRAPEAU DOIT SUIVRE LE DOCUMENT, DANS LES DEUX SENS — même règle
+        # que pour « convention de laboratoire ». Une réserve oubliée rend
+        # « sensible » sans la dire ; une réserve de trop apprend à ignorer
+        # les réserves.
+        porte = {tuple(c.split(":")) for c in ECOFF}
+        for g, k in sorted(entre_parentheses):
+            print("  %-14s %-5s %s" % (g, k,
+                  "" if (g, k) in porte else "  <- PhénoBac ne porte PAS la réserve"))
+        trop = sorted(porte - entre_parentheses)
+        for g, k in trop:
+            print("  %-14s %-5s   <- réserve portée sans que le document la donne" % (g, k))
+        ecarts_ecoff = len([1 for x in entre_parentheses if x not in porte]) + len(trop)
+        print("  → %d écart(s) entre le document et le drapeau ECOFF." % ecarts_ecoff)
 
     print("\n=== bilan ===")
     print("  identiques         : %d" % total['identique'])

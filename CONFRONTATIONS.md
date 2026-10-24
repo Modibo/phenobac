@@ -66,13 +66,29 @@ Il reste, à juste titre, sur trois :
 - **moxifloxacine** — elle vient du CA-SFM, qui la retient pour l'ensemble des
   anaérobies.
 
-### Une nuance que la base ne sait pas encore porter
+### La parenthèse, désormais portée par la base
 
-L'EUCAST donne la clindamycine **entre parenthèses** : le seuil repose sur
-l'ECOFF et non sur des données cliniques, et le document avertit que « la
-preuve clinique en monothérapie fait généralement défaut ». La base n'a pas de
-colonne pour cette distinction : la valeur est juste, la réserve n'est pas
-affichée. La réserve est écrite ici, faute d'une colonne pour la porter.
+L'EUCAST donne certains seuils **entre parenthèses**. Ils reposent sur l'ECOFF :
+ils séparent la souche sauvage de celle qui a acquis un mécanisme, et le
+document l'écrit — « ECOFFs do not predict clinical susceptibility ». La note
+12 va plus loin : « clinical evidence as monotherapy is usually lacking […]
+**Reporting S or I should be avoided** and if considered necessary, there
+should be a comment to explain the need for adjunctive measures ».
+
+La base n'avait pas de colonne pour cette distinction : PhénoBac appliquait la
+valeur et perdait la réserve. Il rendait donc une colistine ou un aminoside
+« sensible » sur un seuil qui ne le promet pas.
+
+Une colonne `ecoff` la porte depuis le 24 octobre 2026, sur **20 couples** —
+colistine, gentamicine et amikacine chez les entérobactéries, *Acinetobacter*,
+*Pseudomonas*, *Salmonella*, *Serratia* et *Morganella* ; gentamicine chez les
+staphylocoques ; clindamycine chez *Bacteroides*. Le commentaire paraît quand
+la molécule est rendue **S ou I**, et seulement alors : le document autorise
+expressément à rendre « R ».
+
+`comparer-eucast.py` vérifie le drapeau **dans les deux sens** à chaque
+confrontation, comme celui de « convention de laboratoire ». Au 24 octobre : 0
+écart.
 
 ### Les 91 couples « non comparés », triés
 

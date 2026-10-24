@@ -376,6 +376,43 @@ dire("\nPrevotella et Fusobacterium — et la ligne que le document trace entre 
         "F. nucleatum : PhénoBac explique pourquoi deux molécules manquent");
 })();
 
+/* ---------- 11. Les seuils que l'EUCAST donne entre parenthèses ---------- */
+dire("\nLa parenthèse de l'EUCAST est une réserve, pas une coquetterie");
+(function () {
+  var RESERVE = /seuil donné entre parenthèses/;
+  // Le document : « ECOFFs do not predict clinical susceptibility » et, note
+  // 12, « Reporting S or I should be avoided […] there should be a comment ».
+  var s1 = lire("ecoli", { AMX: "S", CTX: "S", GEN: "S", COL: "S" });
+  verif(RESERVE.test(texte(s1)), "gentamicine et colistine rendues S : la réserve paraît");
+  verif(/ne prédit PAS le succès clinique/.test(texte(s1)),
+        "… et elle dit ce que le seuil ne promet pas");
+  verif(/Gentamicine/.test(texte(s1)) && /Colistine/.test(texte(s1)),
+        "… en nommant les molécules concernées");
+
+  // « Isolates with resistance can be reported R » : rien à dire alors.
+  verif(!RESERVE.test(texte(lire("ecoli", { AMX: "S", CTX: "S", GEN: "R", COL: "R" }))),
+        "rendues R : aucune réserve — le document autorise ce rendu-là");
+  verif(!RESERVE.test(texte(lire("ecoli", { AMX: "S", CTX: "S", CIP: "S" }))),
+        "aucune molécule concernée : aucune réserve, pas de bruit");
+
+  // Elle suit la MOLÉCULE et l'ESPÈCE, pas l'humeur.
+  verif(RESERVE.test(texte(lire("saureus", { FOX: "S", PEN: "S", GEN: "S", VA: "S" }))),
+        "gentamicine sur staphylocoque : concernée aussi");
+  verif(!RESERVE.test(texte(lire("saureus", { FOX: "S", PEN: "S", VA: "S", RD: "S" }))),
+        "… mais ni la vancomycine ni la rifampicine");
+
+  // Sous CA-SFM, c'est le seuil français qui s'applique : la réserve de
+  // l'EUCAST y serait fausse.
+  verif(!RESERVE.test(texte(lire("ecoli", { AMX: "S", CTX: "S", GEN: "S", COL: "S" }, {}, "casfm"))),
+        "sous CA-SFM : pas de réserve EUCAST — ce n'est pas son seuil qui s'applique");
+
+  // Et la table vient de la base, pas d'une liste écrite à part.
+  verif(Object.keys(E.ECOFF).length === 20,
+        Object.keys(E.ECOFF).length + " couples portent la réserve, lus dans la base");
+  verif(E.seuilEcoff("entero", "COL") && !E.seuilEcoff("entero", "CTX"),
+        "la colistine des entérobactéries est visée, la céfotaxime non");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : la gravité, le D-test et les règles du CA-SFM"
                     + " ne peuvent plus changer sans que rien ne tombe."));

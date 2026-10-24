@@ -108,7 +108,7 @@ if (!BASE || !BASE.regles)
 const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
       BP_MENINGE_CASFM = {},
       DZ = {}, DZ_MENINGE = {}, DZ_URIN = {}, DZ_CASFM = {}, DZ_CASFM_URIN = {},
-      DZ_TEMOIN = {}, DZ_CASFM_ESPECE = {},
+      DZ_TEMOIN = {}, DZ_CASFM_ESPECE = {}, ECOFF = {},
       // Le même objet sous un nom exact : la colonne « espece » de la base se
       // remplit quel que soit le référentiel, et l'EUCAST en a désormais
       // besoin (nitrofurantoïne chez E. coli, triméthoprime chez E. coli et
@@ -156,6 +156,7 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
     if (r.temoin !== undefined) met(DZ_TEMOIN, r.groupe, r.abx, r.temoin);
     if (r.dep !== undefined)    met(DEPISTAGE_CASFM, r.groupe, r.abx, r.dep);
     if (r.espece !== undefined) DZ_CASFM_ESPECE[r.groupe + ":" + r.abx] = r.espece;
+    if (r.ecoff) ECOFF[r.groupe + ":" + r.abx] = true;
     if (r.conv) dans(HORS_EUCAST, r.groupe, r.abx);
     if (r.couv !== undefined) {
       dans(CASFM_COUVRE, r.groupe, r.abx);
@@ -653,8 +654,41 @@ function moleculesDuSite(table, groupe, r) {
   });
 }
 
+/* L'EUCAST DONNE CERTAINS SEUILS ENTRE PARENTHÈSES, et ce n'est pas une
+   coquetterie typographique. Ils sont fondés sur l'ECOFF : ils séparent la
+   souche sauvage de celle qui a acquis un mécanisme, et — le document l'écrit
+   — « ECOFFs do not predict clinical susceptibility ». La note 12 va plus
+   loin : « clinical evidence as monotherapy is usually lacking […] Reporting
+   S or I should be avoided and if considered necessary, there should be a
+   comment to explain the need for adjunctive measures ».
+
+   PhénoBac appliquait la valeur et perdait la réserve. Il rendait donc une
+   colistine ou un aminoside « sensible » sur un seuil qui ne le promet pas.
+   Il ne CHANGE pas la catégorie — le document ne le demande pas — il joint le
+   commentaire que le document réclame. */
+function seuilEcoff(group, k) { return !!ECOFF[group + ":" + k]; }
+
 function coherence(A, r, org, c) {
   const ajoute = (lvl, txt) => A.alerts.push({ lvl: lvl, txt: txt });
+
+  /* --- 0 bis. Les seuils fondés sur l'ECOFF ---
+     La parenthèse est celle de l'EUCAST. Sous CA-SFM, c'est le seuil français
+     qui s'applique, et le comité y a ses propres choix : joindre la réserve de
+     l'autre référentiel la rendrait fausse. */
+  if (org && org.bpGroup && !estCasfm()) {
+    const vises = Object.keys(r).filter(function (k) {
+      return (r[k] === "S" || r[k] === "I") && seuilEcoff(org.bpGroup, k);
+    });
+    if (vises.length) {
+      A.rules.push({ k: "⟨⟩", txt:
+        "EUCAST : " + vises.map(function (k) { return ABXNAME[k] || k; }).join(", ")
+        + " — seuil donné entre parenthèses, fondé sur l'ECOFF. Il distingue la souche "
+        + "sauvage de celle qui a acquis un mécanisme, et ne prédit PAS le succès "
+        + "clinique : la preuve en monothérapie manque le plus souvent. Le référentiel "
+        + "demande d'éviter de rendre « sensible » sans commentaire, et de préciser "
+        + "les mesures associées (note 12)." });
+    }
+  }
 
   /* --- 0. LE PRÉLÈVEMENT DÉCLARÉ ET LE CONTEXTE DISENT-ILS LA MÊME CHOSE ? ---
 
@@ -3168,7 +3202,7 @@ const MOTEUR = {
   // traduction d'une mesure en catégorie
   catFromMic, catFromDiam, parseMic, parseDiam,
   getBP, getDZ, disquePour, zitPour, zitZonePour, enZit, enZitZone,
-  horsEucast, depistageSeuil, estCasfm,
+  horsEucast, depistageSeuil, estCasfm, seuilEcoff, ECOFF,
   // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
   CONDITIONS, conditionsTechniques,
   // rendu ciblé (HAS 2023)
