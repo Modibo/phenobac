@@ -2112,49 +2112,67 @@ function staphInterpret(r, c, a) {
 }
 
 function enteroCoccusInterpret(r, c, { species, ampExpectedS }) {
-  const A = { sev: "wild", name: "Entérocoque de phénotype sauvage",
-    mech: "Rappel : résistance naturelle aux céphalosporines, au cotrimoxazole in vivo et aux aminosides à bas niveau.", alerts: [], rules: [], comment: "" };
+  const A = { sev: "wild", name: tr("Entérocoque de phénotype sauvage", "Wild-type enterococcus"),
+    mech: tr("Rappel : résistance naturelle aux céphalosporines, au cotrimoxazole in vivo et aux aminosides à bas niveau.",
+             "Remember: intrinsic resistance to cephalosporins, to trimethoprim-sulfamethoxazole in vivo, and low-level resistance to aminoglycosides."),
+    alerts: [], rules: [], comment: "" };
 
   if (isRI(r.VA)) {
-    A.sev = "crit"; A.name = "ERV — Entérocoque résistant aux glycopeptides";
-    A.mech = "Résistance à la vancomycine (gènes vanA/vanB le plus souvent). Confirmer le génotype.";
+    A.sev = "crit"; A.name = tr("ERV — Entérocoque résistant aux glycopeptides", "VRE — vancomycin-resistant enterococcus");
+    A.mech = tr("Résistance à la vancomycine (gènes vanA/vanB le plus souvent). Confirmer le génotype.",
+                "Vancomycin resistance, usually through vanA or vanB. Confirm the genotype.");
     parce(A, r, {
-      pour: [["VA", "RI", "vancomycine atteinte — c'est la définition du phénotype"],
-             ["TEC", "RI", "téicoplanine également atteinte : oriente vers vanA plutôt que vanB"]],
-      aConfirmerPar: "génotypage van (vanA / vanB), qui distingue les deux et change la conduite"
+      pour: [["VA", "RI", tr("vancomycine atteinte — c'est la définition du phénotype", "vancomycin affected — that is the definition of the phenotype")],
+             ["TEC", "RI", tr("téicoplanine également atteinte : oriente vers vanA plutôt que vanB",
+                              "teicoplanin also affected: this points to vanA rather than vanB")]],
+      aConfirmerPar: tr("génotypage van (vanA / vanB), qui distingue les deux et change la conduite",
+                        "van genotyping (vanA / vanB), which separates the two and changes management")
     });
-    A.alerts.push({ lvl: "crit", txt: "Précautions complémentaires contact renforcées et signalement immédiat (EOH). Risque épidémique." });
-    A.rules.push({ k: "✚", txt: "Options à discuter selon l'antibiogramme : linézolide (souvent actif)." });
-    A.comment = `${species} résistant aux glycopeptides (ERV). Souche à signaler d'urgence, précautions complémentaires contact renforcées. Génotype van à confirmer.`;
+    A.alerts.push({ lvl: "crit", txt: tr("Précautions complémentaires contact renforcées et signalement immédiat (EOH). Risque épidémique.",
+      "Reinforced contact precautions and immediate notification of the infection control team. Outbreak risk.") });
+    A.rules.push({ k: "✚", txt: tr("Options à discuter selon l'antibiogramme : linézolide (souvent actif).",
+      "Options to discuss on the antibiogram: linezolid, which is often active.") });
+    A.comment = tr(`${species} résistant aux glycopeptides (ERV). Souche à signaler d'urgence, précautions complémentaires contact renforcées. Génotype van à confirmer.`,
+      `${species} resistant to glycopeptides (VRE). Notify urgently; reinforced contact precautions. The van genotype is to be confirmed.`);
   } else {
     parce(A, r, {
-      pour: [["VA", "S", "vancomycine active : pas de gène van"],
-             ["AMP", "S", "ampicilline active — c'est elle qui traite, et elle fonde la synergie avec un aminoside"]],
-      contre: [["HLG", "RI", "haut niveau de résistance à la gentamicine : la synergie β-lactamine + aminoside est perdue"]]
+      pour: [["VA", "S", tr("vancomycine active : pas de gène van", "vancomycin active: no van gene")],
+             ["AMP", "S", tr("ampicilline active — c'est elle qui traite, et elle fonde la synergie avec un aminoside",
+                             "ampicillin active — it is the treating agent, and it underpins synergy with an aminoglycoside")]],
+      contre: [["HLG", "RI", tr("haut niveau de résistance à la gentamicine : la synergie β-lactamine + aminoside est perdue",
+                                "high-level gentamicin resistance: the beta-lactam plus aminoglycoside synergy is lost")]]
     });
-    A.comment = `${species} sans résistance acquise majeure détectée sur le panel testé.`;
+    A.comment = tr(`${species} sans résistance acquise majeure détectée sur le panel testé.`,
+      `${species} with no major acquired resistance detected on the panel tested.`);
   }
 
   if (isR(r.AMP)) {
     if (ampExpectedS) {
-      A.alerts.push({ lvl: "warn", txt: "Ampicilline R chez E. faecalis : inhabituel — vérifier l'identification et le résultat." });
+      A.alerts.push({ lvl: "warn", txt: tr("Ampicilline R chez E. faecalis : inhabituel — vérifier l'identification et le résultat.",
+        "Ampicillin R in E. faecalis: unusual — check the identification and the result.") });
     }
-    A.rules.push({ k: "→R", txt: "Ampicilline R : impact sur les associations synergiques (β-lactamine + aminoside)." });
+    A.rules.push({ k: "→R", txt: tr("Ampicilline R : impact sur les associations synergiques (β-lactamine + aminoside).",
+      "Ampicillin R: this affects synergistic combinations (beta-lactam plus aminoglycoside).") });
     if (A.sev === "wild") A.sev = "mod";
   }
 
   if (isRI(r.HLG)) {
-    A.alerts.push({ lvl: "warn", txt: "Haut niveau de résistance à la gentamicine (HLAR) : perte de la synergie β-lactamine + aminoside." });
-    A.rules.push({ k: "✕", txt: "Ne pas compter sur l'association aminoside pour un effet bactéricide synergique." });
+    A.alerts.push({ lvl: "warn", txt: tr("Haut niveau de résistance à la gentamicine (HLAR) : perte de la synergie β-lactamine + aminoside.",
+      "High-level aminoglycoside resistance (HLAR): the beta-lactam plus aminoglycoside synergy is lost.") });
+    A.rules.push({ k: "✕", txt: tr("Ne pas compter sur l'association aminoside pour un effet bactéricide synergique.",
+      "Do not rely on an aminoglycoside combination for a synergistic bactericidal effect.") });
     if (A.sev === "wild") A.sev = "mod";
-    A.comment += " Haut niveau de résistance aux aminosides (perte de synergie).";
+    A.comment += tr(" Haut niveau de résistance aux aminosides (perte de synergie).",
+      " High-level aminoglycoside resistance (synergy lost).");
   }
   return finalize(A, r);
 }
 
 function pseudoInterpret(r, c) {
-  const A = { sev: "wild", name: "Pseudomonas aeruginosa sauvage",
-    mech: "Rappel : résistances naturelles nombreuses (aminopénicillines, C1G–C2G, céfotaxime, ertapénème, cotrimoxazole…).", alerts: [], rules: [], comment: "" };
+  const A = { sev: "wild", name: tr("Pseudomonas aeruginosa sauvage", "Wild-type Pseudomonas aeruginosa"),
+    mech: tr("Rappel : résistances naturelles nombreuses (aminopénicillines, C1G–C2G, céfotaxime, ertapénème, cotrimoxazole…).",
+             "Remember: many intrinsic resistances (aminopenicillins, 1st and 2nd generation cephalosporins, cefotaxime, ertapenem, trimethoprim-sulfamethoxazole…)."),
+    alerts: [], rules: [], comment: "" };
 
   const classes = [
     isRI(r.TZP) || isRI(r.CAZ) || isRI(r.FEP),
@@ -2164,58 +2182,79 @@ function pseudoInterpret(r, c) {
   ].filter(Boolean).length;
 
   // Les familles comptées ci-dessus, dites en clair pour la grille.
-  const FAMILLES = [["TZP", "RI", "β-lactamine anti-pyocyanique atteinte"],
-                    ["CAZ", "RI", "β-lactamine anti-pyocyanique atteinte"],
-                    ["FEP", "RI", "β-lactamine anti-pyocyanique atteinte"],
-                    ["IPM", "RI", "carbapénème atteint"],
-                    ["MEM", "RI", "carbapénème atteint"],
-                    ["CIP", "RI", "fluoroquinolone atteinte"],
-                    ["GEN", "RI", "aminoside atteint"],
-                    ["AMK", "RI", "aminoside atteint"]];
+  const antiPyo = tr("β-lactamine anti-pyocyanique atteinte", "antipseudomonal beta-lactam affected");
+  const carbaT = tr("carbapénème atteint", "carbapenem affected");
+  const aminoT = tr("aminoside atteint", "aminoglycoside affected");
+  const FAMILLES = [["TZP", "RI", antiPyo],
+                    ["CAZ", "RI", antiPyo],
+                    ["FEP", "RI", antiPyo],
+                    ["IPM", "RI", carbaT],
+                    ["MEM", "RI", carbaT],
+                    ["CIP", "RI", tr("fluoroquinolone atteinte", "fluoroquinolone affected")],
+                    ["GEN", "RI", aminoT],
+                    ["AMK", "RI", aminoT]];
 
   const carba = isRI(r.IPM) || isRI(r.MEM);
   const onlyColistin = has(r, "COL") && r.COL === "S" &&
     ["TZP", "CAZ", "FEP", "IPM", "MEM", "CIP", "GEN", "AMK"].every(k => !has(r, k) || isRI(r[k]));
 
   if (onlyColistin && classes >= 3) {
-    A.sev = "crit"; A.name = "Pseudomonas toto-résistant (XDR)";
-    A.mech = "Résistance à quasiment toutes les familles anti-pyocyaniques, colistine encore active.";
+    A.sev = "crit"; A.name = tr("Pseudomonas toto-résistant (XDR)", "Extensively drug-resistant Pseudomonas (XDR)");
+    A.mech = tr("Résistance à quasiment toutes les familles anti-pyocyaniques, colistine encore active.",
+                "Resistance to almost every antipseudomonal class, with colistin still active.");
     parce(A, r, {
-      pour: FAMILLES.concat([["COL", "S", "colistine encore active — c'est ce qui sépare le toto-résistant du multirésistant"]]),
-      aConfirmerPar: "CMI de colistine par microdilution en milieu liquide : la méthode des disques ne vaut pas pour elle"
+      pour: FAMILLES.concat([["COL", "S", tr("colistine encore active — c'est ce qui sépare le toto-résistant du multirésistant",
+                                             "colistin still active — that is what separates extensively from multidrug resistant")]]),
+      aConfirmerPar: tr("CMI de colistine par microdilution en milieu liquide : la méthode des disques ne vaut pas pour elle",
+                        "a colistin MIC by broth microdilution: disk diffusion is not valid for this agent")
     });
-    A.alerts.push({ lvl: "crit", txt: "Précautions complémentaires contact et signalement. Avis référent en antibiothérapie." });
-    A.comment = "Pseudomonas aeruginosa toto-résistant (XDR) : seule la colistine reste active sur le panel. Souche à signaler ; avis spécialisé indispensable.";
+    A.alerts.push({ lvl: "crit", txt: tr("Précautions complémentaires contact et signalement. Avis référent en antibiothérapie.",
+      "Contact precautions and notification. Seek advice from the antimicrobial stewardship team.") });
+    A.comment = tr("Pseudomonas aeruginosa toto-résistant (XDR) : seule la colistine reste active sur le panel. Souche à signaler ; avis spécialisé indispensable.",
+      "Extensively drug-resistant Pseudomonas aeruginosa (XDR): colistin alone remains active on the panel. Notifiable isolate; specialist advice is essential.");
   } else if (classes >= 3) {
-    A.sev = "high"; A.name = "Pseudomonas multirésistant (MDR)";
-    A.mech = "Résistance acquise à au moins trois familles anti-pyocyaniques.";
+    A.sev = "high"; A.name = tr("Pseudomonas multirésistant (MDR)", "Multidrug-resistant Pseudomonas (MDR)");
+    A.mech = tr("Résistance acquise à au moins trois familles anti-pyocyaniques.",
+                "Acquired resistance to at least three antipseudomonal classes.");
     parce(A, r, { pour: FAMILLES });
-    A.alerts.push({ lvl: "warn", txt: "Précautions complémentaires contact ; options thérapeutiques limitées." });
-    A.comment = "Pseudomonas aeruginosa multirésistant (MDR). Options thérapeutiques restreintes — voir antibiogramme détaillé.";
+    A.alerts.push({ lvl: "warn", txt: tr("Précautions complémentaires contact ; options thérapeutiques limitées.",
+      "Contact precautions; treatment options are limited.") });
+    A.comment = tr("Pseudomonas aeruginosa multirésistant (MDR). Options thérapeutiques restreintes — voir antibiogramme détaillé.",
+      "Multidrug-resistant Pseudomonas aeruginosa (MDR). Treatment options are narrow — see the full antibiogram.");
   } else if (carba) {
-    A.sev = "high"; A.name = "Résistance aux carbapénèmes";
-    A.mech = "Sensibilité diminuée aux carbapénèmes : imperméabilité (perte OprD) et/ou carbapénémase.";
+    A.sev = "high"; A.name = tr("Résistance aux carbapénèmes", "Carbapenem resistance");
+    A.mech = tr("Sensibilité diminuée aux carbapénèmes : imperméabilité (perte OprD) et/ou carbapénémase.",
+                "Reduced carbapenem susceptibility: impermeability (loss of OprD) and/or a carbapenemase.");
     parce(A, r, {
-      pour: [["IPM", "RI", "imipénème atteint — la perte de la porine OprD l'atteint en premier"],
-             ["MEM", "RI", "méropénème atteint"]],
-      contre: [["CAZ", "S", "une ceftazidime conservée oriente vers une imperméabilité plutôt que vers une carbapénémase"]],
-      aConfirmerPar: "recherche de carbapénémase, qui change la conduite d'hygiène"
+      pour: [["IPM", "RI", tr("imipénème atteint — la perte de la porine OprD l'atteint en premier",
+                              "imipenem affected — loss of the OprD porin affects it first")],
+             ["MEM", "RI", tr("méropénème atteint", "meropenem affected")]],
+      contre: [["CAZ", "S", tr("une ceftazidime conservée oriente vers une imperméabilité plutôt que vers une carbapénémase",
+                               "a preserved ceftazidime points to impermeability rather than to a carbapenemase")]],
+      aConfirmerPar: tr("recherche de carbapénémase, qui change la conduite d'hygiène",
+                        "testing for a carbapenemase, which changes infection-control measures")
     });
-    A.alerts.push({ lvl: "warn", txt: "Discordance imipénème/méropénème possible ; envisager confirmation de carbapénémase." });
-    A.comment = "Pseudomonas aeruginosa de sensibilité diminuée aux carbapénèmes (imperméabilité et/ou carbapénémase à préciser).";
+    A.alerts.push({ lvl: "warn", txt: tr("Discordance imipénème/méropénème possible ; envisager confirmation de carbapénémase.",
+      "Imipenem and meropenem may disagree; consider confirming a carbapenemase.") });
+    A.comment = tr("Pseudomonas aeruginosa de sensibilité diminuée aux carbapénèmes (imperméabilité et/ou carbapénémase à préciser).",
+      "Pseudomonas aeruginosa with reduced carbapenem susceptibility (impermeability and/or a carbapenemase, to be determined).");
   } else if (classes > 0) {
-    A.sev = "mod"; A.name = "Résistance acquise partielle";
-    A.mech = "Résistance acquise à une ou deux familles ; reste des anti-pyocyaniques conservé.";
+    A.sev = "mod"; A.name = tr("Résistance acquise partielle", "Partial acquired resistance");
+    A.mech = tr("Résistance acquise à une ou deux familles ; reste des anti-pyocyaniques conservé.",
+                "Acquired resistance to one or two classes; the remaining antipseudomonal agents are preserved.");
     parce(A, r, { pour: FAMILLES });
-    A.comment = "Pseudomonas aeruginosa avec résistance acquise partielle — se référer à l'antibiogramme.";
+    A.comment = tr("Pseudomonas aeruginosa avec résistance acquise partielle — se référer à l'antibiogramme.",
+      "Pseudomonas aeruginosa with partial acquired resistance — refer to the antibiogram.");
   } else {
     parce(A, r, {
-      pour: [["CAZ", "S", "ceftazidime active : pas de céphalosporinase AmpC déréprimée"],
-             ["IPM", "S", "imipénème actif : porine OprD conservée"],
-             ["CIP", "S", "fluoroquinolone active"],
-             ["GEN", "S", "aminoside actif"]]
+      pour: [["CAZ", "S", tr("ceftazidime active : pas de céphalosporinase AmpC déréprimée",
+                             "ceftazidime active: no derepressed AmpC cephalosporinase")],
+             ["IPM", "S", tr("imipénème actif : porine OprD conservée", "imipenem active: the OprD porin is intact")],
+             ["CIP", "S", tr("fluoroquinolone active", "fluoroquinolone active")],
+             ["GEN", "S", tr("aminoside actif", "aminoglycoside active")]]
     });
-    A.comment = "Pseudomonas aeruginosa de phénotype sauvage sur le panel testé.";
+    A.comment = tr("Pseudomonas aeruginosa de phénotype sauvage sur le panel testé.",
+      "Wild-type Pseudomonas aeruginosa on the panel tested.");
   }
   return finalize(A, r);
 }
@@ -2332,46 +2371,63 @@ function salmonellaInterpret(r, c) {
 }
 
 function pneumoInterpret(r, c) {
-  const A = { sev: "wild", name: "Pneumocoque sensible à la pénicilline",
-    mech: "Dépistage oxacilline en faveur d'une sensibilité conservée aux β-lactamines.", alerts: [], rules: [], comment: "" };
+  const A = { sev: "wild", name: tr("Pneumocoque sensible à la pénicilline", "Penicillin-susceptible pneumococcus"),
+    mech: tr("Dépistage oxacilline en faveur d'une sensibilité conservée aux β-lactamines.",
+             "The oxacillin screen favours preserved beta-lactam susceptibility."), alerts: [], rules: [], comment: "" };
   const mening = c && c.mening === "Oui";
 
   const oxaR = isRI(r.OXA);
   const betaR = isRI(r.PEN) || isRI(r.AMX) || isRI(r.CTX);
   if (betaR) {
-    A.sev = "high"; A.name = "PSDP — sensibilité diminuée aux β-lactamines";
-    A.mech = "Pneumocoque de sensibilité diminuée à la pénicilline et/ou aux céphalosporines (modification des PLP).";
+    A.sev = "high"; A.name = tr("PSDP — sensibilité diminuée aux β-lactamines",
+                                "PNSP — pneumococcus with reduced beta-lactam susceptibility");
+    A.mech = tr("Pneumocoque de sensibilité diminuée à la pénicilline et/ou aux céphalosporines (modification des PLP).",
+                "Pneumococcus with reduced susceptibility to penicillin and/or cephalosporins (altered penicillin-binding proteins).");
     parce(A, r, {
-      pour: [["PEN", "RI", "pénicilline G atteinte"],
-             ["AMX", "RI", "amoxicilline atteinte"],
-             ["CTX", "RI", "céfotaxime atteint — l'atteinte des céphalosporines est plus tardive que celle de la pénicilline"]],
-      aConfirmerPar: "CMI de pénicilline G, d'amoxicilline et de céfotaxime, qui ne se recouvrent pas"
+      pour: [["PEN", "RI", tr("pénicilline G atteinte", "benzylpenicillin affected")],
+             ["AMX", "RI", tr("amoxicilline atteinte", "amoxicillin affected")],
+             ["CTX", "RI", tr("céfotaxime atteint — l'atteinte des céphalosporines est plus tardive que celle de la pénicilline",
+                              "cefotaxime affected — cephalosporins are affected later than penicillin")]],
+      aConfirmerPar: tr("CMI de pénicilline G, d'amoxicilline et de céfotaxime, qui ne se recouvrent pas",
+                        "MICs of benzylpenicillin, amoxicillin and cefotaxime, which do not overlap")
     });
-    A.rules.push({ k: "CMI", txt: "Rendre pénicilline, amoxicilline et céfotaxime selon leur CMI (les catégories diffèrent par molécule)." });
-    if (mening) A.alerts.push({ lvl: "crit", txt: "Contexte méningé : appliquer les seuils méningés (stricts). Céfotaxime/ceftriaxone à forte dose ; avis spécialisé." });
-    A.comment = `Streptococcus pneumoniae de sensibilité diminuée aux β-lactamines (PSDP). Rendre pénicilline G, amoxicilline et céfotaxime selon leurs CMI respectives${mening ? ", avec les seuils méningés" : ""}.`;
+    A.rules.push({ k: "CMI", txt: tr("Rendre pénicilline, amoxicilline et céfotaxime selon leur CMI (les catégories diffèrent par molécule).",
+      "Report penicillin, amoxicillin and cefotaxime on their MICs (the categories differ from one agent to the next).") });
+    if (mening) A.alerts.push({ lvl: "crit", txt: tr("Contexte méningé : appliquer les seuils méningés (stricts). Céfotaxime/ceftriaxone à forte dose ; avis spécialisé.",
+      "Meningitis: apply the meningeal breakpoints, which are strict. High-dose cefotaxime or ceftriaxone; seek specialist advice.") });
+    A.comment = tr(`Streptococcus pneumoniae de sensibilité diminuée aux β-lactamines (PSDP). Rendre pénicilline G, amoxicilline et céfotaxime selon leurs CMI respectives${mening ? ", avec les seuils méningés" : ""}.`,
+      `Streptococcus pneumoniae with reduced beta-lactam susceptibility (PNSP). Report benzylpenicillin, amoxicillin and cefotaxime on their respective MICs${mening ? ", using the meningeal breakpoints" : ""}.`);
   } else if (oxaR) {
-    A.sev = "mod"; A.name = "Dépistage oxacilline positif — CMI requises";
-    A.mech = "Diamètre oxacilline diminué : sensibilité aux β-lactamines à confirmer par les CMI de pénicilline, amoxicilline et céfotaxime.";
+    A.sev = "mod"; A.name = tr("Dépistage oxacilline positif — CMI requises", "Oxacillin screen positive — MICs required");
+    A.mech = tr("Diamètre oxacilline diminué : sensibilité aux β-lactamines à confirmer par les CMI de pénicilline, amoxicilline et céfotaxime.",
+                "Reduced oxacillin zone: beta-lactam susceptibility must be confirmed by the MICs of penicillin, amoxicillin and cefotaxime.");
     parce(A, r, {
-      pour: [["OXA", "RI", "dépistage à l'oxacilline positif — il signale une modification des protéines liant les pénicillines, PAS une résistance clinique"]],
-      aConfirmerPar: "CMI de pénicilline G, d'amoxicilline et de céfotaxime : le dépistage ne tranche pas, il alerte"
+      pour: [["OXA", "RI", tr("dépistage à l'oxacilline positif — il signale une modification des protéines liant les pénicillines, PAS une résistance clinique",
+                              "oxacillin screen positive — it signals altered penicillin-binding proteins, NOT clinical resistance")]],
+      aConfirmerPar: tr("CMI de pénicilline G, d'amoxicilline et de céfotaxime : le dépistage ne tranche pas, il alerte",
+                        "MICs of benzylpenicillin, amoxicillin and cefotaxime: the screen does not decide, it warns")
     });
-    A.alerts.push({ lvl: "warn", txt: "Déterminer les CMI de pénicilline G, amoxicilline et céfotaxime avant de conclure." });
-    A.comment = "Streptococcus pneumoniae : dépistage oxacilline positif. Déterminer les CMI de pénicilline, amoxicilline et céfotaxime pour catégorisation.";
+    A.alerts.push({ lvl: "warn", txt: tr("Déterminer les CMI de pénicilline G, amoxicilline et céfotaxime avant de conclure.",
+      "Determine the MICs of benzylpenicillin, amoxicillin and cefotaxime before concluding.") });
+    A.comment = tr("Streptococcus pneumoniae : dépistage oxacilline positif. Déterminer les CMI de pénicilline, amoxicilline et céfotaxime pour catégorisation.",
+      "Streptococcus pneumoniae: oxacillin screen positive. Determine the MICs of penicillin, amoxicillin and cefotaxime in order to categorise.");
   } else {
-    A.comment = "Streptococcus pneumoniae sensible à la pénicilline (dépistage oxacilline négatif).";
+    A.comment = tr("Streptococcus pneumoniae sensible à la pénicilline (dépistage oxacilline négatif).",
+      "Streptococcus pneumoniae susceptible to penicillin (oxacillin screen negative).");
   }
 
   if (isR(r.E) && r.DA === "S") {
-    A.alerts.push({ lvl: "info", txt: "Érythromycine R et clindamycine S : rechercher une résistance inductible (D-test) avant de rendre la clindamycine." });
+    A.alerts.push({ lvl: "info", txt: tr("Érythromycine R et clindamycine S : rechercher une résistance inductible (D-test) avant de rendre la clindamycine.",
+      "Erythromycin R and clindamycin S: look for inducible resistance (D-test) before reporting clindamycin.") });
   } else if (isR(r.E) && isR(r.DA)) {
-    A.rules.push({ k: "MLS", txt: "Résistance constitutive MLSb (macrolides + lincosamides)." });
+    A.rules.push({ k: "MLS", txt: tr("Résistance constitutive MLSb (macrolides + lincosamides).",
+      "Constitutive MLSb resistance (macrolides and lincosamides).") });
   }
 
   if (isRI(r.VA)) {
     A.sev = "crit";
-    A.alerts.unshift({ lvl: "crit", txt: "Vancomycine non sensible chez un pneumocoque : exceptionnel — vérifier l'identification et la CMI d'urgence." });
+    A.alerts.unshift({ lvl: "crit", txt: tr("Vancomycine non sensible chez un pneumocoque : exceptionnel — vérifier l'identification et la CMI d'urgence.",
+      "Vancomycin not susceptible in a pneumococcus: exceptional — check the identification and the MIC urgently.") });
   }
   return finalize(A, r);
 }
@@ -2384,55 +2440,73 @@ function strepInterpret(r, c, a) {
   const penRI = isRI(r.PEN) || isRI(r.AMX) || isRI(r.CTX);
 
   if (betaHem) {
-    A.name = `${sp} — sensible à la pénicilline`;
-    A.mech = "Streptocoque β-hémolytique : la pénicilline G reste l'antibiotique de référence (aucune résistance acquise décrite).";
-    A.comment = `${sp}. Pénicilline G / amoxicilline : traitement de référence, sensibilité conservée.`;
+    A.name = tr(`${sp} — sensible à la pénicilline`, `${sp} — penicillin-susceptible`);
+    A.mech = tr("Streptocoque β-hémolytique : la pénicilline G reste l'antibiotique de référence (aucune résistance acquise décrite).",
+                "Beta-haemolytic streptococcus: benzylpenicillin remains the reference agent (no acquired resistance has been described).");
+    A.comment = tr(`${sp}. Pénicilline G / amoxicilline : traitement de référence, sensibilité conservée.`,
+                   `${sp}. Benzylpenicillin / amoxicillin: reference treatment, susceptibility preserved.`);
     parce(A, r, {
-      pour: [["PEN", "S", "pénicilline G active — aucune résistance acquise n'est décrite chez les streptocoques β-hémolytiques"],
-             ["AMX", "S", "amoxicilline active"]]
+      pour: [["PEN", "S", tr("pénicilline G active — aucune résistance acquise n'est décrite chez les streptocoques β-hémolytiques",
+                             "benzylpenicillin active — no acquired resistance has been described in beta-haemolytic streptococci")],
+             ["AMX", "S", tr("amoxicilline active", "amoxicillin active")]]
     });
     if (penRI) {
-      A.sev = "high"; A.name = "Sensibilité β-lactamine inhabituelle";
-      A.mech = "Résistance/sensibilité diminuée aux β-lactamines chez un streptocoque β-hémolytique.";
+      A.sev = "high"; A.name = tr("Sensibilité β-lactamine inhabituelle", "Unusual beta-lactam susceptibility");
+      A.mech = tr("Résistance/sensibilité diminuée aux β-lactamines chez un streptocoque β-hémolytique.",
+                  "Resistance or reduced beta-lactam susceptibility in a beta-haemolytic streptococcus.");
       parce(A, r, {
-        pour: [["PEN", "RI", "pénicilline G atteinte"],
-               ["AMX", "RI", "amoxicilline atteinte"],
-               ["CTX", "RI", "céfotaxime atteinte"]],
-        aConfirmerPar: "vérification de l'identification et CMI : aucune résistance acquise à la pénicilline n'est décrite dans cette espèce, l'erreur d'identification est l'hypothèse la plus probable"
+        pour: [["PEN", "RI", tr("pénicilline G atteinte", "benzylpenicillin affected")],
+               ["AMX", "RI", tr("amoxicilline atteinte", "amoxicillin affected")],
+               ["CTX", "RI", tr("céfotaxime atteinte", "cefotaxime affected")]],
+        aConfirmerPar: tr("vérification de l'identification et CMI : aucune résistance acquise à la pénicilline n'est décrite dans cette espèce, l'erreur d'identification est l'hypothèse la plus probable",
+                          "checking the identification, and an MIC: no acquired penicillin resistance has been described in this species, so a misidentification is the most likely explanation")
       });
-      A.alerts.push({ lvl: "warn", txt: "Résistance aux β-lactamines chez un streptocoque β-hémolytique : exceptionnel — vérifier l'identification et la CMI." });
-      A.comment = `${sp} : profil β-lactamine inhabituel, à confirmer.`;
+      A.alerts.push({ lvl: "warn", txt: tr("Résistance aux β-lactamines chez un streptocoque β-hémolytique : exceptionnel — vérifier l'identification et la CMI.",
+        "Beta-lactam resistance in a beta-haemolytic streptococcus: exceptional — check the identification and the MIC.") });
+      A.comment = tr(`${sp} : profil β-lactamine inhabituel, à confirmer.`, `${sp}: unusual beta-lactam profile, to be confirmed.`);
     }
   } else {
     if (penRI) {
-      A.sev = "high"; A.name = "Sensibilité diminuée aux β-lactamines (PLP)";
-      A.mech = "Streptocoque du groupe viridans avec sensibilité diminuée à la pénicilline (modification des PLP).";
+      A.sev = "high"; A.name = tr("Sensibilité diminuée aux β-lactamines (PLP)", "Reduced beta-lactam susceptibility (PBP)");
+      A.mech = tr("Streptocoque du groupe viridans avec sensibilité diminuée à la pénicilline (modification des PLP).",
+                  "Viridans group streptococcus with reduced penicillin susceptibility (altered penicillin-binding proteins).");
       parce(A, r, {
-        pour: [["PEN", "RI", "pénicilline G atteinte — par modification des protéines liant la pénicilline, non par une β-lactamase"],
-               ["AMX", "RI", "amoxicilline atteinte"],
-               ["CTX", "RI", "céfotaxime atteinte : l'atteinte s'étend aux C3G"]],
-        contre: [["CTX", "S", "céfotaxime conservée : l'altération des PLP reste partielle, ce qui laisse une porte thérapeutique"]],
-        aConfirmerPar: "CMI de la pénicilline, de l'amoxicilline et de la ceftriaxone — ici le rendu catégoriel ne suffit pas, surtout en endocardite"
+        pour: [["PEN", "RI", tr("pénicilline G atteinte — par modification des protéines liant la pénicilline, non par une β-lactamase",
+                                "benzylpenicillin affected — through altered penicillin-binding proteins, not through a beta-lactamase")],
+               ["AMX", "RI", tr("amoxicilline atteinte", "amoxicillin affected")],
+               ["CTX", "RI", tr("céfotaxime atteinte : l'atteinte s'étend aux C3G", "cefotaxime affected: the change extends to the third-generation cephalosporins")]],
+        contre: [["CTX", "S", tr("céfotaxime conservée : l'altération des PLP reste partielle, ce qui laisse une porte thérapeutique",
+                                 "cefotaxime preserved: the alteration of the binding proteins is partial, which leaves a therapeutic option")]],
+        aConfirmerPar: tr("CMI de la pénicilline, de l'amoxicilline et de la ceftriaxone — ici le rendu catégoriel ne suffit pas, surtout en endocardite",
+                          "MICs of penicillin, amoxicillin and ceftriaxone — a categorical result is not enough here, least of all in endocarditis")
       });
-      A.rules.push({ k: "CMI", txt: "Rendre pénicilline, amoxicilline et ceftriaxone selon leurs CMI respectives." });
-      A.alerts.push({ lvl: "warn", txt: "Contexte endocardite : une sensibilité diminuée à la pénicilline modifie le schéma (association à un aminoside à discuter)." });
-      A.comment = `${sp} de sensibilité diminuée aux β-lactamines. Interpréter pénicilline / amoxicilline / ceftriaxone selon la CMI.`;
+      A.rules.push({ k: "CMI", txt: tr("Rendre pénicilline, amoxicilline et ceftriaxone selon leurs CMI respectives.",
+        "Report penicillin, amoxicillin and ceftriaxone on their respective MICs.") });
+      A.alerts.push({ lvl: "warn", txt: tr("Contexte endocardite : une sensibilité diminuée à la pénicilline modifie le schéma (association à un aminoside à discuter).",
+        "In endocarditis, reduced penicillin susceptibility changes the regimen (adding an aminoglycoside is to be discussed).") });
+      A.comment = tr(`${sp} de sensibilité diminuée aux β-lactamines. Interpréter pénicilline / amoxicilline / ceftriaxone selon la CMI.`,
+        `${sp} with reduced beta-lactam susceptibility. Interpret penicillin, amoxicillin and ceftriaxone on the MIC.`);
     } else {
-      A.name = `${sp} — sensible à la pénicilline`;
-      A.mech = "Streptocoque du groupe viridans sensible aux β-lactamines.";
+      A.name = tr(`${sp} — sensible à la pénicilline`, `${sp} — penicillin-susceptible`);
+      A.mech = tr("Streptocoque du groupe viridans sensible aux β-lactamines.",
+                  "Viridans group streptococcus susceptible to beta-lactams.");
       parce(A, r, {
-        pour: [["PEN", "S", "pénicilline G active : protéines liant la pénicilline non modifiées"],
-               ["AMX", "S", "amoxicilline active"]]
+        pour: [["PEN", "S", tr("pénicilline G active : protéines liant la pénicilline non modifiées",
+                               "benzylpenicillin active: penicillin-binding proteins unaltered")],
+               ["AMX", "S", tr("amoxicilline active", "amoxicillin active")]]
       });
-      A.comment = `${sp} sensible à la pénicilline.`;
+      A.comment = tr(`${sp} sensible à la pénicilline.`, `${sp} susceptible to penicillin.`);
     }
   }
 
   if (isR(r.E) && r.DA === "S") {
     if (c && c.dtest === "Positif") {
-      A.alerts.push({ lvl: "warn", txt: "MLSb inductible (D-test positif) : clindamycine rendue R malgré une sensibilité apparente in vitro." });
-      A.rules.push({ k: "→R", txt: "Clindamycine rendue R (résistance inductible démontrée)." });
-      A.comment += " Résistance inductible à la clindamycine (MLSb, D-test positif).";
+      A.alerts.push({ lvl: "warn", txt: tr("MLSb inductible (D-test positif) : clindamycine rendue R malgré une sensibilité apparente in vitro.",
+        "Inducible MLSb (positive D-test): clindamycin reported R despite apparent susceptibility in vitro.") });
+      A.rules.push({ k: "→R", txt: tr("Clindamycine rendue R (résistance inductible démontrée).",
+        "Clindamycin reported R (inducible resistance demonstrated).") });
+      A.comment += tr(" Résistance inductible à la clindamycine (MLSb, D-test positif).",
+        " Inducible clindamycin resistance (MLSb, positive D-test).");
     // « PAS ENCORE RÉPONDU » EST AUSSI UN D-TEST NON FAIT, et c'est même
     // l'état de DÉPART de tout antibiogramme : la question s'affiche sans
     // réponse cochée. La condition ne reconnaissait que « Non fait »
@@ -2444,13 +2518,15 @@ function strepInterpret(r, c, a) {
         "Erythromycin R and clindamycin S: perform a D-test before reporting clindamycin.") });
     }
   } else if (isR(r.E) && isR(r.DA)) {
-    A.rules.push({ k: "MLS", txt: "Résistance constitutive MLSb (macrolides + lincosamides)." });
+    A.rules.push({ k: "MLS", txt: tr("Résistance constitutive MLSb (macrolides + lincosamides).",
+      "Constitutive MLSb resistance (macrolides and lincosamides).") });
     if (A.sev === "wild") A.sev = "mod";
   }
 
   if (isRI(r.VA)) {
     A.sev = "crit";
-    A.alerts.unshift({ lvl: "crit", txt: "Vancomycine non sensible chez un streptocoque : exceptionnel — vérifier l'identification et la CMI d'urgence." });
+    A.alerts.unshift({ lvl: "crit", txt: tr("Vancomycine non sensible chez un streptocoque : exceptionnel — vérifier l'identification et la CMI d'urgence.",
+      "Vancomycin not susceptible in a streptococcus: exceptional — check the identification and the MIC urgently.") });
   }
   return finalize(A, r);
 }
