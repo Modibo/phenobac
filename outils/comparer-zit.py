@@ -56,6 +56,61 @@ for groupe, (_especes, feuilles) in CE.GROUPES.items():
     for f in feuilles:
         FEUILLE_GROUPES.setdefault(f, []).append(groupe)
 
+# Nom français du CA-SFM -> code PhénoBac. Ce qui n'y figure pas n'est pas au
+# panel de PhénoBac, et l'outil le DIT au lieu de le taire : une ZIT qu'on ne
+# sait pas nommer ressemble, dans un rapport, à une ZIT qui n'existe pas.
+AGENTS_FR = [
+    (r"^pip[eé]racilline-tazobactam", "TZP"),
+    (r"^ciprofloxacine", "CIP"),
+    (r"^l[eé]vofloxacine", "LVX"),
+    (r"^colistine", "COL"),
+    (r"^vancomycine", "VA"),
+    (r"^t[eé]icoplanine", "TEC"),
+    (r"^daptomycine", "DAP"),
+    (r"^amikacine", "AMK"),
+    (r"^gentamicine", "GEN"),
+    (r"^m[eé]rop[eé]n[eè]me", "MEM"),
+    (r"^imip[eé]n[eè]me", "IPM"),
+    (r"^ertap[eé]n[eè]me", "ETP"),
+    (r"^c[eé]fotaxime", "CTX"),
+    (r"^ceftriaxone", "CRO"),
+    (r"^ceftazidime", "CAZ"),
+    (r"^c[eé]f[eé]pime", "FEP"),
+    (r"^clarithromycine", None),      # hors panel, et c'est une réponse
+    (r"^ceftaroline", None),
+    (r"^ceftobiprole", None),
+    (r"^c[eé]furoxime", None),
+]
+
+# Restrictions qui se lisent DANS le document et non dans l'en-tête du
+# chapitre. Sans elles, on appliquerait la ZIT d'une espèce à ses voisines.
+#
+#   · le tableau des fluoroquinolones du chapitre Enterobacterales est
+#     intitulé « à l'exception du genre Salmonella » ;
+#   · une ligne qui NOMME une espèce ne vaut que pour elle : « Vancomycine
+#     S. aureus » ne concerne pas les staphylocoques à coagulase négative,
+#     dont la ligne « Vancomycine, SCN » ne porte aucune ZIT.
+def groupes_vises(chapitre, agent, groupes):
+    a = agent.lower()
+    if chapitre == "Enterobacterales" and a.startswith("ciprofloxacine"):
+        return [g for g in groupes if g != "salmonella"]
+    if "s. aureus" in a or "s.aureus" in a:
+        return [g for g in groupes if g == "staph"]
+    if "scn" in a or "coagulase" in a:
+        return [g for g in groupes if g == "scn"]
+    return groupes
+
+
+def code_fr(agent):
+    """(code, connu). « connu » distingue « hors panel, c'est voulu » de
+    « nom que l'outil ne sait pas lire », qui est un défaut de l'outil."""
+    a = agent.strip().lower()
+    for motif, code in AGENTS_FR:
+        if re.match(motif, a):
+            return code, True
+    return None, False
+
+
 # Chapitre CA-SFM (page du PDF où il commence) -> groupes PhénoBac.
 # Le PDF n'a pas de titre courant portant l'espèce : on repère les chapitres
 # par leur intitulé numéroté, « 5. 2. Pseudomonas spp. » et ainsi de suite.
@@ -231,6 +286,9 @@ def tables_app(racine):
 
 
 
+RESULTAT = []
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
@@ -272,15 +330,84 @@ def main():
             cible = ' / '.join(groupes) if groupes else 'chapitre hors PhénoBac'
             print("  p%-4d %-22s %-30s S≤%-7s R>%-7s ZIT %-6s  chapitre : %s"
                   % (page, chapitre, agent[:30], s_, r_, val, cible))
-        print("\n  La dernière colonne donne les groupes que couvre le CHAPITRE, pas")
-        print("  ceux auxquels la ZIT s'applique. Deux restrictions se lisent dans le")
-        print("  document et non dans cette colonne :")
-        print("    - le tableau des fluoroquinolones du chapitre Enterobacterales est")
-        print("      intitulé « à l'exception du genre Salmonella » : la ZIT de la")
-        print("      ciprofloxacine ne vaut pas pour ce genre. L'EUCAST lui donne de")
-        print("      même une ligne propre, sans ATU ;")
-        print("    - une ligne qui nomme une espèce (« Vancomycine S. aureus ») ne vaut")
-        print("      que pour elle ; la ligne « Vancomycine, SCN » n'a pas de ZIT.")
+        print("\n  La colonne « chapitre » donne les groupes que couvre le CHAPITRE, pas")
+        print("  ceux auxquels la ZIT s'applique : deux restrictions se lisent dans le")
+        print("  document lui-même, et la confrontation ci-dessous les applique.")
+
+        # ---- LA CONFRONTATION, QUI MANQUAIT ----
+        #
+        # Jusqu'au 25 octobre 2026, cette moitié se contentait d'IMPRIMER ce
+        # qu'elle lisait, puis d'imprimer à part ce que PhénoBac applique.
+        # Rapprocher les deux listes restait à l'œil du lecteur — c'est-à-dire
+        # que personne ne le faisait, et qu'une ZIT divergente ou manquante
+        # n'aurait rien fait tomber.
+        print("\n=== CA-SFM — confrontation ===")
+        ecarts, muets = [], []
+        for chapitre, agent, _s, _r, val, page in lues:
+            groupes = CHAPITRE_GROUPES.get(chapitre, [])
+            if not groupes:
+                muets.append("p%d %s / %s : chapitre absent de PhénoBac"
+                             % (page, chapitre, agent[:34]))
+                continue
+            code, connu = code_fr(agent)
+            if not connu:
+                # L'IGNORANCE D'UN VÉRIFICATEUR NE DOIT PAS PASSER POUR UN
+                # VERDICT. Un nom non reconnu est un défaut de l'outil, pas
+                # une absence dans l'application.
+                ecarts.append("p%d %s / « %s » : nom d'antibiotique que l'outil ne sait "
+                              "pas lire. Ajoutez-le à AGENTS_FR — ou à sa liste des "
+                              "molécules hors panel, en le disant."
+                              % (page, chapitre, agent[:40]))
+                continue
+            if code is None:
+                muets.append("p%d %s / %s : molécule hors du panel de PhénoBac"
+                             % (page, chapitre, agent[:34]))
+                continue
+            for g in groupes_vises(chapitre, agent, groupes):
+                porte = casfm_seules.get((g, code), communes.get((g, code)))
+                if porte is None:
+                    ecarts.append("p%d %s / %s : le CA-SFM donne ZIT %s pour « %s », "
+                                  "PhénoBac n'en porte aucune."
+                                  % (page, chapitre, agent[:30], val, g))
+                elif float(porte) != float(val):
+                    ecarts.append("p%d %s / %s : CA-SFM ZIT %s, PhénoBac ZIT %s (« %s »)."
+                                  % (page, chapitre, agent[:30], val, porte, g))
+                else:
+                    print("  ok   %-12s %-5s ZIT %-5s  CA-SFM p%d — identique"
+                          % (g, code, val, page))
+        for m in muets:
+            print("  —    %s" % m)
+
+        # ---- ET LE SENS INVERSE ----
+        #
+        # Comparer ce que le document donne à ce que l'application porte ne dit
+        # rien de ce que l'application porte EN TROP. Éprouvé en ajoutant à la
+        # base une ZIT de vancomycine sur les staphylocoques à coagulase
+        # négative — que le CA-SFM ne donne pas, sa ligne « Vancomycine, SCN »
+        # étant vide : le contrôle restait vert. Une ZIT inventée n'est pas
+        # anodine, elle fait douter d'une mesure que le comité tient pour
+        # fiable, et elle envoie faire une CMI pour rien.
+        attendues = set()
+        for chapitre, agent, _s, _r, val, _page in lues:
+            code, connu = code_fr(agent)
+            if not connu or code is None:
+                continue
+            for g in groupes_vises(chapitre, agent, CHAPITRE_GROUPES.get(chapitre, [])):
+                attendues.add((g, code))
+        for (g, code), val in sorted(casfm_seules.items()):
+            if (g, code) not in attendues:
+                ecarts.append("PhénoBac porte une ZIT CA-SFM de %s sur « %s » (%s) que le "
+                              "document ne donne PAS sur ce groupe. Une ZIT inventée fait "
+                              "douter d'une mesure que le comité tient pour fiable."
+                              % (code, g, val))
+        if ecarts:
+            print("\n  ÉCARTS :")
+            for e in ecarts:
+                print("    - %s" % e)
+            RESULTAT.append(1)
+        else:
+            print("\n  Aucun écart : chaque ZIT en CMI du document que PhénoBac peut")
+            print("  porter est portée, à la bonne valeur et sur les bons groupes.")
     else:
         print("  (document .pdf non fourni)")
 
@@ -292,7 +419,7 @@ def main():
 
     print("\nAucun fichier n'a été modifié. Toute correction doit être validée")
     print("par un biologiste avant d'être portée dans le code.")
-    return 0
+    return 1 if RESULTAT else 0
 
 
 if __name__ == '__main__':

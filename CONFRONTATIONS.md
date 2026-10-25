@@ -187,12 +187,15 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 
 ## comparer-zit.py — zones d'incertitude technique
 
-- **document** : EUCAST v16.1 (classeur xlsx) ET CA-SFM 2026 V1.0 (pdf)
+- **document** : EUCAST v16.1 (classeur xlsx) ET **CA-SFM 2026, recommandations
+  V1.0 septembre 2026, 178 pages** — les TABLES COMPLÈTES, et non le document
+  des différences
 - **tables** : ZIT, ZIT_CASFM
 - **empreinte** : 9127c6a5b2cd1c8911ad2510299faf472a5fb51255dc6fcc94db5b5a2860a106
-- **date** : 2026-10-24
-- **résultat** : moitié EUCAST faite — **7 ATU sur 7 retenues**, aux bonnes valeurs.
-  Moitié CA-SFM : impossible avec le document que PhénoBac référence (voir plus bas).
+- **date** : 2026-10-25
+- **résultat** : **les deux moitiés faites**. EUCAST : 7 ATU sur 7 retenues.
+  CA-SFM : 10 ZIT en CMI confrontées — **10 identiques, 0 divergente,
+  0 manquante, 0 en trop**.
 
 ### L'outil lisait le mauvais fichier, et il ACCUSAIT
 
@@ -208,6 +211,84 @@ levait aucune erreur, elle rendait une table **vide**.
 Un vérificateur qui lit le mauvais fichier ne se tait pas : il accuse. Il lit
 désormais la base, par le même chemin que les autres.
 
+### Les trois ZIT du CA-SFM, enfin confrontées
+
+Elles étaient appliquées depuis longtemps sans confrontation possible, faute
+du bon document. Les voici, avec leur page :
+
+| groupe | molécule | ZIT | CA-SFM 2026 V1.0 |
+|---|---|---|---|
+| *Enterococcus* | daptomycine | **4 mg/L** | p. 83 |
+| *Pseudomonas* | colistine | **4 mg/L** | p. 61 |
+| *Staphylococcus* | vancomycine | **2 mg/L** | p. 75 |
+
+Les sept autres ZIT en CMI du document se répartissent ainsi : quatre sont
+communes à l'EUCAST et déjà confrontées (pipéracilline-tazobactam et
+ciprofloxacine chez les entérobactéries), trois portent sur des molécules hors
+du panel de PhénoBac — ceftaroline, ceftobiprole, céfuroxime iv — et deux sur
+un chapitre qu'elle ne couvre pas (*Mycobacterium abscessus*). L'outil le dit
+molécule par molécule au lieu de les passer sous silence.
+
+### DEUX RESTRICTIONS QUI NE SE LISENT PAS DANS L'EN-TÊTE DU CHAPITRE
+
+Et qui, appliquées de travers, auraient fait douter d'une mesure fiable :
+
+- le tableau des fluoroquinolones du chapitre *Enterobacterales* est intitulé
+  « **à l'exception du genre Salmonella** » : la ZIT de la ciprofloxacine ne
+  vaut pas pour ce genre. L'EUCAST lui donne de même une ligne propre, sans
+  ATU. PhénoBac ne la porte pas sur *Salmonella* — vérifié ;
+- une ligne qui **nomme une espèce** ne vaut que pour elle. « Vancomycine
+  *S. aureus* » ne concerne pas les staphylocoques à coagulase négative, dont
+  la ligne « Vancomycine, SCN » ne porte **aucune** ZIT. PhénoBac ne la porte
+  pas sur les SCN — vérifié.
+
+Ces deux restrictions étaient jusqu'ici **imprimées en remarque** sous le
+tableau, à charge pour le lecteur de les appliquer. Elles sont désormais dans
+le code de l'outil, et la confrontation s'en sert.
+
+### L'outil IMPRIMAIT deux listes et laissait l'œil les rapprocher
+
+Jusqu'au 25 octobre 2026, la moitié CA-SFM affichait ce qu'elle lisait dans le
+document, puis, séparément, ce que PhénoBac applique. Rapprocher les deux
+restait à l'œil du lecteur — c'est-à-dire que personne ne le faisait, et
+qu'une ZIT divergente ou manquante n'aurait rien fait tomber.
+
+La confrontation est maintenant faite par l'outil, **dans les deux sens**, et
+elle rend un code d'erreur. Le sens inverse manquait d'abord, et son absence a
+été prouvée en ajoutant à la base une ZIT de vancomycine sur les SCN : le
+contrôle restait vert. Trois fautes réalistes ont servi à l'éprouver, et
+chacune le fait tomber :
+
+| faute introduite | ce que l'outil dit |
+|---|---|
+| ZIT de la daptomycine portée à 8 | « CA-SFM ZIT 4, PhénoBac ZIT 8 » |
+| ZIT de la vancomycine étendue aux SCN | « que le document ne donne PAS sur ce groupe » |
+| ZIT de la ciprofloxacine appliquée à *Salmonella* | idem |
+
+Un nom d'antibiotique que l'outil ne sait pas lire est signalé comme **un
+défaut de l'outil**, et non comme une absence dans l'application : « nom
+d'antibiotique que l'outil ne sait pas lire. Ajoutez-le à AGENTS_FR. »
+L'ignorance d'un vérificateur ne doit pas se présenter comme un verdict —
+c'est la leçon de la tétracycline absente de `comparer-eucast.py`.
+
+### Où trouver les tables complètes du CA-SFM
+
+Elles sont **publiques et téléchargeables**, contrairement à ce que supposait
+l'entrée précédente :
+
+    https://www.sfm-microbiologie.org/casfm2026_v1-0-septembre-2026/
+
+L'URL n'a pas d'extension `.pdf` et ressemble à une page, mais elle **sert le
+PDF directement** — 178 pages, 9,9 Mo.
+sha256 `9ec01d61d5015d05f9fb7d3324a3b7aa1a667bf8631372b4081efa20aaf5dd42`.
+
+Le document des **différences** (`CASFM2026EUCAST.pdf`, 18 pages) reste utile
+pour comprendre les écarts, mais il ne sert pas à cette confrontation : ses
+ZIT y sont citées en prose, et la lecture par position — qui fait la sûreté de
+l'outil — n'a rien sur quoi s'appuyer.
+
+### Ce qui bloquait, et qui ne bloque plus
+
 ### La moitié CA-SFM demande un document que le projet n'utilise pas
 
 Le CA-SFM 2026 que PhénoBac référence est celui des **différences** avec
@@ -216,14 +297,11 @@ POSITION dans des colonnes « S ≤ | R > | ZIT », et n'a rien sur quoi
 s'appuyer. Il le dit maintenant au lieu d'imprimer une section vide : « aucune
 ZIT lue dans ce PDF — et ce n'est pas *aucune ZIT* ».
 
-Les trois ZIT propres au CA-SFM que PhénoBac applique — daptomycine 4 chez
-l'entérocoque, colistine 4 chez *Pseudomonas*, vancomycine 2 chez le
-staphylocoque — restent donc non confrontées. Le texte du document les
-mentionne (« le CA-SFM propose un breakpoint à 2 mg/L, avec une ZIT à
-4 mg/L » pour la daptomycine), mais une lecture en prose ne vaut pas une
-lecture par position : il faut les tables complètes. C'est une dette, elle est écrite,
-et la chaîne la rappelle à chaque livraison sans bloquer : bloquer sur un
-document que personne n'a sous la main n'aiderait personne.
+Les trois ZIT propres au CA-SFM que PhénoBac applique y étaient citées en
+prose (« le CA-SFM propose un breakpoint à 2 mg/L, avec une ZIT à 4 mg/L »
+pour la daptomycine), et une lecture en prose ne vaut pas une lecture par
+position. **Cette dette est levée depuis le 25 octobre 2026** : les tables
+complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 ---
 
