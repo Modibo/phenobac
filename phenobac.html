@@ -1331,7 +1331,7 @@
 <header>
   <div class="bar">
     <div class="brand">
-      <button class="brand-open" id="brandOpen" title="Revoir la présentation">
+      <button class="brand-open" id="brandOpen" data-i18n-attr="title:attr.revoirIntro" title="Revoir la présentation">
         <span class="pheno-mark brand-mark" aria-hidden="true"></span>
         <span class="logo">Phéno<b>Bac</b></span>
       </button>
@@ -1363,7 +1363,7 @@
 <!-- Présentation : première visite, puis rouvrable par le logo -->
 <section class="intro" id="introView" style="display:none" aria-labelledby="introTitre">
   <div class="intro-card">
-    <button class="intro-close" id="introClose" aria-label="Fermer la présentation">&times;</button>
+    <button class="intro-close" id="introClose" data-i18n-attr="aria-label:attr.fermerIntro" aria-label="Fermer la présentation">&times;</button>
     <!-- La présentation reste affichée d'un onglet à l'autre, mais son contenu
          change avec lui : sur « Identification » et « Entraînement », décrire
          l'interprétation n'apprenait rien à personne. Tout est rendu par
@@ -1513,7 +1513,7 @@
     <div class="card-h">
       <span class="eyebrow" data-i18n="cr.regles"><span class="num">R</span>Règles appliquées</span>
       <div style="margin-left:auto" class="toolbar">
-        <input class="ref-q" id="refQ" type="search" placeholder="antibiotique, groupe…" aria-label="Filtrer les règles">
+        <input class="ref-q" id="refQ" type="search" data-i18n-attr="placeholder:attr.filtreRegles,aria-label:attr.filtrerRegles" placeholder="antibiotique, groupe…" aria-label="Filtrer les règles">
         <button class="btn" id="refExport">Exporter (CSV)</button>
       </div>
     </div>
@@ -1583,7 +1583,7 @@
       <button data-mode="combo">Cas complet</button>
       <span class="quiz-sep" aria-hidden="true"></span>
       <button id="quizExamen" class="exam-btn" aria-pressed="false"
-        title="Aucune correction pendant l'épreuve : tout est rendu à la fin.">Mode examen</button>
+        data-i18n-attr="title:attr.modeExamen" title="Aucune correction pendant l'épreuve : tout est rendu à la fin.">Mode examen</button>
     </div>
     <div id="quizHisto"></div>
     <div id="bankManage"></div>
@@ -1670,7 +1670,7 @@
      mesuré jusqu'à ce qui est proposé, lisible par un technicien ou un
      étudiant. Rien n'y est recalculé : tout vient du moteur. -->
 <div class="modal-ov" id="detectiveModal">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Pourquoi cette interprétation">
+  <div class="modal" role="dialog" aria-modal="true" data-i18n-attr="aria-label:attr.pourquoiInterp" aria-label="Pourquoi cette interprétation">
     <div class="modal-top">
       <div class="modal-eyebrow">Resistance Detective</div>
       <div class="modal-title" data-i18n="cr.pourquoi">Pourquoi cette interprétation&nbsp;?</div>
@@ -1685,7 +1685,7 @@
 </div>
 
 <div class="modal-ov" id="survModal">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Verser à la surveillance">
+  <div class="modal" role="dialog" aria-modal="true" data-i18n-attr="aria-label:act.verserSurv" aria-label="Verser à la surveillance">
     <div class="modal-top">
       <div class="modal-eyebrow" data-i18n="bloc.surveillance">Surveillance de la résistance</div>
       <div class="modal-title" data-i18n="act.verser">Verser cet isolat</div>
@@ -1724,7 +1724,7 @@
              probabiliste. Le champ ne part PAS à l'OMS : GLASS ne le prévoit
              pas, il ne sert qu'à l'antibiogramme cumulatif du laboratoire. -->
         <label class="surv-ch"><span>Service demandeur</span>
-          <input id="survService" type="text" list="survServices" placeholder="Réanimation" autocomplete="off">
+          <input id="survService" type="text" list="survServices" data-i18n-attr="placeholder:attr.service" placeholder="Réanimation" autocomplete="off">
           <datalist id="survServices">
             <option value="Réanimation"></option><option value="Médecine interne"></option>
             <option value="Chirurgie"></option><option value="Pédiatrie"></option>
@@ -1743,7 +1743,7 @@
 </div>
 
 <div class="modal-ov" id="upgradeModal">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Passer à Premium">
+  <div class="modal" role="dialog" aria-modal="true" data-i18n-attr="aria-label:attr.passerPremium" aria-label="Passer à Premium">
     <div class="modal-top">
       <div class="modal-eyebrow" data-i18n="bloc.premium">Accès Premium</div>
       <div class="modal-title" data-i18n="premium.titre">Débloquez l'accès total</div>
@@ -1757,7 +1757,7 @@
         <li><span class="ck">✓</span> Banque extensible : créer (réponse déduite), importer, exporter</li></ul>
       <div class="modal-price" id="modalPrice"></div>
       <div class="modal-code">
-        <input id="licenseInput" type="text" placeholder="Collez votre clé de licence" autocomplete="off" spellcheck="false">
+        <input id="licenseInput" type="text" data-i18n-attr="placeholder:attr.cleLicence" placeholder="Collez votre clé de licence" autocomplete="off" spellcheck="false">
         <button class="modal-activate" id="activateBtn" data-i18n="act.activer">Activer</button>
       </div>
       <div class="modal-err" id="modalErr"></div>
@@ -1953,6 +1953,23 @@ function traduire() {
     const t = L(e.getAttribute("data-i18n-html"));
     if (t) e.innerHTML = t;
   });
+  /* LES ATTRIBUTS. Une infobulle, un libellé d'accessibilité, un texte
+     d'invite ne sont pas des nœuds de texte : ni data-i18n ni
+     data-i18n-html ne les atteignent, et texte_visible() ne les lit pas
+     davantage. Le 25 octobre 2026, l'infobulle de la puce ZIT expliquait en
+     français, dans une page anglaise, pourquoi une catégorie n'est pas
+     reproductible — c'est-à-dire le seul endroit où elle est expliquée.
+     Un lecteur d'écran anglophone, lui, n'entendait que du français. */
+  document.querySelectorAll("[data-i18n-attr]").forEach(function (e) {
+    e.getAttribute("data-i18n-attr").split(",").forEach(function (paire) {
+      const i = paire.indexOf(":");
+      if (i < 0) return;
+      const attr = paire.slice(0, i).trim(), cle = paire.slice(i + 1).trim();
+      const t = L(cle);
+      if (t && t.charAt(0) !== "\u27E6") e.setAttribute(attr, t);
+    });
+  });
+
   // Les éléments que le script REMPLIT ne se marquent pas : on les refait.
   // Sans cela, la ligne du référentiel de la page « À propos » gardait la
   // langue du premier affichage.
@@ -3662,7 +3679,8 @@ function renderAbx(){
         // Marqueur d'incertitude technique : il ne remplace pas la catégorie,
         // il dit qu'à cette valeur la catégorie n'est pas reproductible.
         const zc=document.createElement("span"); zc.className="zit-chip"; zc.textContent="ZIT";
-        zc.title="Zone d'incertitude technique : à cette valeur, la catégorisation est peu reproductible. Ni l'EUCAST ni le CA-SFM n'en font une catégorie ; PhénoBac ne modifie rien de lui-même.";
+        zc.title=T("Zone d'incertitude technique : à cette valeur, la catégorisation est peu reproductible. Ni l'EUCAST ni le CA-SFM n'en font une catégorie ; PhénoBac ne modifie rien de lui-même.",
+          "Area of technical uncertainty: at this value, categorisation is poorly reproducible. Neither EUCAST nor CA-SFM makes it a category; PhénoBac changes nothing on its own.");
         const majChips=(c)=>{
           chip.className="cat-chip "+(c||"none"); chip.textContent=c?lettreCat(c):"—";
           zc.hidden = !douteux(valeurs[k]);
@@ -4015,8 +4033,8 @@ function cqHistorique(){
       // son côté, leur écart dépendait de la largeur du texte des boutons, et
       // ils se chevauchaient sur un écran étroit.
       + `<div class="cq-actes">`
-      + (e.valide ? "" : `<button class="cq-val" data-v="${i}" title="Déclarer ce contrôle relu et clos">valider</button>`)
-      + `<button class="cq-sup" data-i="${i}" title="Supprimer cette ligne du registre">supprimer</button>`
+      + (e.valide ? "" : `<button class="cq-val" data-v="${i}" title="${T("Déclarer ce contrôle relu et clos", "Record this control as reviewed and closed")}">${T("valider", "validate")}</button>`)
+      + `<button class="cq-sup" data-i="${i}" title="${T("Supprimer cette ligne du registre", "Delete this row from the register")}">${T("supprimer", "delete")}</button>`
       + `</div>
     </div>`;
   });
@@ -4398,12 +4416,12 @@ function renderBpEditor(){
     // conventions de laboratoire, et l'utilisateur doit pouvoir les distinguer
     // de ceux que le référentiel fixe réellement.
     const conv = horsReferentiel(bpGroup(), k, state.org)
-      ? `<span class="bp-conv" title="${referentiel().nom} ne fixe pas de seuil pour ce couple ; valeur conventionnelle, à caler sur votre référentiel">${libelleHors()}</span>`
+      ? `<span class="bp-conv" title="${referentiel().nom}${T(" ne fixe pas de seuil pour ce couple ; valeur conventionnelle, à caler sur votre référentiel", " sets no breakpoint for this pair; a conventional value, to be set against your own standard")}">${libelleHors()}</span>`
       : "";
     // Et signaler, à l'inverse, ceux que le CA-SFM déplace volontairement.
     const ec = ecartCasfm(bpGroup(), k);
     const ecart = ec
-      ? `<span class="bp-ecart" title="Le CA-SFM 2026 s'écarte ici de l'EUCAST${ec==="urine"?" pour les infections urinaires sans signe de gravité":ec==="méningite"?" en contexte méningé":""}. Voir REFERENTIEL-CASFM.md.">CA-SFM</span>`
+      ? `<span class="bp-ecart" title="${T("Le CA-SFM 2026 s'écarte ici de l'EUCAST", "CA-SFM 2026 departs from EUCAST here")}${ec==="urine"?T(" pour les infections urinaires sans signe de gravité", " for urinary tract infections without signs of severity"):ec==="méningite"?T(" en contexte méningé", " in meningitis"):""}${T(". Voir REFERENTIEL-CASFM.md.", ". See REFERENTIEL-CASFM.md.")}">CA-SFM</span>`
       : "";
     row.innerHTML=`<div class="bpn">${nomAbx(k)}<span class="code">${ABX[k].code}</span>${conv}${ecart}</div>`;
     const mk=(field,val)=>{
@@ -5597,7 +5615,7 @@ function renderReferentiels(){
     [["", "Les deux référentiels"], ["eucast", "EUCAST"], ["casfm", "CA-SFM"]]
       .map(([v,l])=>`<button data-rf="${v}" class="${REF_VUE.ref===v?"on":""}">${l}</button>`).join("")
     + `</div>`;
-  f += `<select id="refGroupe" aria-label="Groupe bactérien"><option value="">Tous les groupes</option>`
+  f += `<select id="refGroupe" aria-label="${T("Groupe bactérien", "Bacterial group")}"><option value="">${T("Tous les groupes", "All groups")}</option>`
     + groupes.map(g=>`<option value="${esc(g)}"${REF_VUE.groupe===g?" selected":""}>${esc(g)}</option>`).join("")
     + `</select>`;
   $("#refFiltres").innerHTML = f;
@@ -7475,7 +7493,7 @@ function renderBankManager(){
           </div>
           <div class="field">
             <label class="flabel" for="bankTeach">À retenir — explication pédagogique</label>
-            <textarea class="txt" id="bankTeach" placeholder="Point clé que l'étudiant doit mémoriser."></textarea>
+            <textarea class="txt" id="bankTeach" data-i18n-attr="placeholder:attr.aRetenir" placeholder="Point clé que l'étudiant doit mémoriser."></textarea>
           </div>
           <div class="bank-actions">
             <button class="bank-add" id="bankAdd">Ajouter à la banque</button>

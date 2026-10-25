@@ -264,7 +264,23 @@ const C = {
   "pied.ligne2":          { fr: "<b>Conception : Dr. Modibo Mouctar COULIBALY</b> — PharmD, CLMS, PhD · Maître de Recherche, Hôpital Sominé DOLO de Mopti",
                  en: "<b>Designed by Dr Modibo Mouctar COULIBALY</b> — PharmD, CLMS, PhD · Research Director, Hôpital Sominé DOLO, Mopti" },
   "pied.avert":           { fr: "PhénoBac n'est <b>pas un dispositif médical de diagnostic in vitro</b>. Il propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir de résultats déjà lus, et ne remplace ni le jugement du biologiste, ni les tests de confirmation (synergie, carba NP, biologie moléculaire), ni le référentiel en vigueur. Les concentrations critiques fournies sont <span id=\"footRef\">celles du référentiel EUCAST</span>. Quelques couples germe-antibiotique, pour lesquels <span id=\"footNom\">l'EUCAST</span> ne fixe aucun seuil, y font exception : l'éditeur les signale <b style=\"color:#7a5207\" id=\"footHors\">hors EUCAST</b>. Vérifiez-les et ajustez-les à votre référentiel dans « Concentrations critiques » avant tout rendu.",
-                en: "PhénoBac is <b>not an in vitro diagnostic medical device</b>. It offers an orienting interpretation based on the usual phenotypes, starting from results already read, and replaces neither the clinical microbiologist's judgement, nor the confirmatory tests (synergy, carba NP, molecular biology), nor the standard in force. The breakpoints supplied are <span id=\"footRef\">those of the EUCAST standard</span>. A few organism-agent pairs, for which <span id=\"footNom\">EUCAST</span> sets no breakpoint, are the exception: the editor marks them <b style=\"color:#7a5207\" id=\"footHors\">outside EUCAST</b>. Check them and set them to your own standard under \"Breakpoints\" before reporting anything." }
+                en: "PhénoBac is <b>not an in vitro diagnostic medical device</b>. It offers an orienting interpretation based on the usual phenotypes, starting from results already read, and replaces neither the clinical microbiologist's judgement, nor the confirmatory tests (synergy, carba NP, molecular biology), nor the standard in force. The breakpoints supplied are <span id=\"footRef\">those of the EUCAST standard</span>. A few organism-agent pairs, for which <span id=\"footNom\">EUCAST</span> sets no breakpoint, are the exception: the editor marks them <b style=\"color:#7a5207\" id=\"footHors\">outside EUCAST</b>. Check them and set them to your own standard under \"Breakpoints\" before reporting anything." },
+
+  /* ---------- vague 4 : les attributs (infobulles, accessibilité, invites) ----------
+     Ni data-i18n ni data-i18n-html ne les atteignent, et texte_visible() ne
+     les lit pas : posés par data-i18n-attr="attribut:clé". */
+  "attr.revoirIntro":     { fr: "Revoir la présentation", en: "See the introduction again" },
+  "attr.fermerIntro":     { fr: "Fermer la présentation", en: "Close the introduction" },
+  "attr.filtreRegles":    { fr: "antibiotique, groupe…", en: "antibiotic, group…" },
+  "attr.filtrerRegles":   { fr: "Filtrer les règles", en: "Filter the rules" },
+  "attr.modeExamen":      { fr: "Aucune correction pendant l'épreuve : tout est rendu à la fin.",
+                            en: "No marking during the test: everything is given at the end." },
+  "attr.pourquoiInterp":  { fr: "Pourquoi cette interprétation", en: "Why this interpretation" },
+  "attr.service":         { fr: "Réanimation", en: "Intensive care" },
+  "attr.passerPremium":   { fr: "Passer à Premium", en: "Go Premium" },
+  "attr.cleLicence":      { fr: "Collez votre clé de licence", en: "Paste your licence key" },
+  "attr.aRetenir":        { fr: "Point clé que l'étudiant doit mémoriser.",
+                            en: "The key point the student should remember." }
 };
 
 const DEFAUT = "fr";

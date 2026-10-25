@@ -873,6 +873,47 @@ def main():
                     "T() — le cadre suit la langue du commentaire qu'il entoure."
                     % len(NON_RETOUR))
 
+    # --- LES ATTRIBUTS : INFOBULLES, ACCESSIBILITÉ, TEXTES D'INVITE ---
+    #
+    # texte_visible() lit le TEXTE de la page. Un title=, un aria-label=, un
+    # placeholder= n'en sont pas, et data-i18n ne les atteint pas davantage :
+    # ils sont passés entre toutes les mailles. Au navigateur, en production,
+    # l'infobulle de la puce ZIT expliquait en FRANÇAIS, dans une page
+    # anglaise, pourquoi une catégorie n'est pas reproductible — et c'est le
+    # seul endroit où cela s'explique. Un lecteur d'écran anglophone
+    # n'entendait que du français.
+    #
+    # Les attributs statiques se marquent par data-i18n-attr="attribut:clé" ;
+    # ceux que le script engendre passent par T(). Ce contrôle cherche ce qui
+    # reste nu.
+    ATTRS = ("title", "aria-label", "placeholder", "alt")
+    nus = []
+    for attr in ATTRS:
+        for m in re.finditer(r'(?<![\w-])%s="([^"$]{4,})"' % attr, page):
+            t = m.group(1)
+            if not (ACCENTS.search(t.replace("PhénoBac", "PhenoBac")) or MOTS_FR.search(t)):
+                continue
+            if PROPRES.search(t):
+                continue
+            # Marqué ? L'attribut data-i18n-attr est sur la MÊME balise.
+            deb = page.rfind("<", 0, m.start())
+            fin_balise = page.find(">", m.end())
+            balise = page[deb:fin_balise if fin_balise > 0 else m.end()]
+            if "data-i18n-attr=" in balise and attr + ":" in balise:
+                continue
+            nus.append("ligne %d, %s=\"%s\"" % (page.count("\n", 0, m.start()) + 1, attr, t[:60]))
+    if nus:
+        ecarts.append("%d attribut(s) restent en français sans marquage : %s. Ni "
+                      "data-i18n ni le compteur de texte visible ne les atteignent — "
+                      "une infobulle ou un libellé d'accessibilité français dans une "
+                      "page anglaise ne se voit qu'en le cherchant."
+                      % (len(nus), " ; ".join(nus[:6])))
+    else:
+        marques_attr = len(re.findall(r'data-i18n-attr="', page))
+        dits.append("les infobulles, libellés d'accessibilité et textes d'invite "
+                    "suivent la langue (%d balises marquées ; les autres passent par "
+                    "T())." % marques_attr)
+
     if ecarts:
         print("LE BILINGUISME EST ABÎMÉ :")
         for e in ecarts:
