@@ -427,6 +427,50 @@ dire("\nLa parenthèse de l'EUCAST est une réserve, pas une coquetterie");
         "la colistine des entérobactéries est visée, la céfotaxime non");
 })();
 
+/* ---------- La fosfomycine : espèce ET indication ----------
+   L'EUCAST ne la chiffre que pour E. coli et que pour l'infection urinaire.
+   PhénoBac l'appliquait à tout le groupe « entero » et à tout contexte, et
+   n'avait aucun diamètre — alors que le document donne 24 mm sur 200 µg,
+   le test le moins cher qui existe pour une cystite. Corrigé le 25 octobre
+   2026, après validation. */
+dire("\nFosfomycine : E. coli seulement, infection urinaire seulement");
+(function () {
+  function cat(org, ctx, mode, v) {
+    var e = { organism: org, ctx: ctx };
+    if (mode === "mic") { e.mode = "mic"; e.mic = { FOS: v }; }
+    else { e.mode = "diam"; e.diam = { FOS: v }; }
+    return E.runInterpretation(e).categories.FOS;
+  }
+  verif(cat("ecoli", { urin: "Oui" }, "mic", "8") === "S",
+        "E. coli, cystite, CMI 8 mg/L : S");
+  verif(cat("ecoli", { urin: "Oui" }, "diam", "26") === "S",
+        "E. coli, cystite, 26 mm sur disque 200 µg : S — le disque manquait entièrement");
+  verif(cat("ecoli", { urin: "Oui" }, "diam", "20") === "R",
+        "… et 20 mm : R (seuil 24)");
+  verif(cat("ecoli", {}, "mic", "8") === undefined,
+        "E. coli HORS contexte urinaire : aucune catégorie — « other indications » renvoie à une note");
+  verif(cat("kpneu", { urin: "Oui" }, "mic", "8") === undefined,
+        "Klebsiella, même en cystite : aucune catégorie — le document ne chiffre que E. coli");
+  verif(cat("ecloacae", { urin: "Oui" }, "diam", "26") === undefined,
+        "Enterobacter : aucune catégorie non plus");
+
+  // ET L'ABSENCE DOIT DIRE SA PROPRE RAISON. Une mauvaise raison coûte un
+  // examen : envoyer faire une CMI sur une Klebsiella ne donnerait rien.
+  function raison(org, ctx) {
+    var o = E.runInterpretation({ organism: org, mode: "diam", diam: { FOS: "26" }, ctx: ctx });
+    return (o.interpretation.alerts || []).map(function (a) { return a.txt; })
+             .filter(function (t) { return /osfomycine/i.test(t); }).join(" ");
+  }
+  verif(/que pour E\. coli/.test(raison("kpneu", { urin: "Oui" })),
+        "Klebsiella : on dit que le seuil est propre à E. coli");
+  verif(!/question du contexte/.test(raison("kpneu", {})),
+        "… et on ne lui propose PAS de cocher le contexte, qui n'y changerait rien");
+  verif(/question du contexte/.test(raison("ecoli", {})),
+        "E. coli hors contexte : on dit que répondre à la question suffit");
+  verif(!/ne reconnaît pas la méthode des disques/.test(raison("ecoli", {})),
+        "… et plus « l'EUCAST ne reconnaît pas la méthode des disques », qui était faux");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : la gravité, le D-test et les règles du CA-SFM"
                     + " ne peuvent plus changer sans que rien ne tombe."));

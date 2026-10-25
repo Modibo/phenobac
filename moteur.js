@@ -3467,6 +3467,16 @@ function catFromDiam(str, dz) {
 // Pourquoi ce diamètre n'a pas pu être traduit. Un refus sans motif
 // laisserait croire à une panne ; chacun de ces trois cas est au contraire
 // une décision du référentiel, et le biologiste doit savoir laquelle.
+/* Les espèces auxquelles un seuil est restreint, nommées comme le biologiste
+   les lit. Sans cela le message citerait des identifiants (« ecoli »). */
+function especesDites(group, k) {
+  const limite = ESPECE_LIMITE[group + ":" + k] || [];
+  const noms = limite.map(function (id) {
+    return (ORG[id] && ORG[id].args && ORG[id].args.species) || id;
+  });
+  return noms.length ? noms.join(", ") : "certaines espèces seulement";
+}
+
 function raisonSansDisque(group, k, ctx) {
   const c = ctx || {};
   if (estCasfm() && dzCasfmDivergent(group, k, c))
@@ -3474,10 +3484,37 @@ function raisonSansDisque(group, k, ctx) {
   if (c.mening === "Oui" && !(DZ_MENINGE[group] && DZ_MENINGE[group][k])
       && BP_MENINGE[group] && BP_MENINGE[group][k])
     return "l'EUCAST ne chiffre pas ce couple au disque dans le LCR et renvoie à la CMI — le seuil ordinaire serait trop permissif pour une méningite";
-  if (!(DZ[group] && DZ[group][k]))
+  /* UNE ABSENCE DOIT DIRE SA PROPRE RAISON, pas la plus courante.
+
+     « L'EUCAST ne reconnaît pas la méthode des disques pour ce couple » était
+     la seule explication donnée, et elle est FAUSSE dès qu'un seuil existe
+     mais ne s'applique pas ici. Le 25 octobre 2026, la fosfomycine l'a
+     montré : le document lui donne bien un disque de 200 µg, mais pour
+     E. coli et pour l'infection urinaire. Sur une Klebsiella, le message
+     envoyait faire une CMI qui ne serait pas catégorisée davantage ; sur un
+     E. coli hors contexte urinaire, il cachait qu'il suffisait de répondre à
+     une question. Une mauvaise raison coûte un examen et fait douter de
+     l'outil. */
+  if (!(DZ[group] && DZ[group][k])) {
+    const urinaire = DZ_URIN[group] && DZ_URIN[group][k];
+    // L'ESPÈCE D'ABORD, LE CONTEXTE ENSUITE. Sur une Klebsiella hors contexte
+    // urinaire, les deux raisons valent — mais seule la première est
+    // RÉPARABLE par l'utilisateur, et l'annoncer serait lui faire cocher une
+    // question qui ne changera rien.
+    if (urinaire && !especeAutorisee(group, k))
+      return "l'EUCAST ne chiffre ce couple que pour " + especesDites(group, k)
+           + " — pour les autres espèces du groupe, le document renvoie à une note "
+           + "et ne donne aucun seuil, ni au disque ni en CMI";
+    if (urinaire && c.urin !== "Oui")
+      return "l'EUCAST ne chiffre ce couple que pour l'infection urinaire — répondre à "
+           + "la question du contexte, en haut de la page, suffit à le catégoriser";
     return horsEucast(group, k)
       ? "l'EUCAST ne chiffre ce couple ni en CMI ni au disque ; PhénoBac ne dispose que d'une convention de laboratoire, applicable à une CMI — saisir une CMI"
       : "l'EUCAST ne reconnaît pas la méthode des disques pour ce couple — une CMI est nécessaire";
+  }
+  if (!especeAutorisee(group, k))
+    return "l'EUCAST ne chiffre ce couple que pour " + especesDites(group, k)
+         + " — pour les autres espèces du groupe, le document ne donne aucun seuil";
   return "valeur illisible : un diamètre s'écrit en millimètres, entre 6 (pas de zone) et 60";
 }
 

@@ -27,7 +27,7 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : ae4e8ab090ab72344dc9a4e9bacd45244c47855a483612ef784b3960bc59daf4
+- **empreinte** : 0c7981912f22861cada9e144b1fd8d185838f85881eac131f60040e902ebe6f9
 - **date** : 2026-10-25
 - **résultat** : 403 seuils confrontés — **403 identiques, 0 différent**, 91 non
   comparés. Et, dans l'autre sens : **aucune molécule du panel n'est privée du
@@ -220,11 +220,40 @@ PhénoBac porte la CMI 8/8 et **aucun diamètre**. Un laboratoire qui mesure
 méthode au disque pour ce couple » — ce qui est faux, et c'est le test le
 moins cher qui existe pour une cystite simple.
 
-Deux restrictions vont avec, et elles changent ce que l'application rend
-aujourd'hui : le seuil ne vaut que pour ***E. coli*** et que pour les
-indications **urinaires**. PhénoBac rend aujourd'hui « fosfomycine S » pour
-*Klebsiella* et *Enterobacter*, et hors contexte urinaire. **Cette correction
-restreint un rendu existant : elle attend la validation du biologiste.**
+Deux restrictions vont avec : le seuil ne vaut que pour ***E. coli*** et que
+pour les indications **urinaires**. PhénoBac rendait « fosfomycine S » pour
+*Klebsiella* et *Enterobacter*, et hors contexte urinaire.
+
+**Corrigé le 25 octobre 2026, à la lettre du document, sur décision du
+biologiste.** La ligne porte désormais le site `urinaire` et la restriction
+d'espèce `["ecoli"]`, et le diamètre 24 mm / 200 µg est ajouté.
+
+Une limite est assumée : PhénoBac n'a **qu'un** site urinaire, et la question
+posée dit « cystite simple ». La ligne intraveineuse du document vise plus
+large — « infections d'origine urinaire », pyélonéphrite comprise. Le
+rattachement est donc un peu PLUS ÉTROIT que le document : sur une
+pyélonéphrite, la molécule reste sans catégorie tant que la question n'est pas
+cochée. C'est le sens prudent de l'écart, et l'usage courant — fosfomycine
+orale, cystite simple — est couvert.
+
+### Une absence doit dire SA raison, pas la plus courante
+
+« L'EUCAST ne reconnaît pas la méthode des disques pour ce couple » était la
+seule explication donnée à un diamètre non catégorisé. Elle devient **fausse**
+dès qu'un seuil existe mais ne s'applique pas ici : sur une *Klebsiella*, elle
+envoyait faire une CMI qui n'aurait pas été catégorisée davantage ; sur un
+*E. coli* hors contexte urinaire, elle cachait qu'il suffisait de répondre à
+une question. Une mauvaise raison coûte un examen et fait douter de l'outil.
+
+Le moteur distingue maintenant trois cas, et **l'espèce passe avant le
+contexte** — sur une *Klebsiella* hors contexte, les deux raisons valent, mais
+seule la première est réparable par l'utilisateur :
+
+| situation | ce qui est dit |
+|---|---|
+| l'espèce n'est pas celle du document | « l'EUCAST ne chiffre ce couple que pour *E. coli* » |
+| l'indication n'est pas cochée | « répondre à la question du contexte suffit à le catégoriser » |
+| le document ne donne vraiment pas de disque | le message d'origine, qui redevient vrai |
 
 ---
 
@@ -263,12 +292,13 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : DZ, DZ_URIN
-- **empreinte** : 20ea128f08b308a3d2507891f1366f3d2860f3947b4afc450503d57a407e1627
+- **empreinte** : 85d4dfa1fe2171bf24abdd871edcefe7439fbe28f3d64777ee974a37be4e47cb
 - **date** : 2026-10-25
-- **résultat** : 410 diamètres confrontés — **410 identiques, 0 différent**,
+- **résultat** : 411 diamètres confrontés — **411 identiques, 0 différent**,
   0 non comparé, 2 à arbitrer (les deux concordent). Dans l'autre sens :
-  **un** manque réel, la fosfomycine au disque chez *E. coli* (voir plus bas) ;
-  26 couples chiffrés hors du panel.
+  **aucune molécule du panel n'est privée du seuil que le document lui donne**
+  (le manque de la fosfomycine a été corrigé) ; 26 couples chiffrés hors du
+  panel, et 6 absences expliquées par un témoin ou un écran.
 
 ### La moitié que personne ne relisait
 
@@ -459,7 +489,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 4b15f7d5dd0ae46135f02333e5558fba6447c55d9a2a1fe1c8753b84b454ebb0
+- **empreinte** : 3349ef00da25527c254f678858cf95bf2e5a38003e2663c798f28259f41c63fe
 - **date** : 2026-10-25
 - **résultat** : 22 tables du classeur relues, **409 règles attendues** — **0 manque,
   0 excédent, 0 écart**, CMI **et** disque.

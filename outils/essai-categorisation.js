@@ -211,15 +211,27 @@ dire("\nCertaines molécules n'ont de seuil que pour la cystite simple");
   // triméthoprime et le céfixime QUE pour cette indication. Hors d'elle, il
   // n'y a pas de seuil — et dire « sensible » serait appliquer le seuil d'une
   // autre indication à un prélèvement qui n'en relève pas.
-  ["MEC", "NIT", "TMP", "CFM"].forEach(function (k) {
-    var m = {}; m[k] = k === "NIT" ? "32" : "1";
+  // LA FOSFOMYCINE LES A REJOINTES le 25 octobre 2026. Elle servait jusque-là
+  // de contre-exemple — « toutes ne sont pas urinaires » — parce qu'elle
+  // portait un seuil hors cystite. Elle n'aurait pas dû : le document ne la
+  // chiffre que pour E. coli et pour l'infection urinaire, et renvoie tout le
+  // reste à une note. Le contre-exemple est désormais la ciprofloxacine, qui
+  // a bien un seuil dans les deux contextes.
+  ["MEC", "NIT", "TMP", "CFM", "FOS"].forEach(function (k) {
+    var m = {}; m[k] = k === "NIT" ? "32" : (k === "FOS" ? "8" : "1");
     verif(categ("ecoli", m, {})[k] === undefined,
           k + " hors cystite : AUCUNE catégorie — le référentiel n'en chiffre pas");
     verif(categ("ecoli", m, { urin: "Oui" })[k] === "S",
           k + " en cystite simple : catégorisé");
   });
-  verif(categ("ecoli", { FOS: "8" }, {}).FOS === "S",
-        "la fosfomycine, elle, a un seuil hors cystite : toutes ne sont pas urinaires");
+  verif(categ("ecoli", { CIP: "0.125" }, {}).CIP === "S",
+        "la ciprofloxacine, elle, a un seuil hors cystite : toutes ne sont pas urinaires");
+  // Et la fosfomycine ajoute une restriction d'ESPÈCE que les quatre autres
+  // n'ont pas : cochée ou non, elle ne vaut pas pour Klebsiella.
+  verif(categ("kpneu", { FOS: "8" }, { urin: "Oui" }).FOS === undefined,
+        "fosfomycine sur Klebsiella, même en cystite : aucune catégorie — E. coli seulement");
+  verif(categ("ecoli", { FOS: "8" }, { urin: "Oui" }).FOS === "S",
+        "… alors que sur E. coli en cystite, elle est catégorisée");
 })();
 
 /* ---------- 10. La restriction d'espèce ---------- */

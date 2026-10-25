@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.17";
+const BASE_VERSION = "2026.18";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -711,7 +711,39 @@ const REGLES = [
 ["eucast","entero","FDC","disque","standard",23,23,"30",[21,23],undefined,undefined,undefined,undefined,undefined],
 ["eucast","entero","FEP","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","entero","FEP","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","entero","FOS","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+/* LA FOSFOMYCINE, À LA LETTRE DU DOCUMENT.
+
+   L'EUCAST v16.1 chiffre la fosfomycine pour E. COLI SEULEMENT et pour les
+   indications URINAIRES seulement :
+
+     Fosfomycin iv (infections originating from the urinary tract), E. coli
+                                              CMI 8/8 · disque 200 µg · 24/24
+     Fosfomycin oral (uncomplicated UTI only), E. coli
+                                              CMI 8/8 · disque 200 µg · 24/24
+     Fosfomycin iv (other indications), E. coli                        Note
+     Fosfomycin iv, OTHER ENTEROBACTERALES                             Note
+
+   PhénoBac portait « entero / FOS / cmi / standard 8-8 » : sans restriction
+   d'espèce, sans restriction d'indication, et SANS DIAMÈTRE. Elle rendait donc
+   « fosfomycine S » pour Klebsiella, Enterobacter et Citrobacter sur un seuil
+   que le document ne leur donne pas, et répondait « l'EUCAST ne reconnaît pas
+   la méthode au disque » à qui mesurait 26 mm sur un disque de 200 µg — ce
+   qui est faux, et c'est le test le moins cher qui existe pour une cystite.
+
+   UNE LIMITE ASSUMÉE. PhénoBac n'a qu'un site urinaire, et la question posée
+   à l'utilisateur dit « cystite simple ». La ligne intraveineuse du document
+   vise plus large — « infections d'origine urinaire », pyélonéphrite
+   comprise. Rattacher la fosfomycine à ce site unique est donc un peu PLUS
+   ÉTROIT que le document : sur une pyélonéphrite, la molécule restera sans
+   catégorie tant que la question n'est pas cochée. C'est le sens prudent de
+   l'écart, et l'usage courant — fosfomycine orale, cystite simple — est
+   couvert. L'élargir demanderait un second site urinaire, que rien d'autre
+   ne réclame aujourd'hui.
+
+   Trouvé le 25 octobre 2026 par le balayage inverse de comparer-eucast.py,
+   et porté sur décision du biologiste. */
+["eucast","entero","FOS","cmi","urinaire",8,8,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli"]],
+["eucast","entero","FOS","disque","urinaire",24,24,"200",undefined,undefined,undefined,undefined,undefined,["ecoli"]],
 ["eucast","entero","FOX","cmi","standard",8,8,undefined,undefined,undefined,undefined,true,["ecoli"],undefined],
 ["eucast","entero","GEN","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","entero","GEN","disque","standard",17,17,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
