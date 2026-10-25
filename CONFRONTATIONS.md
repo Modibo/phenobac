@@ -185,6 +185,80 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 
 ---
 
+## comparer-eucast.py --diametres — diamètres critiques
+
+- **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
+- **tables** : DZ, DZ_URIN
+- **empreinte** : 20ea128f08b308a3d2507891f1366f3d2860f3947b4afc450503d57a407e1627
+- **date** : 2026-10-25
+- **résultat** : 410 diamètres confrontés — **410 identiques, 0 différent**,
+  0 non comparé, 2 à arbitrer (les deux concordent).
+
+### La moitié que personne ne relisait
+
+`outils/extraire-diametres.py` a produit cette table une fois, à partir du
+classeur. Depuis, **rien ne la relisait**. `comparer-eucast.py` ne lisait que
+les colonnes B et C — les CMI — et `verifier-couverture-eucast.py` ne couvre
+que 22 tables sur 39.
+
+C'est pourtant la moitié que lit un laboratoire sans automate : il mesure au
+pied à coulisse, en millimètres. Et le sens y est **inversé** — « petit » veut
+dire résistant, là où une petite CMI veut dire sensible. Un seuil lu à
+l'envers transforme chaque sensible en résistant sans qu'aucune erreur ne
+paraisse.
+
+Le mode `--diametres` ne réécrit **rien** de la sélection des lignes : les
+indications, les voies, les restrictions d'espèce, les genres qui partagent
+une feuille — tout ce savoir vaut pour les deux moitiés. Il change les deux
+colonnes qu'on lit, et la table à laquelle on compare.
+
+### Quatre réserves oubliées, que la confrontation des CMI ne pouvait pas voir
+
+L'EUCAST donne **entre parenthèses** la ciprofloxacine et l'amikacine du
+staphylocoque, en CMI comme au disque :
+
+| | CMI | diamètre |
+|---|---|---|
+| Ciprofloxacine, *S. aureus* | (0,001) / (2) | (50) / (17) |
+| Ciprofloxacine, SCN | (0,001) / (2) | (50) / (22) |
+| Amikacine, *S. aureus* | (16) / (16) | (15) / (15) |
+| Amikacine, SCN | (16) / (16) | (15) / (15) |
+
+PhénoBac ne portait la réserve que pour la **gentamicine**. Une ciprofloxacine
+de staphylocoque était donc rendue « I » sans la réserve que la note 12 exige
+— « *Reporting S or I should be avoided and if considered necessary, there
+should be a comment* ».
+
+**Pourquoi la confrontation des CMI ne l'avait pas vu** : PhénoBac n'a pas de
+concentration critique pour ces couples, seulement un diamètre. Un comparateur
+qui part de ce que l'application porte ne visite jamais ce qu'elle ne porte
+pas. La réserve est désormais sur **29 couples**.
+
+### Deux pièges du mode, corrigés avant de rien conclure
+
+Le premier passage a crié **32 divergences**. Aucune n'en était une :
+
+- la note 13 s'écrit « S ≤ 0,001 mg/L » en CMI et « **S ≥ 50 mm** » au
+  disque. La traduction en `S: null` existait pour les CMI et manquait pour
+  les diamètres. Trente-deux fausses alertes valent une absence de contrôle ;
+- le drapeau « convention de laboratoire » dit que le référentiel ne fixe
+  RIEN pour un couple. Il se juge sur les CMI : la vancomycine de
+  l'entérocoque a une concentration critique et **aucun diamètre**, sans que
+  la mention devienne fausse. L'invariant est donc neutralisé dans ce mode ;
+- l'invariant ECOFF, lui, ne porte que sur les couples que la passe a
+  **vraiment visités** : la colistine n'ayant pas de disque, la compter
+  « réserve de trop » aurait fait six fausses alertes pour une réserve bien
+  fondée côté CMI.
+
+### Les deux « à arbitrer » concordent
+
+| couple | lignes du document | ce que PhénoBac retient |
+|---|---|---|
+| *Enterococcus* / vancomycine | *E. faecalis* et *E. faecium* 12 mm ; autres entérocoques 15 mm | **12 mm** — les deux espèces qu'il couvre |
+| *Pseudomonas* / méropénème | *P. aeruginosa* 20/14 ; autres *Pseudomonas* 24/18 | **20/14** — l'espèce qu'il couvre |
+
+---
+
 ## comparer-zit.py — zones d'incertitude technique
 
 - **document** : EUCAST v16.1 (classeur xlsx) ET **CA-SFM 2026, recommandations
@@ -309,7 +383,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 9609897fa850d6a0ba45edd4906f06df6c34743bf6ba421c373b05faa7adf1ca
+- **empreinte** : 4b15f7d5dd0ae46135f02333e5558fba6447c55d9a2a1fe1c8753b84b454ebb0
 - **date** : 2026-10-25
 - **résultat** : 22 tables du classeur relues, **409 règles attendues** — **0 manque,
   0 excédent, 0 écart**, CMI **et** disque.

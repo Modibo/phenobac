@@ -185,7 +185,10 @@ def seuils_phenobac(racine):
         "moteur_py", os.path.join(racine, "outils", "moteur_py.py"))
     MP = importlib.util.module_from_spec(s)
     s.loader.exec_module(MP)
-    tables = MP.tables(["BP", "BP_URIN", "BP_MENINGE", "HORS_EUCAST", "ECOFF"])
+    tables = MP.tables(["BP", "BP_URIN", "BP_MENINGE", "HORS_EUCAST", "ECOFF",
+                        "DZ", "DZ_URIN", "DZ_TEMOIN", "DEPISTAGE"])
+    globals()["DZ_TEMOIN"] = tables.get("DZ_TEMOIN") or {}
+    globals()["DEPISTAGE"] = tables.get("DEPISTAGE") or {}
     globals()["ECOFF"] = tables.get("ECOFF") or {}
     globals()["HORS_EUCAST"] = tables.get("HORS_EUCAST") or {}
     if MENINGE:
@@ -196,6 +199,8 @@ def seuils_phenobac(racine):
         # « I » à « R » sur un liquide céphalo-rachidien.
         BP, URIN = tables.get("BP_MENINGE") or {}, {}
         globals()["BP_ORDINAIRE"] = tables.get("BP") or {}
+    elif DIAMETRE:
+        BP, URIN = tables.get("DZ") or {}, tables.get("DZ_URIN") or {}
     else:
         BP, URIN = tables["BP"], tables.get("BP_URIN") or {}
     # Les seuils de cystite simple vivent dans leur propre table : ne lire que
@@ -222,7 +227,15 @@ def seuils_phenobac(racine):
 
 def nombre(txt):
     """« 0.001 » dans le classeur EUCAST signifie « pas de catégorie S » ; on le
-    laisse tel quel ici, la comparaison le traduit en None côté application."""
+    laisse tel quel ici, la comparaison le traduit en None côté application.
+
+    AU DISQUE, LA MÊME CHOSE S'ÉCRIT « 50 » (note 13 : « an MIC breakpoint of
+    S ≤ 0.001 mg/L … corresponding to a zone diameter breakpoint of S ≥ 50 mm »).
+    Le mode diamètres doit donc traduire 50 exactement comme le mode CMI
+    traduit 0,001 : sans cela, les trente-deux couples concernés — pénicilline
+    G de Corynebacterium, ciprofloxacine d'Acinetobacter, lévofloxacine du
+    staphylocoque… — ressortent tous « DIFFÉRENTS », et trente-deux fausses
+    alertes valent une absence de contrôle."""
     if txt is None: return None
     t = str(txt).strip().strip('()')
     if t in ('-', '', 'IE', 'NA'): return None
@@ -232,10 +245,37 @@ def nombre(txt):
 
 MENINGE = False
 
+# LES DIAMÈTRES N'ÉTAIENT CONFRONTÉS À RIEN.
+#
+# Cet outil lisait les colonnes B et C du classeur — les CMI — et comparait à
+# BP. La moitié DIAMÈTRE du référentiel, celle que lit un laboratoire qui
+# travaille au pied à coulisse, n'était relue par personne depuis que
+# outils/extraire-diametres.py l'avait produite. Le 25 octobre 2026 on a
+# découvert ainsi que les sept diamètres de Bacteroides fragilis manquaient
+# tous, et rien ne le disait.
+#
+# Le mode « --diametres » ne réécrit RIEN de la sélection des lignes : les
+# indications, les voies, les restrictions d'espèce, les genres qui partagent
+# une feuille — tout ce savoir accumulé vaut pour les deux moitiés. Il change
+# seulement les DEUX COLONNES qu'on lit, et la table à laquelle on compare.
+# Le sens est inversé (S ≥, R <), mais une égalité se compare dans les deux
+# sens de la même façon.
+DIAMETRE = False
+
+
+def hors_echelle():
+    """La valeur par laquelle l'EUCAST écrit « aucune catégorie sensible » :
+    0,001 mg/L en CMI, 50 mm au disque. Note 13 du classeur."""
+    return 50.0 if DIAMETRE else 0.001
+
 
 def main():
-    global MENINGE
+    global MENINGE, DIAMETRE
     MENINGE = "--meninge" in sys.argv
+    DIAMETRE = "--diametres" in sys.argv
+    if MENINGE and DIAMETRE:
+        sys.exit("« --meninge » et « --diametres » ne se combinent pas : "
+                 "les diamètres méningés n'ont pas de table à part dans PhénoBac.")
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -246,6 +286,7 @@ def main():
     non_comparables = []
     drapeaux = []
     entre_parentheses = set()
+    vus = set()
 
     def convention(groupe, code):
         v = HORS_EUCAST.get(groupe)
@@ -376,7 +417,10 @@ def main():
                                             else "indication particulière", nom))
                         continue
                     if re.search(motif, nom, re.I):
-                        bruts = (cel.get('B'), cel.get('C'))
+                        # Les seules deux lignes qui changent entre les deux
+                        # moitiés du référentiel.
+                        bruts = ((cel.get('F'), cel.get('G')) if DIAMETRE
+                                 else (cel.get('B'), cel.get('C')))
                         sE, rE = nombre(bruts[0]), nombre(bruts[1])
                         if sE is None and rE is None:
                             # La ligne EXISTE mais ne porte aucun chiffre :
@@ -392,7 +436,19 @@ def main():
                             # valeur reste la bonne, mais la parenthèse est une
                             # réserve du référentiel : la faire disparaître
                             # silencieusement serait perdre une information.
-                            if any("(" in str(x or "") for x in bruts):
+                            # LA RÉSERVE SE LIT DES DEUX CÔTÉS DE LA LIGNE.
+                            # La colonne « ecoff » de la base vaut pour le
+                            # COUPLE germe/antibiotique, pas pour une méthode :
+                            # ne regarder que les colonnes du mode courant
+                            # ferait crier l'outil dans les deux sens pour
+                            # rien — la colistine, qui n'a pas de disque,
+                            # paraîtrait porter une réserve que le document ne
+                            # donne pas, et la ciprofloxacine du staphylocoque,
+                            # dont PhénoBac n'a QUE le diamètre, échappait au
+                            # contrôle en mode CMI. C'est ainsi que quatre
+                            # réserves manquantes sont restées invisibles.
+                            if any("(" in str(cel.get(col) or "")
+                                   for col in ("B", "C", "F", "G")):
                                 nom = nom + "  ⟨valeur entre parenthèses⟩"
                             cands.append((nom, sE, rE))
             # Si des lignes nomment l'espèce du groupe, elles seules valent :
@@ -433,7 +489,7 @@ def main():
             # écart réel avec l'application se retrouve classé « à arbitrer »
             # et passe inaperçu — c'est arrivé pour la gentamicine.
             if cands:
-                distinctes = {(None if s0 == 0.001 else s0, r0) for _, s0, r0 in cands}
+                distinctes = {(None if s0 == hors_echelle() else s0, r0) for _, s0, r0 in cands}
                 if len(distinctes) == 1:
                     cands = [cands[0]]
 
@@ -448,7 +504,7 @@ def main():
                     etat, detail = 'absent', "le document ne porte pas ce couple sur cette feuille"
             elif len(cands) == 1:
                 nom, sE, rE = cands[0]
-                if sE == 0.001: sE = None      # « pas de catégorie S » <-> S: null
+                if sE == hors_echelle(): sE = None   # « pas de catégorie S » <-> S: null
                 # LA PARENTHÈSE SE LIT SUR LA LIGNE RETENUE, pas sur une
                 # candidate. L'amoxicilline des entérobactéries n'est entre
                 # parenthèses que sur « oral (other indications) » ; la ligne
@@ -456,12 +512,15 @@ def main():
                 # Marquer au moment de la collecte faisait entrer les deux
                 # molécules les plus courantes du panel urinaire dans une
                 # réserve qui ne les concerne pas.
+                vus.add((groupe, code))
                 if "parenthèses" in nom:
                     entre_parentheses.add((groupe, code))
                 if sE == sA and rE == rA:
                     etat, detail = 'identique', nom
                 else:
-                    etat, detail = 'different', "%s : EUCAST S<=%s R>%s" % (nom, sE, rE)
+                    etat, detail = 'different', ("%s : EUCAST %s%s %s%s"
+                        % (nom, "S>=" if DIAMETRE else "S<=", sE,
+                           "R<" if DIAMETRE else "R>", rE))
             else:
                 etat = 'arbitrer'
                 detail = "%d lignes possibles :" % len(cands)
@@ -482,7 +541,14 @@ def main():
             # c'est un manque, et il se compte ailleurs.
             conv = convention(groupe, code)
             chiffre = (etat in ('identique', 'different'))
-            if MENINGE:
+            if MENINGE or DIAMETRE:
+                # Le drapeau « convention de laboratoire » dit que le
+                # référentiel ne fixe RIEN pour ce couple. Il se juge sur les
+                # CMI : un couple peut avoir une concentration critique et
+                # aucun diamètre — la vancomycine de l'entérocoque,
+                # le méropénème de Pseudomonas — sans que la mention devienne
+                # fausse pour autant. L'éprouver ici réclamerait un drapeau
+                # sur des couples parfaitement fixés par le document.
                 pass
             elif conv and chiffre:
                 drapeaux.append((groupe, code, "marqué « convention de laboratoire » "
@@ -492,11 +558,14 @@ def main():
                                  "ne donne aucun chiffre pour ce couple"))
             total[etat] += 1
             marque = {'identique': ' ok ', 'different': '!!!!', 'arbitrer': ' ?? ', 'absent': ' -- '}[etat]
-            print("  [%s] %-4s application S<=%-7s R>%-7s  %s" % (marque, code, sA, rA, detail))
+            gauche, droite = ("S>=", "R<") if DIAMETRE else ("S<=", "R>")
+            print("  [%s] %-4s application %s%-7s %s%-7s  %s"
+                  % (marque, code, gauche, sA, droite, rA, detail))
             if etat == 'arbitrer':
                 for nom, sE, rE in cands:
                     concorde = "  <- concorde" if (sE == sA and rE == rA) else ""
-                    print("            %-58s S<=%-7s R>%s%s" % (nom[:58], sE, rE, concorde))
+                    print("            %-58s %s%-7s %s%s%s"
+                          % (nom[:58], gauche, sE, droite, rE, concorde))
 
     if non_comparables:
         print("\n=== groupes NON COMPARABLES : ils couvrent plusieurs feuilles EUCAST ===")
@@ -545,7 +614,7 @@ def main():
                     if not ord_:
                         break
                     sO = ord_.get("S"); rO = ord_.get("R")
-                    if sO == 0.001: sO = None
+                    if sO == hors_echelle(): sO = None
                     if (sO, rO) == (sE, rE):
                         break
                     manques.append((groupe, code, nom, sE, rE, sO, rO))
@@ -575,7 +644,11 @@ def main():
         # que pour « convention de laboratoire ». Une réserve oubliée rend
         # « sensible » sans la dire ; une réserve de trop apprend à ignorer
         # les réserves.
-        porte = {tuple(c.split(":")) for c in ECOFF}
+        # … MAIS SEULEMENT SUR LES COUPLES QUE CETTE PASSE A VRAIMENT VUS.
+        # La colistine n'a pas de disque : en mode diamètres, son couple n'est
+        # jamais visité, et la compter « réserve de trop » ferait six fausses
+        # alertes pour une réserve parfaitement fondée côté CMI.
+        porte = {tuple(c.split(":")) for c in ECOFF if tuple(c.split(":")) in vus}
         for g, k in sorted(entre_parentheses):
             print("  %-14s %-5s %s" % (g, k,
                   "" if (g, k) in porte else "  <- PhénoBac ne porte PAS la réserve"))

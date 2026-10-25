@@ -414,7 +414,14 @@ dire("\nLa parenthèse de l'EUCAST est une réserve, pas une coquetterie");
   // en toutes lettres À DESSEIN : s'il bouge sans qu'on l'ait voulu, c'est
   // qu'une parenthèse est apparue ou a disparu dans le classeur, et cela se
   // regarde. outils/verifier-couverture-eucast.py dit laquelle.
-  verif(Object.keys(E.ECOFF).length === 25,
+  // 20 le 24 octobre 2026, 25 le 25 au matin, 29 le 25 au soir : le mode
+  // diamètres de comparer-eucast.py a trouvé quatre réserves oubliées —
+  // ciprofloxacine et amikacine du staphylocoque et des SCN, que l'EUCAST met
+  // entre parenthèses en CMI comme au disque. La confrontation des CMI ne
+  // pouvait pas les voir : PhénoBac n'a de seuil que AU DISQUE pour ces
+  // couples, et un comparateur qui part de ce que l'application porte ne
+  // visite jamais ce qu'elle ne porte pas.
+  verif(Object.keys(E.ECOFF).length === 29,
         Object.keys(E.ECOFF).length + " couples portent la réserve, lus dans la base");
   verif(E.seuilEcoff("entero", "COL") && !E.seuilEcoff("entero", "CTX"),
         "la colistine des entérobactéries est visée, la céfotaxime non");

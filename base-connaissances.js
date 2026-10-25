@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.16";
+const BASE_VERSION = "2026.17";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -954,9 +954,22 @@ const REGLES = [
 ["eucast","salmonella","TEM","disque","standard",null,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","salmonella","TZP","cmi","standard",8,8,undefined,16,undefined,undefined,undefined,undefined,undefined],
 ["eucast","salmonella","TZP","disque","standard",20,20,"30-6",[19,19],undefined,undefined,undefined,undefined,undefined],
-["eucast","scn","AMK","disque","standard",15,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+/* QUATRE RÉSERVES OUBLIÉES, TROUVÉES PAR LE MODE DIAMÈTRES.
+
+   L'EUCAST v16.1 donne ENTRE PARENTHÈSES la ciprofloxacine et l'amikacine du
+   staphylocoque — en CMI comme au disque : « Ciprofloxacin, S. aureus
+   (0.001)/(2), (50)/(17) », « Amikacin (16)/(16), (15)/(15) ». PhénoBac ne
+   portait la réserve que pour la gentamicine.
+
+   Pourquoi la confrontation des CMI ne l'avait pas vu : PhénoBac n'a PAS de
+   concentration critique pour ces couples, seulement un diamètre. Le
+   comparateur partant de ce que l'application porte, ces couples n'étaient
+   jamais visités, et l'invariant du drapeau ECOFF ne les voyait pas non plus.
+   Une ciprofloxacine de staphylocoque était donc rendue « I » sans la réserve
+   que la note 12 exige. */
+["eucast","scn","AMK","disque","standard",15,15,"30",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","scn","AMP","disque","standard",18,18,"2",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","scn","CIP","disque","standard",null,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","scn","CIP","disque","standard",null,22,"5",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","scn","DA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","DA","disque","standard",22,22,"2",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","E","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -1022,9 +1035,9 @@ const REGLES = [
 ["eucast","serratia","TEM","disque","standard",null,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","serratia","TZP","cmi","standard",8,8,undefined,16,undefined,undefined,undefined,undefined,undefined],
 ["eucast","serratia","TZP","disque","standard",20,20,"30-6",[19,19],undefined,undefined,undefined,undefined,undefined],
-["eucast","staph","AMK","disque","standard",15,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","staph","AMK","disque","standard",15,15,"30",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","staph","AMP","disque","standard",18,18,"2",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","staph","CIP","disque","standard",null,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","staph","CIP","disque","standard",null,17,"5",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","staph","DA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","staph","DA","disque","standard",22,22,"2",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","staph","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
