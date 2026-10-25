@@ -263,6 +263,105 @@ MENINGE = False
 DIAMETRE = False
 
 
+# ESPÈCES QUE CHAQUE GROUPE DE SEUILS COUVRE, telles que le document les
+# nomme. Une ligne qui NOMME une espèce ne vaut que pour elle : « Clindamycin,
+# C. diphtheriae » ne concerne pas C. ulcerans, « Daptomycin, S. aureus » ne
+# concerne pas les staphylocoques à coagulase négative, et « Nitrofurantoin
+# (uncomplicated UTI only), S. saprophyticus » ne concerne ni S. aureus ni les
+# autres SCN. Sans cette liste, le balayage inverse réclamait des seuils que
+# le document ne donne PAS pour l'espèce visée — l'outil qui accuse, encore.
+ESPECES_GROUPE = {
+    'entero':       r'E\. coli|Klebsiella|Enterobacter|Citrobacter|Shigella|Enterobacterales',
+    'salmonella':   r'Salmonella|Enterobacterales',
+    'morganella':   r'Morganell|Proteus|Providencia|Enterobacterales',
+    'serratia':     r'Serratia|Enterobacterales',
+    'staph':        r'S\. aureus|Staphylococcus',
+    'scn':          r'[Cc]oagulase-negative|S\. saprophyticus|S\. epidermidis|Staphylococcus',
+    'enteroc':      r'E\. faecalis|E\. faecium|enterococci|Enterococcus',
+    'strepacg':     r'groups? A|S\. pyogenes|S\. dysgalactiae|Streptococcus',
+    'strepb':       r'group B|S\. agalactiae|Streptococcus',
+    'cdiphtheriae': r'C\. diphtheriae',
+    'culcerans':    r'C\. ulcerans',
+    'fnecrophorum': r'F\. necrophorum',
+    'fnucleatum':   r'F\. nucleatum',
+    'campylo':      r'C\. jejuni|Campylobacter',
+}
+
+# Ce qui ressemble à une restriction d'espèce dans un intitulé de ligne.
+ESPECE_CITEE = re.compile(
+    r'\b[A-Z]\.\s*[a-z]+|Enterobacterales|Morganellaceae|Serratia|Salmonella|'
+    r'Klebsiella|Proteus|Providencia|Citrobacter|Enterobacter|Shigella|'
+    r'[Cc]oagulase-negative staphylococci|enterococci|groups? [ABCG]|group [ABCG]')
+
+
+def panels_par_groupe(racine):
+    """Molécules OFFERTES par l'application, groupe de seuils par groupe de
+    seuils, lues dans PRESENTATION de la page.
+
+    POURQUOI C'EST LA BONNE QUESTION. Un couple que le document chiffre et que
+    PhénoBac ne porte pas n'est pas forcément un défaut : l'application offre
+    un PANEL choisi — celui d'un laboratoire de district, et non la liste
+    entière de l'EUCAST. La tétracycline du pneumocoque n'y est pas, et c'est
+    une décision.
+
+    Mais une molécule OFFERTE AU PANEL sans seuil, c'en est un : le
+    biologiste la voit, la saisit, et rien ne sort. Ce sont ces deux cas qu'il
+    faut séparer, sinon le rapport noie l'un dans l'autre."""
+    page = open(os.path.join(racine, "phenobac.html"), encoding="utf-8").read()
+    i = page.index("const PRESENTATION")
+    bloc = page[i:page.index("\n};", i)]
+    par_espece = {}
+    for m in re.finditer(r"\n  (\w+):\{(.*?)\n  \},", bloc, re.S):
+        par_espece[m.group(1)] = set(re.findall(r'"([A-Z][A-Z0-9]*)"', m.group(2)))
+    # espèce -> groupe de seuils, lu dans le moteur
+    mot = open(os.path.join(racine, "moteur.js"), encoding="utf-8").read()
+    k = mot.index("const ORG = {")
+    org = mot[k:mot.index("\n};", k)]
+    par_groupe = {}
+    for m in re.finditer(r"^\s{2}(\w+):\s*\{.*?bpGroup:\s*\"(\w+)\"", org, re.M | re.S):
+        espece, groupe = m.group(1), m.group(2)
+        par_groupe.setdefault(groupe, set()).update(par_espece.get(espece, set()))
+    if not par_groupe:
+        raise SystemExit("CONFRONTATION INTERROMPUE — aucun panel lu dans la page. "
+                         "Sans eux, le rapport ne saurait plus distinguer un seuil "
+                         "manquant d'un choix de couverture, et dirait les deux de la "
+                         "même façon.")
+    return par_groupe
+
+
+def vise_mon_groupe(groupe, nom):
+    """La ligne concerne-t-elle l'espèce du groupe ? « Oui » quand elle ne
+    nomme aucune espèce. Quand elle en nomme, il faut que l'une soit la mienne
+    — sauf si elle les EXCLUT (« except Morganella morganii »), auquel cas
+    c'est l'inverse."""
+    citees = ESPECE_CITEE.findall(nom)
+    if not citees:
+        return True
+    mien = ESPECES_GROUPE.get(groupe)
+    if not mien:
+        return True                     # groupe à feuille propre : rien à filtrer
+    apres_except = nom.split("except", 1)[1] if re.search(r'\bexcept\b', nom) else ""
+    if apres_except and re.search(mien, apres_except):
+        return False                    # nommément exclu
+    avant = nom.split("except", 1)[0]
+    return bool(re.search(mien, avant))
+
+
+def excuse_absence(groupe, code):
+    """Pourquoi PhénoBac peut légitimement ne pas porter un seuil que le
+    document donne. Chaque excuse est un MÉCANISME de l'application, pas une
+    tolérance : si aucune ne s'applique, c'est un manque."""
+    if DIAMETRE:
+        t = (DZ_TEMOIN.get(groupe) or {}).get(code)
+        if t:
+            return "lu sur le disque de %s (témoin déclaré par le document)" % t
+        if groupe == "pneumo" and code in ("PEN", "AMX", "CTX"):
+            return "se déduit du dépistage à l'oxacilline 1 µg"
+    if (DEPISTAGE.get(groupe) or {}).get(code):
+        return "porté comme seuil de DÉPISTAGE, pas comme seuil clinique"
+    return None
+
+
 def hors_echelle():
     """La valeur par laquelle l'EUCAST écrit « aucune catégorie sensible » :
     0,001 mg/L en CMI, 50 mm au disque. Note 13 du classeur."""
@@ -287,6 +386,8 @@ def main():
     drapeaux = []
     entre_parentheses = set()
     vus = set()
+    manque_couverture, excuses, hors_panel = [], [], []
+    PANELS = panels_par_groupe(racine)
 
     def convention(groupe, code):
         v = HORS_EUCAST.get(groupe)
@@ -357,8 +458,22 @@ def main():
                 print("   section « %s » introuvable ou vide sur cette feuille — "
                       "titres repérés : %s" % (section, ", ".join(sorted(titres.values()))))
             lignes = garde
-        for code in sorted(bp[groupe]):
-            sA, rA = bp[groupe][code]
+        # L'AUTRE MOITIÉ DE LA QUESTION, POUR TOUTES LES FEUILLES.
+        #
+        # La boucle ne parcourait que les codes que PhénoBac PORTE. Ce que le
+        # document chiffre et que l'application n'a pas lui était invisible —
+        # et c'est ainsi que les sept diamètres de Bacteroides fragilis ont
+        # dormi : outils/verifier-couverture-eucast.py les a trouvés, mais il
+        # ne couvre que 22 tables sur 39, faute de savoir lire les indications
+        # et les voies des grandes feuilles. Ce savoir est ICI.
+        #
+        # On parcourt donc aussi les 40 codes que PhénoBac sait tester. Pour
+        # ceux qu'elle ne porte pas, la MÊME sélection de lignes s'applique :
+        # si le document donne un chiffre, c'est un manque, et il se compte à
+        # part pour ne pas brouiller le bilan des seuils confrontés.
+        for code in sorted(set(bp.get(groupe, {})) | set(AGENTS)):
+            porte = code in bp.get(groupe, {})
+            sA, rA = bp[groupe][code] if porte else (None, None)
             motif = AGENTS.get(code)
             cands = []
             # POURQUOI un couple n'est pas comparé. « Aucune ligne
@@ -368,6 +483,7 @@ def main():
             # divergents de Bacteroides fragilis. On note donc chaque mise à
             # l'écart, et le rapport la restitue.
             ecartes = []
+            espece_propre = False
             if motif:
                 # Deux groupes partagent la feuille des staphylocoques : on ne
                 # retient que les lignes de l'espèce concernée, sinon celles de
@@ -417,6 +533,17 @@ def main():
                                             else "indication particulière", nom))
                         continue
                     if re.search(motif, nom, re.I):
+                        # UNE LIGNE QUI NOMME MON ESPÈCE GOUVERNE, MÊME SANS
+                        # CHIFFRE. Le document donne à Salmonella sa propre
+                        # ligne de ciprofloxacine, dont le DIAMÈTRE est
+                        # « Note » : il n'y a pas de disque pour ce genre, et
+                        # l'EUCAST fait écran à la péfloxacine. Retomber sur la
+                        # ligne générale des entérobactéries (25/22) faisait
+                        # réclamer un seuil que le référentiel refuse de
+                        # donner. « Note » n'est pas une absence de ligne :
+                        # c'est un refus de trancher, et il vaut pour moi.
+                        if espece and re.search(espece, nom):
+                            espece_propre = True
                         # Les seules deux lignes qui changent entre les deux
                         # moitiés du référentiel.
                         bruts = ((cel.get('F'), cel.get('G')) if DIAMETRE
@@ -455,7 +582,14 @@ def main():
             # sans cela, C. coli concurrence C. jejuni sur la même feuille.
             if espece and cands:
                 visees = [x for x in cands if re.search(espece, x[0])]
-                if visees: cands = visees
+                if visees:
+                    cands = visees
+                elif espece_propre:
+                    # Ma ligne existe et ne porte pas de chiffre : rien ne
+                    # s'applique, et surtout pas la ligne générale.
+                    ecartes.append(("ligne propre à l'espèce, sans valeur chiffrée",
+                                    "le document ne donne rien pour ce groupe"))
+                    cands = []
 
             # Convention documentée dans le README : la ligne intraveineuse et
             # l'infection systémique servent de référence, un antibiogramme
@@ -524,6 +658,24 @@ def main():
             else:
                 etat = 'arbitrer'
                 detail = "%d lignes possibles :" % len(cands)
+            # Un code que PhénoBac ne porte pas : on ne confronte pas, on
+            # constate. Avec les excuses qui en sont de vraies.
+            if not porte:
+                chiffres = [x for x in cands if x[1] is not None or x[2] is not None]
+                # Une ligne qui nomme une AUTRE espèce ne vaut pas pour ce
+                # groupe : la réclamer serait accuser à tort.
+                chiffres = [x for x in chiffres if vise_mon_groupe(groupe, x[0])]
+                if chiffres:
+                    pourquoi = excuse_absence(groupe, code)
+                    nom0, s0, r0 = chiffres[0]
+                    if pourquoi:
+                        excuses.append((groupe, code, pourquoi))
+                    elif code not in PANELS.get(groupe, set()):
+                        hors_panel.append((groupe, code, nom0, s0, r0))
+                    else:
+                        manque_couverture.append((groupe, code, nom0, s0, r0))
+                continue
+
             # LE DRAPEAU « CONVENTION DE LABORATOIRE » DOIT DIRE VRAI.
             #
             # Il signifie « le référentiel ne fixe RIEN pour ce couple », et
@@ -629,6 +781,33 @@ def main():
                 print("               %s" % nom[:70])
         else:
             print("\nAucun seuil méningé du document ne manque à PhénoBac.")
+
+    # ---- CE QUE LE DOCUMENT DONNE ET QUE PHÉNOBAC NE PORTE PAS ----
+    if excuses:
+        print("\n=== ABSENCES EXPLIQUÉES PAR UN MÉCANISME DE L'APPLICATION (%d) ==="
+              % len(excuses))
+        for g, k, pourquoi in sorted(set(excuses)):
+            print("  %-12s %-5s %s" % (g, k, pourquoi))
+    if hors_panel:
+        print("\n=== CHIFFRÉ PAR LE DOCUMENT, HORS DU PANEL DE PHÉNOBAC (%d) ==="
+              % len(hors_panel))
+        print("Ce n'est pas un défaut : l'application offre un panel CHOISI, celui")
+        print("d'un laboratoire de district, et non la liste entière de l'EUCAST.")
+        print("C'est la liste de ce qu'elle POURRAIT couvrir — une décision, pas")
+        print("une omission.")
+        for g, k, nom, sE, rE in sorted(set(hors_panel)):
+            print("  %-12s %-5s %s" % (g, k, nom[:56]))
+    if manque_couverture:
+        print("\n=== AU PANEL, ET SANS SEUIL (%d) ===" % len(manque_couverture))
+        print("CELLES-LÀ SONT DES DÉFAUTS : la molécule est offerte à la saisie, le")
+        print("biologiste la mesure, et rien ne sort. Chacune est à ajouter après")
+        print("validation par un biologiste.")
+        for g, k, nom, sE, rE in sorted(set(manque_couverture)):
+            gauche, droite = ("S>=", "R<") if DIAMETRE else ("S<=", "R>")
+            print("  %-12s %-5s %s%-7s %s%-7s   %s" % (g, k, gauche, sE, droite, rE, nom[:52]))
+    else:
+        print("\n%s : aucune molécule du panel n'est privée du seuil que le "
+              "document lui donne." % ("Diamètres" if DIAMETRE else "Concentrations critiques"))
 
     if entre_parentheses:
         # LA PARENTHÈSE EST UNE RÉSERVE DU RÉFÉRENTIEL, pas une coquetterie

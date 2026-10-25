@@ -29,7 +29,10 @@ pour obtenir la nouvelle empreinte.
 - **tables** : BP, BP_URIN
 - **empreinte** : ae4e8ab090ab72344dc9a4e9bacd45244c47855a483612ef784b3960bc59daf4
 - **date** : 2026-10-25
-- **résultat** : 403 seuils confrontés — **403 identiques, 0 différent**, 91 non comparés.
+- **résultat** : 403 seuils confrontés — **403 identiques, 0 différent**, 91 non
+  comparés. Et, dans l'autre sens : **aucune molécule du panel n'est privée du
+  seuil que le document lui donne** ; 109 couples sont chiffrés par l'EUCAST
+  hors du panel de PhénoBac, ce qui est une décision et non une omission.
   (244 le 24 octobre ; les 159 de plus sont les dix anaérobies à Gram positif et
   les sept espèces aérobies.)
 
@@ -154,6 +157,77 @@ signale une section vide au lieu de la taire.
 
 ---
 
+### Et enfin la question inverse, sur les TRENTE-NEUF groupes
+
+`verifier-couverture-eucast.py` répond à cette question de façon exacte, ligne
+à ligne — mais pour **22 tables seulement**, celles dont la mise en page est
+simple. Les dix-sept grandes feuilles empilent des lignes par indication, par
+voie et par espèce, et tout le savoir qui permet de choisir la bonne est
+**ici**, dans `comparer-eucast.py`. On l'y emploie donc, dans les deux modes.
+
+La boucle ne parcourait que les codes que PhénoBac **porte**. Elle parcourt
+maintenant aussi les quarante codes qu'elle sait tester, et le rapport trie
+en trois :
+
+| | CMI | diamètres |
+|---|---|---|
+| absences expliquées par un mécanisme (témoin, dépistage) | — | 6 |
+| chiffré par le document, **hors du panel** de PhénoBac | 109 | 26 |
+| **au panel, et sans seuil** | **0** | **1** |
+
+Les 109 et les 26 ne sont **pas** des défauts : PhénoBac offre un panel
+choisi, celui d'un laboratoire de district, et non la liste entière de
+l'EUCAST — la tétracycline du pneumocoque n'y est pas, et c'est une décision.
+La troisième ligne, elle, en est : la molécule est offerte à la saisie, le
+biologiste la mesure, et rien ne sort.
+
+### DEUX RÈGLES QUI MANQUAIENT À LA SÉLECTION DES LIGNES
+
+Le premier passage réclamait **137** couples. Seize venaient d'un défaut de
+l'outil, et une dix-septième d'un défaut plus subtil :
+
+- **une ligne qui nomme une espèce ne vaut que pour elle.** « Clindamycin,
+  C. diphtheriae » ne concerne pas *C. ulcerans* ; « Daptomycin, S. aureus »
+  ne concerne pas les SCN ; « Nitrofurantoin …, S. saprophyticus » ne concerne
+  ni *S. aureus* ni les autres SCN ; « Trimethoprim …, E. coli and Klebsiella »
+  ne concerne ni *Salmonella*, ni *Serratia*, ni les Morganellaceae. Une liste
+  d'espèces par groupe règle cela, avec la clause « **except** » prise dans le
+  bon sens ;
+
+- **une ligne qui nomme mon espèce gouverne, MÊME SANS CHIFFRE.** Le document
+  donne à *Salmonella* sa propre ligne de ciprofloxacine, dont le diamètre est
+  « Note » : il n'y a **pas** de disque pour ce genre, et l'EUCAST fait écran à
+  la péfloxacine. Retomber sur la ligne générale des entérobactéries (25/22)
+  faisait réclamer un seuil que le référentiel refuse de donner. « Note » n'est
+  pas une absence de ligne : c'est un refus de trancher, et il vaut pour moi.
+
+Après ces deux règles, les comptes avant/après sont inchangés — 403 CMI et
+410 diamètres identiques — et il ne reste **qu'un** manque.
+
+### LE MANQUE : la fosfomycine au disque
+
+L'EUCAST v16.1 donne, pour *E. coli* :
+
+| ligne du document | CMI | disque | diamètre |
+|---|---|---|---|
+| Fosfomycin iv (infections originating from the urinary tract), *E. coli* | 8 / 8 | 200 µg | **24 / 24** |
+| Fosfomycin oral (uncomplicated UTI only), *E. coli* | 8 / 8 | 200 µg | **24 / 24** |
+| Fosfomycin iv (other indications), *E. coli* | Note | — | Note |
+| Fosfomycin iv, **other Enterobacterales** | Note | — | Note |
+
+PhénoBac porte la CMI 8/8 et **aucun diamètre**. Un laboratoire qui mesure
+26 mm sur un disque de 200 µg s'entend répondre « l'EUCAST ne reconnaît pas la
+méthode au disque pour ce couple » — ce qui est faux, et c'est le test le
+moins cher qui existe pour une cystite simple.
+
+Deux restrictions vont avec, et elles changent ce que l'application rend
+aujourd'hui : le seuil ne vaut que pour ***E. coli*** et que pour les
+indications **urinaires**. PhénoBac rend aujourd'hui « fosfomycine S » pour
+*Klebsiella* et *Enterobacter*, et hors contexte urinaire. **Cette correction
+restreint un rendu existant : elle attend la validation du biologiste.**
+
+---
+
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
@@ -192,7 +266,9 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 - **empreinte** : 20ea128f08b308a3d2507891f1366f3d2860f3947b4afc450503d57a407e1627
 - **date** : 2026-10-25
 - **résultat** : 410 diamètres confrontés — **410 identiques, 0 différent**,
-  0 non comparé, 2 à arbitrer (les deux concordent).
+  0 non comparé, 2 à arbitrer (les deux concordent). Dans l'autre sens :
+  **un** manque réel, la fosfomycine au disque chez *E. coli* (voir plus bas) ;
+  26 couples chiffrés hors du panel.
 
 ### La moitié que personne ne relisait
 
