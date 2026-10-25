@@ -140,6 +140,56 @@ dire("\nUn diamètre sans catégorie explique sa raison dans les deux langues");
         "… avec le nom anglais de la molécule, pas le français");
 })();
 
+/* ---------- 8. LE RECENSEMENT, ESPÈCE PAR ESPÈCE ----------
+
+   COMPTER LE FRANÇAIS DANS LE FICHIER NE MARCHE PAS, ET ON A ESSAYÉ TROIS
+   FOIS. Un balayage d'états sur moteur.js se désynchronise sur les
+   apostrophes, puis sur les littéraux d'expression régulière ; le nombre a
+   valu 501, 415 puis 413 sans suivre le travail — dix-huit phrases traduites
+   n'en faisaient baisser que deux. Un nombre qui ne suit pas le travail ne
+   mesure pas le travail, et un plafond posé dessus ne retient rien.
+
+   On mesure donc le COMPORTEMENT, qui est exact et qui est aussi ce que
+   l'utilisateur voit : on fait tourner le moteur en anglais sur CHAQUE
+   espèce, et on compte celles dont le rendu contient encore du français.
+   Soixante sur soixante au départ. Le nombre ne peut descendre qu'en
+   traduisant, et il ne peut pas se tromper : c'est le texte rendu. */
+// 60 au départ, le 25 octobre 2026. 51 après les entérobactéries, les
+// staphylocoques et la réserve ECOFF. Il ne doit que DESCENDRE : le baisser
+// est la seule façon de le franchir.
+var PLAFOND_ESPECES = 51;
+
+dire("\nRecensement : quelles espèces rendent encore du français en anglais ?");
+(function () {
+  var FR = /[àâéèêëîïôùûç]|\b(le|la|les|des|une|un|aux|est|pas|qui|que|pour|sur|dans|avec|sans)\b/;
+  var profil = { PEN: "R", AMX: "R", CTX: "R", FOX: "R", E: "R",
+                 MTZ: "S", SXT: "S", CIP: "S" };
+  var reste = [];
+  Object.keys(E.ORG).forEach(function (id) {
+    var a = E.runInterpretation({ organism: id, lang: "en", mode: "sir",
+                                  results: profil, ctx: {} }).interpretation;
+    var t = [a.name || "", a.mech || "", a.comment || ""]
+      .concat((a.rules || []).map(function (x) { return x.txt; }))
+      .concat((a.alerts || []).map(function (x) { return x.txt; })).join(" || ");
+    if (FR.test(t)) reste.push(id);
+  });
+  var n = Object.keys(E.ORG).length;
+  verif(reste.length <= PLAFOND_ESPECES,
+        reste.length + " espèces sur " + n + " rendent encore du français en anglais "
+        + "(plafond " + PLAFOND_ESPECES + ")"
+        + (reste.length > PLAFOND_ESPECES ? " — LA TRADUCTION A RECULÉ" : ""));
+  verif(n >= 60, "… et le recensement a bien parcouru les " + n + " espèces : "
+        + "un recensement vide passerait au vert sans rien avoir regardé");
+  E.fixerLangue("fr");
+  var frOk = Object.keys(E.ORG).every(function (id) {
+    var a = E.runInterpretation({ organism: id, lang: "fr", mode: "sir",
+                                  results: profil, ctx: {} }).interpretation;
+    return !!a.comment;
+  });
+  verif(frOk, "en français, les " + n + " espèces rendent toujours un commentaire — "
+        + "traduire ne doit rien casser de ce qui marchait");
+})();
+
 E.fixerLangue("fr");
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : le moteur rend dans les deux langues, les noms de "

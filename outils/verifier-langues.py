@@ -49,10 +49,20 @@ PLAFOND = {
     # français non traduit sans rien faire tomber.
     # Relevés par le balayage d'états, qui est le seul juste : les premiers
     # chiffres — 411, 671, 37 — venaient d'un comptage faux.
-    # Fichiers JavaScript PURS : le balayage d'états y est juste.
-    # 501 au départ. Chaque appel tr(français, anglais) en retire autant que
-    # la phrase en comptait : le nombre ne descend qu'en traduisant.
-    "moteur.js": 415,
+    # LE MOTEUR N'EST PLUS MESURÉ ICI, ET C'EST UN AVEU.
+    #
+    # On a essayé trois fois de compter le français de moteur.js par le texte.
+    # Le balayage d'états se désynchronise sur les apostrophes, puis sur les
+    # littéraux d'expression régulière : le nombre a valu 501, 415 puis 413
+    # sans suivre le travail — dix-huit phrases traduites n'en faisaient
+    # baisser que deux, et les « chaînes » comptées étaient des blocs de code
+    # entiers. Un plafond posé sur un nombre pareil ne retient rien.
+    #
+    # Le moteur est désormais mesuré par son COMPORTEMENT, dans
+    # outils/essai-langue.js : on le fait tourner en anglais sur chacune des
+    # soixante espèces et on compte celles dont le rendu contient encore du
+    # français. C'est exact, c'est ce que l'utilisateur voit, et cela ne peut
+    # descendre qu'en traduisant.
     "rendu-cible.js": 43,
 }
 
@@ -108,6 +118,7 @@ def chaines(src):
     spec = importlib.util.spec_from_file_location("muter", os.path.join(ICI, "muter.py"))
     MU = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(MU)
+    src = sans_regex(src)
     code = MU.masque_code(src)
     out, i, n = [], 0, len(src)
     while i < n:
@@ -192,6 +203,62 @@ def texte_visible(page):
     sans = sans.replace("&nbsp;", " ").replace("&amp;", "&").replace("&times;", " ")
     morceaux = [" ".join(l.split()) for l in sans.splitlines()]
     return [m for m in morceaux if len(m) > 3]
+
+
+def sans_regex(src):
+    r"""Les littéraux d'expression régulière, neutralisés.
+
+    Le balayage d'états lit du JavaScript mais ne connaît pas les expressions
+    régulières : dans « /['\"]/ » ou « /\bqu'/ », l'apostrophe ouvre une
+    chaîne qui ne se referme jamais, et tout ce qui suit bascule. C'est ce qui
+    faisait que le compte du moteur — 415 — ne concordait pas avec la somme
+    de ses fonctions : dix-huit chaînes traduites n'en faisaient baisser que
+    deux. Un nombre qui ne suit pas le travail ne mesure pas le travail.
+
+    On repère un « / » qui OUVRE une expression : il suit un opérateur, une
+    parenthèse, une virgule ou un début d'instruction — jamais une valeur, où
+    il serait une division. Heuristique, mais celle des coloriseurs, et elle
+    suffit ici puisqu'on ne cherche qu'à ne pas se désynchroniser."""
+    out, i, n = [], 0, len(src)
+    while i < n:
+        c = src[i]
+        if c in "\"'`":                       # chaîne : on la recopie entière
+            j = i + 1
+            while j < n and not (src[j] == c and src[j - 1] != "\\"):
+                j += 1
+            out.append(src[i:j + 1]); i = j + 1; continue
+        if c == "/" and i + 1 < n and src[i + 1] == "/":
+            j = src.find("\n", i)
+            j = n if j < 0 else j
+            out.append(src[i:j]); i = j; continue
+        if c == "/" and i + 1 < n and src[i + 1] == "*":
+            j = src.find("*/", i)
+            j = n if j < 0 else j + 2
+            out.append(src[i:j]); i = j; continue
+        if c == "/":
+            k = len(out) - 1
+            prec = ""
+            while k >= 0 and not prec:
+                prec = out[k].strip()[-1:] if out[k].strip() else ""
+                k -= 1
+            if prec in ("", "(", ",", "=", "!", "&", "|", ":", ";", "{", "}", "?", "+", "["):
+                j, classe = i + 1, False
+                while j < n:
+                    d = src[j]
+                    if d == "\\":
+                        j += 2; continue
+                    if d == "[":
+                        classe = True
+                    elif d == "]":
+                        classe = False
+                    elif d == "/" and not classe:
+                        break
+                    elif d == "\n":
+                        break
+                    j += 1
+                out.append(" " * (j - i + 1)); i = j + 1; continue
+        out.append(c); i += 1
+    return "".join(out)
 
 
 def sans_tr(src):
