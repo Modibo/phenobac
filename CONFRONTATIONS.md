@@ -27,9 +27,10 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : cdcae852b51e8200d058db409d72916503ac2da8f00c62a98254b5b667ef4380
-- **date** : 2026-10-24
-- **résultat** : 244 seuils confrontés — **244 identiques, 0 différent**, 91 non comparés.
+- **empreinte** : 130407f93f953db1cdf6a90a8a93fc14fa4c962723f66160761aa87913360a5e
+- **date** : 2026-10-25
+- **résultat** : 340 seuils confrontés — **340 identiques, 0 différent**, 91 non comparés.
+  (244 le 24 octobre ; les 96 de plus sont les dix anaérobies à Gram positif.)
 
 La confrontation porte sur les concentrations critiques de l'EUCAST. Les
 seuils méningés (BP_MENINGE) et ceux du CA-SFM ont leurs propres documents et
@@ -79,7 +80,10 @@ La base n'avait pas de colonne pour cette distinction : PhénoBac appliquait la
 valeur et perdait la réserve. Il rendait donc une colistine ou un aminoside
 « sensible » sur un seuil qui ne le promet pas.
 
-Une colonne `ecoff` la porte depuis le 24 octobre 2026, sur **20 couples** —
+Une colonne `ecoff` la porte depuis le 24 octobre 2026, sur **25 couples** —
+la clindamycine de *C. innocuum*, de *Parvimonas*, de *Peptostreptococcus* et
+de *Peptoniphilus* s'y sont ajoutées le 25, avec l'ertapénème de
+*Bacteroides* ; les vingt premiers sont la
 colistine, gentamicine et amikacine chez les entérobactéries, *Acinetobacter*,
 *Pseudomonas*, *Salmonella*, *Serratia* et *Morganella* ; gentamicine chez les
 staphylocoques ; clindamycine chez *Bacteroides*. Le commentaire paraît quand
@@ -212,6 +216,95 @@ document que personne n'a sous la main n'aiderait personne.
 
 ---
 
+## verifier-couverture-eucast.py — la base dit-elle TOUT ce que le classeur dit ?
+
+- **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
+- **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
+- **empreinte** : 9b0a791719a792f95c6247f2a213434819a775ba2ed0d8ea1bdb4ba518a7c999
+- **date** : 2026-10-25
+- **résultat** : 22 tables du classeur relues — **0 manque, 0 excédent, 0 écart**,
+  CMI **et** disque.
+
+### Pourquoi il a fallu un deuxième outil
+
+`comparer-eucast.py` ne va que dans **un sens** : il part de ce que la base
+porte et le confronte au document. Ce que le document chiffre et que la base
+n'a pas lui est invisible. Et il ne lit que les **CMI** — la moitié diamètre
+n'était confrontée à rien.
+
+Le 25 octobre 2026, cette moitié manquante s'est vue. L'EUCAST v16.1 donne
+**sept diamètres pour *Bacteroides fragilis*** — amoxicilline-clavulanate,
+pipéracilline-tazobactam, ertapénème, imipénème, méropénème, clindamycine,
+métronidazole — et PhénoBac n'en portait **aucun** : seules les CMI y étaient.
+Un laboratoire qui travaille au disque, c'est-à-dire presque tous ceux auxquels
+PhénoBac s'adresse, ne pouvait rien rendre sur l'anaérobie le plus fréquent des
+suppurations abdominales. Rien ne le disait. Tout était vert.
+
+Le nouvel outil relit les tables par `outils/extraire-especes.py` — la même
+lecture mécanique qui sert à les écrire — et confronte **ligne à ligne, dans
+les deux sens, CMI et disque**. Une règle que la base porte et que le document
+ne donne pas est un écart, **sauf** si elle porte le drapeau « convention de
+laboratoire » : c'est tout l'objet de ce drapeau.
+
+### Ce qu'il a trouvé du premier coup
+
+| | |
+|---|---|
+| *B. fragilis* : diamètres absents | 7 |
+| *B. fragilis* : ertapénème absent des deux côtés (CMI **et** disque, entre parenthèses) | 1 |
+| *C. perfringens* : ampicilline, amoxicilline, ertapénème — CMI absentes | 3 |
+
+Aucune valeur divergente, aucune valeur en trop : rien que des **manques**.
+C'est exactement ce qu'un contrôle à sens unique ne peut pas voir.
+
+### La colonne I du classeur n'avait jamais été lue
+
+Les feuilles ne portent pas que des chiffres. Leur **colonne I** porte les
+notes, et trois d'entre elles changent ce qu'un laboratoire peut rendre :
+
+- « *Isolates susceptible to benzylpenicillin can be reported susceptible to
+  all beta-lactam agents with breakpoints (including those with Note) without
+  further testing* » — un seul disque de pénicilline G suffit alors à rendre
+  huit β-lactamines. Dans un laboratoire qui compte ses disques, ce n'est pas
+  un détail. PhénoBac le **dit** désormais quand la pénicilline G est
+  sensible ; elle ne rend rien d'office, parce que fabriquer une catégorie
+  pour une molécule non testée serait fabriquer un résultat (§ 13).
+- « *Susceptibility can be inferred from ampicillin* » — l'amoxicilline n'a
+  pas de disque et se lit sur celui de l'ampicilline. **Treize** lignes
+  « témoin » manquaient : la CMI était portée, le disque restait sans
+  catégorie.
+- « *Metronidazole resistance is rare, but inadequate anaerobic conditions may
+  lead to false resistance* » — la cause la plus probable d'un métronidazole
+  résistant n'est pas la souche, c'est la jarre. L'alerte le dit maintenant,
+  dans cet ordre.
+
+Chaque témoin déclaré dans l'outil **porte la phrase du document qui le
+fonde**, et l'extraction s'arrête si cette phrase n'est plus dans la table :
+un humain lit et déclare, la machine confronte. Toute note qui ressemble à une
+action sans correspondre à un motif connu est imprimée en capitales,
+« NOTE NON TRAITÉE » — une note lue à moitié ne vaut pas mieux qu'une note non
+lue. Au 25 octobre : aucune.
+
+### Les dix anaérobies à Gram positif
+
+Ajoutés le même jour, **194 règles** : *Clostridium innocuum*, *C. ramosum*,
+*C. septicum*, *C. tertium*, *Cutibacterium acnes*, *C. avidum*,
+*Finegoldia magna*, *Parvimonas micra*, *Peptostreptococcus anaerobius*,
+*Peptoniphilus* spp.
+
+Dix espèces, **dix tables de seuils** : le document les sépare, et elles
+diffèrent franchement — *C. innocuum* n'a ni pénicilline G, ni carbapénème, ni
+vancomycine ; *C. ramosum* n'a ni vancomycine ni clindamycine ; *C. tertium*
+n'a ni pénicilline G, ni clindamycine, ni pipéracilline-tazobactam. Les
+confondre donnerait « un chiffre juste au mauvais endroit ».
+
+*C. innocuum* est résistante à la vancomycine et le moteur le dit ; la mention
+n'est **pas** portée comme « résistance naturelle attendue », parce que le
+document EUCAST des phénotypes attendus ne la déclare pas et que cette colonne
+cite une règle numérotée. § 26.
+
+---
+
 ## Les anaérobies manquants, ajoutés
 
 Le 24 octobre 2026, le classeur v16.1 obtenu, *Prevotella* spp.,
@@ -228,8 +321,9 @@ mauvais endroit ».
 Plusieurs couples n'ont qu'un seuil **au disque** : l'EUCAST renvoie à une
 note pour la CMI. C'est fidèle — la lecture au disque conclut, la CMI non.
 
-*Cutibacterium acnes* n'a pas été ajouté : il relève de la feuille des
-anaérobies à Gram positif, qui reste à traiter.
+*Cutibacterium acnes* n'a pas été ajouté ce jour-là : il relevait de la
+feuille des anaérobies à Gram positif. Elle a été traitée le 25 octobre 2026,
+en entier — voir l'entrée `verifier-couverture-eucast.py` ci-dessus.
 
 ## Ce que l'absence de document avait bloqué
 

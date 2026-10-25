@@ -232,7 +232,7 @@ const ORG = {
                   FOX: "Céphalosporines / céphamycines naturellement inactives.", CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.11.", FEP: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.11."} },
   coryne:     { engine: "gramposrod", args: { species: "Corynebacterium spp.", type: "coryne" }, bpGroup: "coryne", intrinsic: {FOS: "Résistance naturelle attendue — fosfomycine. EUCAST, phénotypes résistants attendus v1.2, règle 4.10."} },
   bfragilis:  { engine: "anaerobe", args: { species: "Bacteroides fragilis", type: "bfragilis" }, bpGroup: "bfragilis", intrinsic: {} },
-  cperfringens:{ engine: "anaerobe", args: { species: "Clostridium perfringens", type: "cperfringens" }, bpGroup: "cperfringens", intrinsic: {} },
+  cperfringens:{ engine: "anaerobe", args: { species: "Clostridium perfringens", type: "cperfringens", penCouvre: true }, bpGroup: "cperfringens", intrinsic: {} },
   cdifficile: { engine: "anaerobe", args: { species: "Clostridioides difficile", type: "cdifficile" }, bpGroup: "cdifficile", intrinsic: {} },
 
   /* Anaérobies à Gram négatif. Le tableau 5 des phénotypes attendus les dit
@@ -245,9 +245,35 @@ const ORG = {
      Fusobacterium a DEUX entrées parce que le document sépare les deux
      espèces sur l'amoxicilline-acide clavulanique et la
      pipéracilline-tazobactam. */
-  prevotella: { engine: "anaerobe", args: { species: "Prevotella spp.", type: "prevotella" }, bpGroup: "prevotella", intrinsic: {} },
-  fnecrophorum: { engine: "anaerobe", args: { species: "Fusobacterium necrophorum", type: "fusobacterium" }, bpGroup: "fnecrophorum", intrinsic: {} },
-  fnucleatum: { engine: "anaerobe", args: { species: "Fusobacterium nucleatum", type: "fusobacterium" }, bpGroup: "fnucleatum", intrinsic: {} },
+  prevotella: { engine: "anaerobe", args: { species: "Prevotella spp.", type: "prevotella", penCouvre: true }, bpGroup: "prevotella", intrinsic: {} },
+  fnecrophorum: { engine: "anaerobe", args: { species: "Fusobacterium necrophorum", type: "fusobacterium", penCouvre: true }, bpGroup: "fnecrophorum", intrinsic: {} },
+  fnucleatum: { engine: "anaerobe", args: { species: "Fusobacterium nucleatum", type: "fusobacterium", penCouvre: true }, bpGroup: "fnucleatum", intrinsic: {} },
+
+  /* Anaérobies à Gram POSITIF — feuille « Anaerobic bacteria_G-positive » du
+     classeur v16.1. Trois profils cliniques, pas dix : les clostridies, les
+     Cutibacterium (infections sur matériel) et les cocci à Gram positif
+     anaérobies. Le type gouverne le commentaire ; les seuils, eux, restent
+     propres à chaque espèce, parce que le document les sépare. */
+  /* PAS d'« intrinsic » POUR LA VANCOMYCINE DE C. INNOCUUM, ET C'EST VOULU.
+     L'espèce est bien résistante à la vancomycine, et le moteur le DIT (voir
+     anaerobeInterpret). Mais la colonne « intrinsic » de PhénoBac porte les
+     résistances naturelles du document EUCAST « Expected Resistant
+     Phenotypes », chacune avec son numéro de règle — et C. innocuum n'y
+     figure pas. L'y inscrire reviendrait à citer un document qui ne le dit
+     pas. Le risque pratique est nul : l'EUCAST ne donnant aucun seuil de
+     vancomycine pour cette espèce, elle ne se catégorise pas et le panel ne
+     la propose pas. § 26. */
+  cinnocuum: { engine: "anaerobe", args: { species: "Clostridium innocuum", type: "clostridium" }, bpGroup: "cinnocuum", intrinsic: {} },
+  cramosum: { engine: "anaerobe", args: { species: "Clostridium ramosum", type: "clostridium", penCouvre: true }, bpGroup: "cramosum", intrinsic: {} },
+  csepticum: { engine: "anaerobe", args: { species: "Clostridium septicum", type: "clostridium", penCouvre: true }, bpGroup: "csepticum", intrinsic: {} },
+  ctertium: { engine: "anaerobe", args: { species: "Clostridium tertium", type: "clostridium" }, bpGroup: "ctertium", intrinsic: {} },
+  cacnes: { engine: "anaerobe", args: { species: "Cutibacterium acnes", type: "cutibacterium", penCouvre: true }, bpGroup: "cacnes", intrinsic: {} },
+  cavidum: { engine: "anaerobe", args: { species: "Cutibacterium avidum", type: "cutibacterium", penCouvre: true }, bpGroup: "cavidum", intrinsic: {} },
+  finegoldia: { engine: "anaerobe", args: { species: "Finegoldia magna", type: "gpac", penCouvre: true }, bpGroup: "finegoldia", intrinsic: {} },
+  parvimonas: { engine: "anaerobe", args: { species: "Parvimonas micra", type: "gpac", penCouvre: true }, bpGroup: "parvimonas", intrinsic: {} },
+  peptostrepto: { engine: "anaerobe", args: { species: "Peptostreptococcus anaerobius", type: "gpac", penCouvre: true }, bpGroup: "peptostrepto", intrinsic: {} },
+  peptoniphilus: { engine: "anaerobe", args: { species: "Peptoniphilus spp.", type: "gpac", penCouvre: true }, bpGroup: "peptoniphilus", intrinsic: {} },
+
   campylobacter:{ engine: "curved", args: { species: "Campylobacter jejuni", type: "campylobacter" }, bpGroup: "campylo", intrinsic: {} },
   vibrio:     { engine: "curved", args: { species: "Vibrio cholerae", type: "vibrio" }, bpGroup: "vibrio", intrinsic: {} },
   efaecalis:  { engine: "enterococcus", args: { species: "E. faecalis", ampExpectedS: true }, bpGroup: "enteroc", intrinsic: {CAZ: "Résistance naturelle attendue — ceftazidime. EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", CTX: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", FOX: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", FEP: "Résistance naturelle attendue — céphalosporines (hors ceftazidime). EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", GEN: "Résistance naturelle attendue — aminosides (bas niveau). EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", E: "Résistance naturelle attendue — macrolides. EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", AZM: "Résistance naturelle attendue — macrolides. EUCAST, phénotypes résistants attendus v1.2, règle 4.7.", DA: "Résistance naturelle attendue — lincosamides. EUCAST, phénotypes résistants attendus v1.2, règle 4.7."} },
@@ -2479,6 +2505,43 @@ function gramposrodInterpret(r, c, a) {
   return finalize(A, r);
 }
 
+/* LES NOTES DU CLASSEUR, QUI VIVAIENT DANS UNE COLONNE QU'ON NE LISAIT PAS.
+
+   La colonne I des feuilles d'anaérobies porte deux phrases qui changent ce
+   qu'un laboratoire peut rendre, et une troisième qui évite de rendre faux :
+
+     « Isolates susceptible to benzylpenicillin can be reported susceptible to
+       all beta-lactam agents with breakpoints (including those with Note)
+       without further testing » — un seul disque de pénicilline G suffit
+       alors à rendre huit β-lactamines. Dans un laboratoire qui compte ses
+       disques, ce n'est pas un détail ;
+
+     « Susceptibility can be inferred from ampicillin » — l'amoxicilline n'a
+       pas de disque et se lit sur celui de l'ampicilline. C'est porté par la
+       colonne « temoin » de la base ;
+
+     « Metronidazole resistance is rare, but inadequate anaerobic conditions
+       may lead to false resistance » — la cause la plus probable d'un
+       métronidazole résistant n'est pas la souche, c'est la jarre.
+
+   PhénoBac n'INVENTE aucune catégorie à partir de la première : rendre
+   « sensible » une molécule qu'on n'a pas testée serait fabriquer un
+   résultat. Elle le DIT, et c'est le biologiste qui rend. § 13. */
+function notesAnaerobie(A, r, a) {
+  if (a && a.penCouvre && r.PEN === "S") {
+    A.rules.push({ k: "✚", txt: "Pénicilline G sensible : l'EUCAST autorise à rendre "
+      + "sensibles TOUTES les β-lactamines à seuil de cette espèce, sans les tester "
+      + "(classeur v16.1, note de la table). PhénoBac ne les rend pas d'office — "
+      + "c'est au biologiste de le faire, en connaissance de cause." });
+  }
+  if (isRI(r.MTZ)) {
+    A.alerts.push({ lvl: "warn", txt: "Avant de rendre le métronidazole non sensible : "
+      + "vérifier l'ANAÉROBIOSE de l'incubation. Une jarre qui a mal pris donne une "
+      + "fausse résistance, et c'est la cause la plus fréquente. Vérifier ensuite "
+      + "l'identification, puis refaire l'antibiogramme (EUCAST v16.1)." });
+  }
+}
+
 function anaerobeInterpret(r, c, a) {
   const sp = (a && a.species) || "Anaérobie";
   const type = (a && a.type) || "bfragilis";
@@ -2497,7 +2560,7 @@ function anaerobeInterpret(r, c, a) {
                ["DA", "R", "clindamycine résistante : fréquent chez B. fragilis, à ne pas employer en probabiliste"]]
     });
     A.comment = "Bacteroides fragilis : β-lactamase fréquente (pénicillines R, restaurées par les inhibiteurs). Métronidazole = traitement de référence ; aminosides naturellement inactifs.";
-    if (isRI(r.MTZ)) { A.sev = "crit"; A.alerts.push({ lvl: "crit", txt: "Résistance au métronidazole : rare et grave — confirmer et avis référent." }); A.comment += " Métronidazole non sensible : à confirmer d'urgence."; }
+    if (isRI(r.MTZ)) { A.sev = "crit"; A.alerts.push({ lvl: "crit", txt: "Résistance au métronidazole : rare et grave — avis référent." }); A.comment += " Métronidazole non sensible : à confirmer d'urgence."; }
     if (isRI(r.IPM) || isRI(r.MEM)) A.alerts.push({ lvl: "warn", txt: "Sensibilité diminuée aux carbapénèmes : carbapénémase (cfiA) possible — confirmer." });
     if (isR(r.DA)) A.alerts.push({ lvl: "info", txt: "Clindamycine résistante : fréquent chez B. fragilis, ne pas utiliser en probabiliste." });
   }
@@ -2533,7 +2596,7 @@ function anaerobeInterpret(r, c, a) {
               + "Aminosides et colistine naturellement inactifs.";
     if (isRI(r.MTZ)) {
       A.sev = "crit";
-      A.alerts.push({ lvl: "crit", txt: "Résistance au métronidazole chez un anaérobie : rare et grave — confirmer et avis référent." });
+      A.alerts.push({ lvl: "crit", txt: "Résistance au métronidazole chez un anaérobie : rare et grave — avis référent." });
     }
     if (isRI(r.IPM) || isRI(r.MEM)) {
       A.alerts.push({ lvl: "warn", txt: "Sensibilité diminuée aux carbapénèmes chez un anaérobie : confirmer le mécanisme." });
@@ -2541,6 +2604,110 @@ function anaerobeInterpret(r, c, a) {
     if (type === "fusobacterium" && /nucleatum/.test(sp)) {
       A.alerts.push({ lvl: "info", txt: "F. nucleatum : l'EUCAST ne chiffre ni l'amoxicilline-acide clavulanique ni la pipéracilline-tazobactam pour cette espèce — elles ne sont pas catégorisées." });
     }
+  }
+  else if (type === "clostridium") {
+    /* C. innocuum, ramosum, septicum, tertium. L'EUCAST les chiffre
+       SÉPARÉMENT, et les quatre tables ne se ressemblent pas : l'une n'a pas
+       de vancomycine, l'autre pas de pénicilline G, une troisième pas de
+       clindamycine. Un groupe de seuils commun appliquerait le chiffre de
+       l'une à l'autre — « un chiffre juste au mauvais endroit ». */
+    A.sev = "mod"; A.name = sp;
+    A.mech = "Clostridie anaérobie à Gram positif. Le document chiffre chaque espèce "
+           + "à part : l'identification jusqu'à l'espèce commande les seuils.";
+    A.rules.push({ k: "✚", txt: "Métronidazole = référence des infections à anaérobies ; "
+      + "β-lactamines actives selon l'espèce." });
+    parce(A, r, {
+      pour: [["MTZ", "S", "métronidazole actif — traitement de référence des anaérobies"],
+             ["AMP", "S", "ampicilline active"],
+             ["MEM", "S", "méropénème actif"]],
+      contre: [["MTZ", "RI", "métronidazole non sensible chez une clostridie : rare, et d'abord suspect d'une anaérobiose insuffisante"]]
+    });
+    A.comment = sp + " : clostridie anaérobie. Métronidazole = traitement de référence.";
+
+    if (/innocuum/.test(sp)) {
+      A.rules.push({ k: "✕", txt: "Vancomycine naturellement inactive chez C. innocuum — "
+        + "ne jamais la rendre sensible. L'EUCAST ne lui donne d'ailleurs aucun seuil de "
+        + "vancomycine, non plus que de pénicilline G ni de carbapénème." });
+      A.comment += " Vancomycine naturellement inactive dans cette espèce : c'est ce qui "
+                 + "la distingue des autres clostridies.";
+    }
+    if (/ramosum/.test(sp)) {
+      A.rules.push({ k: "!", txt: "L'EUCAST ne donne pour C. ramosum ni seuil de "
+        + "vancomycine ni seuil de clindamycine : ces deux molécules ne se catégorisent pas." });
+    }
+    if (/tertium/.test(sp)) {
+      A.rules.push({ k: "!", txt: "C. tertium est AÉROTOLÉRANTE : elle pousse en aérobiose "
+        + "et se confond avec un Bacillus ou un lactobacille. L'EUCAST ne lui donne ni "
+        + "pénicilline G, ni clindamycine, ni pipéracilline-tazobactam." });
+    }
+    if (/septicum/.test(sp)) {
+      A.sev = "high";
+      A.alerts.push({ lvl: "warn", txt: "Clostridium septicum : son isolement — surtout "
+        + "dans une hémoculture — impose de chercher une néoplasie colique ou une "
+        + "neutropénie. L'association est constante et connue ; le signaler au clinicien "
+        + "fait partie du compte rendu." });
+      A.comment += " Isolement de C. septicum : rechercher une néoplasie colique ou une "
+                 + "neutropénie.";
+    }
+  }
+  else if (type === "cutibacterium") {
+    /* C. acnes, C. avidum. Flore cutanée : le problème n'est pas de les
+       traiter, c'est de savoir si elles infectent. */
+    A.sev = "mod"; A.name = sp;
+    A.mech = "Bacille à Gram positif anaérobie de la flore cutanée. Pathogène sur "
+           + "MATÉRIEL — prothèse d'épaule, dérivation ventriculaire, ostéosynthèse — "
+           + "et contaminant de prélèvement partout ailleurs.";
+    A.rules.push({ k: "✚", txt: "Pénicilline G / amoxicilline = référence ; clindamycine "
+      + "et linézolide en alternative." });
+    A.rules.push({ k: "!", txt: "CROISSANCE LENTE : la culture anaérobie doit être tenue "
+      + "14 jours. Rendue à 48 heures, une infection de prothèse à Cutibacterium est "
+      + "rendue stérile." });
+    A.rules.push({ k: "!", txt: "Un seul prélèvement positif ne vaut pas infection : il "
+      + "faut la concordance de plusieurs prélèvements profonds. Sur un prélèvement "
+      + "superficiel, c'est la flore du malade." });
+    parce(A, r, {
+      pour: [["PEN", "S", "pénicilline G active — c'est le traitement de référence"],
+             ["AMX", "S", "amoxicilline active"],
+             ["DA", "S", "clindamycine active : alternative, et bonne diffusion osseuse"]],
+      contre: [["PEN", "RI", "pénicilline G atteinte : rare dans ce genre, et le document demande de la confirmer"]],
+      aConfirmerPar: "la concordance de plusieurs prélèvements profonds : un Cutibacterium "
+                   + "isolé une fois est le plus souvent un contaminant"
+    });
+    A.comment = sp + " : bacille anaérobie de la flore cutanée, pathogène sur matériel. "
+              + "Pénicilline G / amoxicilline = référence. Culture à tenir 14 jours ; "
+              + "l'interprétation demande plusieurs prélèvements profonds concordants.";
+    if (isRI(r.PEN) || isRI(r.AMX) || isRI(r.AMP)) {
+      A.sev = "high";
+      A.alerts.push({ lvl: "warn", txt: "Résistance aux β-lactamines chez Cutibacterium : "
+        + "l'EUCAST la dit RARE et demande de confirmer l'identification ET l'antibiogramme "
+        + "de toute souche de ce type (classeur v16.1, note de la table)." });
+    }
+  }
+  else if (type === "gpac") {
+    /* Finegoldia, Parvimonas, Peptostreptococcus, Peptoniphilus : les cocci
+       à Gram positif anaérobies. Un seul récit clinique, quatre tables de
+       seuils, parce que le document les sépare. */
+    A.sev = "mod"; A.name = sp + " — coque à Gram positif anaérobie";
+    A.mech = "Flore cutanée et buccale. Isolés des plaies chroniques et du pied "
+           + "diabétique, des abcès, des infections pleuropulmonaires et "
+           + "ostéo-articulaires, le plus souvent en flore mixte.";
+    A.rules.push({ k: "✚", txt: "β-lactamines et métronidazole actifs ; clindamycine "
+      + "d'activité variable." });
+    A.rules.push({ k: "!", txt: "Presque toujours en association avec d'autres germes : "
+      + "le traitement vise la flore entière, pas ce seul isolat." });
+    parce(A, r, {
+      pour: [["PEN", "S", "pénicilline G active"],
+             ["AMC", "S", "amoxicilline-acide clavulanique active : couvre aussi la flore associée"],
+             ["MTZ", "S", "métronidazole actif — référence des anaérobies"]],
+      contre: [["DA", "RI", "clindamycine atteinte : fréquent dans ce groupe, à ne pas employer en probabiliste"],
+               ["MTZ", "RI", "métronidazole non sensible : d'abord suspect d'une anaérobiose insuffisante"]]
+    });
+    A.comment = sp + " : coque à Gram positif anaérobie, le plus souvent en flore mixte. "
+              + "β-lactamines et métronidazole actifs ; clindamycine variable.";
+    A.alerts.push({ lvl: "info", txt: "Résistance INDUCTIBLE à la clindamycine possible dans "
+      + "ce groupe : elle se cherche par antagonisme entre les disques d'érythromycine et de "
+      + "clindamycine, posés à 12–16 mm l'un de l'autre. L'EUCAST précise que sa portée "
+      + "clinique n'est pas établie." });
   }
   else {
     A.sev = "mod"; A.name = "Clostridioides difficile — pas d'antibiogramme de routine";
@@ -2558,6 +2725,7 @@ function anaerobeInterpret(r, c, a) {
     A.comment = "Clostridioides difficile : colite post-antibiotique. Pas d'antibiogramme de routine — traitement par vancomycine orale ou fidaxomicine, métronidazole oral en alternative.";
     A.alerts.push({ lvl: "info", txt: "Hygiène : spores résistantes aux hydro-alcooliques — lavage des mains et désinfection sporicide." });
   }
+  notesAnaerobie(A, r, a);
   return finalize(A, r);
 }
 

@@ -170,6 +170,14 @@ jobs:
       - name: La gravité, le D-test et les règles du CA-SFM tiennent
         run: node outils/essai-regles.js
 
+      # Dix espèces d'anaérobies, dix tables de seuils : les confondre
+      # appliquerait le chiffre de l'une à l'autre. Et la colonne des notes du
+      # classeur — l'amoxicilline lue sur le disque d'ampicilline, la jarre à
+      # vérifier avant de rendre un métronidazole résistant — n'était lue par
+      # personne jusqu'au 25 octobre 2026.
+      - name: Les anaérobies, espèce par espèce, et les notes du classeur
+        run: node outils/essai-anaerobies.js
+
       - name: Aucun argument ne contredit la catégorie qu'il explique
         run: python3 outils/verifier-arguments.py
 

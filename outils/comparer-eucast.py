@@ -75,6 +75,19 @@ GROUPES = {
     'fnucleatum':(["F. nucleatum"],                          ['Anaerobic bacteria_G-negative']),
     'cperfringens':(["C. perfringens"],                      ['Anaerobic bacteria_G-positive']),
     'cdifficile':(["C. difficile"],                          ['Anaerobic bacteria_G-positive']),
+    # Anaérobies à Gram positif, ajoutés le 25 octobre 2026. Dix espèces, dix
+    # tables : le document les sépare, et les seuils de l'une ne valent pas
+    # pour l'autre.
+    'cinnocuum':(["C. innocuum"],                            ['Anaerobic bacteria_G-positive']),
+    'cramosum':(["C. ramosum"],                              ['Anaerobic bacteria_G-positive']),
+    'csepticum':(["C. septicum"],                            ['Anaerobic bacteria_G-positive']),
+    'ctertium':(["C. tertium"],                              ['Anaerobic bacteria_G-positive']),
+    'cacnes':(["C. acnes"],                                  ['Anaerobic bacteria_G-positive']),
+    'cavidum':(["C. avidum"],                                ['Anaerobic bacteria_G-positive']),
+    'finegoldia':(["Finegoldia magna"],                      ['Anaerobic bacteria_G-positive']),
+    'parvimonas':(["Parvimonas micra"],                      ['Anaerobic bacteria_G-positive']),
+    'peptostrepto':(["Peptostreptococcus anaerobius"],       ['Anaerobic bacteria_G-positive']),
+    'peptoniphilus':(["Peptoniphilus spp."],                 ['Anaerobic bacteria_G-positive']),
 }
 
 # Les feuilles d'anaérobies sont découpées en blocs par genre, et le genre ne
@@ -87,6 +100,16 @@ SECTIONS = {
     'fnucleatum':   'Fusobacterium necrophorum and Fusobacterium nucleatum',
     'cperfringens': 'Clostridium perfringens',
     'cdifficile':   'Clostridioides difficile',
+    'cinnocuum':    'Clostridium innocuum',
+    'cramosum':     'Clostridium ramosum',
+    'csepticum':    'Clostridium septicum',
+    'ctertium':     'Clostridium tertium',
+    'cacnes':       'Cutibacterium acnes',
+    'cavidum':      'Cutibacterium avidum',
+    'finegoldia':   'Finegoldia spp.',
+    'parvimonas':   'Parvimonas micra',
+    'peptostrepto': 'Peptostreptococcus anaerobius',
+    'peptoniphilus':'Peptoniphilus spp.',
 }
 
 # Compatibilité : les groupes à feuille unique restent comparables.

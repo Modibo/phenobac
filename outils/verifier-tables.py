@@ -80,7 +80,14 @@ def base_lue():
     cols = re.findall(r'"(\w+)"', cols)
     corps = src[src.index("const REGLES = ["):src.index("\n];")]
     regles = []
-    for ligne in re.findall(r'^\[(.*)\],$', corps, re.M):
+    # UN COMMENTAIRE EN BOUT DE LIGNE FAISAIT DISPARAÎTRE LA RÈGLE. Le motif
+    # exigeait que la ligne FINISSE par « ], » ; une règle suivie de
+    # « // se lit sur le disque d'ampicilline » n'était donc pas lue du tout,
+    # et la table de référence se construisait sans elle. Le contrôle criait
+    # alors que le moteur portait une entrée « que la base n'a pas » — alors
+    # que la base l'avait, et que c'est le lecteur qui ne voyait pas. Une
+    # ligne de règle peut porter un commentaire ; c'est même souhaitable.
+    for ligne in re.findall(r'^\[(.*?)\],\s*(?://.*)?$', corps, re.M):
         # Découpe au premier niveau : une valeur peut être un tableau.
         vals, prof, cour = [], 0, ""
         for ch in ligne:

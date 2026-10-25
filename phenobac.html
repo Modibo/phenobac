@@ -2181,8 +2181,8 @@ const PRESENTATION = {
   bfragilis:{
     label:"Bacteroides fragilis", italic:true, group:"Anaérobies",
     panel:[
-      {t:"β-lactamines",abx:["PEN","AMC","TZP","IPM","MEM"]},
-      {t:"Anti-anaérobies",abx:["DA","MTZ","MXF"]}
+      {t:"β-lactamines",abx:["PEN","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["VA","DA","MTZ","MXF"]}
     ],
     
     ctx:[],
@@ -2192,9 +2192,107 @@ const PRESENTATION = {
     label:"Clostridium perfringens", italic:true, group:"Anaérobies",
     panel:[
       {t:"Référence thérapeutique",abx:["PEN"]},
-      {t:"Autres familles",abx:["AMX","DA","MTZ","MXF"]}
+      {t:"β-lactamines",abx:["AMP","AMX","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Autres familles",abx:["VA","DA","MTZ","MXF"]}
     ],
     
+    ctx:[],
+  },
+
+
+  /* Anaérobies à Gram POSITIF, feuille « Anaerobic bacteria_G-positive » du
+     classeur v16.1. Chaque panel ne porte QUE les molécules que l'EUCAST
+     chiffre pour cette espèce-là : C. innocuum n'a ni pénicilline G ni
+     carbapénème ni vancomycine, C. ramosum ni vancomycine ni clindamycine,
+     C. tertium ni pénicilline G ni clindamycine. Afficher une case là où le
+     document ne tranche pas laisserait croire qu'elle se catégorise. */
+  cinnocuum:{
+    label:"Clostridium innocuum", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["AMP","AMX","AMC","TZP"]},
+      {t:"Anti-anaérobies",abx:["DA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  cramosum:{
+    label:"Clostridium ramosum", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  csepticum:{
+    label:"Clostridium septicum", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["VA","DA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  ctertium:{
+    label:"Clostridium tertium", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["AMP","AMX","AMC","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["VA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  cacnes:{
+    label:"Cutibacterium acnes", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","CTX","CRO","ETP","IPM","MEM"]},
+      {t:"Autres familles",abx:["VA","DA","LZD"]}
+    ],
+    ctx:[],
+  },
+
+  cavidum:{
+    label:"Cutibacterium avidum", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","CTX","CRO","ETP","IPM","MEM"]},
+      {t:"Autres familles",abx:["VA","DA","LZD"]}
+    ],
+    ctx:[],
+  },
+
+  finegoldia:{
+    label:"Finegoldia magna", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["VA","DA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  parvimonas:{
+    label:"Parvimonas micra", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["VA","DA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  peptostrepto:{
+    label:"Peptostreptococcus anaerobius", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["VA","DA","MTZ"]}
+    ],
+    ctx:[],
+  },
+
+  peptoniphilus:{
+    label:"Peptoniphilus spp.", italic:true, group:"Anaérobies",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","TZP","ETP","IPM","MEM"]},
+      {t:"Anti-anaérobies",abx:["VA","DA","MTZ"]}
+    ],
     ctx:[],
   },
 

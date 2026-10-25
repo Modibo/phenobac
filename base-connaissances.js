@@ -63,11 +63,15 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.14";
+const BASE_VERSION = "2026.15";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
-/* 578 règles. */
+/* Le nombre de règles n'est PAS écrit ici. Il l'a été, et il a vieilli sans
+   bruit : « 578 » alors que le fichier en portait 681. Un chiffre faux dans
+   un commentaire est inoffensif ; la même habitude dans la page ne l'est pas,
+   et outils/verifier-comptes.py existe pour cela. Le compte se lit sur
+   REGLES.length. */
 const REGLES = [
 ["casfm","acineto","CAZ","disque","standard",null,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","FEP","disque","standard",null,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],
@@ -271,6 +275,242 @@ const REGLES = [
 ["eucast","fnucleatum","DA","disque","standard",30,30,"2",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","fnucleatum","MTZ","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","fnucleatum","MTZ","disque","standard",30,30,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+
+/* LES DIAMÈTRES DE BACTEROIDES MANQUAIENT TOUS. L'EUCAST v16.1 chiffre sept
+   diamètres pour le groupe — amoxicilline-clavulanate, pipéracilline-
+   tazobactam, ertapénème, imipénème, méropénème, clindamycine,
+   métronidazole — et la base n'en portait aucun : seules les CMI y étaient.
+   Un laboratoire qui travaille au disque, c'est-à-dire presque tous ceux
+   auxquels PhénoBac s'adresse, ne pouvait rien rendre sur l'anaérobie le
+   plus fréquent des suppurations abdominales. Rien ne le signalait :
+   outils/comparer-eucast.py ne lit que les CMI, et seulement dans le sens
+   base -> document. C'est outils/verifier-couverture-eucast.py qui l'a vu.
+   L'ertapénème, lui, manquait des deux côtés — et il vient entre
+   parenthèses, d'où le drapeau « ecoff ». */
+["eucast","bfragilis","AMC","disque","standard",14,14,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","bfragilis","DA","disque","standard",10,10,"2",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","bfragilis","ETP","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","bfragilis","ETP","disque","standard",23,23,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","bfragilis","IPM","disque","standard",29,29,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","bfragilis","MEM","disque","standard",28,28,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","bfragilis","MTZ","disque","standard",25,25,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","bfragilis","TZP","disque","standard",24,24,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+
+/* Trois CMI manquaient aussi à Clostridium perfringens : l'ampicilline,
+   l'amoxicilline et l'ertapénème, toutes trois chiffrées par le document. */
+["eucast","cperfringens","AMP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cperfringens","AMX","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cperfringens","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+
+/* L'amoxicilline n'a pas de disque chez les anaérobies : l'EUCAST la fait
+   lire sur celui de l'ampicilline — « Susceptibility can be inferred from
+   ampicillin ». Cette note vit dans la COLONNE I du classeur, que PhénoBac
+   n'avait jamais lue : la CMI était portée, le disque restait sans catégorie,
+   et un laboratoire qui travaille au disque — c'est-à-dire presque tous ceux
+   auxquels PhénoBac s'adresse — perdait la molécule. */
+["eucast","prevotella","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","fnecrophorum","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","fnucleatum","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+
+/* Anaérobies à Gram positif — feuille « Anaerobic bacteria_G-positive » du
+   classeur v16.1, extraite par outils/extraire-especes.py, jamais recopiée.
+   Les seuils entre parenthèses (clindamycine de C. innocuum, de Parvimonas,
+   de Peptostreptococcus et de Peptoniphilus) portent la colonne « ecoff » :
+   ils séparent le sauvage de l'acquis et ne promettent rien en clinique. */
+["eucast","cinnocuum","AMP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","AMP","disque","standard",21,21,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","AMX","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","AMC","disque","standard",19,19,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","TZP","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","TZP","disque","standard",24,24,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","DA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","cinnocuum","DA","disque","standard",17,17,"2",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","cinnocuum","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","MTZ","disque","standard",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cinnocuum","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","cramosum","PEN","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","PEN","disque","standard",21,21,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","AMP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","AMP","disque","standard",20,20,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","AMX","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","AMC","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","AMC","disque","standard",21,21,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","TZP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","TZP","disque","standard",28,28,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","IPM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","IPM","disque","standard",26,26,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","MEM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","MEM","disque","standard",22,22,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","MTZ","disque","standard",21,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cramosum","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","csepticum","PEN","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","PEN","disque","standard",21,21,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","AMP","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","AMP","disque","standard",25,25,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","AMX","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","AMC","disque","standard",25,25,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","TZP","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","TZP","disque","standard",23,23,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","ETP","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","ETP","disque","standard",26,26,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","IPM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","IPM","disque","standard",31,31,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","MEM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","MEM","disque","standard",29,29,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","VA","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","VA","disque","standard",14,14,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","DA","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","DA","disque","standard",24,24,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","MTZ","disque","standard",21,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","csepticum","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","ctertium","AMP","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","AMP","disque","standard",12,12,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","AMX","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","AMC","disque","standard",15,15,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","IPM","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","IPM","disque","standard",28,28,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","MEM","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","MEM","disque","standard",24,24,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","VA","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","VA","disque","standard",13,13,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","MTZ","disque","standard",20,20,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","ctertium","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","cacnes","PEN","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","PEN","disque","standard",24,24,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","AMP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","AMP","disque","standard",23,23,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","AMX","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","AMC","disque","standard",24,24,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","TZP","disque","standard",27,27,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","CTX","disque","standard",26,26,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","CRO","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","CRO","disque","standard",33,33,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","ETP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","ETP","disque","standard",28,28,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","IPM","disque","standard",39,39,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","MEM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","MEM","disque","standard",28,28,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","VA","disque","standard",22,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","DA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","DA","disque","standard",26,26,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","LZD","disque","standard",34,34,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cacnes","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","cavidum","PEN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","PEN","disque","standard",23,23,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","AMP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","AMP","disque","standard",23,23,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","AMX","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","AMC","disque","standard",23,23,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","TZP","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","TZP","disque","standard",28,28,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","CTX","disque","standard",24,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","CRO","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","CRO","disque","standard",30,30,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","ETP","disque","standard",28,28,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","IPM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","IPM","disque","standard",39,39,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","MEM","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","MEM","disque","standard",29,29,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","VA","disque","standard",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","DA","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","DA","disque","standard",33,33,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","LZD","disque","standard",28,28,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cavidum","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","finegoldia","PEN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","PEN","disque","standard",20,20,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","AMP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","AMP","disque","standard",21,21,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","AMX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","AMC","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","AMC","disque","standard",21,21,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","TZP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","TZP","disque","standard",30,30,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","ETP","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","ETP","disque","standard",29,29,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","IPM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","IPM","disque","standard",34,34,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","MEM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","MEM","disque","standard",31,31,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","VA","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","VA","disque","standard",20,20,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","DA","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","DA","disque","standard",23,23,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","MTZ","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","MTZ","disque","standard",25,25,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","finegoldia","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","parvimonas","PEN","cmi","standard",0.03,0.03,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","PEN","disque","standard",31,31,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","AMP","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","AMP","disque","standard",29,29,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","AMX","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","AMC","disque","standard",28,28,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","TZP","disque","standard",33,33,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","ETP","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","ETP","disque","standard",33,33,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","IPM","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","IPM","disque","standard",40,40,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","MEM","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","MEM","disque","standard",36,36,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","VA","disque","standard",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","DA","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","parvimonas","DA","disque","standard",18,18,"2",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","parvimonas","MTZ","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","MTZ","disque","standard",28,28,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","parvimonas","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","peptostrepto","PEN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","PEN","disque","standard",20,20,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","AMP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","AMP","disque","standard",25,25,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","AMX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","AMC","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","AMC","disque","standard",22,22,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","TZP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","TZP","disque","standard",32,32,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","ETP","disque","standard",27,27,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","IPM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","IPM","disque","standard",36,36,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","MEM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","MEM","disque","standard",30,30,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","VA","disque","standard",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","DA","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","peptostrepto","DA","disque","standard",17,17,"2",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","peptostrepto","MTZ","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","MTZ","disque","standard",22,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptostrepto","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","peptoniphilus","PEN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","PEN","disque","standard",18,18,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","AMP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","AMP","disque","standard",21,21,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","AMX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","AMC","disque","standard",23,23,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","TZP","disque","standard",36,36,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","ETP","cmi","standard",0.03,0.03,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","ETP","disque","standard",32,32,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","IPM","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","IPM","disque","standard",37,37,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","MEM","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","MEM","disque","standard",35,35,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","VA","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","VA","disque","standard",21,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","DA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","peptoniphilus","DA","disque","standard",15,15,"2",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","peptoniphilus","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","MTZ","disque","standard",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","peptoniphilus","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
 ["eucast","cperfringens","VA","disque","standard",12,12,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","entero","AMC","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","entero","AMC","disque","standard",19,19,"20-10",[19,20],undefined,undefined,undefined,undefined,undefined],

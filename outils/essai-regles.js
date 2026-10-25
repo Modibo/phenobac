@@ -407,7 +407,14 @@ dire("\nLa parenthèse de l'EUCAST est une réserve, pas une coquetterie");
         "sous CA-SFM : pas de réserve EUCAST — ce n'est pas son seuil qui s'applique");
 
   // Et la table vient de la base, pas d'une liste écrite à part.
-  verif(Object.keys(E.ECOFF).length === 20,
+  // Vingt couples jusqu'au 24 octobre 2026, vingt-cinq depuis : la feuille
+  // des anaérobies à Gram positif a apporté la clindamycine de C. innocuum,
+  // de Parvimonas, de Peptostreptococcus et de Peptoniphilus, et la relecture
+  // de Bacteroides a trouvé l'ertapénème, qui manquait. Le nombre est écrit
+  // en toutes lettres À DESSEIN : s'il bouge sans qu'on l'ait voulu, c'est
+  // qu'une parenthèse est apparue ou a disparu dans le classeur, et cela se
+  // regarde. outils/verifier-couverture-eucast.py dit laquelle.
+  verif(Object.keys(E.ECOFF).length === 25,
         Object.keys(E.ECOFF).length + " couples portent la réserve, lus dans la base");
   verif(E.seuilEcoff("entero", "COL") && !E.seuilEcoff("entero", "CTX"),
         "la colistine des entérobactéries est visée, la céfotaxime non");
