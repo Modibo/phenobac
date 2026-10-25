@@ -1958,6 +1958,10 @@ const _M = self.PhenoBacMoteur;
    ==================================================================== */
 const _L = self.PhenoBacLangue;
 const L = (c) => _L.L(c);
+/* T(français, anglais) — le jumeau du tr() du moteur, pour les phrases que la
+   PAGE compose et qui n'ont pas leur place dans un catalogue à clés : une aide
+   de seuil se lit « seuil : S ≤ 8 · R > 8 », avec ses valeurs dedans. */
+const T = (fr, en) => (_L.estAnglais() && en) ? en : fr;
 const MEM_LANGUE = "phenobac-langue";
 
 function langueMemorisee() {
@@ -3712,7 +3716,7 @@ function renderAbx(){
 /* libellé de seuil pour l'aide sous chaque antibiotique */
 function bpHint(group,k){
   const bp=getBP(group,k);
-  if(!bp) return "pas de seuil défini · saisir en S/I/R";
+  if(!bp) return T("pas de seuil défini · saisir en S/I/R", "no breakpoint set · enter S/I/R");
   // « S ≤ 0 » ÉTAIT UN MENSONGE QUI SE LISAIT COMME UN SEUIL. Quand le
   // référentiel ne reconnaît AUCUNE catégorie « sensible » à posologie
   // standard, la base écrit S = null — et fmt(null) rendait 0. Vingt-sept
@@ -3720,13 +3724,15 @@ function bpHint(group,k){
   // Corynebacterium et la ciprofloxacine d'Acinetobacter. L'aide des
   // diamètres, elle, disait depuis toujours « pas de catégorie S ».
   if(bp.S===null||bp.S===undefined)
-    return `aucune catégorie « sensible » · R > ${fmt(bp.R)} · I jusque-là`;
+    return T(`aucune catégorie « sensible » · R > ${fmt(bp.R)} · I jusque-là`,
+             `no "susceptible" category · R > ${fmt(bp.R)} · I up to that value`);
   const s=fmt(bp.S), r=fmt(bp.R);
-  const base = (bp.S===bp.R) ? `seuil : S ≤ ${s} · R > ${r}` : `seuils : S ≤ ${s} · R > ${r}`;
+  const base = T(bp.S===bp.R ? `seuil : S ≤ ${s} · R > ${r}` : `seuils : S ≤ ${s} · R > ${r}`,
+                 bp.S===bp.R ? `breakpoint: S ≤ ${s} · R > ${r}` : `breakpoints: S ≤ ${s} · R > ${r}`);
   // Annoncer la ZIT avant la saisie : le biologiste sait alors à quelle
   // valeur sa mesure deviendra douteuse, au lieu de le découvrir après.
   const z = zitPour(group,k);
-  return z===null ? base : base + ` · ZIT ${fmt(z)}`;
+  return z===null ? base : base + ` · ${T("ZIT","ATU")} ${fmt(z)}`;
 }
 function fmt(x){ return (Math.round(x*1000)/1000).toString(); }
 
@@ -3740,30 +3746,37 @@ function dzHint(group,k){
   // à rendre résistant faute de CMI. Une seule phrase pour les deux
   // attribuerait à l'un la règle de l'autre.
   if(seuil) return estCasfm()
-    ? `dépistage : sensible si ≥ ${seuil} mm · en dessous, déterminer la CMI`
-    : `écran : sensible si ≥ ${seuil} mm · en dessous, tester chaque molécule ou la rendre R`;
+    ? T(`dépistage : sensible si ≥ ${seuil} mm · en dessous, déterminer la CMI`,
+        `screen: susceptible if ≥ ${seuil} mm · below that, determine the MIC`)
+    : T(`écran : sensible si ≥ ${seuil} mm · en dessous, tester chaque molécule ou la rendre R`,
+        `screen: susceptible if ≥ ${seuil} mm · below that, test each agent or report it R`);
   const dz=getDZ(group,k);
   if(!dz){
-    if(group==="pneumo" && k==="OXA") return `dépistage des β-lactamines · disque 1 µg · négatif si ≥ ${OXA_PNEUMO} mm`;
+    if(group==="pneumo" && k==="OXA") return T(`dépistage des β-lactamines · disque 1 µg · négatif si ≥ ${OXA_PNEUMO} mm`,
+      `beta-lactam screen · 1 µg disk · negative if ≥ ${OXA_PNEUMO} mm`);
     // Ces trois-là ne sont pas « sans seuil » : elles se déduisent du
     // dépistage, et dire le contraire enverrait chercher une CMI pour rien.
     if(group==="pneumo" && ["PEN","AMX","CTX"].includes(k))
-      return `se déduit du dépistage à l'oxacilline 1 µg (ci-dessus)`;
-    if(estCasfm() && dzCasfmDivergent(group,k)) return "le CA-SFM déplace ce seuil · saisir en CMI";
+      return T(`se déduit du dépistage à l'oxacilline 1 µg (ci-dessus)`,
+               `inferred from the oxacillin 1 µg screen (above)`);
+    if(estCasfm() && dzCasfmDivergent(group,k)) return T("le CA-SFM déplace ce seuil · saisir en CMI",
+      "the CA-SFM moves this breakpoint · enter an MIC");
     const c=state.ctx||{};
     if(c.mening==="Oui" && BP_MENINGE[group] && BP_MENINGE[group][k])
-      return "pas de seuil au disque dans le LCR · saisir en CMI";
-    return "pas de seuil au disque · saisir en CMI";
+      return T("pas de seuil au disque dans le LCR · saisir en CMI",
+               "no zone diameter breakpoint in CSF · enter an MIC");
+    return T("pas de seuil au disque · saisir en CMI",
+             "no zone diameter breakpoint · enter an MIC");
   }
   const d=disquePour(group,k);
-  const charge = d ? " · disque " + (d.charge==="1 unit" ? "1 UI" : d.charge+" µg") : "";
+  const charge = d ? " · " + T("disque ","disk ") + (d.charge==="1 unit" ? T("1 UI","1 unit") : d.charge+" µg") : "";
   const temoin = d && d.temoin ? " (" + (nomAbx(d.temoin)) + ")" : "";
   const base = (dz.S===null || dz.S===undefined)
-    ? `pas de catégorie S · R < ${dz.R} mm`
-    : (dz.S===dz.R ? `seuil : S ≥ ${dz.S} · R < ${dz.R} mm`
-                   : `seuils : S ≥ ${dz.S} · R < ${dz.R} mm`);
+    ? T(`pas de catégorie S · R < ${dz.R} mm`, `no S category · R < ${dz.R} mm`)
+    : T(dz.S===dz.R ? `seuil : S ≥ ${dz.S} · R < ${dz.R} mm` : `seuils : S ≥ ${dz.S} · R < ${dz.R} mm`,
+        dz.S===dz.R ? `breakpoint: S ≥ ${dz.S} · R < ${dz.R} mm` : `breakpoints: S ≥ ${dz.S} · R < ${dz.R} mm`);
   const z = zitZonePour(group,k);
-  const zit = z ? ` · ZIT ${z[0]===z[1] ? z[0] : z[0]+"–"+z[1]} mm` : "";
+  const zit = z ? ` · ${T("ZIT","ATU")} ${z[0]===z[1] ? z[0] : z[0]+"–"+z[1]} mm` : "";
   return base + charge + temoin + zit;
 }
 
