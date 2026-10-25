@@ -156,9 +156,10 @@ dire("\nUn diamètre sans catégorie explique sa raison dans les deux langues");
    traduisant, et il ne peut pas se tromper : c'est le texte rendu. */
 // 60 au départ, le 25 octobre 2026. 51 après les entérobactéries, les
 // staphylocoques et la réserve ECOFF ; 43 après le pneumocoque, les
-// streptocoques, les entérocoques et Pseudomonas. Il ne doit que DESCENDRE : le baisser
+// streptocoques, les entérocoques et Pseudomonas ; 26 après Acinetobacter
+// et les seize anaérobies. Il ne doit que DESCENDRE : le baisser
 // est la seule façon de le franchir.
-var PLAFOND_ESPECES = 43;
+var PLAFOND_ESPECES = 26;
 
 dire("\nRecensement : quelles espèces rendent encore du français en anglais ?");
 (function () {

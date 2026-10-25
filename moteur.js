@@ -2263,16 +2263,19 @@ function acinetoInterpret(r, c) {
   // Les familles anti-Acinetobacter, énoncées une fois et réutilisées par
   // chaque conclusion — comme chez Pseudomonas. Une liste par phénotype
   // finirait par diverger d'un phénotype à l'autre.
-  const FAM_ACI = [["TZP", "RI", "pipéracilline-tazobactam atteinte"],
-                   ["CAZ", "RI", "ceftazidime atteinte"],
-                   ["FEP", "RI", "céfépime atteint"],
-                   ["IPM", "RI", "imipénème atteint"],
-                   ["MEM", "RI", "méropénème atteint"],
-                   ["CIP", "RI", "fluoroquinolone atteinte"],
-                   ["GEN", "RI", "aminoside atteint"],
-                   ["AMK", "RI", "aminoside atteint"]];
-  const A = { sev: "wild", name: "Acinetobacter baumannii sauvage",
-    mech: "Rappel : résistances naturelles nombreuses (aminopénicillines, C1G–C2G, ertapénème, aztréonam, fosfomycine).", alerts: [], rules: [], comment: "" };
+  const aminoA = tr("aminoside atteint", "aminoglycoside affected");
+  const FAM_ACI = [["TZP", "RI", tr("pipéracilline-tazobactam atteinte", "piperacillin-tazobactam affected")],
+                   ["CAZ", "RI", tr("ceftazidime atteinte", "ceftazidime affected")],
+                   ["FEP", "RI", tr("céfépime atteint", "cefepime affected")],
+                   ["IPM", "RI", tr("imipénème atteint", "imipenem affected")],
+                   ["MEM", "RI", tr("méropénème atteint", "meropenem affected")],
+                   ["CIP", "RI", tr("fluoroquinolone atteinte", "fluoroquinolone affected")],
+                   ["GEN", "RI", aminoA],
+                   ["AMK", "RI", aminoA]];
+  const A = { sev: "wild", name: tr("Acinetobacter baumannii sauvage", "Wild-type Acinetobacter baumannii"),
+    mech: tr("Rappel : résistances naturelles nombreuses (aminopénicillines, C1G–C2G, ertapénème, aztréonam, fosfomycine).",
+             "Remember: many intrinsic resistances (aminopenicillins, 1st and 2nd generation cephalosporins, ertapenem, aztreonam, fosfomycin)."),
+    alerts: [], rules: [], comment: "" };
   const carba = isRI(r.IPM) || isRI(r.MEM);
   const classes = [
     isRI(r.TZP) || isRI(r.CAZ) || isRI(r.FEP),
@@ -2284,48 +2287,64 @@ function acinetoInterpret(r, c) {
     ["TZP", "CAZ", "FEP", "IPM", "MEM", "CIP", "GEN", "AMK", "SXT"].every(k => !has(r, k) || isRI(r[k]));
 
   if (onlyColistin && classes >= 3) {
-    A.sev = "crit"; A.name = "Acinetobacter toto-résistant (XDR)";
-    A.mech = "Résistance à quasiment toutes les familles disponibles, colistine encore active.";
+    A.sev = "crit"; A.name = tr("Acinetobacter toto-résistant (XDR)", "Extensively drug-resistant Acinetobacter (XDR)");
+    A.mech = tr("Résistance à quasiment toutes les familles disponibles, colistine encore active.",
+                "Resistance to almost every available class, with colistin still active.");
     parce(A, r, {
-      pour: FAM_ACI.concat([["COL", "S", "colistine encore active — c'est ce qui sépare le toto-résistant du multirésistant"]]),
-      aConfirmerPar: "CMI de colistine par microdilution en milieu liquide : la méthode des disques ne vaut pas pour elle"
+      pour: FAM_ACI.concat([["COL", "S", tr("colistine encore active — c'est ce qui sépare le toto-résistant du multirésistant",
+                                            "colistin still active — that is what separates extensively from multidrug resistant")]]),
+      aConfirmerPar: tr("CMI de colistine par microdilution en milieu liquide : la méthode des disques ne vaut pas pour elle",
+                        "a colistin MIC by broth microdilution: disk diffusion is not valid for this agent")
     });
-    A.alerts.push({ lvl: "crit", txt: "Précautions complémentaires contact renforcées et signalement (potentiel épidémique en réanimation). Avis référent indispensable." });
-    A.comment = "Acinetobacter baumannii toto-résistant (XDR) : seule la colistine reste active sur le panel. Souche à signaler ; avis spécialisé indispensable.";
+    A.alerts.push({ lvl: "crit", txt: tr("Précautions complémentaires contact renforcées et signalement (potentiel épidémique en réanimation). Avis référent indispensable.",
+      "Reinforced contact precautions and notification (outbreak potential in intensive care). Specialist advice is essential.") });
+    A.comment = tr("Acinetobacter baumannii toto-résistant (XDR) : seule la colistine reste active sur le panel. Souche à signaler ; avis spécialisé indispensable.",
+      "Extensively drug-resistant Acinetobacter baumannii (XDR): colistin alone remains active on the panel. Notifiable isolate; specialist advice is essential.");
   } else if (carba) {
-    A.sev = "crit"; A.name = "Suspicion de carbapénémase (OXA / métallo-)";
-    A.mech = "Sensibilité diminuée aux carbapénèmes : oxacillinases (OXA-23/24/58) le plus souvent, parfois métallo-β-lactamase.";
+    A.sev = "crit"; A.name = tr("Suspicion de carbapénémase (OXA / métallo-)", "Suspected carbapenemase (OXA or metallo-)");
+    A.mech = tr("Sensibilité diminuée aux carbapénèmes : oxacillinases (OXA-23/24/58) le plus souvent, parfois métallo-β-lactamase.",
+                "Reduced carbapenem susceptibility: most often an oxacillinase (OXA-23/24/58), sometimes a metallo-beta-lactamase.");
     parce(A, r, {
-      pour: [["IPM", "RI", "imipénème atteint"],
-             ["MEM", "RI", "méropénème atteint"]],
+      pour: [["IPM", "RI", tr("imipénème atteint", "imipenem affected")],
+             ["MEM", "RI", tr("méropénème atteint", "meropenem affected")]],
       // L'ertapénème est naturellement inactif sur Acinetobacter : l'invoquer
       // comme argument ferait passer une résistance naturelle pour un mécanisme
       // acquis. Il n'a donc rien à faire dans cette grille.
-      contre: [["COL", "RI", "colistine atteinte elle aussi : la dernière ligne tombe — vérifier par microdilution avant de le rendre"]],
-      aConfirmerPar: "confirmation du mécanisme (test de synergie aux inhibiteurs, ou biologie moléculaire) : OXA et métallo-β-lactamase n'ouvrent pas les mêmes options"
+      contre: [["COL", "RI", tr("colistine atteinte elle aussi : la dernière ligne tombe — vérifier par microdilution avant de le rendre",
+                                "colistin affected as well: the last line falls — confirm by broth microdilution before reporting it")]],
+      aConfirmerPar: tr("confirmation du mécanisme (test de synergie aux inhibiteurs, ou biologie moléculaire) : OXA et métallo-β-lactamase n'ouvrent pas les mêmes options",
+                        "confirmation of the mechanism (inhibitor synergy test, or molecular testing): an OXA and a metallo-beta-lactamase do not open the same options")
     });
-    A.alerts.push({ lvl: "crit", txt: "Précautions complémentaires contact et signalement. Options thérapeutiques très limitées." });
-    A.rules.push({ k: "→R", txt: "β-lactamines à interpréter avec prudence ; confirmer le mécanisme." });
-    A.comment = "Acinetobacter baumannii de sensibilité diminuée aux carbapénèmes (carbapénémase probable). Souche à signaler, précautions complémentaires contact.";
+    A.alerts.push({ lvl: "crit", txt: tr("Précautions complémentaires contact et signalement. Options thérapeutiques très limitées.",
+      "Contact precautions and notification. Treatment options are very limited.") });
+    A.rules.push({ k: "→R", txt: tr("β-lactamines à interpréter avec prudence ; confirmer le mécanisme.",
+      "Interpret the beta-lactams with caution; confirm the mechanism.") });
+    A.comment = tr("Acinetobacter baumannii de sensibilité diminuée aux carbapénèmes (carbapénémase probable). Souche à signaler, précautions complémentaires contact.",
+      "Acinetobacter baumannii with reduced carbapenem susceptibility (a carbapenemase is likely). Notifiable isolate; contact precautions.");
   } else if (classes >= 3) {
-    A.sev = "high"; A.name = "Acinetobacter multirésistant (MDR)";
-    A.mech = "Résistance acquise à au moins trois familles.";
+    A.sev = "high"; A.name = tr("Acinetobacter multirésistant (MDR)", "Multidrug-resistant Acinetobacter (MDR)");
+    A.mech = tr("Résistance acquise à au moins trois familles.", "Acquired resistance to at least three classes.");
     parce(A, r, { pour: FAM_ACI });
-    A.alerts.push({ lvl: "warn", txt: "Précautions complémentaires contact ; options limitées." });
-    A.comment = "Acinetobacter baumannii multirésistant (MDR). Options thérapeutiques restreintes — voir antibiogramme détaillé.";
+    A.alerts.push({ lvl: "warn", txt: tr("Précautions complémentaires contact ; options limitées.",
+      "Contact precautions; options are limited.") });
+    A.comment = tr("Acinetobacter baumannii multirésistant (MDR). Options thérapeutiques restreintes — voir antibiogramme détaillé.",
+      "Multidrug-resistant Acinetobacter baumannii (MDR). Treatment options are narrow — see the full antibiogram.");
   } else if (classes > 0) {
-    A.sev = "mod"; A.name = "Résistance acquise partielle";
-    A.mech = "Résistance acquise à une ou deux familles.";
+    A.sev = "mod"; A.name = tr("Résistance acquise partielle", "Partial acquired resistance");
+    A.mech = tr("Résistance acquise à une ou deux familles.", "Acquired resistance to one or two classes.");
     parce(A, r, { pour: FAM_ACI });
-    A.comment = "Acinetobacter baumannii avec résistance acquise partielle — se référer à l'antibiogramme.";
+    A.comment = tr("Acinetobacter baumannii avec résistance acquise partielle — se référer à l'antibiogramme.",
+      "Acinetobacter baumannii with partial acquired resistance — refer to the antibiogram.");
   } else {
     parce(A, r, {
-      pour: [["IPM", "S", "imipénème actif : ni oxacillinase ni métallo-β-lactamase décelée"],
-             ["CAZ", "S", "ceftazidime active"],
-             ["CIP", "S", "fluoroquinolone active"],
-             ["GEN", "S", "aminoside actif"]]
+      pour: [["IPM", "S", tr("imipénème actif : ni oxacillinase ni métallo-β-lactamase décelée",
+                             "imipenem active: neither an oxacillinase nor a metallo-beta-lactamase detected")],
+             ["CAZ", "S", tr("ceftazidime active", "ceftazidime active")],
+             ["CIP", "S", tr("fluoroquinolone active", "fluoroquinolone active")],
+             ["GEN", "S", tr("aminoside actif", "aminoglycoside active")]]
     });
-    A.comment = "Acinetobacter baumannii de phénotype sauvage sur le panel testé.";
+    A.comment = tr("Acinetobacter baumannii de phénotype sauvage sur le panel testé.",
+      "Wild-type Acinetobacter baumannii on the panel tested.");
   }
   return finalize(A, r);
 }
@@ -2844,16 +2863,24 @@ function gramposrodInterpret(r, c, a) {
    résultat. Elle le DIT, et c'est le biologiste qui rend. § 13. */
 function notesAnaerobie(A, r, a) {
   if (a && a.penCouvre && r.PEN === "S") {
-    A.rules.push({ k: "✚", txt: "Pénicilline G sensible : l'EUCAST autorise à rendre "
+    A.rules.push({ k: "✚", txt: tr("Pénicilline G sensible : l'EUCAST autorise à rendre "
       + "sensibles TOUTES les β-lactamines à seuil de cette espèce, sans les tester "
       + "(classeur v16.1, note de la table). PhénoBac ne les rend pas d'office — "
-      + "c'est au biologiste de le faire, en connaissance de cause." });
+      + "c'est au biologiste de le faire, en connaissance de cause.",
+        "Benzylpenicillin susceptible: EUCAST allows ALL beta-lactams with a breakpoint "
+      + "for this species to be reported susceptible without further testing (v16.1 "
+      + "tables, note to the table). PhénoBac does not report them automatically — that "
+      + "is for the microbiologist to decide, knowingly.") });
   }
   if (isRI(r.MTZ)) {
-    A.alerts.push({ lvl: "warn", txt: "Avant de rendre le métronidazole non sensible : "
+    A.alerts.push({ lvl: "warn", txt: tr("Avant de rendre le métronidazole non sensible : "
       + "vérifier l'ANAÉROBIOSE de l'incubation. Une jarre qui a mal pris donne une "
       + "fausse résistance, et c'est la cause la plus fréquente. Vérifier ensuite "
-      + "l'identification, puis refaire l'antibiogramme (EUCAST v16.1)." });
+      + "l'identification, puis refaire l'antibiogramme (EUCAST v16.1).",
+        "Before reporting metronidazole as not susceptible: check the ANAEROBIC "
+      + "conditions of the incubation. A jar that failed gives a false resistance, and "
+      + "that is the commonest cause. Then check the identification, and repeat the "
+      + "susceptibility test (EUCAST v16.1).") });
   }
 }
 
@@ -2864,60 +2891,93 @@ function anaerobeInterpret(r, c, a) {
 
   if (type === "bfragilis") {
     A.sev = "mod"; A.name = "Bacteroides fragilis";
-    A.mech = "β-lactamase (cepA) fréquente ; résistance naturelle aux aminosides ; sensibilité à la clindamycine devenue variable.";
-    A.rules.push({ k: "✕", txt: "Aminosides naturellement inactifs (anaérobie)." });
-    A.rules.push({ k: "✚", txt: "Métronidazole = référence ; alternatives : amoxicilline-clavulanate, pipéracilline-tazobactam, carbapénèmes." });
-    A.rules.push({ k: "→R", txt: "Pénicilline / ampicilline R (β-lactamase) ; restaurées par clavulanate / tazobactam." });
+    A.mech = tr("β-lactamase (cepA) fréquente ; résistance naturelle aux aminosides ; sensibilité à la clindamycine devenue variable.",
+                "A beta-lactamase (cepA) is common; intrinsic resistance to aminoglycosides; clindamycin susceptibility has become variable.");
+    A.rules.push({ k: "✕", txt: tr("Aminosides naturellement inactifs (anaérobie).",
+      "Aminoglycosides intrinsically inactive (anaerobe).") });
+    A.rules.push({ k: "✚", txt: tr("Métronidazole = référence ; alternatives : amoxicilline-clavulanate, pipéracilline-tazobactam, carbapénèmes.",
+      "Metronidazole is the reference agent; alternatives are amoxicillin-clavulanate, piperacillin-tazobactam and the carbapenems.") });
+    A.rules.push({ k: "→R", txt: tr("Pénicilline / ampicilline R (β-lactamase) ; restaurées par clavulanate / tazobactam.",
+      "Penicillin and ampicillin R (beta-lactamase); restored by clavulanate or tazobactam.") });
     parce(A, r, {
-      pour: [["MTZ", "S", "métronidazole actif — c'est le traitement de référence des infections à anaérobies"],
-             ["AMC", "S", "l'inhibiteur restaure l'activité : la β-lactamase cepA est inhibée"]],
-      contre: [["MTZ", "RI", "métronidazole non sensible : rare et grave, à confirmer avant de le rendre"],
-               ["DA", "R", "clindamycine résistante : fréquent chez B. fragilis, à ne pas employer en probabiliste"]]
+      pour: [["MTZ", "S", tr("métronidazole actif — c'est le traitement de référence des infections à anaérobies",
+                             "metronidazole active — it is the reference treatment for anaerobic infections")],
+             ["AMC", "S", tr("l'inhibiteur restaure l'activité : la β-lactamase cepA est inhibée",
+                             "the inhibitor restores activity: the cepA beta-lactamase is inhibited")]],
+      contre: [["MTZ", "RI", tr("métronidazole non sensible : rare et grave, à confirmer avant de le rendre",
+                                "metronidazole not susceptible: rare and serious, to be confirmed before reporting")],
+               ["DA", "R", tr("clindamycine résistante : fréquent chez B. fragilis, à ne pas employer en probabiliste",
+                              "clindamycin resistant: common in B. fragilis, not to be used empirically")]]
     });
-    A.comment = "Bacteroides fragilis : β-lactamase fréquente (pénicillines R, restaurées par les inhibiteurs). Métronidazole = traitement de référence ; aminosides naturellement inactifs.";
-    if (isRI(r.MTZ)) { A.sev = "crit"; A.alerts.push({ lvl: "crit", txt: "Résistance au métronidazole : rare et grave — avis référent." }); A.comment += " Métronidazole non sensible : à confirmer d'urgence."; }
-    if (isRI(r.IPM) || isRI(r.MEM)) A.alerts.push({ lvl: "warn", txt: "Sensibilité diminuée aux carbapénèmes : carbapénémase (cfiA) possible — confirmer." });
-    if (isR(r.DA)) A.alerts.push({ lvl: "info", txt: "Clindamycine résistante : fréquent chez B. fragilis, ne pas utiliser en probabiliste." });
+    A.comment = tr("Bacteroides fragilis : β-lactamase fréquente (pénicillines R, restaurées par les inhibiteurs). Métronidazole = traitement de référence ; aminosides naturellement inactifs.",
+      "Bacteroides fragilis: a beta-lactamase is common (penicillins R, restored by the inhibitors). Metronidazole is the reference treatment; aminoglycosides are intrinsically inactive.");
+    if (isRI(r.MTZ)) { A.sev = "crit"; A.alerts.push({ lvl: "crit", txt: tr("Résistance au métronidazole : rare et grave — avis référent.",
+      "Metronidazole resistance: rare and serious — seek specialist advice.") }); A.comment += tr(" Métronidazole non sensible : à confirmer d'urgence.",
+      " Metronidazole not susceptible: to be confirmed urgently."); }
+    if (isRI(r.IPM) || isRI(r.MEM)) A.alerts.push({ lvl: "warn", txt: tr("Sensibilité diminuée aux carbapénèmes : carbapénémase (cfiA) possible — confirmer.",
+      "Reduced carbapenem susceptibility: a carbapenemase (cfiA) is possible — confirm.") });
+    if (isR(r.DA)) A.alerts.push({ lvl: "info", txt: tr("Clindamycine résistante : fréquent chez B. fragilis, ne pas utiliser en probabiliste.",
+      "Clindamycin resistant: common in B. fragilis, do not use empirically.") });
   }
   else if (type === "cperfringens") {
-    A.name = "Clostridium perfringens — sensible à la pénicilline";
-    A.mech = "Anaérobie à Gram positif sensible aux β-lactamines.";
-    A.rules.push({ k: "✚", txt: "Pénicilline G = référence ; associer la clindamycine (effet antitoxine) dans la gangrène gazeuse." });
+    A.name = tr("Clostridium perfringens — sensible à la pénicilline", "Clostridium perfringens — penicillin-susceptible");
+    A.mech = tr("Anaérobie à Gram positif sensible aux β-lactamines.", "A Gram-positive anaerobe susceptible to beta-lactams.");
+    A.rules.push({ k: "✚", txt: tr("Pénicilline G = référence ; associer la clindamycine (effet antitoxine) dans la gangrène gazeuse.",
+      "Benzylpenicillin is the reference agent; add clindamycin for its antitoxin effect in gas gangrene.") });
     parce(A, r, {
-      pour: [["PEN", "S", "pénicilline G active — traitement de référence"],
-             ["DA", "S", "clindamycine active : on l'associe pour son effet antitoxine dans la gangrène gazeuse"]],
-      contre: [["PEN", "RI", "pénicilline non sensible : inhabituel — vérifier l'identification et la CMI"]]
+      pour: [["PEN", "S", tr("pénicilline G active — traitement de référence", "benzylpenicillin active — the reference treatment")],
+             ["DA", "S", tr("clindamycine active : on l'associe pour son effet antitoxine dans la gangrène gazeuse",
+                            "clindamycin active: it is added for its antitoxin effect in gas gangrene")]],
+      contre: [["PEN", "RI", tr("pénicilline non sensible : inhabituel — vérifier l'identification et la CMI",
+                                "penicillin not susceptible: unusual — check the identification and the MIC")]]
     });
-    A.comment = "Clostridium perfringens : pénicilline G = traitement de référence, associée à la clindamycine (effet antitoxine) dans les formes graves.";
-    if (isRI(r.PEN)) { A.sev = "high"; A.alerts.push({ lvl: "warn", txt: "Pénicilline non sensible : inhabituel — vérifier l'identification et la CMI." }); }
+    A.comment = tr("Clostridium perfringens : pénicilline G = traitement de référence, associée à la clindamycine (effet antitoxine) dans les formes graves.",
+      "Clostridium perfringens: benzylpenicillin is the reference treatment, combined with clindamycin for its antitoxin effect in severe disease.");
+    if (isRI(r.PEN)) { A.sev = "high"; A.alerts.push({ lvl: "warn", txt: tr("Pénicilline non sensible : inhabituel — vérifier l'identification et la CMI.",
+      "Penicillin not susceptible: unusual — check the identification and the MIC.") }); }
   }
   else if (type === "prevotella" || type === "fusobacterium") {
     const gn = type === "prevotella" ? "Prevotella" : "Fusobacterium";
     A.sev = "mod"; A.name = sp;
-    A.mech = "Anaérobie à Gram négatif. La β-lactamase est fréquente chez "
-           + gn + " : les pénicillines seules ne sont pas fiables, les associations "
-           + "avec inhibiteur et les carbapénèmes le sont.";
-    A.rules.push({ k: "✕", txt: "Aminosides, aztréonam et colistine naturellement inactifs sur les anaérobies — ne pas les rendre sensibles." });
-    A.rules.push({ k: "✚", txt: "Métronidazole = référence ; alternatives : amoxicilline-acide clavulanique, pipéracilline-tazobactam, carbapénèmes." });
+    A.mech = tr("Anaérobie à Gram négatif. La β-lactamase est fréquente chez "
+              + gn + " : les pénicillines seules ne sont pas fiables, les associations "
+              + "avec inhibiteur et les carbapénèmes le sont.",
+                "A Gram-negative anaerobe. A beta-lactamase is common in "
+              + gn + ": penicillins alone are not reliable, whereas inhibitor "
+              + "combinations and the carbapenems are.");
+    A.rules.push({ k: "✕", txt: tr("Aminosides, aztréonam et colistine naturellement inactifs sur les anaérobies — ne pas les rendre sensibles.",
+      "Aminoglycosides, aztreonam and colistin are intrinsically inactive against anaerobes — never report them susceptible.") });
+    A.rules.push({ k: "✚", txt: tr("Métronidazole = référence ; alternatives : amoxicilline-acide clavulanique, pipéracilline-tazobactam, carbapénèmes.",
+      "Metronidazole is the reference agent; alternatives are amoxicillin-clavulanic acid, piperacillin-tazobactam and the carbapenems.") });
     parce(A, r, {
-      pour: [["MTZ", "S", "métronidazole actif — c'est le traitement de référence des anaérobies"],
-             ["AMC", "S", "l'inhibiteur restaure l'activité : la β-lactamase est inhibée"],
-             ["MEM", "S", "méropénème actif"]],
-      contre: [["MTZ", "RI", "métronidazole non sensible : rare et grave chez un anaérobie, à confirmer avant de le rendre"],
-               ["PEN", "RI", "pénicilline atteinte : β-lactamase, attendue dans ce genre"]]
+      pour: [["MTZ", "S", tr("métronidazole actif — c'est le traitement de référence des anaérobies",
+                             "metronidazole active — it is the reference treatment for anaerobes")],
+             ["AMC", "S", tr("l'inhibiteur restaure l'activité : la β-lactamase est inhibée",
+                             "the inhibitor restores activity: the beta-lactamase is inhibited")],
+             ["MEM", "S", tr("méropénème actif", "meropenem active")]],
+      contre: [["MTZ", "RI", tr("métronidazole non sensible : rare et grave chez un anaérobie, à confirmer avant de le rendre",
+                                "metronidazole not susceptible: rare and serious in an anaerobe, to be confirmed before reporting")],
+               ["PEN", "RI", tr("pénicilline atteinte : β-lactamase, attendue dans ce genre",
+                                "penicillin affected: a beta-lactamase, expected in this genus")]]
     });
-    A.comment = sp + " : anaérobie à Gram négatif. Métronidazole = traitement de référence ; "
-              + "β-lactamase fréquente, d'où des pénicillines seules peu fiables. "
-              + "Aminosides et colistine naturellement inactifs.";
+    A.comment = sp + tr(" : anaérobie à Gram négatif. Métronidazole = traitement de référence ; "
+                      + "β-lactamase fréquente, d'où des pénicillines seules peu fiables. "
+                      + "Aminosides et colistine naturellement inactifs.",
+                        ": a Gram-negative anaerobe. Metronidazole is the reference treatment; "
+                      + "a beta-lactamase is common, which makes penicillins alone unreliable. "
+                      + "Aminoglycosides and colistin are intrinsically inactive.");
     if (isRI(r.MTZ)) {
       A.sev = "crit";
-      A.alerts.push({ lvl: "crit", txt: "Résistance au métronidazole chez un anaérobie : rare et grave — avis référent." });
+      A.alerts.push({ lvl: "crit", txt: tr("Résistance au métronidazole chez un anaérobie : rare et grave — avis référent.",
+        "Metronidazole resistance in an anaerobe: rare and serious — seek specialist advice.") });
     }
     if (isRI(r.IPM) || isRI(r.MEM)) {
-      A.alerts.push({ lvl: "warn", txt: "Sensibilité diminuée aux carbapénèmes chez un anaérobie : confirmer le mécanisme." });
+      A.alerts.push({ lvl: "warn", txt: tr("Sensibilité diminuée aux carbapénèmes chez un anaérobie : confirmer le mécanisme.",
+        "Reduced carbapenem susceptibility in an anaerobe: confirm the mechanism.") });
     }
     if (type === "fusobacterium" && /nucleatum/.test(sp)) {
-      A.alerts.push({ lvl: "info", txt: "F. nucleatum : l'EUCAST ne chiffre ni l'amoxicilline-acide clavulanique ni la pipéracilline-tazobactam pour cette espèce — elles ne sont pas catégorisées." });
+      A.alerts.push({ lvl: "info", txt: tr("F. nucleatum : l'EUCAST ne chiffre ni l'amoxicilline-acide clavulanique ni la pipéracilline-tazobactam pour cette espèce — elles ne sont pas catégorisées.",
+        "F. nucleatum: EUCAST gives no breakpoint for amoxicillin-clavulanic acid or piperacillin-tazobactam in this species — they are not categorised.") });
     }
   }
   else if (type === "clostridium") {
@@ -2927,118 +2987,180 @@ function anaerobeInterpret(r, c, a) {
        clindamycine. Un groupe de seuils commun appliquerait le chiffre de
        l'une à l'autre — « un chiffre juste au mauvais endroit ». */
     A.sev = "mod"; A.name = sp;
-    A.mech = "Clostridie anaérobie à Gram positif. Le document chiffre chaque espèce "
-           + "à part : l'identification jusqu'à l'espèce commande les seuils.";
-    A.rules.push({ k: "✚", txt: "Métronidazole = référence des infections à anaérobies ; "
-      + "β-lactamines actives selon l'espèce." });
+    A.mech = tr("Clostridie anaérobie à Gram positif. Le document chiffre chaque espèce "
+              + "à part : l'identification jusqu'à l'espèce commande les seuils.",
+                "A Gram-positive anaerobic clostridium. The document sets breakpoints species "
+              + "by species: identification to species level determines which ones apply.");
+    A.rules.push({ k: "✚", txt: tr("Métronidazole = référence des infections à anaérobies ; "
+      + "β-lactamines actives selon l'espèce.",
+        "Metronidazole is the reference agent for anaerobic infections; beta-lactam activity "
+      + "depends on the species.") });
     parce(A, r, {
-      pour: [["MTZ", "S", "métronidazole actif — traitement de référence des anaérobies"],
-             ["AMP", "S", "ampicilline active"],
-             ["MEM", "S", "méropénème actif"]],
-      contre: [["MTZ", "RI", "métronidazole non sensible chez une clostridie : rare, et d'abord suspect d'une anaérobiose insuffisante"]]
+      pour: [["MTZ", "S", tr("métronidazole actif — traitement de référence des anaérobies", "metronidazole active — the reference treatment for anaerobes")],
+             ["AMP", "S", tr("ampicilline active", "ampicillin active")],
+             ["MEM", "S", tr("méropénème actif", "meropenem active")]],
+      contre: [["MTZ", "RI", tr("métronidazole non sensible chez une clostridie : rare, et d'abord suspect d'une anaérobiose insuffisante",
+                                "metronidazole not susceptible in a clostridium: rare, and first of all suspicious of insufficient anaerobiosis")]]
     });
-    A.comment = sp + " : clostridie anaérobie. Métronidazole = traitement de référence.";
+    A.comment = sp + tr(" : clostridie anaérobie. Métronidazole = traitement de référence.",
+                        ": an anaerobic clostridium. Metronidazole is the reference treatment.");
 
     if (/innocuum/.test(sp)) {
-      A.rules.push({ k: "✕", txt: "Vancomycine naturellement inactive chez C. innocuum — "
+      A.rules.push({ k: "✕", txt: tr("Vancomycine naturellement inactive chez C. innocuum — "
         + "ne jamais la rendre sensible. L'EUCAST ne lui donne d'ailleurs aucun seuil de "
-        + "vancomycine, non plus que de pénicilline G ni de carbapénème." });
-      A.comment += " Vancomycine naturellement inactive dans cette espèce : c'est ce qui "
-                 + "la distingue des autres clostridies.";
+        + "vancomycine, non plus que de pénicilline G ni de carbapénème.",
+          "Vancomycin is intrinsically inactive in C. innocuum — never report it susceptible. "
+        + "EUCAST gives this species no vancomycin breakpoint at all, and none for "
+        + "benzylpenicillin or the carbapenems either.") });
+      A.comment += tr(" Vancomycine naturellement inactive dans cette espèce : c'est ce qui "
+                    + "la distingue des autres clostridies.",
+                      " Vancomycin is intrinsically inactive in this species: that is what "
+                    + "sets it apart from the other clostridia.");
     }
     if (/ramosum/.test(sp)) {
-      A.rules.push({ k: "!", txt: "L'EUCAST ne donne pour C. ramosum ni seuil de "
-        + "vancomycine ni seuil de clindamycine : ces deux molécules ne se catégorisent pas." });
+      A.rules.push({ k: "!", txt: tr("L'EUCAST ne donne pour C. ramosum ni seuil de "
+        + "vancomycine ni seuil de clindamycine : ces deux molécules ne se catégorisent pas.",
+          "EUCAST gives C. ramosum no breakpoint for vancomycin and none for clindamycin: "
+        + "neither agent can be categorised.") });
     }
     if (/tertium/.test(sp)) {
-      A.rules.push({ k: "!", txt: "C. tertium est AÉROTOLÉRANTE : elle pousse en aérobiose "
+      A.rules.push({ k: "!", txt: tr("C. tertium est AÉROTOLÉRANTE : elle pousse en aérobiose "
         + "et se confond avec un Bacillus ou un lactobacille. L'EUCAST ne lui donne ni "
-        + "pénicilline G, ni clindamycine, ni pipéracilline-tazobactam." });
+        + "pénicilline G, ni clindamycine, ni pipéracilline-tazobactam.",
+          "C. tertium is AEROTOLERANT: it grows aerobically and is easily mistaken for a "
+        + "Bacillus or a lactobacillus. EUCAST gives it no breakpoint for benzylpenicillin, "
+        + "clindamycin or piperacillin-tazobactam.") });
     }
     if (/septicum/.test(sp)) {
       A.sev = "high";
-      A.alerts.push({ lvl: "warn", txt: "Clostridium septicum : son isolement — surtout "
+      A.alerts.push({ lvl: "warn", txt: tr("Clostridium septicum : son isolement — surtout "
         + "dans une hémoculture — impose de chercher une néoplasie colique ou une "
         + "neutropénie. L'association est constante et connue ; le signaler au clinicien "
-        + "fait partie du compte rendu." });
-      A.comment += " Isolement de C. septicum : rechercher une néoplasie colique ou une "
-                 + "neutropénie.";
+        + "fait partie du compte rendu.",
+          "Clostridium septicum: isolating it — above all from a blood culture — requires a "
+        + "search for a colonic malignancy or for neutropenia. The association is consistent "
+        + "and well known; telling the clinician is part of the report.") });
+      A.comment += tr(" Isolement de C. septicum : rechercher une néoplasie colique ou une "
+                    + "neutropénie.",
+                      " C. septicum isolated: look for a colonic malignancy or neutropenia.");
     }
   }
   else if (type === "cutibacterium") {
     /* C. acnes, C. avidum. Flore cutanée : le problème n'est pas de les
        traiter, c'est de savoir si elles infectent. */
     A.sev = "mod"; A.name = sp;
-    A.mech = "Bacille à Gram positif anaérobie de la flore cutanée. Pathogène sur "
-           + "MATÉRIEL — prothèse d'épaule, dérivation ventriculaire, ostéosynthèse — "
-           + "et contaminant de prélèvement partout ailleurs.";
-    A.rules.push({ k: "✚", txt: "Pénicilline G / amoxicilline = référence ; clindamycine "
-      + "et linézolide en alternative." });
-    A.rules.push({ k: "!", txt: "CROISSANCE LENTE : la culture anaérobie doit être tenue "
+    A.mech = tr("Bacille à Gram positif anaérobie de la flore cutanée. Pathogène sur "
+              + "MATÉRIEL — prothèse d'épaule, dérivation ventriculaire, ostéosynthèse — "
+              + "et contaminant de prélèvement partout ailleurs.",
+                "A Gram-positive anaerobic rod of the skin flora. A pathogen on IMPLANTED "
+              + "MATERIAL — shoulder prostheses, ventricular shunts, internal fixation — and "
+              + "a specimen contaminant everywhere else.");
+    A.rules.push({ k: "✚", txt: tr("Pénicilline G / amoxicilline = référence ; clindamycine "
+      + "et linézolide en alternative.",
+        "Benzylpenicillin or amoxicillin is the reference agent; clindamycin and linezolid "
+      + "are alternatives.") });
+    A.rules.push({ k: "!", txt: tr("CROISSANCE LENTE : la culture anaérobie doit être tenue "
       + "14 jours. Rendue à 48 heures, une infection de prothèse à Cutibacterium est "
-      + "rendue stérile." });
-    A.rules.push({ k: "!", txt: "Un seul prélèvement positif ne vaut pas infection : il "
+      + "rendue stérile.",
+        "SLOW GROWTH: the anaerobic culture must be held for 14 days. Reported at 48 hours, "
+      + "a Cutibacterium prosthetic infection is reported as sterile.") });
+    A.rules.push({ k: "!", txt: tr("Un seul prélèvement positif ne vaut pas infection : il "
       + "faut la concordance de plusieurs prélèvements profonds. Sur un prélèvement "
-      + "superficiel, c'est la flore du malade." });
+      + "superficiel, c'est la flore du malade.",
+        "A single positive specimen does not amount to infection: several deep specimens must "
+      + "agree. On a superficial swab, this is the patient's own flora.") });
     parce(A, r, {
-      pour: [["PEN", "S", "pénicilline G active — c'est le traitement de référence"],
-             ["AMX", "S", "amoxicilline active"],
-             ["DA", "S", "clindamycine active : alternative, et bonne diffusion osseuse"]],
-      contre: [["PEN", "RI", "pénicilline G atteinte : rare dans ce genre, et le document demande de la confirmer"]],
-      aConfirmerPar: "la concordance de plusieurs prélèvements profonds : un Cutibacterium "
-                   + "isolé une fois est le plus souvent un contaminant"
+      pour: [["PEN", "S", tr("pénicilline G active — c'est le traitement de référence", "benzylpenicillin active — it is the reference treatment")],
+             ["AMX", "S", tr("amoxicilline active", "amoxicillin active")],
+             ["DA", "S", tr("clindamycine active : alternative, et bonne diffusion osseuse",
+                            "clindamycin active: an alternative, with good bone penetration")]],
+      contre: [["PEN", "RI", tr("pénicilline G atteinte : rare dans ce genre, et le document demande de la confirmer",
+                                "benzylpenicillin affected: rare in this genus, and the document asks for it to be confirmed")]],
+      aConfirmerPar: tr("la concordance de plusieurs prélèvements profonds : un Cutibacterium "
+                      + "isolé une fois est le plus souvent un contaminant",
+                        "agreement between several deep specimens: a Cutibacterium isolated "
+                      + "once is most often a contaminant")
     });
-    A.comment = sp + " : bacille anaérobie de la flore cutanée, pathogène sur matériel. "
-              + "Pénicilline G / amoxicilline = référence. Culture à tenir 14 jours ; "
-              + "l'interprétation demande plusieurs prélèvements profonds concordants.";
+    A.comment = sp + tr(" : bacille anaérobie de la flore cutanée, pathogène sur matériel. "
+                      + "Pénicilline G / amoxicilline = référence. Culture à tenir 14 jours ; "
+                      + "l'interprétation demande plusieurs prélèvements profonds concordants.",
+                        ": an anaerobic rod of the skin flora, pathogenic on implanted material. "
+                      + "Benzylpenicillin or amoxicillin is the reference treatment. Hold the "
+                      + "culture for 14 days; interpretation requires several concordant deep "
+                      + "specimens.");
     if (isRI(r.PEN) || isRI(r.AMX) || isRI(r.AMP)) {
       A.sev = "high";
-      A.alerts.push({ lvl: "warn", txt: "Résistance aux β-lactamines chez Cutibacterium : "
+      A.alerts.push({ lvl: "warn", txt: tr("Résistance aux β-lactamines chez Cutibacterium : "
         + "l'EUCAST la dit RARE et demande de confirmer l'identification ET l'antibiogramme "
-        + "de toute souche de ce type (classeur v16.1, note de la table)." });
+        + "de toute souche de ce type (classeur v16.1, note de la table).",
+          "Beta-lactam resistance in Cutibacterium: EUCAST calls it RARE and asks for both the "
+        + "identification AND the susceptibility result of any such isolate to be confirmed "
+        + "(v16.1 tables, note to the table).") });
     }
   }
   else if (type === "gpac") {
     /* Finegoldia, Parvimonas, Peptostreptococcus, Peptoniphilus : les cocci
        à Gram positif anaérobies. Un seul récit clinique, quatre tables de
        seuils, parce que le document les sépare. */
-    A.sev = "mod"; A.name = sp + " — coque à Gram positif anaérobie";
-    A.mech = "Flore cutanée et buccale. Isolés des plaies chroniques et du pied "
-           + "diabétique, des abcès, des infections pleuropulmonaires et "
-           + "ostéo-articulaires, le plus souvent en flore mixte.";
-    A.rules.push({ k: "✚", txt: "β-lactamines et métronidazole actifs ; clindamycine "
-      + "d'activité variable." });
-    A.rules.push({ k: "!", txt: "Presque toujours en association avec d'autres germes : "
-      + "le traitement vise la flore entière, pas ce seul isolat." });
+    A.sev = "mod"; A.name = sp + tr(" — coque à Gram positif anaérobie", " — anaerobic Gram-positive coccus");
+    A.mech = tr("Flore cutanée et buccale. Isolés des plaies chroniques et du pied "
+              + "diabétique, des abcès, des infections pleuropulmonaires et "
+              + "ostéo-articulaires, le plus souvent en flore mixte.",
+                "Skin and oral flora. Recovered from chronic wounds and the diabetic foot, "
+              + "from abscesses, and from pleuropulmonary and bone and joint infections, "
+              + "most often as part of a mixed flora.");
+    A.rules.push({ k: "✚", txt: tr("β-lactamines et métronidazole actifs ; clindamycine "
+      + "d'activité variable.",
+        "Beta-lactams and metronidazole are active; clindamycin activity is variable.") });
+    A.rules.push({ k: "!", txt: tr("Presque toujours en association avec d'autres germes : "
+      + "le traitement vise la flore entière, pas ce seul isolat.",
+        "Almost always alongside other organisms: treatment addresses the whole flora, not "
+      + "this isolate alone.") });
     parce(A, r, {
-      pour: [["PEN", "S", "pénicilline G active"],
-             ["AMC", "S", "amoxicilline-acide clavulanique active : couvre aussi la flore associée"],
-             ["MTZ", "S", "métronidazole actif — référence des anaérobies"]],
-      contre: [["DA", "RI", "clindamycine atteinte : fréquent dans ce groupe, à ne pas employer en probabiliste"],
-               ["MTZ", "RI", "métronidazole non sensible : d'abord suspect d'une anaérobiose insuffisante"]]
+      pour: [["PEN", "S", tr("pénicilline G active", "benzylpenicillin active")],
+             ["AMC", "S", tr("amoxicilline-acide clavulanique active : couvre aussi la flore associée",
+                             "amoxicillin-clavulanic acid active: it also covers the accompanying flora")],
+             ["MTZ", "S", tr("métronidazole actif — référence des anaérobies", "metronidazole active — the reference agent for anaerobes")]],
+      contre: [["DA", "RI", tr("clindamycine atteinte : fréquent dans ce groupe, à ne pas employer en probabiliste",
+                               "clindamycin affected: common in this group, not to be used empirically")],
+               ["MTZ", "RI", tr("métronidazole non sensible : d'abord suspect d'une anaérobiose insuffisante",
+                                "metronidazole not susceptible: first of all suspicious of insufficient anaerobiosis")]]
     });
-    A.comment = sp + " : coque à Gram positif anaérobie, le plus souvent en flore mixte. "
-              + "β-lactamines et métronidazole actifs ; clindamycine variable.";
-    A.alerts.push({ lvl: "info", txt: "Résistance INDUCTIBLE à la clindamycine possible dans "
+    A.comment = sp + tr(" : coque à Gram positif anaérobie, le plus souvent en flore mixte. "
+                      + "β-lactamines et métronidazole actifs ; clindamycine variable.",
+                        ": an anaerobic Gram-positive coccus, usually part of a mixed flora. "
+                      + "Beta-lactams and metronidazole are active; clindamycin is variable.");
+    A.alerts.push({ lvl: "info", txt: tr("Résistance INDUCTIBLE à la clindamycine possible dans "
       + "ce groupe : elle se cherche par antagonisme entre les disques d'érythromycine et de "
       + "clindamycine, posés à 12–16 mm l'un de l'autre. L'EUCAST précise que sa portée "
-      + "clinique n'est pas établie." });
+      + "clinique n'est pas établie.",
+        "INDUCIBLE clindamycin resistance is possible in this group: look for antagonism "
+      + "between the erythromycin and clindamycin disks, placed 12–16 mm apart. EUCAST notes "
+      + "that its clinical significance is unknown.") });
   }
   else {
-    A.sev = "mod"; A.name = "Clostridioides difficile — pas d'antibiogramme de routine";
-    A.mech = "Diagnostic par toxines / GDH / PCR ; l'antibiogramme n'est pas réalisé en routine.";
+    A.sev = "mod"; A.name = tr("Clostridioides difficile — pas d'antibiogramme de routine",
+                               "Clostridioides difficile — no routine susceptibility testing");
+    A.mech = tr("Diagnostic par toxines / GDH / PCR ; l'antibiogramme n'est pas réalisé en routine.",
+                "Diagnosis rests on toxin, GDH and PCR testing; susceptibility testing is not performed routinely.");
     // PAS DE GRILLE ICI, ET C'EST VOULU. Une grille d'arguments explique un
     // phénotype lu sur un antibiogramme ; ici il n'y en a pas, et le rendu dit
     // précisément qu'il ne faut pas en faire. Fabriquer des arguments à partir
     // de molécules qu'on ne teste pas donnerait au raisonnement une apparence
     // de rigueur fondée sur rien. L'absence est déclarée pour qu'on ne la
     // prenne pas pour un oubli.
-    A.sansGrille = "le diagnostic repose sur la recherche de toxines, pas sur un antibiogramme : "
-                 + "il n'y a pas de profil à argumenter";
-    A.rules.push({ k: "✚", txt: "Traitement : vancomycine orale ou fidaxomicine (référence) ; métronidazole oral en alternative (formes non sévères)." });
-    A.rules.push({ k: "!", txt: "Arrêter si possible l'antibiotique inducteur ; précautions contact (spores)." });
-    A.comment = "Clostridioides difficile : colite post-antibiotique. Pas d'antibiogramme de routine — traitement par vancomycine orale ou fidaxomicine, métronidazole oral en alternative.";
-    A.alerts.push({ lvl: "info", txt: "Hygiène : spores résistantes aux hydro-alcooliques — lavage des mains et désinfection sporicide." });
+    A.sansGrille = tr("le diagnostic repose sur la recherche de toxines, pas sur un antibiogramme : "
+                    + "il n'y a pas de profil à argumenter",
+                      "the diagnosis rests on toxin detection, not on a susceptibility test: "
+                    + "there is no profile to argue about");
+    A.rules.push({ k: "✚", txt: tr("Traitement : vancomycine orale ou fidaxomicine (référence) ; métronidazole oral en alternative (formes non sévères).",
+      "Treatment: oral vancomycin or fidaxomicin as the reference; oral metronidazole as an alternative in non-severe disease.") });
+    A.rules.push({ k: "!", txt: tr("Arrêter si possible l'antibiotique inducteur ; précautions contact (spores).",
+      "Stop the inducing antibiotic where possible; contact precautions (spores).") });
+    A.comment = tr("Clostridioides difficile : colite post-antibiotique. Pas d'antibiogramme de routine — traitement par vancomycine orale ou fidaxomicine, métronidazole oral en alternative.",
+      "Clostridioides difficile: antibiotic-associated colitis. No routine susceptibility testing — treat with oral vancomycin or fidaxomicin, with oral metronidazole as an alternative.");
+    A.alerts.push({ lvl: "info", txt: tr("Hygiène : spores résistantes aux hydro-alcooliques — lavage des mains et désinfection sporicide.",
+      "Infection control: the spores resist alcohol-based hand rubs — wash hands and use a sporicidal disinfectant.") });
   }
   notesAnaerobie(A, r, a);
   return finalize(A, r);
