@@ -178,6 +178,14 @@ jobs:
       - name: Les anaérobies, espèce par espèce, et les notes du classeur
         run: node outils/essai-anaerobies.js
 
+      # « S ≤ 0,001 mg/L » n'est pas un seuil : c'est la note 13 du classeur,
+      # « ne jamais rendre sensible ». Recopiée comme un chiffre, elle rendrait
+      # sensible une pénicilline G sur un Corynebacterium diphtheriae. Et les
+      # seuils de cystite simple d'Aerococcus ne doivent pas déborder sur une
+      # hémoculture.
+      - name: La note 13, les feuilles partagées et les seuils de cystite
+        run: node outils/essai-especes-aerobies.js
+
       - name: Aucun argument ne contredit la catégorie qu'il explique
         run: python3 outils/verifier-arguments.py
 

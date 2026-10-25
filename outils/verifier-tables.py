@@ -138,7 +138,8 @@ def main():
     regles = base_lue()
     bati = MP.tables(sorted(set(SEUILS.values())) + ["DISQUE", "DISQUE_CASFM", "ZIT",
                                                     "ZIT_CASFM", "ZIT_ZONE", "ZIT_ZONE_CASFM",
-                                                    "DZ_TEMOIN", "DEPISTAGE_CASFM"])
+                                                    "DZ_TEMOIN", "DEPISTAGE",
+                                                    "DEPISTAGE_CASFM"])
     attendu = {n: {} for n in bati}
 
     def met(n, g, a, v):
@@ -156,7 +157,11 @@ def main():
                 else ("ZIT_ZONE_CASFM" if r["ref"] == "casfm" else "ZIT_ZONE")
             met(n, r["groupe"], r["abx"], r["zit"])
         if "temoin" in r: met("DZ_TEMOIN", r["groupe"], r["abx"], r["temoin"])
-        if "dep" in r:    met("DEPISTAGE_CASFM", r["groupe"], r["abx"], r["dep"])
+        # Le dépistage va dans la table de SON référentiel. Tout mettre dans
+        # celle du CA-SFM rendait les dépistages EUCAST inopérants, en
+        # silence : la mesure était rendue « non catégorisée ».
+        if "dep" in r:    met("DEPISTAGE_CASFM" if r["ref"] == "casfm" else "DEPISTAGE",
+                              r["groupe"], r["abx"], r["dep"])
 
     for n in sorted(attendu):
         A, B = attendu[n], bati.get(n, {})

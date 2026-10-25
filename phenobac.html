@@ -1877,7 +1877,8 @@ const ABX = {
   TEM:{n:"Témocilline",code:"TEM"},
   FDC:{n:"Céfidérocol",code:"FDC"},
   DAP:{n:"Daptomycine",code:"DAP"},
-  MXF:{n:"Moxifloxacine",code:"MXF"}
+  MXF:{n:"Moxifloxacine",code:"MXF"},
+  TET:{n:"Tétracycline",code:"TE"}
 };
 
 /* helpers */
@@ -2302,6 +2303,76 @@ const PRESENTATION = {
       {t:"Traitement (hors antibiogramme de routine)",abx:["VA","MTZ"]}
     ],
     
+    ctx:[],
+  },
+
+
+  /* Espèces aérobies ajoutées le 25 octobre 2026. Chaque panel ne porte que
+     ce que le classeur v16.1 chiffre : Achromobacter n'a QUE trois molécules,
+     et c'est l'information. Chez Aerococcus, trois seuils ne valent que pour
+     la cystite simple — le panneau le dit, et la question du contexte les
+     active. La clindamycine n'est au panel que de C. diphtheriae : le
+     document ne la chiffre pas pour C. ulcerans. */
+  pasteurella:{
+    label:"Pasteurella multocida", italic:true, group:"Autres bacilles à Gram négatif",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","CTX"]},
+      {t:"Autres familles",abx:["CIP","LVX","TET","DOX","SXT"]}
+    ],
+    ctx:[],
+  },
+
+  aeromonas:{
+    label:"Aeromonas spp.", italic:true, group:"Autres bacilles à Gram négatif",
+    panel:[
+      {t:"β-lactamines",abx:["CAZ","FEP","ATM"]},
+      {t:"Autres familles",abx:["CIP","LVX","SXT"]}
+    ],
+    ctx:[],
+  },
+
+  achromobacter:{
+    label:"Achromobacter xylosoxidans", italic:true, group:"Autres bacilles à Gram négatif",
+    panel:[
+      {t:"Ce que l'EUCAST chiffre",abx:["TZP","MEM","SXT"]}
+    ],
+    ctx:[],
+  },
+
+  kingella:{
+    label:"Kingella kingae", italic:true, group:"Autres bacilles à Gram négatif",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","CTX","CRO","MEM"]},
+      {t:"Autres familles",abx:["CIP","LVX","E","AZM","TET","DOX","RD","SXT"]}
+    ],
+    ctx:[],
+  },
+
+  aerococcus:{
+    label:"Aerococcus urinae / sanguinicola", italic:true, group:"Cocci à Gram positif",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMP","AMX","MEM"]},
+      {t:"Cystite simple seulement",abx:["CIP","LVX","NIT"]},
+      {t:"Autres familles",abx:["VA","RD"]}
+    ],
+    ctx:[],
+  },
+
+  cdiphtheriae:{
+    label:"Corynebacterium diphtheriae", italic:true, group:"Bacilles à Gram positif",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMX","CTX","MEM"]},
+      {t:"Autres familles",abx:["CIP","E","DA","TET","DOX","LZD","RD","SXT"]}
+    ],
+    ctx:[],
+  },
+
+  culcerans:{
+    label:"Corynebacterium ulcerans", italic:true, group:"Bacilles à Gram positif",
+    panel:[
+      {t:"β-lactamines",abx:["PEN","AMX","CTX","MEM"]},
+      {t:"Autres familles",abx:["CIP","E","TET","DOX","LZD","RD","SXT"]}
+    ],
     ctx:[],
   },
 
@@ -4379,7 +4450,15 @@ function questionUrinaire(){
     id:"urin",
     q: estCasfm()
       ? "Infection urinaire sans signe de gravité ? Le CA-SFM y retient un seuil de cotrimoxazole plus élevé."
-      : "Cystite simple ? L'EUCAST ne chiffre le pivmécillinam, le céfixime, la nitrofurantoïne et le triméthoprime que pour cette indication.",
+      // Les molécules étaient ÉCRITES EN DUR — pivmécillinam, céfixime,
+      // nitrofurantoïne, triméthoprime — ce qui est juste chez les
+      // entérobactéries et faux partout ailleurs. Aerococcus, arrivé le
+      // 25 octobre 2026, n'a de seuil urinaire que pour la ciprofloxacine, la
+      // lévofloxacine et la nitrofurantoïne : la question nommait trois
+      // molécules absentes de son panel et taisait les siennes.
+      : "Cystite simple ? L'EUCAST ne chiffre " +
+        codes.map(k=>(_M.ABXNAME[k]||k).toLowerCase()).join(", ") +
+        " que pour cette indication.",
     opts:["Oui","Non"],
     when:r=>state.ctx.mening!=="Oui" &&
             codes.some(k=>r[k]!==undefined || mesureSaisie(k))

@@ -27,10 +27,11 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : 130407f93f953db1cdf6a90a8a93fc14fa4c962723f66160761aa87913360a5e
+- **empreinte** : ae4e8ab090ab72344dc9a4e9bacd45244c47855a483612ef784b3960bc59daf4
 - **date** : 2026-10-25
-- **résultat** : 340 seuils confrontés — **340 identiques, 0 différent**, 91 non comparés.
-  (244 le 24 octobre ; les 96 de plus sont les dix anaérobies à Gram positif.)
+- **résultat** : 403 seuils confrontés — **403 identiques, 0 différent**, 91 non comparés.
+  (244 le 24 octobre ; les 159 de plus sont les dix anaérobies à Gram positif et
+  les sept espèces aérobies.)
 
 La confrontation porte sur les concentrations critiques de l'EUCAST. Les
 seuils méningés (BP_MENINGE) et ceux du CA-SFM ont leurs propres documents et
@@ -91,8 +92,18 @@ la molécule est rendue **S ou I**, et seulement alors : le document autorise
 expressément à rendre « R ».
 
 `comparer-eucast.py` vérifie le drapeau **dans les deux sens** à chaque
-confrontation, comme celui de « convention de laboratoire ». Au 24 octobre : 0
+confrontation, comme celui de « convention de laboratoire ». Au 25 octobre : 0
 écart.
+
+### Un outil qui ne connaît pas une molécule ne se tait pas : il accuse
+
+La tétracycline, arrivée le 25 octobre avec *Pasteurella*, *Kingella* et
+*C. diphtheriae*, n'avait pas de motif de recherche dans `comparer-eucast.py`.
+Faute de motif, le couple passait pour « non chiffré par le document », et
+l'outil **réclamait** le drapeau « convention de laboratoire » sur trois
+seuils que l'EUCAST donne pourtant. C'est le même défaut que la lecture du
+mauvais fichier : l'ignorance d'un vérificateur ne se présente pas comme une
+ignorance, elle se présente comme un verdict.
 
 ### Les 91 couples « non comparés », triés
 
@@ -220,10 +231,10 @@ document que personne n'a sous la main n'aiderait personne.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 9b0a791719a792f95c6247f2a213434819a775ba2ed0d8ea1bdb4ba518a7c999
+- **empreinte** : 9609897fa850d6a0ba45edd4906f06df6c34743bf6ba421c373b05faa7adf1ca
 - **date** : 2026-10-25
-- **résultat** : 22 tables du classeur relues — **0 manque, 0 excédent, 0 écart**,
-  CMI **et** disque.
+- **résultat** : 22 tables du classeur relues, **409 règles attendues** — **0 manque,
+  0 excédent, 0 écart**, CMI **et** disque.
 
 ### Pourquoi il a fallu un deuxième outil
 
@@ -302,6 +313,68 @@ confondre donnerait « un chiffre juste au mauvais endroit ».
 n'est **pas** portée comme « résistance naturelle attendue », parce que le
 document EUCAST des phénotypes attendus ne la déclare pas et que cette colonne
 cite une règle numérotée. § 26.
+
+---
+
+## Les sept espèces aérobies, ajoutées
+
+Le 25 octobre 2026, **126 règles** pour sept groupes de seuils :
+*Pasteurella multocida*, *Aeromonas* spp., *Achromobacter xylosoxidans*,
+*Kingella kingae*, *Aerococcus urinae / sanguinicola*,
+*Corynebacterium diphtheriae* et *C. ulcerans*. Avec les dix anaérobies du
+même jour, PhénoBac passe de 43 à **60 espèces**.
+
+**Deux groupes pour les corynébactéries toxinogènes**, et c'est le document
+qui l'impose : il chiffre la clindamycine pour *C. diphtheriae* seulement —
+« *Wild-type C. ulcerans is less susceptible to clindamycin* ».
+
+### La note 13, et ce qu'elle interdit
+
+Chez *C. diphtheriae* et *C. ulcerans*, le classeur écrit « S ≤ 0,001 mg/L »
+et « S ≥ 50 mm » pour la pénicilline G, la céfotaxime et la ciprofloxacine. Ce
+ne sont pas des seuils : c'est la **note 13**, un seuil hors échelle qui
+signifie « *never report susceptible, standard dosing regimen* ». La base
+l'écrit `S: null`, et ces trois molécules ne se rendent qu'en **I** ou en
+**R** — une CMI de 0,004 mg/L donne « I », jamais « S ».
+
+L'extracteur **s'arrête** si les deux marques ne vont pas ensemble : « 0,001 »
+sans « 50 », ou l'inverse, est une structure qu'on ne comprend pas, et il vaut
+mieux ne rien produire que produire à côté.
+
+### Le code de la tétracycline manquait
+
+PhénoBac portait la doxycycline et la minocycline, pas la **tétracycline** —
+or c'est elle que l'EUCAST fait lire chez ces trois espèces, soit comme seuil
+clinique, soit comme **écran** dont se déduit la doxycycline. Le disque le
+plus répandu des laboratoires à moyens comptés n'avait pas de place.
+
+### Deux tables de dépistage, et il en fallait deux
+
+Le dépistage était une notion du **CA-SFM** dans PhénoBac : une seule table,
+`DEPISTAGE_CASFM`, consultée uniquement sous ce référentiel. L'EUCAST en a
+aussi — « *Tetracycline (screen only)* » chez *Pasteurella* — et ils tombaient
+dans la table du mauvais référentiel. Résultat : la mesure restait « non
+catégorisée », et l'application affirmait que l'EUCAST ne tranche pas, alors
+que le document explique exactement comment conclure.
+
+Pire, le message d'alerte était celui du CA-SFM — « ne pas conclure
+résistant, faire une CMI » — et les deux référentiels ne disent **pas** la
+même chose : l'EUCAST autorise expressément à rendre résistant faute de CMI.
+Attribuer à un référentiel la règle de l'autre est pire qu'un silence. Les
+deux textes sont désormais distincts.
+
+### Les seuils de cystite simple, et la question qui les active
+
+Trois seuils d'*Aerococcus* ne valent que pour la cystite simple :
+ciprofloxacine, lévofloxacine, nitrofurantoïne. Hors ce contexte, ils ne
+s'appliquent pas, et le moteur ne catégorise rien — ce qui est juste.
+
+La question posée à l'utilisateur, en revanche, nommait des molécules
+**écrites en dur** : « l'EUCAST ne chiffre le pivmécillinam, le céfixime, la
+nitrofurantoïne et le triméthoprime que pour cette indication ». Vrai chez les
+entérobactéries, faux chez *Aerococcus*, dont elle taisait les trois
+molécules pour en citer deux absentes de son panel. Elle nomme désormais
+celles du groupe affiché.
 
 ---
 

@@ -72,7 +72,13 @@ const ABXNAME = {
   CAF: "Chloramphénicol", DOX: "Doxycycline",
   OXA: "Oxacilline", LVX: "Lévofloxacine", PEF: "Péfloxacine", AZM: "Azithromycine",
   TEM: "Témocilline", FDC: "Céfidérocol", DAP: "Daptomycine", MXF: "Moxifloxacine",
-  MIN: "Minocycline"
+  MIN: "Minocycline",
+  // TÉTRACYCLINE. PhénoBac portait la doxycycline et la minocycline, pas la
+  // tétracycline — or c'est ELLE que l'EUCAST fait lire chez Pasteurella,
+  // Kingella et Corynebacterium diphtheriae, soit comme seuil clinique, soit
+  // comme DÉPISTAGE dont se déduit la doxycycline. Sans ce code, le disque le
+  // plus répandu des laboratoires à moyens comptés n'avait pas de place.
+  TET: "Tétracycline"
 };
 
 // concentrations critiques (valeurs par défaut, surchargées par bpOverride côté client)
@@ -118,7 +124,16 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
       DISQUE = {}, DISQUE_CASFM = {},
       ZIT = {}, ZIT_CASFM = {}, ZIT_ZONE = {}, ZIT_ZONE_CASFM = {},
       HORS_EUCAST = {}, CASFM_COUVRE = {}, CASFM_COUVRE_ESPECE = {},
-      DEPISTAGE_CASFM = {};
+      // DEUX TABLES DE DÉPISTAGE, ET IL EN FALLAIT DEUX. Jusqu'au 25 octobre
+      // 2026 il n'y en avait qu'une, nommée DEPISTAGE_CASFM, et
+      // depistageSeuil() ne la consultait QUE sous CA-SFM. C'était juste tant
+      // que les seuls dépistages venus de la base étaient ceux du CA-SFM.
+      // L'EUCAST en a aussi — « Tetracycline (screen only) » chez Pasteurella,
+      // dont se déduit la doxycycline — et ils tombaient dans la table du
+      // mauvais référentiel : la mesure restait « non catégorisée », et
+      // l'application disait à l'utilisateur que l'EUCAST ne tranche pas,
+      // alors que le document explique précisément comment conclure.
+      DEPISTAGE = {}, DEPISTAGE_CASFM = {};
 
 (function batir() {
   const met = function (t, g, a, v) { (t[g] || (t[g] = {}))[a] = v; };
@@ -154,7 +169,7 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
                            : (r.ref === "casfm" ? ZIT_ZONE_CASFM : ZIT_ZONE),
           r.groupe, r.abx, r.zit);
     if (r.temoin !== undefined) met(DZ_TEMOIN, r.groupe, r.abx, r.temoin);
-    if (r.dep !== undefined)    met(DEPISTAGE_CASFM, r.groupe, r.abx, r.dep);
+    if (r.dep !== undefined)    met(r.ref === "casfm" ? DEPISTAGE_CASFM : DEPISTAGE, r.groupe, r.abx, r.dep);
     if (r.espece !== undefined) DZ_CASFM_ESPECE[r.groupe + ":" + r.abx] = r.espece;
     if (r.ecoff) ECOFF[r.groupe + ":" + r.abx] = true;
     if (r.conv) dans(HORS_EUCAST, r.groupe, r.abx);
@@ -273,6 +288,24 @@ const ORG = {
   parvimonas: { engine: "anaerobe", args: { species: "Parvimonas micra", type: "gpac", penCouvre: true }, bpGroup: "parvimonas", intrinsic: {} },
   peptostrepto: { engine: "anaerobe", args: { species: "Peptostreptococcus anaerobius", type: "gpac", penCouvre: true }, bpGroup: "peptostrepto", intrinsic: {} },
   peptoniphilus: { engine: "anaerobe", args: { species: "Peptoniphilus spp.", type: "gpac", penCouvre: true }, bpGroup: "peptoniphilus", intrinsic: {} },
+
+
+  /* Espèces aérobies ajoutées le 25 octobre 2026, lues dans le classeur v16.1.
+
+     AUCUNE « résistance naturelle » déclarée ici, et c'est voulu. Aeromonas
+     est bien inactivée par les aminopénicillines, Achromobacter par les
+     aminosides — mais la colonne « intrinsic » de PhénoBac porte les
+     phénotypes du document EUCAST « Expected Resistant Phenotypes », chacun
+     avec son numéro de règle, et ces espèces n'y figurent pas. Le moteur le
+     DIT dans son commentaire, en s'appuyant sur ce qui est vérifiable : les
+     molécules que le classeur ne chiffre pas. § 26. */
+  pasteurella: { engine: "autresbgn", args: { species: "Pasteurella multocida", type: "pasteurella" }, bpGroup: "pasteurella", intrinsic: {} },
+  aeromonas:   { engine: "autresbgn", args: { species: "Aeromonas spp.", type: "aeromonas" }, bpGroup: "aeromonas", intrinsic: {} },
+  achromobacter:{ engine: "autresbgn", args: { species: "Achromobacter xylosoxidans", type: "achromobacter" }, bpGroup: "achromobacter", intrinsic: {} },
+  kingella:    { engine: "autresbgn", args: { species: "Kingella kingae", type: "kingella" }, bpGroup: "kingella", intrinsic: {} },
+  aerococcus:  { engine: "aerococcus", args: { species: "Aerococcus urinae / A. sanguinicola" }, bpGroup: "aerococcus", intrinsic: {} },
+  cdiphtheriae:{ engine: "gramposrod", args: { species: "Corynebacterium diphtheriae", type: "diphtheriae" }, bpGroup: "cdiphtheriae", intrinsic: {} },
+  culcerans:   { engine: "gramposrod", args: { species: "Corynebacterium ulcerans", type: "diphtheriae", ulcerans: true }, bpGroup: "culcerans", intrinsic: {} },
 
   campylobacter:{ engine: "curved", args: { species: "Campylobacter jejuni", type: "campylobacter" }, bpGroup: "campylo", intrinsic: {} },
   vibrio:     { engine: "curved", args: { species: "Vibrio cholerae", type: "vibrio" }, bpGroup: "vibrio", intrinsic: {} },
@@ -1537,16 +1570,34 @@ function finalize(A, r) {
   A.commentaireCopiable = commentaireCopiable(A.moments);
 
   if (_depistageEchoue.length) {
+    /* DEUX RÉFÉRENTIELS, DEUX CONDUITES, ET ELLES NE DISENT PAS LA MÊME CHOSE.
+       Ce message était écrit pour le dépistage de la pénicilline G du CA-SFM
+       chez les streptocoques : « ne pas conclure résistant, faire une CMI ».
+       Depuis que l'EUCAST apporte ses propres dépistages — la tétracycline
+       chez Pasteurella, dont se déduit la doxycycline — le même texte
+       s'affichait sous EUCAST, en citant le CA-SFM et en donnant une
+       consigne qui n'est pas la sienne : l'EUCAST, lui, autorise
+       expressément à rendre résistant faute de CMI. Attribuer à un
+       référentiel la règle de l'autre est pire qu'un silence. */
+    const casfm = estCasfm();
     _depistageEchoue.forEach(d => {
-      A.alerts.push({ lvl: "warn", txt:
-        `${ABXNAME[d.abx] || d.abx} : ${d.mm} mm, en dessous du seuil de dépistage (${d.seuil} mm). ` +
-        `Le CA-SFM n'autorise pas à conclure « résistant » au disque pour ce couple — la résistance aux ` +
-        `β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème ` +
-        `technique. Déterminer la CMI avant de priver le malade de son traitement de référence.` });
+      A.alerts.push({ lvl: "warn", txt: casfm
+        ? `${ABXNAME[d.abx] || d.abx} : ${d.mm} mm, en dessous du seuil de dépistage (${d.seuil} mm). `
+          + `Le CA-SFM n'autorise pas à conclure « résistant » au disque pour ce couple — la résistance aux `
+          + `β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème `
+          + `technique. Déterminer la CMI avant de priver le malade de son traitement de référence.`
+        : `${ABXNAME[d.abx] || d.abx} : ${d.mm} mm, en dessous du seuil de dépistage (${d.seuil} mm). `
+          + `L'écran est POSITIF : l'EUCAST demande alors de déterminer la sensibilité de chaque `
+          + `molécule de la classe, ou de les rendre résistantes. Le dépistage ne conclut que dans `
+          + `un sens — au-dessus du seuil, il dit « sensible » ; en dessous, il ne dit rien de plus `
+          + `que « il faut regarder ».` });
     });
-    A.rules.push({ k: "≈", txt:
-      "CA-SFM : le disque de pénicilline G ne sert ici qu'à reconnaître les souches sensibles. " +
-      "En dessous du seuil, il faut une CMI — le disque ne tranche pas." });
+    A.rules.push({ k: "≈", txt: casfm
+      ? "CA-SFM : le disque de pénicilline G ne sert ici qu'à reconnaître les souches sensibles. "
+        + "En dessous du seuil, il faut une CMI — le disque ne tranche pas."
+      : "EUCAST : ce disque est un ÉCRAN, pas un seuil clinique. Au-dessus, il autorise à rendre "
+        + "la classe sensible sans autre test ; en dessous, il faut tester chaque molécule ou la "
+        + "rendre résistante." });
   }
 
   /* Diamètres mesurés que le moteur n'a pas traduits. Les taire reviendrait
@@ -2481,6 +2532,47 @@ function gramposrodInterpret(r, c, a) {
       A.alerts.push({ lvl: "warn", txt: "Ampicilline non sensible chez Listeria : exceptionnel — vérifier l'identification et la CMI." });
       A.comment += " Ampicilline non sensible : à confirmer d'urgence.";
     }
+  } else if (type === "diphtheriae") {
+    /* LA SEULE ESPÈCE DE PHÉNOBAC OÙ L'ANTIBIOGRAMME N'EST PAS LA QUESTION.
+       La diphtérie se traite par l'ANTITOXINE, en urgence : c'est la toxine
+       qui tue, pas le germe. L'antibiotique interrompt la contagion et
+       raccourcit le portage. Rendre un antibiogramme propre sans dire cela,
+       c'est répondre à côté. */
+    const ulc = !!(a && a.ulcerans);
+    A.sev = "crit";
+    A.name = sp + " — URGENCE : l'antitoxine avant l'antibiotique";
+    A.mech = "La gravité tient à la TOXINE diphtérique, pas au germe. Le caractère "
+           + "toxinogène se cherche par le gène tox (PCR) ou le test d'Elek — "
+           + "l'antibiogramme ne le dit pas.";
+    A.alerts.push({ lvl: "crit", txt: "Suspicion de diphtérie : prévenir le clinicien "
+      + "IMMÉDIATEMENT, sans attendre l'antibiogramme. L'antitoxine se donne sur la "
+      + "présomption clinique ; chaque heure compte. Maladie à déclaration obligatoire." });
+    A.rules.push({ k: "!", txt: "Chercher le caractère toxinogène (gène tox / test d'Elek) : "
+      + "c'est lui qui décide de la conduite, pas la sensibilité aux antibiotiques." });
+    A.rules.push({ k: "✚", txt: "Antibiotique : pénicilline G ou érythromycine (14 jours), "
+      + "pour interrompre la contagion et tarir le portage. Dépistage et antibioprophylaxie "
+      + "de l'entourage ; mise à jour de la vaccination." });
+    A.rules.push({ k: "!", txt: "L'EUCAST ne reconnaît AUCUNE catégorie « sensible » à "
+      + "posologie standard pour la pénicilline G, la céfotaxime et la ciprofloxacine chez "
+      + "cette espèce (note 13 du classeur) : elles ne se rendent qu'en I ou en R." });
+    if (ulc) {
+      A.rules.push({ k: "!", txt: "C. ulcerans est une ZOONOSE — lait cru, bovins, animaux "
+        + "de compagnie — et non une transmission interhumaine : l'enquête ne vise pas le "
+        + "même entourage. L'EUCAST ne lui donne pas de seuil de clindamycine : « le "
+        + "sauvage y est moins sensible »." });
+    }
+    parce(A, r, {
+      pour: [["E", "S", "érythromycine active — c'est le traitement qui tarit le portage"],
+             ["PEN", "I", "pénicilline G utilisable à forte exposition : l'EUCAST ne lui reconnaît pas de catégorie S chez cette espèce"]],
+      contre: [["E", "R", "érythromycine résistante : il reste la pénicilline G, et l'avis spécialisé"]],
+      aConfirmerPar: "la recherche du gène tox ou le test d'Elek : c'est le caractère "
+                   + "toxinogène, et non l'antibiogramme, qui commande le traitement"
+    });
+    A.comment = sp + " : " + (ulc ? "zoonose (lait cru, animaux). " : "")
+              + "LA PRIORITÉ EST L'ANTITOXINE, donnée sur la présomption clinique — "
+              + "c'est la toxine qui tue. L'antibiotique (pénicilline G ou érythromycine, "
+              + "14 jours) interrompt la contagion. Chercher le caractère toxinogène ; "
+              + "déclaration obligatoire ; entourage à dépister et à vacciner.";
   } else {
     if (isR(r.PEN)) {
       A.sev = "high"; A.name = "Corynebacterium multirésistant probable (groupe JK)";
@@ -2729,6 +2821,176 @@ function anaerobeInterpret(r, c, a) {
   return finalize(A, r);
 }
 
+/* ============================================================
+   autresbgn — Pasteurella, Aeromonas, Achromobacter, Kingella.
+
+   Quatre bacilles à Gram négatif que PhénoBac ne couvrait pas, et qu'on
+   n'isole pas dans les mêmes circonstances : une morsure, une plaie souillée
+   d'eau douce, un malade de réanimation ou de mucoviscidose, un petit enfant
+   qui boite. Le récit clinique est ce qui manque le plus au biologiste quand
+   l'espèce est rare — une liste de S et de R ne dit pas quoi en faire.
+   ============================================================ */
+function autresbgnInterpret(r, c, a) {
+  const sp = (a && a.species) || "Bacille à Gram négatif";
+  const type = (a && a.type) || "pasteurella";
+  const A = { sev: "wild", name: "", mech: "", alerts: [], rules: [], comment: "" };
+
+  if (type === "pasteurella") {
+    A.name = "Pasteurella multocida — morsure animale";
+    A.mech = "Flore buccale du chien et du chat. Cellulite d'installation RAPIDE, "
+           + "souvent en moins de 24 heures après la morsure.";
+    A.rules.push({ k: "✚", txt: "Amoxicilline-acide clavulanique = référence : elle couvre "
+      + "Pasteurella, les anaérobies de la gueule et les staphylocoques de la peau, qui "
+      + "sont ensemble dans la plaie." });
+    A.rules.push({ k: "✕", txt: "PIÈGE CLASSIQUE : oxacilline, céphalosporines de première "
+      + "génération et clindamycine sont INACTIVES sur Pasteurella. Traiter une morsure "
+      + "« comme une infection cutanée » avec un antistaphylococcique, c'est passer à côté." });
+    A.rules.push({ k: "!", txt: "La morsure pose aussi les questions de la rage et du tétanos : "
+      + "elles ne se lisent pas sur un antibiogramme." });
+    parce(A, r, {
+      pour: [["AMC", "S", "amoxicilline-clavulanate active — c'est le traitement de référence de la morsure"],
+             ["PEN", "S", "pénicilline G active : Pasteurella l'est habituellement"],
+             ["DOX", "S", "doxycycline active : alternative en cas d'allergie aux β-lactamines"]],
+      contre: [["PEN", "RI", "pénicilline G atteinte : inhabituel, à confirmer"]]
+    });
+    A.comment = "Pasteurella multocida : morsure de chien ou de chat, cellulite rapide. "
+              + "Amoxicilline-acide clavulanique = traitement de référence. Oxacilline, "
+              + "C1G et clindamycine sont inactives — ne pas traiter comme une infection "
+              + "cutanée banale. Penser rage et tétanos.";
+    if (isRI(r.PEN) || isRI(r.AMX)) {
+      A.sev = "mod";
+      A.alerts.push({ lvl: "info", txt: "β-lactamase possible chez Pasteurella : rare, mais "
+        + "décrite. L'amoxicilline-acide clavulanique reste alors active." });
+    }
+  }
+  else if (type === "aeromonas") {
+    A.sev = "mod";
+    A.name = "Aeromonas spp. — plaie souillée d'eau douce";
+    A.mech = "Eaux douces et saumâtres. Plaies souillées, diarrhées, et bactériémies "
+           + "graves chez le cirrhotique. L'espèce porte plusieurs β-lactamases "
+           + "INDUCTIBLES — céphalosporinase, pénicillinase et carbapénémase — d'où une "
+           + "résistance qui peut apparaître SOUS traitement.";
+    A.rules.push({ k: "!", txt: "β-lactamases inductibles : une souche rendue sensible à une "
+      + "β-lactamine peut se dérépresser en cours de traitement. Sur une infection grave, "
+      + "refaire un antibiogramme si l'évolution n'est pas celle qu'on attend." });
+    A.rules.push({ k: "✚", txt: "Ciprofloxacine ou cotrimoxazole = appuis habituels ; "
+      + "céfépime et ceftazidime chiffrées par l'EUCAST." });
+    A.rules.push({ k: "!", txt: "L'EUCAST ne chiffre pour ce genre NI aminopénicilline, NI "
+      + "céphalosporine de première génération, NI carbapénème : ces molécules ne se "
+      + "catégorisent pas, et ce silence du document est lui-même une indication." });
+    parce(A, r, {
+      pour: [["CIP", "S", "ciprofloxacine active — appui habituel, et non soumise aux β-lactamases"],
+             ["SXT", "S", "cotrimoxazole actif : alternative"],
+             ["CAZ", "S", "ceftazidime active"]],
+      contre: [["CIP", "RI", "ciprofloxacine atteinte : les options se réduisent aux β-lactamines, que les enzymes inductibles menacent"]]
+    });
+    A.comment = "Aeromonas : plaie souillée d'eau douce, diarrhée, bactériémie du "
+              + "cirrhotique. β-lactamases inductibles — une résistance peut apparaître "
+              + "sous traitement. Fluoroquinolone ou cotrimoxazole en appui.";
+  }
+  else if (type === "achromobacter") {
+    A.sev = "mod";
+    A.name = "Achromobacter xylosoxidans — bacille non fermentant";
+    A.mech = "Non fermentant de l'environnement hydrique. Colonisation et infection "
+           + "respiratoire de la mucoviscidose, infections sur cathéter et en "
+           + "réanimation. Naturellement peu sensible : le document ne chiffre que "
+           + "quatre molécules, et c'est la réponse.";
+    A.rules.push({ k: "✚", txt: "Pipéracilline-tazobactam, méropénème et cotrimoxazole : "
+      + "ce sont les trois seules molécules que l'EUCAST chiffre pour cette espèce." });
+    A.rules.push({ k: "✕", txt: "Aminosides, ceftriaxone et céfotaxime, aztréonam : pas de "
+      + "seuil, et une activité qu'on ne peut pas affirmer. Ne pas les rendre." });
+    A.rules.push({ k: "!", txt: "Céfidérocol : l'EUCAST ne fixe pas de seuil clinique, faute "
+      + "de données. Une CMI ≤ 0,5 mg/L signale une souche sans mécanisme acquis, sans "
+      + "promettre le résultat clinique." });
+    parce(A, r, {
+      pour: [["SXT", "S", "cotrimoxazole actif — souvent la meilleure option dans cette espèce"],
+             ["MEM", "S", "méropénème actif"],
+             ["TZP", "S", "pipéracilline-tazobactam active"]],
+      contre: [["MEM", "RI", "méropénème atteint : les options deviennent très étroites, avis spécialisé"],
+               ["SXT", "RI", "cotrimoxazole atteint"]]
+    });
+    A.comment = "Achromobacter xylosoxidans : non fermentant de la mucoviscidose, du "
+              + "cathéter et de la réanimation. L'EUCAST ne chiffre que la "
+              + "pipéracilline-tazobactam, le méropénème et le cotrimoxazole — les autres "
+              + "molécules ne se catégorisent pas.";
+    if (isRI(r.MEM) && isRI(r.SXT)) {
+      A.sev = "high";
+      A.alerts.push({ lvl: "warn", txt: "Méropénème ET cotrimoxazole atteints : il ne reste "
+        + "presque rien de chiffré pour cette espèce — avis spécialisé, et discuter une "
+        + "association." });
+    }
+  }
+  else {
+    A.name = "Kingella kingae — infection ostéo-articulaire de l'enfant";
+    A.mech = "Groupe HACEK, flore oropharyngée du petit enfant. Première cause "
+           + "d'arthrite et de spondylodiscite entre 6 mois et 4 ans.";
+    A.rules.push({ k: "!", txt: "ELLE POUSSE MAL SUR GÉLOSE : ensemencer le liquide "
+      + "articulaire dans un FLACON D'HÉMOCULTURE, et penser à la PCR. Une culture "
+      + "classique négative n'écarte pas Kingella — c'est ainsi qu'on rend « stérile » "
+      + "une arthrite qui ne l'est pas." });
+    A.rules.push({ k: "✚", txt: "Amoxicilline ou céphalosporine de troisième génération = "
+      + "référence ; l'évolution est habituellement rapide." });
+    A.rules.push({ k: "!", txt: "β-lactamase : rare mais décrite. Sa détection (céphalosporine "
+      + "chromogène) suffit à rendre résistantes les pénicillines SANS inhibiteur ; aucun "
+      + "autre mécanisme de résistance aux β-lactamines n'est connu dans l'espèce." });
+    parce(A, r, {
+      pour: [["AMX", "S", "amoxicilline active — traitement de référence"],
+             ["CRO", "S", "ceftriaxone active"],
+             ["PEN", "S", "pénicilline G active : le profil habituel de l'espèce"]],
+      contre: [["PEN", "R", "pénicilline G résistante : chercher la β-lactamase, seul mécanisme décrit"]]
+    });
+    A.comment = "Kingella kingae : arthrite ou spondylodiscite du petit enfant. Ensemencer "
+              + "en flacon d'hémoculture et penser à la PCR — elle pousse mal sur gélose. "
+              + "Amoxicilline ou C3G = traitement de référence.";
+    if (isR(r.PEN)) {
+      A.sev = "mod";
+      A.alerts.push({ lvl: "info", txt: "Pénicilline G résistante : rechercher la β-lactamase. "
+        + "Les pénicillines avec inhibiteur et les C3G restent actives." });
+    }
+  }
+  return finalize(A, r);
+}
+
+/* ============================================================
+   aerococcus — Aerococcus urinae et A. sanguinicola.
+
+   Coques à Gram positif qu'on prend pour des streptocoques ou des
+   staphylocoques, et qui infectent l'homme âgé par les urines. Plusieurs de
+   leurs seuils ne valent QUE pour la cystite simple : les appliquer à une
+   bactériémie rendrait sensible ce qui ne l'est pas.
+   ============================================================ */
+function aerococcusInterpret(r, c, a) {
+  const sp = (a && a.species) || "Aerococcus spp.";
+  const A = { sev: "wild", name: sp + " — infection urinaire de l'homme âgé",
+              mech: "", alerts: [], rules: [], comment: "" };
+  A.mech = "Coque à Gram positif, catalase négative, en amas ou en courtes chaînes : on "
+         + "le rend souvent pour un streptocoque ou un staphylocoque. Infections "
+         + "urinaires de l'homme âgé — obstacle prostatique, sonde — et parfois "
+         + "endocardite.";
+  A.rules.push({ k: "✚", txt: "Pénicilline G / amoxicilline = référence ; la vancomycine "
+    + "est constamment active et reste le recours." });
+  A.rules.push({ k: "!", txt: "Identification : catalase NÉGATIVE, ce qui l'écarte des "
+    + "staphylocoques. Un « streptocoque » isolé d'une urine chez un homme âgé mérite "
+    + "d'être regardé de près." });
+  A.rules.push({ k: "!", txt: "Ciprofloxacine, lévofloxacine et nitrofurantoïne : l'EUCAST "
+    + "ne les chiffre que pour la CYSTITE SIMPLE. Sur une hémoculture, ces seuils ne "
+    + "s'appliquent pas." });
+  A.rules.push({ k: "!", txt: "Un Aerococcus en HÉMOCULTURE fait chercher une endocardite : "
+    + "l'espèce en donne, et la porte d'entrée est urinaire." });
+  parce(A, r, {
+    pour: [["AMP", "S", "ampicilline active — c'est le traitement de référence"],
+           ["PEN", "S", "pénicilline G active"],
+           ["VA", "S", "vancomycine active : recours constant dans ce genre"]],
+    contre: [["PEN", "RI", "pénicilline G atteinte : inhabituel, vérifier l'identification"]]
+  });
+  A.comment = "Aerococcus urinae / sanguinicola : coque à Gram positif catalase négative, "
+            + "infection urinaire de l'homme âgé. Pénicilline G / amoxicilline = "
+            + "référence, vancomycine constamment active. Les seuils de ciprofloxacine, "
+            + "lévofloxacine et nitrofurantoïne ne valent que pour la cystite simple ; "
+            + "en hémoculture, chercher une endocardite.";
+  return finalize(A, r);
+}
+
 function curvedInterpret(r, c, a) {
   const sp = (a && a.species) || "Bacille courbe";
   const type = (a && a.type) || "campylobacter";
@@ -2768,7 +3030,8 @@ const ENGINE = {
   enterococcus: enteroCoccusInterpret, pseudo: pseudoInterpret, acineto: acinetoInterpret,
   proteus: proteusInterpret, salmonella: salmonellaInterpret, pneumo: pneumoInterpret,
   strep: strepInterpret, stenoburk: stenoburkInterpret, fastid: fastidInterpret,
-  gramposrod: gramposrodInterpret, anaerobe: anaerobeInterpret, curved: curvedInterpret
+  gramposrod: gramposrodInterpret, anaerobe: anaerobeInterpret, curved: curvedInterpret,
+  autresbgn: autresbgnInterpret, aerococcus: aerococcusInterpret
 };
 
 /* ---------- CMI -> S/I/R (porté) ---------- */
@@ -3254,8 +3517,8 @@ function depistagePneumo(group, dia, results) {
    pénicilline G chez les streptocoques A, C et G. Le principe est le même :
    une grande zone conclut, une petite ne conclut pas et renvoie à la CMI. */
 function depistageSeuil(group, k) {
-  if (estCasfm() && DEPISTAGE_CASFM[group] && DEPISTAGE_CASFM[group][k])
-    return DEPISTAGE_CASFM[group][k];
+  const t = estCasfm() ? DEPISTAGE_CASFM : DEPISTAGE;
+  if (t[group] && t[group][k]) return t[group][k];
   return null;
 }
 
@@ -3388,7 +3651,7 @@ const MOTEUR = {
   REFERENTIELS, ORG, ABXNAME,
   BP, BP_MENINGE, BP_URIN, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
   DZ, DZ_MENINGE, DZ_URIN, DZ_CASFM, DZ_CASFM_URIN, DZ_CASFM_ESPECE, DZ_TEMOIN,
-  DISQUE, DISQUE_CASFM, OXA_PNEUMO, DEPISTAGE_CASFM,
+  DISQUE, DISQUE_CASFM, OXA_PNEUMO, DEPISTAGE, DEPISTAGE_CASFM,
   ZIT, ZIT_CASFM, ZIT_ZONE, ZIT_ZONE_CASFM,
   HORS_EUCAST, CASFM_COUVRE, CASFM_COUVRE_ESPECE,
   // provenance : d'où vient la règle, et dans quelle version de la base

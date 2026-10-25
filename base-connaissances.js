@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.15";
+const BASE_VERSION = "2026.16";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -510,7 +510,181 @@ const REGLES = [
 ["eucast","peptoniphilus","DA","disque","standard",15,15,"2",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","peptoniphilus","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","peptoniphilus","MTZ","disque","standard",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","peptoniphilus","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","peptoniphilus","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],
+
+/* ============ Espèces aérobies ajoutées le 25 octobre 2026 ============
+   Lues par outils/extraire-especes.py dans le classeur v16.1, jamais
+   recopiées, et confrontées dans les deux sens par
+   outils/verifier-couverture-eucast.py. ============================== */
+
+/* Pasteurella spp. — feuille « Pasteurella ».
+   Morsure de chien ou de chat : c'est là qu'on l'isole. L'acide nalidixique
+   et la tétracycline y servent d'ÉCRAN — le document les marque « screen
+   only » et n'en tire pas de catégorie clinique ; la tétracycline porte donc
+   la colonne « dep », pas un couple S/R. L'ampicilline et l'amoxicilline se
+   lisent sur le disque de pénicilline G. */
+["eucast","pasteurella","PEN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","PEN","disque","standard",17,17,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","AMP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","AMX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","AMC","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","AMC","disque","standard",15,15,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","CTX","cmi","standard",0.03,0.03,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","CTX","disque","standard",26,26,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","CIP","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","CIP","disque","standard",27,27,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","LVX","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","LVX","disque","standard",27,27,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","TET","disque","standard",undefined,undefined,"30",undefined,undefined,24,undefined,undefined,undefined],
+["eucast","pasteurella","SXT","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","SXT","disque","standard",23,23,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pasteurella","AMP","disque","standard",undefined,undefined,undefined,undefined,"PEN",undefined,undefined,undefined,undefined],   // se lit sur le disque de PEN (note du classeur)
+["eucast","pasteurella","AMX","disque","standard",undefined,undefined,undefined,undefined,"PEN",undefined,undefined,undefined,undefined],   // se lit sur le disque de PEN (note du classeur)
+
+/* Aeromonas spp. — feuille « Aeromonas ».
+   Eaux douces et saumâtres, plaies souillées, diarrhées. Seule famille de
+   ces sept où l'EUCAST laisse une vraie zone « I » : S ≤ 1 et R > 4 sur les
+   céphalosporines et l'aztréonam. */
+["eucast","aeromonas","FEP","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","FEP","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","CAZ","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","CAZ","disque","standard",24,21,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","ATM","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","ATM","disque","standard",29,26,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","CIP","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","CIP","disque","standard",27,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","LVX","disque","standard",27,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","SXT","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aeromonas","SXT","disque","standard",16,16,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+
+/* Achromobacter xylosoxidans — feuille « A.xylosoxidans ».
+   Bacille non fermentant des mucoviscidoses et des infections sur matériel.
+   Quatre molécules seulement sont chiffrées, et c'est la réponse : le reste
+   n'a pas de seuil. */
+["eucast","achromobacter","TZP","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","achromobacter","TZP","disque","standard",26,26,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","achromobacter","MEM","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","achromobacter","MEM","disque","standard",26,20,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","achromobacter","SXT","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","achromobacter","SXT","disque","standard",26,26,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+
+/* Kingella kingae — feuille « K.kingae ».
+   Arthrites et spondylodiscites du petit enfant (groupe HACEK). La
+   β-lactamase, quand elle existe, suffit à rendre résistantes les
+   pénicillines sans inhibiteur. L'ampicilline et l'amoxicilline se lisent sur
+   le disque de pénicilline G, l'azithromycine sur celui d'érythromycine, la
+   doxycycline sur celui de tétracycline. */
+["eucast","kingella","PEN","cmi","standard",0.03,0.03,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","PEN","disque","standard",25,25,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","AMP","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","AMX","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","AMC","disque","standard",22,22,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","CTX","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","CTX","disque","standard",27,27,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","CRO","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","CRO","disque","standard",30,30,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","MEM","cmi","standard",0.03,0.03,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","MEM","disque","standard",30,30,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","CIP","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","CIP","disque","standard",28,28,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","LVX","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","LVX","disque","standard",28,28,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","AZM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","E","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","E","disque","standard",20,20,"15",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","DOX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","TET","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","TET","disque","standard",28,28,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","RD","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","RD","disque","standard",20,20,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","SXT","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","SXT","disque","standard",28,28,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","kingella","AMP","disque","standard",undefined,undefined,undefined,undefined,"PEN",undefined,undefined,undefined,undefined],   // se lit sur le disque de PEN (note du classeur)
+["eucast","kingella","AMX","disque","standard",undefined,undefined,undefined,undefined,"PEN",undefined,undefined,undefined,undefined],   // se lit sur le disque de PEN (note du classeur)
+["eucast","kingella","AZM","disque","standard",undefined,undefined,undefined,undefined,"E",undefined,undefined,undefined,undefined],   // se lit sur le disque de E (note du classeur)
+["eucast","kingella","DOX","disque","standard",undefined,undefined,undefined,undefined,"TET",undefined,undefined,undefined,undefined],   // se lit sur le disque de TET (note du classeur)
+
+/* Aerococcus urinae et A. sanguinicola — feuille « A.sanguinicola_A.urinae ».
+   Infections urinaires de l'homme âgé, parfois endocardite. Plusieurs seuils
+   sont propres à la CYSTITE SIMPLE et portent le site « urinaire » :
+   ciprofloxacine, lévofloxacine, nitrofurantoïne. Les appliquer à une
+   bactériémie serait rendre sensible ce qui ne l'est pas. */
+["eucast","aerococcus","PEN","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","PEN","disque","standard",21,21,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","AMP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","AMP","disque","standard",26,26,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","MEM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","MEM","disque","standard",31,31,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","CIP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","CIP","disque","urinaire",21,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","LVX","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","VA","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","VA","disque","standard",16,16,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","NIT","cmi","urinaire",16,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","NIT","disque","urinaire",16,16,"100",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","RD","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","RD","disque","standard",25,25,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","aerococcus","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],   // se lit sur le disque de AMP (note du classeur)
+["eucast","aerococcus","LVX","disque","urinaire",undefined,undefined,undefined,undefined,"CIP",undefined,undefined,undefined,undefined],   // se lit sur le disque de CIP (note du classeur)
+
+/* Corynebacterium diphtheriae — feuille « C.diphtheriae_C.ulcerans ».
+   « S ≤ 0,001 » et « S ≥ 50 mm » ne sont pas des seuils : c'est la note 13
+   du classeur, un seuil hors échelle qui veut dire NE JAMAIS RENDRE S. La
+   base l'écrit S = null — pénicilline G, céfotaxime et ciprofloxacine ne se
+   rendent qu'en I ou en R. */
+["eucast","cdiphtheriae","PEN","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","PEN","disque","standard",null,12,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","AMX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","CTX","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","CTX","disque","standard",null,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","MEM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","MEM","disque","standard",24,24,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","CIP","cmi","standard",null,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","CIP","disque","standard",null,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","E","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","E","disque","standard",24,24,"15",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","DA","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // propre à C. diphtheriae
+["eucast","cdiphtheriae","DA","disque","standard",15,15,"2",undefined,undefined,undefined,undefined,undefined,undefined],   // propre à C. diphtheriae
+["eucast","cdiphtheriae","DOX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","TET","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","TET","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","LZD","disque","standard",25,25,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","RD","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","RD","disque","standard",24,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","SXT","disque","standard",23,23,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","cdiphtheriae","DOX","disque","standard",undefined,undefined,undefined,undefined,"TET",undefined,undefined,undefined,undefined],   // se lit sur le disque de TET (note du classeur)
+
+/* Corynebacterium ulcerans — même feuille, groupe SÉPARÉ.
+   Deux groupes, et c'est le document qui l'impose : il chiffre la
+   clindamycine pour C. diphtheriae seulement — « Wild-type C. ulcerans is
+   less susceptible to clindamycin ». Un seul groupe appliquerait le seuil de
+   l'une à l'autre. */
+["eucast","culcerans","PEN","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","PEN","disque","standard",null,12,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","AMX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","CTX","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","CTX","disque","standard",null,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","MEM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","MEM","disque","standard",24,24,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","CIP","cmi","standard",null,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","CIP","disque","standard",null,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","E","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","E","disque","standard",24,24,"15",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","DOX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","TET","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","TET","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","LZD","disque","standard",25,25,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","RD","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","RD","disque","standard",24,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","SXT","disque","standard",23,23,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","culcerans","DOX","disque","standard",undefined,undefined,undefined,undefined,"TET",undefined,undefined,undefined,undefined],   // se lit sur le disque de TET (note du classeur)
+   // se lit sur le disque de AMP (note du classeur)
 ["eucast","cperfringens","VA","disque","standard",12,12,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","entero","AMC","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","entero","AMC","disque","standard",19,19,"20-10",[19,20],undefined,undefined,undefined,undefined,undefined],

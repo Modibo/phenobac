@@ -88,6 +88,16 @@ GROUPES = {
     'parvimonas':(["Parvimonas micra"],                      ['Anaerobic bacteria_G-positive']),
     'peptostrepto':(["Peptostreptococcus anaerobius"],       ['Anaerobic bacteria_G-positive']),
     'peptoniphilus':(["Peptoniphilus spp."],                 ['Anaerobic bacteria_G-positive']),
+    # Espèces aérobies ajoutées le 25 octobre 2026. Une feuille chacune, sauf
+    # les corynébactéries toxinogènes, qui en partagent une et se séparent sur
+    # la clindamycine.
+    'pasteurella':(["Pasteurella multocida"],                ['Pasteurella']),
+    'aeromonas':(["Aeromonas spp."],                         ['Aeromonas']),
+    'achromobacter':(["A. xylosoxidans"],                    ['A.xylosoxidans']),
+    'kingella':(["K. kingae"],                               ['K.kingae']),
+    'aerococcus':(["A. urinae", "A. sanguinicola"],          ['A.sanguinicola_A.urinae']),
+    'cdiphtheriae':(["C. diphtheriae"],                      ['C.diphtheriae_C.ulcerans']),
+    'culcerans':(["C. ulcerans"],                            ['C.diphtheriae_C.ulcerans']),
 }
 
 # Les feuilles d'anaérobies sont découpées en blocs par genre, et le genre ne
@@ -136,6 +146,12 @@ AGENTS = {
     # « Minocycline (prophylaxis only) » chez le méningocoque n'est pas un
     # seuil de catégorisation : le motif s'arrête au nom seul.
     'MIN': r'^minocycline\b(?!\s*\()', 'MXF': r'^moxifloxacin',
+    # TÉTRACYCLINE. Son absence d'ici n'était pas neutre : faute de motif, le
+    # couple passait pour « non chiffré par le document », et le drapeau
+    # « convention de laboratoire » était réclamé sur trois seuils que
+    # l'EUCAST donne bel et bien. Un outil qui ne connaît pas une molécule ne
+    # se tait pas : il accuse.
+    'TET': r'^tetracycline',
     # Molécules de l'antibiogramme ciblé urinaire, ajoutées le 2026-10-24.
     # Les quatre premières ne sont chiffrées QUE pour la cystite simple :
     # leur ligne EUCAST porte « (uncomplicated UTI only) », et le motif doit
@@ -315,7 +331,8 @@ def main():
                 # Deux groupes partagent la feuille des staphylocoques : on ne
                 # retient que les lignes de l'espèce concernée, sinon celles de
                 # S. aureus et des coagulase-négative se mélangent.
-                ESPECES = {'salmonella': r'Salmonella',
+                ESPECES = {'cdiphtheriae': r'C\. diphtheriae',
+                           'salmonella': r'Salmonella',
                            'morganella': r'\bMorganellaceae\b(?!.*except)',
                            'serratia':   r'Serratia',
                            'staph':    r'S\. aureus',
