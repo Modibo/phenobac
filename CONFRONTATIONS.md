@@ -574,6 +574,78 @@ cite une règle numérotée. § 26.
 
 ---
 
+## comparer-casfm.py — le delta CA-SFM, calculé
+
+- **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
+  confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
+- **tables** : BP_CASFM
+- **empreinte** : 2939b6644543fb8440845d3e955bcff8d2562fbb40344e2237f9301147670c74
+- **date** : 2026-10-25
+- **résultat** : **PREMIÈRE PASSE, À RELIRE.** 295 couples confrontés, 167 où
+  les deux comités disent la même chose, **39 écarts candidats** dont **un
+  vérifié dans le document**, 16 noms que l'outil ne sait pas lire.
+
+### Le défaut propre à la façon dont PhénoBac porte le CA-SFM
+
+PhénoBac ne porte pas un second référentiel entier : elle porte le **delta** —
+quarante-cinq règles — et tout couple absent garde sa valeur EUCAST. C'est la
+bonne façon de faire, et elle a un défaut qui lui est propre :
+
+> un écart du CA-SFM que PhénoBac ignore ne se voit **pas**. Le laboratoire
+> choisit « CA-SFM », croit travailler avec, et reçoit la valeur EUCAST.
+> L'erreur est silencieuse, et elle porte le nom du comité français.
+
+Le document des différences (18 pages) énumère ces écarts en prose ; s'y fier
+reviendrait à recopier une liste. L'outil lit les **tables complètes** et
+**calcule** le delta en les confrontant à ce que PhénoBac applique sous
+EUCAST — table BP, confrontée au classeur officiel le même jour, 403 seuils,
+403 identiques.
+
+### CE QUI EST VÉRIFIÉ : la colistine de *Pseudomonas*
+
+> CA-SFM 2026, **page 61** : Colistine · S ≤ **2** · R > **2** · ZIT 4
+
+PhénoBac porte la ZIT 4 pour ce couple, et **pas** les seuils. Sous CA-SFM,
+une CMI de colistine à 4 mg/L sur *Pseudomonas aeruginosa* est donc rendue
+**« S »** — par la valeur EUCAST (4/4) — alors que le CA-SFM la tient pour
+**résistante**, et que 4 mg/L tombe dans sa zone d'incertitude technique.
+
+C'est une décision de dernier recours, prise sur un rendu qui contredit le
+référentiel que le laboratoire a choisi.
+
+### LES 38 AUTRES SONT DES CANDIDATS, PAS DES CONSTATS
+
+Ils demandent une relecture page par page. L'outil a trois heures, et il a
+déjà produit **quatre familles de fausses alertes**, chacune corrigée :
+
+| ce qui n'allait pas | effet | combien |
+|---|---|---|
+| noms français absents du vocabulaire | lignes non lues | 200 → 16 |
+| « 0,001 » pris pour une valeur, alors qu'il veut dire « jamais sensible » | faux écarts | 15 |
+| noms coupés en fin de ligne (« Triméthoprime- ») | **mauvaise molécule** | — |
+| « Amoxicilline-acide » reconnu « Amoxicilline » | mauvaise molécule, mauvaise indication | 19 |
+
+La troisième est la plus instructive : « Triméthoprime- » donnait TMP là où le
+document parle de SXT. Un nom qui est le **début** d'un autre est désormais
+déclaré ambigu et **non lu**, plutôt que deviné — sauf s'il est par ailleurs
+un nom complet, comme « Triméthoprime (cystites) ».
+
+Les quarante lignes d'un autre site — cystite, LCR, dépistage — ne sont pas
+traitées par cette passe : PhénoBac range ses seuils par site, et comparer un
+seuil de cystite au seuil ordinaire fabriquerait des écarts qui n'existent
+pas. C'est une dette, elle est écrite.
+
+### Le vocabulaire français est désormais partagé
+
+`outils/agents_fr.py` porte la correspondance « nom du CA-SFM → code » pour
+les deux outils qui lisent ce document. Deux listes auraient divergé — c'est
+ce qui venait d'arriver à douze fonctions recopiées de `moteur.js` dans la
+page. Une molécule hors du panel y vaut `None` : c'est une réponse. Un nom
+inconnu est signalé comme un **défaut de l'outil**, jamais comme une absence
+dans l'application.
+
+---
+
 ## Les sept espèces aérobies, ajoutées
 
 Le 25 octobre 2026, **126 règles** pour sept groupes de seuils :
