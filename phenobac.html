@@ -1909,6 +1909,12 @@ const ABX = {
    douze fonctions recopiées de moteur.js — une donnée tenue à deux endroits
    finit toujours par diverger. */
 function nomAbx(k){ return (_M.nomAbx ? _M.nomAbx(k) : null) || (ABX[k] && ABX[k].n) || k; }
+/* Le niveau de confiance est une CLÉ (« confirmé », « probable »,
+   « possible »), comparée telle quelle par le moteur et par cette page. On
+   affiche son libellé, jamais la clé — sans quoi un rapport anglais porterait
+   « confirmé ». Même modèle que nomAbx(), et même repli si le moteur est
+   d'une version qui ne connaît pas encore la fonction. */
+function nivLibelle(k){ return (_M.confianceLibelle ? _M.confianceLibelle(k) : null) || k; }
 
 
 /* helpers */
@@ -4870,7 +4876,7 @@ function renderDetective(A){
 
   // 5. le phénotype, et ce qui l'appuie
   let ph = `<b>${esc(A.name)}</b>`
-    + (A.confiance ? ` <span class="niv niv-${A.confiance==="confirmé"?"conf":A.confiance==="probable"?"prob":"poss"}">${esc(A.confiance)}</span>` : "")
+    + (A.confiance ? ` <span class="niv niv-${A.confiance==="confirmé"?"conf":A.confiance==="probable"?"prob":"poss"}">${esc(nivLibelle(A.confiance))}</span>` : "")
     + `<div style="margin-top:6px">${esc(A.mech)}</div>`;
   (A.pour||[]).forEach(x => { ph += `<div class="det-ligne"><span class="dn">+ ${esc(x.txt)}</span></div>`; });
   (A.contre||[]).forEach(x => { ph += `<div class="det-ligne"><span class="dn">− ${esc(x.txt)}</span></div>`; });
@@ -4957,7 +4963,7 @@ function renderInterpretView(A){
     };
     const niv = NIV[A.confiance] || ["poss", ""];
     html += `<div class="sect"><div class="sect-t">Pourquoi ce phénotype
-        <span class="niv niv-${niv[0]}">${esc(A.confiance || "—")}</span></div>`;
+        <span class="niv niv-${niv[0]}">${esc(nivLibelle(A.confiance) || "—")}</span></div>`;
     html += `<div class="niv-dit">${esc(niv[1])}</div>`;
     if(A.confirmation)
       html += `<div class="arg arg-conf"><span class="ic">✓</span><span>Confirmé par : ${esc(A.confirmation)}</span></div>`;
@@ -6317,7 +6323,7 @@ function buildReport(A){
     </table>
 
     <div class="rp-verdict rp-${A.sev}">
-      <div class="rp-vlab">Verdict phénotypique — ${sevLbl}${A.confiance?" · "+esc(A.confiance):""}
+      <div class="rp-vlab">Verdict phénotypique — ${sevLbl}${A.confiance?" · "+esc(nivLibelle(A.confiance)):""}
         <span class="rp-prov rp-prov-i">${esc(PROV_INTERP)}</span>${
           (!A.confirmation && A.aConfirmerPar) ? `<span class="rp-prov rp-prov-x">${esc(PROV_CONFIRM)}</span>` : ""}</div>
       <div class="rp-vname">${esc(A.name)}</div>

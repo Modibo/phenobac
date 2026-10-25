@@ -582,6 +582,38 @@ def main():
             print('    "%s": %d,' % (f, restes[f]))
         return 0
 
+    # --- LE NIVEAU DE CONFIANCE : UNE CLÉ, QU'IL NE FAUT PAS AFFICHER ---
+    #
+    # « confirmé », « probable », « possible » servent de valeurs
+    # d'aiguillage : moteur.js et la page les comparent à ces mots-là. On ne
+    # peut donc pas les traduire. Mais la page les AFFICHAIT tels quels, et
+    # un rapport anglais portait « confirmé ».
+    #
+    # Le moteur expose confianceLibelle() ; la page doit s'en servir. Le banc
+    # essai-langue.js exempte la clé du recensement en se fiant à ce
+    # contrôle-ci : si la page se remettait à afficher la clé, l'exemption
+    # deviendrait un trou, et personne ne le verrait. C'est ici qu'on regarde.
+    if "confianceLibelle" not in moteur:
+        ecarts.append("moteur.js n'expose plus confianceLibelle() : la page ne pourrait "
+                      "plus traduire le niveau de confiance, et le recensement de "
+                      "essai-langue.js exempte cette clé en comptant sur ce contrôle.")
+    else:
+        brut = re.findall(r"esc\(\s*A\.confiance\b[^)]*\)", page)
+        if brut:
+            ecarts.append("la page affiche la CLÉ du niveau de confiance au lieu de son "
+                          "libellé (%d fois : %s). En anglais, le rapport porterait "
+                          "« confirmé ». Passez par nivLibelle(), qui appelle "
+                          "confianceLibelle() du moteur."
+                          % (len(brut), ", ".join(brut[:3])))
+        elif "nivLibelle" not in page:
+            ecarts.append("la page n'appelle plus nivLibelle() : ou le niveau de confiance "
+                          "n'est plus affiché, ou il l'est par un autre chemin que ce "
+                          "contrôle ne surveille pas. Vérifiez, puis mettez ce contrôle à "
+                          "jour — tel quel, il ne garantit plus rien.")
+        else:
+            dits.append("le niveau de confiance est affiché par son libellé, jamais par sa "
+                        "clé : « confirmed » en anglais, « confirmé » en français.")
+
     if ecarts:
         print("LE BILINGUISME EST ABÎMÉ :")
         for e in ecarts:

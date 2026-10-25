@@ -174,11 +174,37 @@ dire("\nUn diamètre sans catégorie explique sa raison dans les deux langues");
    donc posé CHAMP PAR CHAMP ; un champ absent de la table doit rendre zéro,
    ce qui fait échouer l'apparition d'un champ neuf resté français. */
 var PLAFOND_CHAMPS = {
-  // Les trois machineries de composition qui restent à traduire, au
-  // 25 octobre 2026. Ces nombres ne doivent que DESCENDRE.
-  moments: 1653,              // § 15 : les cinq moments
-  commentaireCopiable: 358,   // commentaireStructure()
-  posologies: 42              // posologie.js
+  // Les trois machineries de composition, traduites le 25 octobre 2026 :
+  // les cinq moments du § 15, le commentaire copiable qu'ils composent, et
+  // l'habillage des posologies. Elles valaient 1653, 358 et 42.
+  // TOUT EST À ZÉRO, ET C'EST LÀ QUE CE CONTRÔLE DEVIENT LE PLUS UTILE :
+  // n'importe quelle phrase française qui reparaîtrait, dans n'importe quel
+  // champ, le ferait échouer.
+  moments: 0,
+  commentaireCopiable: 0,
+  posologies: 0,
+  renduCible: 0
+};
+
+/* CE QUI RESTE EN FRANÇAIS POUR UNE RAISON, ET LA RAISON AVEC.
+
+   Les commentaires et les notes du rendu ciblé sont du texte de la HAS,
+   recopié mot pour mot d'une recommandation qui n'existe qu'en français.
+   Les traduire produirait un texte qui RESSEMBLE à la recommandation sans
+   en être une — et qu'un laboratoire recopierait dans un compte rendu en
+   croyant citer la HAS. Ils restent donc en français, et le rendu porte en
+   anglais la phrase qui explique pourquoi (champ « citation »).
+
+   L'exemption est NOMMÉE chemin par chemin, et le contrôle vérifie que
+   chaque chemin exempté est ENCORE ATTEINT. Sans cela, une exemption
+   survivrait à la disparition de ce qu'elle couvre, et deviendrait une
+   porte ouverte sur le reste du rendu. */
+var CITATIONS = {
+  "confiance": "clé d'aiguillage (« confirmé » / « probable » / « possible »), comparée "
+    + "telle quelle par le moteur et par la page ; c'est confianceLibelle() qui est "
+    + "affiché, et verifier-langues.py vérifie que la page n'affiche plus la clé",
+  "renduCible.commentaires": "§ 2.1.4 — les commentaires que la HAS impose au compte rendu",
+  "renduCible.notes": "notes (A), (B) et (C) des tableaux décisionnels de la HAS"
 };
 
 dire("\nRecensement : que reste-t-il de français quand on demande l'anglais ?");
@@ -208,15 +234,49 @@ dire("\nRecensement : que reste-t-il de français quand on demande l'anglais ?")
                ctx: { site: "lcr", meninge: true } } },
     { nom: "prélèvement urinaire",
       appel: { mode: "sir", results: { AMX: "S", SXT: "S", CIP: "S", NIT: "S", FOS: "S" },
-               ctx: { site: "urine" } } }
+               ctx: { site: "urine" } } },
+    /* LE RENDU CIBLÉ EST DÉSACTIVÉ PAR DÉFAUT — et les six profils
+       précédents ne l'atteignaient donc jamais. C'est une machinerie
+       entière (renduCible, rcRestreindre, les commentaires de la HAS) qui
+       serait restée hors du recensement, et un laboratoire anglophone qui
+       l'active est précisément celui qui lirait ces phrases. */
+    { nom: "rendu ciblé HAS",
+      appel: { mode: "sir", renduCible: true,
+               results: { AMX: "S", SXT: "S", CIP: "S", NIT: "S", FOS: "S", AMC: "S", CTX: "S" },
+               ctx: { urin: "Oui", patiente: "Oui", typeIU: "Cystite" } } },
+    /* LES TESTS COMPLÉMENTAIRES SONT DANS ctx, ET AUCUN PROFIL NE LES POSAIT.
+       β-lactamase, synergie, D-test, carbapénémase : ce sont eux qui font
+       basculer le moteur sur ses branches les plus riches — BLPACR, MLSb
+       inductible, BLSE confirmée. Sans eux, ces branches ne sont jamais
+       rendues, et leur français ne se voit pas. */
+    { nom: "tests complémentaires",
+      appel: { mode: "sir",
+               results: { PEN: "R", AMX: "R", AMC: "S", CTX: "R", FOX: "S", E: "R",
+                          DA: "S", OX: "R", MEM: "R", GEN: "S" },
+               ctx: { blac: "Positif", syn: "Positif", dtest: "Positif",
+                      carba: "Positif", carbaType: "OXA-48", cefox: "Positif" } } },
+    /* LE MODE DIAMÈTRE N'ÉTAIT PAS COUVERT NON PLUS. Il a ses propres
+       phrases — l'absence de disque, la restriction d'espèce, la mesure
+       hors échelle — qu'aucun des sept autres profils n'atteint. */
+    { nom: "diamètres",
+      appel: { mode: "disc", diam: { AMX: "12", CIP: "22", CTX: "18", FOS: "20", NIT: "14" },
+               ctx: {} } }
   ];
 
-  var compte = {}, chaines = 0, vus = 0;
-  function marche(x, champ, deja) {
+  var compte = {}, chaines = 0, vus = 0, citees = {}, verifCitation = false;
+  function exempte(chemin) {
+    for (var c in CITATIONS) if (chemin === c || chemin.indexOf(c + ".") === 0) return c;
+    return null;
+  }
+  function marche(x, chemin, deja) {
     if (x === null || x === undefined) return;
+    var champ = chemin.split(".")[0];
     if (typeof x === "string") {
       chaines++;
-      if (francais(x)) compte[champ] = (compte[champ] || 0) + 1;
+      if (!francais(x)) return;
+      var c = exempte(chemin);
+      if (c) { citees[c] = (citees[c] || 0) + 1; return; }
+      compte[champ] = (compte[champ] || 0) + 1;
       return;
     }
     if (typeof x !== "object") return;
@@ -224,9 +284,9 @@ dire("\nRecensement : que reste-t-il de français quand on demande l'anglais ?")
     if (deja.indexOf(x) >= 0) return;
     deja.push(x);
     if (Object.prototype.toString.call(x) === "[object Array]") {
-      for (var i = 0; i < x.length; i++) marche(x[i], champ, deja);
+      for (var i = 0; i < x.length; i++) marche(x[i], chemin, deja);
     } else {
-      for (var k in x) if (Object.prototype.hasOwnProperty.call(x, k)) marche(x[k], champ, deja);
+      for (var k in x) if (Object.prototype.hasOwnProperty.call(x, k)) marche(x[k], chemin + "." + k, deja);
     }
   }
 
@@ -237,6 +297,9 @@ dire("\nRecensement : que reste-t-il de français quand on demande l'anglais ?")
       var a = E.runInterpretation(appel).interpretation;
       vus++;
       Object.keys(a).forEach(function (champ) { marche(a[champ], champ); });
+      if (p.nom === "rendu ciblé HAS" && a.renduCible && a.renduCible.applique) {
+        verifCitation = verifCitation || !!a.renduCible.citation;
+      }
     });
   });
 
@@ -261,6 +324,22 @@ dire("\nRecensement : que reste-t-il de français quand on demande l'anglais ?")
             + Object.keys(compte).sort().map(function (c) {
                 return c + " " + compte[c] + "/" + (PLAFOND_CHAMPS[c] || 0); }).join(", ") + ")"
           : "la traduction a reculé — " + debordent.join(" ; "));
+
+  var creuses = Object.keys(CITATIONS).filter(function (c) { return !citees[c]; });
+  verif(creuses.length === 0,
+        creuses.length === 0
+          ? "les " + Object.keys(CITATIONS).length + " exemptions nommées sont bien "
+            + "atteintes par le recensement (" + Object.keys(CITATIONS).sort().map(function (c) {
+                return c + " " + citees[c]; }).join(", ") + ") — l'exemption couvre quelque "
+            + "chose de réel, elle n'est pas une porte ouverte"
+          : "exemption devenue creuse : " + creuses.join(", ") + " ne rend plus rien de "
+            + "français. Retirez-la de CITATIONS, sans quoi elle laisserait passer ce qui "
+            + "reprendrait ce chemin.");
+  verif(verifCitation,
+        verifCitation
+          ? "… et le rendu ciblé dit en anglais POURQUOI ces blocs restent en français"
+          : "le rendu ciblé laisse du français sans dire pourquoi : un lecteur anglophone "
+            + "y verrait une traduction manquante");
 
   var oublies = Object.keys(PLAFOND_CHAMPS).filter(function (c) {
     return (compte[c] || 0) === 0 && PLAFOND_CHAMPS[c] > 0; });

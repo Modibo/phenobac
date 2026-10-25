@@ -218,6 +218,20 @@ function naturelle(fr) {
   return _lang === "en" ? (naturelleEn(fr) || fr) : fr;
 }
 
+/* LE NIVEAU DE CONFIANCE EST UNE CLÉ, ET IL ÉTAIT AFFICHÉ TEL QUEL.
+
+   « confirmé », « probable », « possible » servent de valeurs d'aiguillage —
+   le moteur ET la page les comparent à ces mots-là. Les traduire casserait
+   les comparaisons ; les laisser afficher tels quels mettait un mot français
+   dans un rapport anglais. On sépare donc la clé de son libellé : A.confiance
+   reste la clé, et c'est confianceLibelle() qu'on affiche.
+   outils/verifier-langues.py vérifie que la page n'affiche plus la clé. */
+const CONFIANCE_EN = { "confirmé": "confirmed", "probable": "probable", "possible": "possible" };
+function confianceLibelle(cle) {
+  if (!cle) return cle;
+  return _lang === "en" ? (CONFIANCE_EN[cle] || cle) : cle;
+}
+
 
 // concentrations critiques (valeurs par défaut, surchargées par bpOverride côté client)
 /* ============================================================
@@ -776,7 +790,7 @@ function parce(A, r, grille) {
 
   if (g.confirme) {
     A.confirmation = g.confirme;
-    A.confiance = "confirmé";
+    A.confiance = "confirmé";          // clé stable : voir confianceLibelle()
   } else if (A.contre.length) {
     A.confiance = "possible";
   } else if (A.nonTeste.length) {
@@ -1137,10 +1151,11 @@ function commentaireStructure(A) {
      On reprend la molécule et sa catégorie, sans le commentaire qui les
      explique — celui-ci relève déjà de l'interprétation. */
   const vus = (A.pour || []).map(x => nomAbx(x.abx) + " " + x.cat);
-  if (vus.length) m.push({ moment: "Observation", texte: "Profil observé : " + vus.join(", ") + "." });
+  if (vus.length) m.push({ moment: tr("Observation", "Observation"),
+    texte: tr("Profil observé : ", "Phenotype observed: ") + vus.join(", ") + "." });
 
   /* 2. INTERPRÉTATION — le texte rédigé pour ce phénotype. */
-  if (A.comment) m.push({ moment: "Interprétation", texte: A.comment });
+  if (A.comment) m.push({ moment: tr("Interprétation", "Interpretation"), texte: A.comment });
 
   /* 3. HYPOTHÈSE MÉCANISTIQUE — § 3 : prudente tant qu'elle n'est pas
      confirmée, affirmée quand un test l'a tranchée. */
@@ -1157,26 +1172,30 @@ function commentaireStructure(A) {
     // Deux phrases plutôt qu'un deux-points enchâssé : « confirmé par X :
     // β-lactamase : synergie positive » enchaîne deux fois le même signe de
     // ponctuation et se lit mal.
-    m.push({ moment: "Hypothèse mécanistique",
+    m.push({ moment: tr("Hypothèse mécanistique", "Mechanistic hypothesis"),
       texte: A.confirmation
         ? majuscule(mech) + (/[.!?]$/.test(mech) ? "" : ".")
-          + " Mécanisme confirmé par " + minuscule(A.confirmation) + "."
-        : "Profil compatible avec " + minuscule(mech)
+          + tr(" Mécanisme confirmé par ", " Mechanism confirmed by ") + minuscule(A.confirmation) + "."
+        : tr("Profil compatible avec ", "Phenotype consistent with ") + minuscule(mech)
           + (/[.!?]$/.test(mech) ? "" : ".") });
   }
 
   /* 4. LIMITES — ce qui empêche d'affirmer. Le niveau de confiance, les
      éléments discordants, et les molécules clés non testées. */
   const limites = [];
-  if (A.confiance === "possible") limites.push("hypothèse seulement possible en l'état");
+  if (A.confiance === "possible")
+    limites.push(tr("hypothèse seulement possible en l'état",
+                    "the hypothesis is only possible as things stand"));
   if ((A.contre || []).length)
-    limites.push("élément(s) discordant(s) : " + A.contre.map(x => x.txt).join(" ; "));
+    limites.push(tr("élément(s) discordant(s) : ", "discordant finding(s): ")
+      + A.contre.map(x => x.txt).join(" ; "));
   if ((A.nonTeste || []).length)
-    limites.push("molécule(s) clé(s) non testée(s) : "
+    limites.push(tr("molécule(s) clé(s) non testée(s) : ", "key agent(s) not tested: ")
       + A.nonTeste.map(x => nomAbx(x.abx)).join(", "));
   if (!A.confirmation && A.aConfirmerPar)
-    limites.push("aucun test n'a confirmé le mécanisme");
-  if (limites.length) m.push({ moment: "Limites", texte: majuscule(limites.join(" ; ")) + "." });
+    limites.push(tr("aucun test n'a confirmé le mécanisme", "no test has confirmed the mechanism"));
+  if (limites.length) m.push({ moment: tr("Limites", "Limitations"),
+    texte: majuscule(limites.join(" ; ")) + "." });
 
   /* 5. TEST COMPLÉMENTAIRE — seulement s'il reste quelque chose à trancher. */
   // Le texte du test porte souvent sa propre condition (« …, si le profil
@@ -1185,9 +1204,10 @@ function commentaireStructure(A) {
   // du § 15 vient APRÈS, dans une phrase à elle.
   if (!A.confirmation && A.aConfirmerPar) {
     const tst = A.aConfirmerPar.trim().replace(/\.$/, "");
-    m.push({ moment: "Test complémentaire",
-      texte: "Pour trancher : " + tst
-           + ". À apprécier selon le contexte et le référentiel du laboratoire." });
+    m.push({ moment: tr("Test complémentaire", "Further testing"),
+      texte: tr("Pour trancher : ", "To settle it: ") + tst
+           + tr(". À apprécier selon le contexte et le référentiel du laboratoire.",
+                ". To be judged against the clinical context and the laboratory's own standard.") });
   }
 
   return m;
@@ -1243,20 +1263,22 @@ function posologiePour(code, cat, ctx) {
       // collées comme si c'en était une seule.
       const m = e.particulier.replace(/^Meningitis\s*:?\s*/i, "")
                              .split(/\s(?=[A-Z][A-Za-z.\s]{2,20}:)/)[0].trim();
-      return { voie: e.voie, schema: m, motif: "contexte méningé" };
+      return { voie: e.voie, schema: m, motif: tr("contexte méningé", "meningitis") };
     }
     if (c.urin === "Oui" && e.urinaire)
-      return { voie: e.voie, schema: e.urinaire, motif: "cystite simple" };
+      return { voie: e.voie, schema: e.urinaire, motif: tr("cystite simple", "uncomplicated UTI") };
 
     // Catégorie I : c'est la posologie FORTE qui fonde le seuil. Quand
     // l'EUCAST n'en définit pas, on le dit — on n'en invente pas (§ 26).
     if (cat === "I") {
       return e.forte
-        ? { voie: e.voie, schema: e.forte, motif: "sensible à forte posologie" }
-        : { voie: e.voie, schema: null, motif: "forte",
-            note: "l'EUCAST ne définit pas de posologie forte pour cette molécule" };
+        ? { voie: e.voie, schema: e.forte,
+            motif: tr("sensible à forte posologie", "susceptible, increased exposure") }
+        : { voie: e.voie, schema: null, motif: tr("forte", "increased exposure"),
+            note: tr("l'EUCAST ne définit pas de posologie forte pour cette molécule",
+                     "EUCAST defines no high-exposure dosage for this agent") };
     }
-    return { voie: e.voie, schema: e.standard, motif: "posologie standard" };
+    return { voie: e.voie, schema: e.standard, motif: tr("posologie standard", "standard dosage") };
   }).filter(function (x) { return x.schema || x.note; });
 }
 
@@ -1481,28 +1503,35 @@ function rcRestreindre(cle, colonne, prevues, r, c, A) {
   // les C3G laisserait la feuille sans céphalosporine utilisable.
   if (esp3 && cle !== "cystite" && colonne !== "c3gRouBlse" && actif("FEP")
       && c3g.some(function (k) { return prevues.indexOf(k) !== -1; })) {
-    oter(c3g, "A", esp3 + " appartient au groupe 3 : la HAS fait préférer le céfépime "
-                 + "aux céphalosporines de 3e génération.");
-    mettre(["FEP"], "A", "il remplace les céphalosporines de 3e génération.");
+    oter(c3g, "A", esp3 + tr(" appartient au groupe 3 : la HAS fait préférer le céfépime "
+                           + "aux céphalosporines de 3e génération.",
+                             " belongs to group 3: HAS prefers cefepime to the "
+                           + "third-generation cephalosporins."));
+    mettre(["FEP"], "A", tr("il remplace les céphalosporines de 3e génération.",
+                            "it replaces the third-generation cephalosporins."));
   }
 
   /* --- Note (A) de la cystite — autre texte, autre règle --- */
   if (esp3 && cle === "cystite" && colonne !== "premiereIntentionS") {
-    oter(["CFM"], "A", esp3 + " appartient au groupe 3, et la souche résiste aux "
-                     + "molécules de première intention.");
+    oter(["CFM"], "A", esp3 + tr(" appartient au groupe 3, et la souche résiste aux "
+                               + "molécules de première intention.",
+                                 " belongs to group 3, and the isolate is resistant to the "
+                               + "first-line agents."));
   }
 
   /* --- Note (B) — les carbapénèmes, molécules de dernier recours --- */
   const carba = rcCodes(listes.carbapenemes);
   const etroites = rcCodes(listes.betalactaminesEtroites);
   if (demande) {
-    mettre(carba, "B", "demandés par le clinicien.");
+    mettre(carba, "B", tr("demandés par le clinicien.", "requested by the clinician."));
   } else if (cle === "cystite") {
-    oter(carba, "B", "en cystite, le document ne les rend que sur demande du clinicien.");
+    oter(carba, "B", tr("en cystite, le document ne les rend que sur demande du clinicien.",
+      "in cystitis, the document reports them only at the clinician's request."));
   } else {
     const restent = etroites.filter(actif);
     if (restent.length) {
-      oter(carba, "B", "une β-lactamine de spectre plus étroit reste active ("
+      oter(carba, "B", tr("une β-lactamine de spectre plus étroit reste active (",
+                          "a narrower-spectrum beta-lactam is still active (")
                      + restent.map(function (k) { return nomAbx(k); }).join(", ") + ").");
     }
   }
@@ -1510,8 +1539,9 @@ function rcRestreindre(cle, colonne, prevues, r, c, A) {
   /* --- Note (C) — nouvelles associations et nouvelles céphalosporines --- */
   const nouvelles = rcCodes(listes.nouvelles);
   if (nouvelles.length) {
-    if (demande) mettre(nouvelles, "C", "demandées par le clinicien.");
-    else oter(nouvelles, "C", "rendues sur demande du clinicien, après avis spécialisé.");
+    if (demande) mettre(nouvelles, "C", tr("demandées par le clinicien.", "requested by the clinician."));
+    else oter(nouvelles, "C", tr("rendues sur demande du clinicien, après avis spécialisé.",
+      "reported at the clinician's request, after specialist advice."));
   }
 
   /* --- § 2.1.3 — les fluoroquinolones ---
@@ -1527,16 +1557,23 @@ function rcRestreindre(cle, colonne, prevues, r, c, A) {
   const fq = rcCodesLigne(cle, /^Fluoroquinolones/i);
   if (cle !== "sansRenseignement" && fq.length) {
     if (r.AMX !== undefined && !actif("AMX") && actif("AMC")) {
-      oter(fq, null, "§ 2.1.3 : souche résistante à l'amoxicilline mais sensible à "
-                   + "l'association — le document écarte alors les fluoroquinolones.");
+      oter(fq, null, tr("§ 2.1.3 : souche résistante à l'amoxicilline mais sensible à "
+                      + "l'association — le document écarte alors les fluoroquinolones.",
+                        "\u00A7 2.1.3: an isolate resistant to amoxicillin but susceptible to the "
+                      + "combination — the document then sets the fluoroquinolones aside."));
     }
     if (fq.some(function (k) { return prevues.indexOf(k) !== -1 && actif(k); }))
-      horsPortee.push("§ 2.1.3 écarte aussi les fluoroquinolones « lorsque d'autres "
+      horsPortee.push(tr("§ 2.1.3 écarte aussi les fluoroquinolones « lorsque d'autres "
         + "antibiotiques per os sont actifs ». PhénoBac ne connaît pas la voie "
         + "d'administration de toutes les molécules urinaires — la table de posologies "
         + "de l'EUCAST ne couvre ni le pivmécillinam, ni la nitrofurantoïne, ni le "
         + "triméthoprime, ni le céfixime — et n'applique pas cette moitié de la règle. "
-        + "Une fluoroquinolone figure donc ici là où le document pourrait la retirer.");
+        + "Une fluoroquinolone figure donc ici là où le document pourrait la retirer.",
+          "\u00A7 2.1.3 also sets the fluoroquinolones aside \u0022when other oral antibiotics are "
+        + "active\u0022. PhenoBac does not know the route of administration of every urinary "
+        + "agent — the EUCAST dosage table covers neither pivmecillinam, nor nitrofurantoin, "
+        + "nor trimethoprim, nor cefixime — and does not apply that half of the rule. A "
+        + "fluoroquinolone therefore appears here where the document might remove it."));
   }
 
   return { prevues: prevues, journal: journal, horsPortee: horsPortee };
@@ -1586,19 +1623,23 @@ function renduCible(A, r, ctx, org, actif) {
   // Garde-fou 2 : le périmètre. Chaque refus est NOMMÉ — « non applicable »
   // sans motif laisserait croire à une panne.
   if (!org || RC_GROUPES.indexOf(org.bpGroup) === -1)
-    return { applique: false, motif: "la recommandation ne vaut que pour les entérobactéries" };
+    return { applique: false, motif: tr("la recommandation ne vaut que pour les entérobactéries",
+      "the recommendation applies to the Enterobacterales only") };
   if (c.urin !== "Oui")
-    return { applique: false, motif: "la recommandation ne vaut que pour les ECBU ; "
-           + "renseignez le prélèvement urinaire" };
+    return { applique: false, motif: tr("la recommandation ne vaut que pour les ECBU ; "
+           + "renseignez le prélèvement urinaire",
+             "the recommendation applies to urine cultures only; record the specimen as urine") };
   if (c.patiente !== "Oui")
-    return { applique: false, motif: "la recommandation n'est validée que chez la femme adulte "
-           + "à partir de 12 ans ; hors de ce cadre le rendu reste complet" };
+    return { applique: false, motif: tr("la recommandation n'est validée que chez la femme adulte "
+           + "à partir de 12 ans ; hors de ce cadre le rendu reste complet",
+             "the recommendation is validated only in women aged 12 years and over; outside "
+           + "that setting the full report stands") };
 
   const cle = c.typeIU === "Cystite" ? "cystite"
             : c.typeIU === "Pyélonéphrite" ? "pyelonephrite"
             : "sansRenseignement";
   const tb = RC.RENDU_CIBLE[cle];
-  if (!tb) return { applique: false, motif: "tableau décisionnel absent" };
+  if (!tb) return { applique: false, motif: tr("tableau décisionnel absent", "decision table missing") };
   const colonne = rcColonne(cle, r, A);
 
   // Ce que le tableau prévoit de rendre dans cette colonne.
@@ -1677,7 +1718,28 @@ function renduCible(A, r, ctx, org, actif) {
     restrictions: journal, horsPortee: restr.horsPortee,
     commentaires: commentairesCible(cle, rendues),
     plancher: plancher, notes: (RC.RENDU_CIBLE_NOTES || {})[cle] || null,
-    source: RC.RENDU_CIBLE_SOURCE
+    source: tr(RC.RENDU_CIBLE_SOURCE,
+      "HAS, 5 October 2023 — targeted antibiograms, urine cultures with Enterobacterales, "
+      + "women aged 12 and over"),
+
+    /* LES COMMENTAIRES ET LES NOTES DE LA HAS RESTENT EN FRANÇAIS, ET C'EST
+       UNE DÉCISION, PAS UN OUBLI. Ce sont des CITATIONS VERBATIM d'une
+       recommandation française qui n'existe qu'en français : les traduire
+       produirait un texte qui ressemble à la recommandation sans en être
+       une, et qu'un laboratoire pourrait recopier dans un compte rendu en
+       croyant citer la HAS. C'est la même raison qui fait que l'anglais de
+       l'EUCAST est la SOURCE et non une traduction.
+
+       Un lecteur anglophone doit savoir pourquoi ce bloc est en français,
+       sans quoi il le prendrait pour une traduction manquante. On le lui
+       dit, en anglais. Le banc exempte ces deux chemins NOMMÉMENT et
+       vérifie qu'ils sont encore atteints : l'exemption ne peut pas devenir
+       une porte ouverte. */
+    citation: _lang === "en"
+      ? "The comments and notes below are quoted verbatim, in French, from the HAS "
+        + "recommendation of 5 October 2023. PhenoBac does not translate them: a "
+        + "translated quotation is no longer the recommendation it cites."
+      : null
   };
 }
 
@@ -2033,19 +2095,26 @@ function enterobacterInterpret(r, c, a) {
   const c3g = isRI(r.CTX) || isRI(r.CAZ);
 
   if (carba) {
-    A.sev = "crit"; A.name = "Suspicion de carbapénémase";
-    A.mech = "Sensibilité diminuée aux carbapénèmes chez une souche AmpC : imperméabilité + AmpC vs carbapénémase vraie. À confirmer.";
+    A.sev = "crit"; A.name = tr("Suspicion de carbapénémase", "Suspected carbapenemase");
+    A.mech = tr("Sensibilité diminuée aux carbapénèmes chez une souche AmpC : imperméabilité + AmpC vs carbapénémase vraie. À confirmer.",
+                "Reduced carbapenem susceptibility in an AmpC isolate: impermeability plus AmpC, or a true carbapenemase. To be confirmed.");
     parce(A, r, {
-      pour: [["ETP", "RI", "ertapénème atteint — c'est le carbapénème le plus sensible à l'association imperméabilité + AmpC, et souvent le premier touché"],
-             ["IPM", "RI", "imipénème atteint"],
-             ["MEM", "RI", "méropénème atteint"]],
-      confirme: carbaConfirmee(c).confirmee ? "confirmation de carbapénémase déclarée au dossier" : null,
+      pour: [["ETP", "RI", tr("ertapénème atteint — c'est le carbapénème le plus sensible à l'association imperméabilité + AmpC, et souvent le premier touché",
+                              "ertapenem affected — it is the carbapenem most sensitive to impermeability plus AmpC, and often the first to go")],
+             ["IPM", "RI", tr("imipénème atteint", "imipenem affected")],
+             ["MEM", "RI", tr("méropénème atteint", "meropenem affected")]],
+      confirme: carbaConfirmee(c).confirmee
+        ? tr("confirmation de carbapénémase déclarée au dossier", "a carbapenemase confirmation recorded in the file") : null,
       aConfirmerPar: carbaConfirmee(c).confirmee ? null
-        : "confirmation de carbapénémase — sans elle, l'imperméabilité associée à l'AmpC naturelle donne le même profil"
+        : tr("confirmation de carbapénémase — sans elle, l'imperméabilité associée à l'AmpC naturelle donne le même profil",
+             "carbapenemase confirmation — without it, impermeability together with the natural AmpC gives the same phenotype")
     });
-    A.alerts.push({ lvl: "crit", txt: "Précautions complémentaires contact et signalement." });
-    A.rules.push({ k: "→R", txt: "β-lactamines à interpréter avec prudence jusqu'à confirmation." });
-    A.comment = `${sp} de sensibilité diminuée aux carbapénèmes. Suspicion de carbapénémase à confirmer. Souche à signaler.`;
+    A.alerts.push({ lvl: "crit", txt: tr("Précautions complémentaires contact et signalement.",
+      "Contact precautions and notification.") });
+    A.rules.push({ k: "→R", txt: tr("β-lactamines à interpréter avec prudence jusqu'à confirmation.",
+      "Interpret the beta-lactams with caution until confirmation.") });
+    A.comment = tr(`${sp} de sensibilité diminuée aux carbapénèmes. Suspicion de carbapénémase à confirmer. Souche à signaler.`,
+      `${sp} with reduced carbapenem susceptibility. A carbapenemase is suspected and must be confirmed. Notifiable isolate.`);
     // Même règle que pour les autres entérobactéries (CA-SFM 2026, p. 8).
     if (estCasfm()) {
       const cb = carbaConfirmee(c);
@@ -4464,7 +4533,7 @@ const MOTEUR = {
   fixerLangue, langueCourante,
   // exporté POUR ÊTRE VÉRIFIÉ : le banc s'en sert pour exiger que chaque
   // phrase de résistance naturelle présente dans ORG sache se traduire.
-  naturelleEn,
+  naturelleEn, confianceLibelle,
   // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
   CONDITIONS, conditionsTechniques,
   // rendu ciblé (HAS 2023)
