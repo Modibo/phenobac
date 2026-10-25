@@ -27,12 +27,12 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : 0c7981912f22861cada9e144b1fd8d185838f85881eac131f60040e902ebe6f9
+- **empreinte** : 3c9ffd93c20ed09d8ab86e18191e15e13722b2a6fbc61c9e6ea74d6167de9839
 - **date** : 2026-10-25
-- **résultat** : 403 seuils confrontés — **403 identiques, 0 différent**, 91 non
-  comparés. Et, dans l'autre sens : **aucune molécule du panel n'est privée du
-  seuil que le document lui donne** ; 109 couples sont chiffrés par l'EUCAST
-  hors du panel de PhénoBac, ce qui est une décision et non une omission.
+- **résultat** : **512** seuils confrontés — **512 identiques, 0 différent**,
+  91 non comparés. Dans l'autre sens : aucune molécule du panel n'est privée
+  du seuil que le document lui donne, et **plus aucun couple hors panel** —
+  les 109 ont été portés le 25 octobre 2026 sur décision du biologiste.
   (244 le 24 octobre ; les 159 de plus sont les dix anaérobies à Gram positif et
   les sept espèces aérobies.)
 
@@ -261,9 +261,9 @@ seule la première est réparable par l'utilisateur :
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP_MENINGE
-- **empreinte** : f1184083a29ee2fe7bae4e955ba10efa3df94d59345aefb0c9878337d8c937cb
-- **date** : 2026-10-24
-- **résultat** : 21 seuils confrontés — 21 identiques, 0 différent, 0 manquant.
+- **empreinte** : e51141f67263aa01bde405f9981d47bb84b598418fb28b6e72e17a9da801b838
+- **date** : 2026-10-25
+- **résultat** : **24** seuils confrontés — 24 identiques, 0 différent, 0 manquant.
 
 Ces seuils-là n'étaient confrontés par **rien**. L'outil écartait volontairement
 les lignes « (meningitis) » du document — le rendu courant se fait hors
@@ -292,13 +292,13 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : DZ, DZ_URIN
-- **empreinte** : 85d4dfa1fe2171bf24abdd871edcefe7439fbe28f3d64777ee974a37be4e47cb
+- **empreinte** : 728e9d87927ddfd7589fa08d7c7ed5a55650f9b8b9275586c383701e13cda609
 - **date** : 2026-10-25
-- **résultat** : 411 diamètres confrontés — **411 identiques, 0 différent**,
-  0 non comparé, 2 à arbitrer (les deux concordent). Dans l'autre sens :
-  **aucune molécule du panel n'est privée du seuil que le document lui donne**
-  (le manque de la fosfomycine a été corrigé) ; 26 couples chiffrés hors du
-  panel, et 6 absences expliquées par un témoin ou un écran.
+- **résultat** : **435** diamètres confrontés — **435 identiques, 0 différent**,
+  0 non comparé, 2 à arbitrer (les deux concordent). Dans l'autre sens : aucune
+  molécule du panel n'est privée de son diamètre ; il reste 2 couples hors
+  panel, faute de charge de disque dans le document, et 6 absences expliquées
+  par un témoin ou un écran.
 
 ### La moitié que personne ne relisait
 
@@ -489,7 +489,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 3349ef00da25527c254f678858cf95bf2e5a38003e2663c798f28259f41c63fe
+- **empreinte** : 6297b5b2adea995bad71ce5e04c60884307d8536b3009931badfd8135e276285
 - **date** : 2026-10-25
 - **résultat** : 22 tables du classeur relues, **409 règles attendues** — **0 manque,
   0 excédent, 0 écart**, CMI **et** disque.
@@ -574,16 +574,65 @@ cite une règle numérotée. § 26.
 
 ---
 
+## La couverture élargie, et le piège qu'elle a tendu
+
+Le 25 octobre 2026, les **111 couples hors panel** relevés par le balayage
+inverse ont été portés, sur décision du biologiste : **133 règles** — 109 en
+CMI, 24 au disque — sur 20 groupes de seuils et 33 espèces, soit 160 entrées de
+panel. Cyclines, β-lactamines, fluoroquinolones et divers, tout le lot.
+
+Les lignes ont été **produites** par `comparer-eucast.py --proposer`, qui
+réutilise la sélection de lignes du comparateur — indications, voies,
+restrictions d'espèce — et non recopiées. Chacune porte en commentaire
+l'intitulé du document dont elle vient.
+
+### Le proposeur fabriquait d'abord des règles FAUSSES
+
+Deux fautes, attrapées avant de coller quoi que ce soit :
+
+- la **note 13** s'écrit `null`, pas `0.001`. Le comparateur le savait pour
+  comparer ; le proposeur l'avait oublié pour écrire. Une ciprofloxacine à
+  0,001 mg/L sur un staphylocoque aurait été rendue **sensible** — l'inverse
+  exact de ce que la note veut dire ;
+- une ligne qui ne vaut que pour **une partie du groupe** porte la colonne
+  `espece`. L'imipénème et la pipéracilline-tazobactam de l'entérocoque ne
+  valent que pour *E. faecalis*, la nitrofurantoïne des SCN que pour
+  *S. saprophyticus*.
+
+Un outil qui fabrique des règles doit les fabriquer justes, sinon c'est une
+machine à introduire des fautes. Un premier script d'extension des panels a
+d'ailleurs dérapé — 252 ajouts au lieu de 111, parce qu'il lisait tout le
+fichier au lieu du bloc inséré. Annulé, refait depuis la source exacte.
+
+### LE PIÈGE : trois seuils méningés du pneumocoque
+
+Porter l'ampicilline, la ceftriaxone et le méropénème au panel du pneumocoque
+**sans leurs valeurs de méningite**, c'était laisser le seuil ordinaire
+s'appliquer à un liquide céphalo-rachidien :
+
+| | ordinaire | méningé | effet sur un LCR, avant correction |
+|---|---|---|---|
+| ceftriaxone | S ≤ 0,5 · R > 2 | S ≤ 0,5 · R > 0,5 | CMI 1 mg/L rendue **I** au lieu de **R** |
+| méropénème | S ≤ 2 · R > 2 | S ≤ 0,25 · R > 0,25 | CMI 1 mg/L rendue **S** au lieu de **R** |
+| ampicilline | S ≤ 0,5 · R > 1 | S ≤ 0,06 · R > 0,06 | CMI 0,5 mg/L rendue **S** au lieu de **R** |
+
+C'est exactement le danger pour lequel le mode `--meninge` avait été écrit, et
+il l'a attrapé **le jour même** — parce que les molécules venaient d'arriver au
+panel. Un élargissement de couverture et ses seuils méningés se portent donc
+ensemble, jamais l'un sans l'autre.
+
+---
+
 ## comparer-casfm.py — le delta CA-SFM, calculé
 
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM
-- **empreinte** : 2939b6644543fb8440845d3e955bcff8d2562fbb40344e2237f9301147670c74
+- **empreinte** : 95c8f7ef64ad4671cfa20c206cc3b966e42ca388cc0743b295b4a38ec20ff9a3
 - **date** : 2026-10-25
 - **résultat** : **PREMIÈRE PASSE, À RELIRE.** 295 couples confrontés, 167 où
-  les deux comités disent la même chose, **39 écarts candidats** dont **un
-  vérifié dans le document**, 16 noms que l'outil ne sait pas lire.
+  les deux comités disent la même chose, **46 écarts candidats** dont **un
+  vérifié dans le document et corrigé** (la colistine de *Pseudomonas*), 16 noms que l'outil ne sait pas lire.
 
 ### Le défaut propre à la façon dont PhénoBac porte le CA-SFM
 

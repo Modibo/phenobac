@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.18";
+const BASE_VERSION = "2026.20";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -99,7 +99,23 @@ const REGLES = [
 ["casfm","morganella","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","ngono","GEN","cmi","standard",16,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","nmening","AMX","cmi","meninge",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["casfm","pseudo","COL","cmi","standard",undefined,undefined,undefined,4,undefined,undefined,undefined,undefined,undefined],
+/* LA COLISTINE DE PSEUDOMONAS SOUS CA-SFM.
+
+   CA-SFM 2026, page 61 : Colistine · S ≤ 2 · R > 2 · ZIT 4.
+
+   PhénoBac ne portait que la ZIT. Les seuils manquant, c'est la valeur EUCAST
+   (4/4) qui s'appliquait — et une CMI de colistine à 4 mg/L sur P. aeruginosa
+   était rendue « SENSIBLE » alors que le comité français la tient pour
+   résistante, et que 4 mg/L tombe dans sa propre zone d'incertitude. Une
+   décision de dernier recours, prise sur un rendu qui contredisait le
+   référentiel affiché.
+
+   C'est le défaut propre à la façon dont PhénoBac porte le CA-SFM : elle n'en
+   garde que le DELTA, et un écart qu'elle ignore ne se voit pas — le
+   laboratoire croit travailler en CA-SFM et reçoit l'EUCAST, en silence.
+   Trouvé par outils/comparer-casfm.py le 25 octobre 2026, vérifié dans le
+   document, porté sur décision du biologiste. */
+["casfm","pseudo","COL","cmi","standard",2,2,undefined,4,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -511,6 +527,222 @@ const REGLES = [
 ["eucast","peptoniphilus","MTZ","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","peptoniphilus","MTZ","disque","standard",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","peptoniphilus","AMX","disque","standard",undefined,undefined,undefined,undefined,"AMP",undefined,undefined,undefined,undefined],
+
+/* ===== COUVERTURE ÉLARGIE — 133 règles, 25 octobre 2026 =====
+
+   Le balayage inverse de comparer-eucast.py a relevé 111 couples que le
+   classeur v16.1 chiffre et que PhénoBac ne portait pas. Ce n'étaient pas des
+   défauts : l'application offrait un panel choisi, celui d'un laboratoire de
+   district. Le biologiste a décidé de les couvrir tous.
+
+   Les lignes ont été PRODUITES par « comparer-eucast.py --proposer », qui
+   réutilise la sélection de lignes du comparateur — indications, voies,
+   restrictions d'espèce — et non recopiées. Chacune porte en commentaire
+   l'intitulé du document dont elle vient, ce qui permet de la vérifier sans
+   rouvrir le classeur.
+
+   DEUX PIÈGES ÉVITÉS AU PASSAGE, parce que le proposeur les avait d'abord :
+   la note 13 (« S ≤ 0,001 ») s'écrit « null » et non 0.001 — sans quoi une
+   ciprofloxacine à 0,001 mg/L sur un staphylocoque serait rendue SENSIBLE,
+   l'inverse exact de ce que la note veut dire ; et une ligne qui ne vaut que
+   pour une partie du groupe porte la colonne « espece » — la nitrofurantoïne
+   de S. saprophyticus ne concerne pas les autres SCN.                   ===== */
+
+// --- acineto (1) ---
+["eucast","acineto","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+
+// --- campylo (2) ---
+["eucast","campylo","TET","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","campylo","TET","disque","standard",30,30,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+
+// --- coryne (5) ---
+["eucast","coryne","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ciprofloxacin
+["eucast","coryne","DA","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Clindamycin
+["eucast","coryne","RD","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Rifampicin
+["eucast","coryne","TET","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","coryne","TET","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+
+// --- entero (3) ---
+["eucast","entero","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+["eucast","entero","MXF","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Moxifloxacin, Enterobacterales except Morganella morganii, Proteus spp
+["eucast","entero","MXF","disque","standard",22,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Moxifloxacin, Enterobacterales except Morganella morganii, Proteus spp
+
+// --- enteroc (6) ---
+["eucast","enteroc","AMX","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Amoxicillin iv
+["eucast","enteroc","IPM","cmi","standard",null,4,undefined,undefined,undefined,undefined,undefined,undefined,["efaecalis"]],   // Imipenem, E. faecalis
+["eucast","enteroc","LVX","cmi","urinaire",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin (uncomplicated UTI only)
+["eucast","enteroc","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,["efaecalis"]],   // Nitrofurantoin (uncomplicated UTI only), E. faecalis
+["eucast","enteroc","NIT","disque","urinaire",15,15,"100",undefined,undefined,undefined,undefined,undefined,["efaecalis"]],   // Nitrofurantoin (uncomplicated UTI only), E. faecalis
+["eucast","enteroc","TZP","cmi","standard",null,16,undefined,undefined,undefined,undefined,undefined,undefined,["efaecalis"]],   // Piperacillin-tazobactam, E. faecalis
+
+// --- haemo (16) ---
+["eucast","haemo","CFM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefixime
+["eucast","haemo","CFM","disque","standard",26,26,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Cefixime
+["eucast","haemo","CRO","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone
+["eucast","haemo","CRO","disque","standard",32,32,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone
+["eucast","haemo","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Doxycycline
+["eucast","haemo","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ertapenem
+["eucast","haemo","FEP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefepime
+["eucast","haemo","IPM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Imipenem
+["eucast","haemo","LVX","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+["eucast","haemo","MEM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Meropenem (indications other than meningitis)
+["eucast","haemo","MIN","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Minocycline
+["eucast","haemo","OFX","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ofloxacin
+["eucast","haemo","OFX","disque","standard",30,30,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Ofloxacin
+["eucast","haemo","TET","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","haemo","TET","disque","standard",25,25,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","haemo","TZP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Piperacillin-tazobactam
+
+// --- moraxella (16) ---
+["eucast","moraxella","CFM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefixime
+["eucast","moraxella","CFM","disque","standard",21,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Cefixime
+["eucast","moraxella","CRO","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone
+["eucast","moraxella","CRO","disque","standard",24,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone
+["eucast","moraxella","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Doxycycline
+["eucast","moraxella","E","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Erythromycin
+["eucast","moraxella","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ertapenem
+["eucast","moraxella","FEP","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefepime
+["eucast","moraxella","IPM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Imipenem
+["eucast","moraxella","LVX","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+["eucast","moraxella","MEM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Meropenem
+["eucast","moraxella","MIN","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Minocycline
+["eucast","moraxella","OFX","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ofloxacin
+["eucast","moraxella","OFX","disque","standard",28,28,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Ofloxacin
+["eucast","moraxella","TET","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","moraxella","TET","disque","standard",26,26,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+
+// --- morganella (1) ---
+["eucast","morganella","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+
+// --- ngono (4) ---
+["eucast","ngono","CFM","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefixime
+["eucast","ngono","CRO","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone
+["eucast","ngono","OFX","cmi","standard",0.125,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ofloxacin
+["eucast","ngono","TET","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+
+// --- nmening (2) ---
+["eucast","nmening","CRO","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone (all indications including prophylaxis)
+["eucast","nmening","MEM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Meropenem (all indications)
+
+/* ET LEURS SEUILS MÉNINGÉS, SANS QUOI L'AJOUT AURAIT ÉTÉ DANGEREUX.
+
+   Porter l'ampicilline, la ceftriaxone et le méropénème au panel du
+   pneumocoque sans leurs valeurs de méningite, c'était laisser le seuil
+   ORDINAIRE s'appliquer à un liquide céphalo-rachidien — et il est bien plus
+   permissif :
+
+     ceftriaxone   ordinaire S ≤ 0,5 · R > 2      méningé S ≤ 0,5 · R > 0,5
+     méropénème    ordinaire S ≤ 2   · R > 2      méningé S ≤ 0,25 · R > 0,25
+     ampicilline   ordinaire S ≤ 0,5 · R > 1      méningé S ≤ 0,06 · R > 0,06
+
+   Vérifié avant correction : une CMI de ceftriaxone à 1 mg/L sur un LCR à
+   pneumocoque était rendue « I » au lieu de « R », et un méropénème à
+   1 mg/L « S » au lieu de « R ». C'est exactement le danger que le mode
+   « --meninge » de outils/comparer-eucast.py a été écrit pour attraper, et il
+   l'a attrapé le jour même — parce que les molécules venaient d'arriver au
+   panel. L'élargissement de couverture et ses seuils méningés se portent donc
+   ENSEMBLE, jamais l'un sans l'autre. */
+["eucast","pneumo","AMP","cmi","meninge",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ampicillin iv (endocarditis and meningitis)
+["eucast","pneumo","CRO","cmi","meninge",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone (endocarditis and meningitis)
+["eucast","pneumo","MEM","cmi","meninge",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Meropenem (meningitis)
+
+// --- pneumo (14) ---
+["eucast","pneumo","AMC","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Amoxicillin-clavulanic acid oral
+["eucast","pneumo","AMP","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ampicillin iv (indications other than endocarditis and meningitis)
+["eucast","pneumo","AZM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Azithromycin
+["eucast","pneumo","CRO","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone (indications other than endocarditis and meningitis)
+["eucast","pneumo","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Doxycycline
+["eucast","pneumo","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ertapenem
+["eucast","pneumo","FEP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefepime
+["eucast","pneumo","IPM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Imipenem
+["eucast","pneumo","MEM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Meropenem (indications other than meningitis)
+["eucast","pneumo","MIN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Minocycline
+["eucast","pneumo","RD","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Rifampicin
+["eucast","pneumo","TEC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Teicoplanin
+["eucast","pneumo","TET","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","pneumo","TET","disque","standard",25,25,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+
+// --- pseudo (3) ---
+["eucast","pseudo","ATM","cmi","standard",null,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Aztreonam
+["eucast","pseudo","ATM","disque","standard",null,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Aztreonam
+["eucast","pseudo","LVX","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+
+// --- salmonella (4) ---
+["eucast","salmonella","FDC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefiderocol
+["eucast","salmonella","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+["eucast","salmonella","MXF","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Moxifloxacin, Enterobacterales except Morganella morganii, Proteus spp
+["eucast","salmonella","MXF","disque","standard",22,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Moxifloxacin, Enterobacterales except Morganella morganii, Proteus spp
+
+// --- scn (11) ---
+["eucast","scn","AMK","cmi","standard",16,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Amikacin, Coagulase-negative staphylococci  ⟨valeur entre parenthèses⟩
+["eucast","scn","AZM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Azithromycin
+["eucast","scn","CIP","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Ciprofloxacin, Coagulase-negative staphylococci  ⟨valeur entre parenth
+["eucast","scn","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Doxycycline
+["eucast","scn","LVX","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin, Coagulase-negative staphylococci
+["eucast","scn","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,["ssaprophyticus"]],   // Nitrofurantoin (uncomplicated UTI only), S. saprophyticus
+["eucast","scn","NIT","disque","urinaire",13,13,"100",undefined,undefined,undefined,undefined,undefined,["ssaprophyticus"]],   // Nitrofurantoin (uncomplicated UTI only), S. saprophyticus
+["eucast","scn","TET","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","scn","TET","disque","standard",22,22,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","scn","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Trimethoprim (uncomplicated UTI only)
+["eucast","scn","TMP","disque","urinaire",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Trimethoprim (uncomplicated UTI only)
+
+// --- serratia (1) ---
+["eucast","serratia","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+
+// --- staph (9) ---
+["eucast","staph","AMK","cmi","standard",16,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Amikacin, S. aureus  ⟨valeur entre parenthèses⟩
+["eucast","staph","AZM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Azithromycin
+["eucast","staph","CIP","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Ciprofloxacin, S. aureus  ⟨valeur entre parenthèses⟩
+["eucast","staph","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Doxycycline
+["eucast","staph","LVX","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin, S. aureus
+["eucast","staph","TET","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","staph","TET","disque","standard",22,22,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","staph","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Trimethoprim (uncomplicated UTI only)
+["eucast","staph","TMP","disque","urinaire",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Trimethoprim (uncomplicated UTI only)
+
+// --- strepacg (10) ---
+["eucast","strepacg","AZM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Azithromycin
+["eucast","strepacg","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Daptomycin
+["eucast","strepacg","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Doxycycline
+["eucast","strepacg","MIN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Minocycline
+["eucast","strepacg","MXF","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Moxifloxacin
+["eucast","strepacg","RD","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Rifampicin
+["eucast","strepacg","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Trimethoprim-sulfamethoxazole
+["eucast","strepacg","TEC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Teicoplanin
+["eucast","strepacg","TET","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","strepacg","TET","disque","standard",23,23,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+
+// --- strepb (12) ---
+["eucast","strepb","AZM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Azithromycin
+["eucast","strepb","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Daptomycin
+["eucast","strepb","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Doxycycline
+["eucast","strepb","MIN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Minocycline
+["eucast","strepb","MXF","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Moxifloxacin
+["eucast","strepb","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Nitrofurantoin (uncomplicated UTI only), S. agalactiae (group B strept
+["eucast","strepb","NIT","disque","urinaire",15,15,"100",undefined,undefined,undefined,undefined,undefined,undefined],   // Nitrofurantoin (uncomplicated UTI only), S. agalactiae (group B strept
+["eucast","strepb","RD","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Rifampicin
+["eucast","strepb","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Trimethoprim-sulfamethoxazole
+["eucast","strepb","TEC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Teicoplanin
+["eucast","strepb","TET","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+["eucast","strepb","TET","disque","standard",23,23,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Tetracycline
+
+// --- vibrio (5) ---
+["eucast","vibrio","CAZ","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftazidime
+["eucast","vibrio","CTX","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefotaxime
+["eucast","vibrio","LVX","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
+["eucast","vibrio","MEM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Meropenem
+["eucast","vibrio","TZP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Piperacillin-tazobactam
+
+// --- viridans (8) ---
+["eucast","viridans","AMP","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ampicillin (indications other than endocarditis)
+["eucast","viridans","CRO","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone
+["eucast","viridans","CRO","disque","standard",27,27,"30",undefined,undefined,undefined,undefined,undefined,undefined],   // Ceftriaxone
+["eucast","viridans","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Ertapenem
+["eucast","viridans","FEP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefepime
+["eucast","viridans","IPM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Imipenem
+["eucast","viridans","MEM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Meropenem
+["eucast","viridans","TEC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Teicoplanin
+
 
 /* ============ Espèces aérobies ajoutées le 25 octobre 2026 ============
    Lues par outils/extraire-especes.py dans le classeur v16.1, jamais

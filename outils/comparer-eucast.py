@@ -294,6 +294,42 @@ ESPECE_CITEE = re.compile(
     r'[Cc]oagulase-negative staphylococci|enterococci|groups? [ABCG]|group [ABCG]')
 
 
+# Nom d'espèce du document -> identifiant PhénoBac. Sert à poser la colonne
+# « espece » quand une ligne ne vaut que pour une partie du groupe :
+# « Nitrofurantoin (uncomplicated UTI only), S. saprophyticus » ne concerne pas
+# les autres staphylocoques à coagulase négative.
+ESPECE_ID = {
+    r'E\. coli': 'ecoli', r'K\. pneumoniae': 'kpneu', r'P\. mirabilis': 'proteus',
+    r'E\. faecalis': 'efaecalis', r'E\. faecium': 'efaecium',
+    r'S\. aureus': 'saureus', r'S\. saprophyticus': 'ssaprophyticus',
+    r'S\. epidermidis': 'sepidermidis', r'S\. lugdunensis': 'slugdunensis',
+    r'S\. haemolyticus': 'shaemolyticus',
+    r'S\. agalactiae': 'sagalactiae', r'S\. pyogenes': 'spyogenes',
+}
+
+
+def organismes_par_groupe(racine):
+    """groupe de seuils -> identifiants d'espèces, lus dans le moteur."""
+    mot = open(os.path.join(racine, "moteur.js"), encoding="utf-8").read()
+    k = mot.index("const ORG = {")
+    org = mot[k:mot.index("\n};", k)]
+    out = {}
+    for m in re.finditer(r"^\s{2}(\w+):\s*\{.*?bpGroup:\s*\"(\w+)\"", org, re.M | re.S):
+        out.setdefault(m.group(2), []).append(m.group(1))
+    return out
+
+
+def restriction(nom, groupe, ORGS):
+    """La ligne ne vaut-elle que pour une PARTIE du groupe ? Rend la liste des
+    espèces, ou None. Ne restreint jamais à tout le groupe : écrire une
+    restriction qui n'en est pas une ferait croire à une subtilité absente."""
+    vises = [i for motif, i in ESPECE_ID.items() if re.search(motif, nom)]
+    dans = [i for i in vises if i in ORGS.get(groupe, [])]
+    if not dans or len(dans) >= len(ORGS.get(groupe, [])):
+        return None
+    return sorted(dans)
+
+
 def panels_par_groupe(racine):
     """Molécules OFFERTES par l'application, groupe de seuils par groupe de
     seuils, lues dans PRESENTATION de la page.
@@ -369,9 +405,10 @@ def hors_echelle():
 
 
 def main():
-    global MENINGE, DIAMETRE
+    global MENINGE, DIAMETRE, PROPOSER
     MENINGE = "--meninge" in sys.argv
     DIAMETRE = "--diametres" in sys.argv
+    PROPOSER = "--proposer" in sys.argv
     if MENINGE and DIAMETRE:
         sys.exit("« --meninge » et « --diametres » ne se combinent pas : "
                  "les diamètres méningés n'ont pas de table à part dans PhénoBac.")
@@ -388,6 +425,7 @@ def main():
     vus = set()
     manque_couverture, excuses, hors_panel = [], [], []
     PANELS = panels_par_groupe(racine)
+    ORGS = organismes_par_groupe(racine)
 
     def convention(groupe, code):
         v = HORS_EUCAST.get(groupe)
@@ -577,7 +615,11 @@ def main():
                             if any("(" in str(cel.get(col) or "")
                                    for col in ("B", "C", "F", "G")):
                                 nom = nom + "  ⟨valeur entre parenthèses⟩"
-                            cands.append((nom, sE, rE))
+                            # La CELLULE voyage avec la valeur : le mode
+                            # « --proposer » a besoin de la charge du disque,
+                            # qui est dans la colonne E. Un diamètre sans sa
+                            # charge ne veut rien dire.
+                            cands.append((nom, sE, rE, cel))
             # Si des lignes nomment l'espèce du groupe, elles seules valent :
             # sans cela, C. coli concurrence C. jejuni sur la même feuille.
             if espece and cands:
@@ -623,7 +665,7 @@ def main():
             # écart réel avec l'application se retrouve classé « à arbitrer »
             # et passe inaperçu — c'est arrivé pour la gentamicine.
             if cands:
-                distinctes = {(None if s0 == hors_echelle() else s0, r0) for _, s0, r0 in cands}
+                distinctes = {(None if x[1] == hors_echelle() else x[1], x[2]) for x in cands}
                 if len(distinctes) == 1:
                     cands = [cands[0]]
 
@@ -637,7 +679,7 @@ def main():
                 else:
                     etat, detail = 'absent', "le document ne porte pas ce couple sur cette feuille"
             elif len(cands) == 1:
-                nom, sE, rE = cands[0]
+                nom, sE, rE, cel0 = cands[0]
                 if sE == hors_echelle(): sE = None   # « pas de catégorie S » <-> S: null
                 # LA PARENTHÈSE SE LIT SUR LA LIGNE RETENUE, pas sur une
                 # candidate. L'amoxicilline des entérobactéries n'est entre
@@ -667,13 +709,17 @@ def main():
                 chiffres = [x for x in chiffres if vise_mon_groupe(groupe, x[0])]
                 if chiffres:
                     pourquoi = excuse_absence(groupe, code)
-                    nom0, s0, r0 = chiffres[0]
+                    nom0, s0, r0, cel0 = chiffres[0]
+                    charge = (str(cel0.get('E')).strip() if cel0.get('E') else None)
+                    ecoff0 = any("(" in str(cel0.get(col) or "")
+                                 for col in ("B", "C", "F", "G"))
+                    fiche = (groupe, code, nom0, s0, r0, charge, ecoff0)
                     if pourquoi:
                         excuses.append((groupe, code, pourquoi))
                     elif code not in PANELS.get(groupe, set()):
-                        hors_panel.append((groupe, code, nom0, s0, r0))
+                        hors_panel.append(fiche)
                     else:
-                        manque_couverture.append((groupe, code, nom0, s0, r0))
+                        manque_couverture.append(fiche)
                 continue
 
             # LE DRAPEAU « CONVENTION DE LABORATOIRE » DOIT DIRE VRAI.
@@ -714,7 +760,7 @@ def main():
             print("  [%s] %-4s application %s%-7s %s%-7s  %s"
                   % (marque, code, gauche, sA, droite, rA, detail))
             if etat == 'arbitrer':
-                for nom, sE, rE in cands:
+                for nom, sE, rE, _c in cands:
                     concorde = "  <- concorde" if (sE == sA and rE == rA) else ""
                     print("            %-58s %s%-7s %s%s%s"
                           % (nom[:58], gauche, sE, droite, rE, concorde))
@@ -795,14 +841,14 @@ def main():
         print("d'un laboratoire de district, et non la liste entière de l'EUCAST.")
         print("C'est la liste de ce qu'elle POURRAIT couvrir — une décision, pas")
         print("une omission.")
-        for g, k, nom, sE, rE in sorted(set(hors_panel)):
+        for g, k, nom, sE, rE, _c, _e in sorted(set(hors_panel)):
             print("  %-12s %-5s %s" % (g, k, nom[:56]))
     if manque_couverture:
         print("\n=== AU PANEL, ET SANS SEUIL (%d) ===" % len(manque_couverture))
         print("CELLES-LÀ SONT DES DÉFAUTS : la molécule est offerte à la saisie, le")
         print("biologiste la mesure, et rien ne sort. Chacune est à ajouter après")
         print("validation par un biologiste.")
-        for g, k, nom, sE, rE in sorted(set(manque_couverture)):
+        for g, k, nom, sE, rE, _c, _e in sorted(set(manque_couverture)):
             gauche, droite = ("S>=", "R<") if DIAMETRE else ("S<=", "R>")
             print("  %-12s %-5s %s%-7s %s%-7s   %s" % (g, k, gauche, sE, droite, rE, nom[:52]))
     else:
@@ -836,6 +882,44 @@ def main():
             print("  %-14s %-5s   <- réserve portée sans que le document la donne" % (g, k))
         ecarts_ecoff = len([1 for x in entre_parentheses if x not in porte]) + len(trop)
         print("  → %d écart(s) entre le document et le drapeau ECOFF." % ecarts_ecoff)
+
+    if PROPOSER:
+        print("\n/* ===== LIGNES PROPOSÉES POUR base-connaissances.js =====")
+        print("   Produites par outils/comparer-eucast.py --proposer, à partir du")
+        print("   classeur v16.1. Elles ne sont PAS écrites dans le fichier : un")
+        print("   humain les relit et les colle. Chacune porte, en commentaire, la")
+        print("   ligne du document dont elle vient — c'est ce qui permet de la")
+        print("   vérifier sans rouvrir le classeur. ===== */")
+        meth = "disque" if DIAMETRE else "cmi"
+        for g, k, nom, sE, rE, charge, ecoff0 in sorted(set(hors_panel) | set(manque_couverture)):
+            site = "urinaire" if re.search(r'uncomplicated UTI|urinary', nom, re.I) else "standard"
+            if DIAMETRE and not charge:
+                print("//   %-12s %-5s — diamètre sans charge de disque : non proposé" % (g, k))
+                continue
+            def js(x):
+                if x is None:
+                    return "null"
+                return str(int(x)) if float(x) == int(x) else str(x)
+            # LA NOTE 13 SE PORTE « null », JAMAIS « 0,001 ».
+            # Le comparateur le savait pour comparer ; le proposeur l'avait
+            # oublié pour écrire, et aurait fait rendre « sensible » une CMI
+            # de ciprofloxacine à 0,001 mg/L sur un staphylocoque — c'est-à-dire
+            # l'inverse exact de ce que la note veut dire. Un outil qui
+            # fabrique des règles doit les fabriquer justes, sinon c'est une
+            # machine à introduire des fautes.
+            if sE == hors_echelle():
+                sE = None
+            esp = restriction(nom, g, ORGS)
+            champs = ['"eucast"', '"%s"' % g, '"%s"' % k, '"%s"' % meth, '"%s"' % site,
+                      js(sE), js(rE),
+                      '"%s"' % charge if (DIAMETRE and charge) else "undefined",
+                      "undefined", "undefined", "undefined", "undefined",
+                      "undefined",
+                      "[%s]" % ",".join('"%s"' % e for e in esp) if esp else "undefined"]
+            if ecoff0:
+                champs.append("true")
+            print("[" + ",".join(champs) + "],   // " + nom[:70])
+        print("/* ===== fin des lignes proposées ===== */")
 
     print("\n=== bilan ===")
     print("  identiques         : %d" % total['identique'])
