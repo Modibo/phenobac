@@ -1896,6 +1896,20 @@ const ABX = {
   MXF:{n:"Moxifloxacine",code:"MXF"},
   TET:{n:"Tétracycline",code:"TE"}
 };
+/* LE NOM AFFICHÉ D'UNE MOLÉCULE VIENT DU MOTEUR, PLUS DE CETTE TABLE.
+
+   ABX ci-dessus garde ce qui lui est propre — le code imprimé sur le disque,
+   « P » pour la pénicilline G, « TE » pour la tétracycline —, mais plus le
+   NOM. Le moteur en tient deux jeux, français et anglais, et c'est lui qui
+   sait lequel employer.
+
+   Sans cela, l'interface disait « Ciprofloxacine » dans le panneau de saisie
+   pendant que l'alerte, juste en dessous, disait « Ciprofloxacin » : deux
+   noms pour la même molécule sur le même écran. C'est le même défaut que les
+   douze fonctions recopiées de moteur.js — une donnée tenue à deux endroits
+   finit toujours par diverger. */
+function nomAbx(k){ return (_M.nomAbx ? _M.nomAbx(k) : null) || (ABX[k] && ABX[k].n) || k; }
+
 
 /* helpers */
 const isR = v => v==="R";
@@ -3149,7 +3163,7 @@ function cqCarte(serie, abx){
   const X = i => mg.g + (L - mg.g - mg.d) * (serie.length === 1 ? .5 : i / (serie.length - 1));
   const Y = v => mg.h + (H - mg.h - mg.b) * (1 - (v - bas) / (haut - bas));
 
-  let g = `<svg viewBox="0 0 ${L} ${H}" class="lj" role="img" aria-label="Carte de contrôle, ${esc(ABX[abx]?ABX[abx].n:abx)}">`;
+  let g = `<svg viewBox="0 0 ${L} ${H}" class="lj" role="img" aria-label="Carte de contrôle, ${esc(nomAbx(abx))}">`;
   // bande acceptable
   g += `<rect x="${mg.g}" y="${Y(c.max)}" width="${L-mg.g-mg.d}" height="${Math.max(0,Y(c.min)-Y(c.max))}" class="lj-bande"/>`;
   [[c.min,"lj-lim"],[c.max,"lj-lim"],[c.cible,"lj-cible"]].forEach(([v,cl])=>{
@@ -3625,7 +3639,7 @@ function renderAbx(){
     group.abx.forEach(k=>{
       const row=document.createElement("div"); row.className="abx-row";
       const intr = org.intrinsic && org.intrinsic[k];
-      const nameHtml = `<div class="abx-name"><span class="n">${ABX[k].n}</span>`+
+      const nameHtml = `<div class="abx-name"><span class="n">${nomAbx(k)}</span>`+
         `<span class="code">${ABX[k].code}</span>`+
         (intr?`<span class="intr" title="${intr}">R naturelle</span>`:"")+
         (estMesure()?`<div class="bp-hint">${state.mode==="mic"?bpHint(g,k):dzHint(g,k)}</div>`:"")+`</div>`;
@@ -3658,7 +3672,7 @@ function renderAbx(){
         const inp=document.createElement("input");
         inp.className="mic-input"; inp.type="text"; inp.inputMode="decimal";
         inp.placeholder="—"; inp.value=valeurs[k]||""; inp.id="mic-"+k;
-        inp.setAttribute("aria-label", (mm?"Diamètre d'inhibition ":"CMI ")+ABX[k].n+" en "+unite);
+        inp.setAttribute("aria-label", (mm?L("mode.diametre")+" ":L("mode.cmi")+" ")+nomAbx(k)+" "+unite);
         const unit=document.createElement("span"); unit.className="mic-unit"; unit.textContent=unite;
         const chip=document.createElement("div"); chip.id="chip-"+k;
         // Marqueur d'incertitude technique : il ne remplace pas la catégorie,
@@ -3743,7 +3757,7 @@ function dzHint(group,k){
   }
   const d=disquePour(group,k);
   const charge = d ? " · disque " + (d.charge==="1 unit" ? "1 UI" : d.charge+" µg") : "";
-  const temoin = d && d.temoin ? " (" + (ABX[d.temoin] ? ABX[d.temoin].n.toLowerCase() : d.temoin) + ")" : "";
+  const temoin = d && d.temoin ? " (" + (nomAbx(d.temoin)) + ")" : "";
   const base = (dz.S===null || dz.S===undefined)
     ? `pas de catégorie S · R < ${dz.R} mm`
     : (dz.S===dz.R ? `seuil : S ≥ ${dz.S} · R < ${dz.R} mm`
@@ -3840,7 +3854,7 @@ function renderCQ(){
     Object.keys(s.abx).forEach(k=>{
       const v = cqVerdict(s.abx[k], CQ_ETAT.mesures[k]);
       if(v === "ok") ok++;
-      else if(v === "hors"){ hors++; nomsHors.push(ABX[k] ? ABX[k].n : k); }
+      else if(v === "hors"){ hors++; nomsHors.push(nomAbx(k)); }
     });
     bilan.className = "cq-bilan" + (hors ? " hors" : (ok ? " ok" : ""));
     if(!ok && !hors){
@@ -3859,10 +3873,10 @@ function renderCQ(){
     }
   };
 
-  Object.keys(s.abx).sort((a,b)=>(ABX[a]?ABX[a].n:a).localeCompare(ABX[b]?ABX[b].n:b)).forEach(k=>{
+  Object.keys(s.abx).sort((a,b)=>nomAbx(a).localeCompare(nomAbx(b))).forEach(k=>{
     const c = s.abx[k];
     const row = document.createElement("div"); row.className = "bp-row";
-    const nom = ABX[k] ? ABX[k].n : k;
+    const nom = nomAbx(k);
     const charge = c.c === "1 unit" ? "1 UI" : c.c + " µg";
     row.innerHTML = `<div class="bpn">${esc(nom)}<span class="code">${esc(k)}</span></div>`
       + `<span class="cq-cible">${charge} · cible ${c.v} · ${c.min}–${c.max} mm</span>`;
@@ -3951,7 +3965,7 @@ function cqSuivi(s){
 
   // une carte par antibiotique suivi, et les dérives
   const codes = Object.keys(s.abx).filter(k=>cqSerie(CQ_ETAT.souche, k).length >= 2);
-  codes.sort((a,b)=>(ABX[a]?ABX[a].n:a).localeCompare(ABX[b]?ABX[b].n:b));
+  codes.sort((a,b)=>nomAbx(a).localeCompare(nomAbx(b)));
   if(!codes.length){
     h += `<div class="bp-note" style="margin-top:10px">Aucun antibiotique n'a encore deux mesures :
       les cartes apparaîtront d'elles-mêmes.</div>`;
@@ -3959,7 +3973,7 @@ function cqSuivi(s){
   codes.forEach(k=>{
     const serie = cqSerie(CQ_ETAT.souche, k);
     const derives = cqDerive(serie);
-    h += `<div class="surv-esp"><div class="surv-esp-t">${esc(ABX[k]?ABX[k].n:k)}
+    h += `<div class="surv-esp"><div class="surv-esp-t">${esc(nomAbx(k))}
       <span class="surv-n">${serie.length} mesure${serie.length>1?"s":""}</span></div>`;
     h += cqCarte(serie, k);
     derives.forEach(d=>{
@@ -3998,7 +4012,7 @@ function cqHistorique(){
       <div class="cq-ligne-d">${e.lignes.length} mesure${e.lignes.length>1?"s":""}`
       + (e.lot ? ` · lot ${esc(e.lot)}` : "")
       + (e.operateur ? ` · lu par ${esc(e.operateur)}` : "")
-      + (hors.length ? ` · ${esc(hors.map(l=>(ABX[l.abx]?ABX[l.abx].n:l.abx) + " " + l.mesure + " mm").join(", "))}` : "")
+      + (hors.length ? ` · ${esc(hors.map(l=>(nomAbx(l.abx)) + " " + l.mesure + " mm").join(", "))}` : "")
       + `</div>`
       + (e.action ? `<div class="cq-ligne-a">Conduite tenue : ${esc(e.action)}</div>` : "")
       + (e.valide
@@ -4143,7 +4157,7 @@ function cqExporter(){
   const corps = [];
   reg.forEach(e=>e.lignes.forEach(l=>{
     corps.push([e.date, e.horodatage, e.espece, e.reference, e.lot, e.lotMilieu || "", e.incubateur || "", e.operateur,
-                (ABX[l.abx]?ABX[l.abx].n:l.abx), l.abx, l.charge, l.mesure,
+                (nomAbx(l.abx)), l.abx, l.charge, l.mesure,
                 l.cible, l.min, l.max,
                 l.verdict==="ok" ? "conforme" : "hors limites",
                 l.verdict==="hors" ? e.action : "",
@@ -4203,7 +4217,7 @@ function cqConstruireRegistre(){
   }));
   const synth = Object.keys(couples).map(k=>couples[k])
     .sort((a,b)=> (b.hors - a.hors) || a.espece.localeCompare(b.espece)
-                || (ABX[a.abx]?ABX[a.abx].n:a.abx).localeCompare(ABX[b.abx]?ABX[b.abx].n:b.abx));
+                || (nomAbx(a.abx)).localeCompare(nomAbx(b.abx)));
 
   const ligneSynth = synth.map(c=>{
     // La dérive est calculée par le même code que l'écran : une alerte qui
@@ -4217,7 +4231,7 @@ function cqConstruireRegistre(){
     const taux = c.n ? Math.round((c.n - c.hors) / c.n * 1000) / 10 : 0;
     return `<tr>
       <td>${esc(c.espece)} ${esc(c.reference)}</td>
-      <td>${esc(ABX[c.abx]?ABX[c.abx].n:c.abx)} <span class="rc">${esc(c.abx)}</span></td>
+      <td>${esc(nomAbx(c.abx))} <span class="rc">${esc(c.abx)}</span></td>
       <td class="cat">${c.n}</td>
       <td class="cat">${c.hors || "—"}</td>
       <td class="cat">${taux} %</td>
@@ -4229,7 +4243,7 @@ function cqConstruireRegistre(){
   const detail = reg.slice().reverse().map(e=>{
     const hors = (e.lignes||[]).filter(l=>l.verdict==="hors");
     const lignes = (e.lignes||[]).map(l=>`<tr>
-        <td>${esc(ABX[l.abx]?ABX[l.abx].n:l.abx)} <span class="rc">${esc(l.abx)}</span></td>
+        <td>${esc(nomAbx(l.abx))} <span class="rc">${esc(l.abx)}</span></td>
         <td class="mic">${esc(String(l.charge))}</td>
         <td class="mic">${esc(String(l.mesure))} mm</td>
         <td class="mic">${esc(String(l.cible))} (${esc(String(l.min))}–${esc(String(l.max))})</td>
@@ -4355,7 +4369,7 @@ function renderDiamNote(){
     `Une zone se mesure bord à bord, boîte retournée sur fond sombre, à 16–20 h de culture ; « pas de zone » se note <b>6</b> (le diamètre du disque) ou <b>0</b>. ` +
     `Un couple sans seuil au disque n'est pas un oubli de PhénoBac : l'EUCAST ne reconnaît pas la méthode pour lui — c'est le cas de la colistine, et de la vancomycine sur staphylocoque.${casfm}</div>`;
   if(estCasfm() && DEPISTAGE_CASFM[g]){
-    const codes=Object.keys(DEPISTAGE_CASFM[g]).map(k=>ABX[k]?ABX[k].n:k).join(", ");
+    const codes=Object.keys(DEPISTAGE_CASFM[g]).map(k=>nomAbx(k)).join(", ");
     body.innerHTML += `<div class="bp-note">Le CA-SFM ne voit ici qu'un <b>dépistage</b> : ${esc(codes)} au disque ne sert qu'à reconnaître les souches sensibles. En dessous du seuil, il faut une CMI — la résistance aux β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème technique.</div>`;
   }
   body.innerHTML += `<div class="bp-note" style="margin-top:12px">Avant de rendre des diamètres,
@@ -4398,7 +4412,7 @@ function renderBpEditor(){
     const ecart = ec
       ? `<span class="bp-ecart" title="Le CA-SFM 2026 s'écarte ici de l'EUCAST${ec==="urine"?" pour les infections urinaires sans signe de gravité":ec==="méningite"?" en contexte méningé":""}. Voir REFERENTIEL-CASFM.md.">CA-SFM</span>`
       : "";
-    row.innerHTML=`<div class="bpn">${ABX[k].n}<span class="code">${ABX[k].code}</span>${conv}${ecart}</div>`;
+    row.innerHTML=`<div class="bpn">${nomAbx(k)}<span class="code">${ABX[k].code}</span>${conv}${ecart}</div>`;
     const mk=(field,val)=>{
       const lab=document.createElement("span"); lab.className="bplab"; lab.textContent=field==="S"?"S ≤":"R >";
       const inp=document.createElement("input"); inp.className="bpin"; inp.type="text"; inp.inputMode="decimal";
@@ -4797,7 +4811,7 @@ function detSeuils(g){
             + " · R > " + fmt(seuil.R) + " mg/L";
     }
     lignes.push(`<div class="det-ligne">
-        <span class="dn">${esc(ABX[k]?ABX[k].n:k)}</span>
+        <span class="dn">${esc(nomAbx(k))}</span>
         <span class="dm">${esc(String(v))} ${mm?"mm":"mg/L"} · ${esc(regle)}</span>
         <span class="dc lc-${classeCat(cat)}">${cat?esc(lettreCat(cat)):"—"}</span>
       </div>`);
@@ -4818,7 +4832,7 @@ function renderDetective(A){
   const mesures = [];
   panelComplet(org).forEach(grp => grp.abx.forEach(k => {
     const c = state.results[k]; if(!c) return;
-    mesures.push(`<div class="det-ligne"><span class="dn">${esc(ABX[k]?ABX[k].n:k)}</span>`
+    mesures.push(`<div class="det-ligne"><span class="dn">${esc(nomAbx(k))}</span>`
       + `<span class="dc lc-${classeCat(c)}">${esc(lettreCat(c))}</span></div>`);
   }));
   h += detEtape(0, mesures.length ? mesures.join("")
@@ -4830,7 +4844,7 @@ function renderDetective(A){
   // 3. résistances naturelles
   const intr = Object.keys(org.intrinsic || {});
   h += detEtape(2, intr.length
-      ? intr.map(k => `<div class="det-ligne"><span class="dn">${esc(ABX[k]?ABX[k].n:k)}</span>`
+      ? intr.map(k => `<div class="det-ligne"><span class="dn">${esc(nomAbx(k))}</span>`
           + `<span class="dm">${esc(org.intrinsic[k])}</span></div>`).join("")
       : `<span class="det-vide">Aucune résistance naturelle attendue sur ce panel.</span>`, false);
 
@@ -4860,7 +4874,7 @@ function renderDetective(A){
   let concl = `<div class="det-concl">${esc(A.comment||"—")}</div>`;
   if((A.rendu||[]).length){
     concl += `<div style="margin-top:9px">Catégories modifiées par la lecture interprétative :</div>`
-      + A.rendu.map(x => `<div class="det-ligne"><span class="dn">${esc(ABX[x.abx]?ABX[x.abx].n:x.abx)}</span>`
+      + A.rendu.map(x => `<div class="det-ligne"><span class="dn">${esc(nomAbx(x.abx))}</span>`
           + `<span class="dm">lu ${esc(lettreCat(x.brut))}, rendu R — ${esc(x.motif)}</span></div>`).join("");
   }
   h += detEtape(6, concl, true);
@@ -4968,7 +4982,7 @@ function renderInterpretView(A){
   if(A.rendu && A.rendu.length){
     html+=`<div class="sect"><div class="sect-t">Lecture interprétative — résultat rendu</div>`;
     A.rendu.forEach(x=>{
-      const nom = ABX[x.abx] ? ABX[x.abx].n : x.abx;
+      const nom = nomAbx(x.abx);
       html+=`<div class="lect">
         <span class="lect-a">${esc(nom)}</span>
         <span class="lect-c"><b class="lc lc-${classeCat(x.brut)}">${esc(lettreCat(x.brut))}</b><span class="lect-fl">→</span><b class="lc lc-R">R</b></span>
@@ -4995,10 +5009,10 @@ function renderInterpretView(A){
     html += `<div class="nat-dit">Attendues, et donc non interprétables comme une résistance
       acquise. Un résultat « sensible » sur l'une d'elles est signalé plus haut : il met en cause
       l'identification avant la souche.</div>`;
-    codesNat.sort((x,y)=>(ABX[x]?ABX[x].n:x).localeCompare(ABX[y]?ABX[y].n:y)).forEach(k=>{
+    codesNat.sort((x,y)=>(nomAbx(x)).localeCompare(nomAbx(y))).forEach(k=>{
       const teste = state.results[k];
       html += `<div class="nat-l">
-        <span class="nat-n">${esc(ABX[k].n)}<span class="nat-c">${esc(ABX[k].code)}</span></span>
+        <span class="nat-n">${esc(nomAbx(k))}<span class="nat-c">${esc(ABX[k].code)}</span></span>
         <span class="nat-e">${esc(natur[k])}</span>
         <span class="nat-s ${teste ? "cat-"+classeCat(teste) : "non"}">${teste ? esc(lettreCat(teste)) : "non testé"}</span>
       </div>`;
@@ -5017,10 +5031,10 @@ function renderInterpretView(A){
       concentrations critiques, dans le contexte déclaré. <b>Ce n'est pas une
       prescription</b> : l'adaptation au malade — poids, fonction rénale, âge,
       grossesse — relève du prescripteur.</div>`;
-    codesPoso.sort((x,y)=>ABX[x].n.localeCompare(ABX[y].n)).forEach(k=>{
+    codesPoso.sort((x,y)=>nomAbx(x).localeCompare(nomAbx(y))).forEach(k=>{
       poso[k].forEach(p=>{
         html += `<div class="poso-l">
-          <span class="poso-n">${esc(ABX[k].n)}<span class="poso-c">${esc(state.results[k]||"")}</span></span>
+          <span class="poso-n">${esc(nomAbx(k))}<span class="poso-c">${esc(state.results[k]||"")}</span></span>
           <span class="poso-s">${p.schema ? esc(p.schema) : `<i>${esc(p.note)}</i>`}</span>
           <span class="poso-m">${esc(p.motif)}</span>
         </div>`;
@@ -5045,7 +5059,7 @@ function renderInterpretView(A){
       et ci-dessous.</div>`;
     if(rcib.masquees.length){
       html += `<div class="rc-masq">` + rcib.masquees.map(k=>
-        `<span class="rc-m"><b>${esc(ABX[k]?ABX[k].n:k)}</b>
+        `<span class="rc-m"><b>${esc(nomAbx(k))}</b>
           <span class="lc lc-${classeCat(state.results[k])}">${esc(lettreCat(state.results[k])||"")}</span></span>`
       ).join("") + `</div>`;
     }
@@ -5054,7 +5068,7 @@ function renderInterpretView(A){
        biologiste doit pouvoir le confronter au document, mot pour mot. */
     const citees = {};        // une note, une citation : la répéter serait du bruit
     (rcib.restrictions||[]).forEach(j=>{
-      const noms = j.codes.map(k=>ABX[k]?ABX[k].n:k).join(", ");
+      const noms = j.codes.map(k=>nomAbx(k)).join(", ");
       const titre = j.note ? `Note (${esc(j.note)})` : "§ 2.1.3";
       const cite = j.texte && !citees[j.note];
       if(j.note) citees[j.note] = true;
@@ -5539,7 +5553,7 @@ function refRegles(){
     if(REF_VUE.ref && r.ref !== REF_VUE.ref) return false;
     if(REF_VUE.groupe && r.groupe !== REF_VUE.groupe) return false;
     if(!q) return true;
-    const nom = (ABX[r.abx] ? ABX[r.abx].n : r.abx).toLowerCase();
+    const nom = (nomAbx(r.abx)).toLowerCase();
     return nom.indexOf(q) !== -1 || r.abx.toLowerCase().indexOf(q) !== -1
         || r.groupe.toLowerCase().indexOf(q) !== -1;
   });
@@ -5548,7 +5562,7 @@ function refRegles(){
 function refSeuilTexte(r){
   const u = r.meth === "cmi" ? " mg/L" : " mm";
   if(r.S === undefined && r.R === undefined){
-    if(r.temoin) return "se lit sur le disque de " + (ABX[r.temoin] ? ABX[r.temoin].n.toLowerCase() : r.temoin);
+    if(r.temoin) return "se lit sur le disque de " + (nomAbx(r.temoin));
     if(r.dep !== undefined) return "dépistage : sensible si ≥ " + r.dep + " mm";
     return "—";
   }
@@ -5600,7 +5614,7 @@ function renderReferentiels(){
     const statut = r.conv ? `<span class="bp-conv">convention</span>`
                  : r.espece ? `<span class="bp-ecart">${esc(r.espece.join(", "))} seulement</span>`
                  : `<span class="ref-off">officiel</span>`;
-    h += `<tr><td>${esc(r.groupe)}</td><td>${esc(ABX[r.abx]?ABX[r.abx].n:r.abx)}
+    h += `<tr><td>${esc(r.groupe)}</td><td>${esc(nomAbx(r.abx))}
         <span class="rc">${esc(r.abx)}</span></td>
         <td>${r.meth === "cmi" ? "CMI" : "disque"}</td>
         <td>${r.site === "standard" ? "—" : esc(r.site)}</td>
@@ -5617,7 +5631,7 @@ function refExporter(){
   const col = ["Referentiel","Groupe","Antibiotique","Code","Methode","Site","S","R","Charge","ZIT","Statut"];
   const ech = v => { const s = String(v===undefined||v===null?"":v);
     return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
-  const lignes = rr.map(r=>[r.ref, r.groupe, (ABX[r.abx]?ABX[r.abx].n:r.abx), r.abx,
+  const lignes = rr.map(r=>[r.ref, r.groupe, (nomAbx(r.abx)), r.abx,
     r.meth, r.site, r.S === null ? "pas de catégorie S" : r.S, r.R, r.charge,
     Array.isArray(r.zit) ? r.zit.join("-") : r.zit,
     r.conv ? "convention de laboratoire" : "officiel"].map(ech).join(";"));
@@ -5755,7 +5769,7 @@ function renderSurveillanceLocale(){
       c += `<div class="surv-esp"><div class="surv-esp-t">${esc(survNomEspece(id))}
             <span class="surv-n">${e.n} isolat${e.n>1?"s":""}</span>
             ${assez ? "" : `<span class="surv-faible">effectif insuffisant — taux non rendus</span>`}</div>`;
-      const codes = Object.keys(e.abx).sort((x,y)=>(ABX[x]?ABX[x].n:x).localeCompare(ABX[y]?ABX[y].n:y));
+      const codes = Object.keys(e.abx).sort((x,y)=>(nomAbx(x)).localeCompare(nomAbx(y)));
       if(!codes.length){ c += `<div class="det-vide">Aucun antibiotique renseigné.</div></div>`; return; }
       c += `<div class="tbl-cumul"><table><thead><tr>
           <th>Antibiotique</th><th>Testés</th><th>S</th><th>I</th><th>R</th><th>% sensibles</th>
@@ -5763,7 +5777,7 @@ function renderSurveillanceLocale(){
       codes.forEach(k=>{
         const a = e.abx[k];
         const pc = assez && a.n ? Math.round(a.S / a.n * 100) : null;
-        c += `<tr><td>${esc(ABX[k]?ABX[k].n:k)}</td><td class="num">${a.n}</td>
+        c += `<tr><td>${esc(nomAbx(k))}</td><td class="num">${a.n}</td>
               <td class="num">${a.S}</td><td class="num">${a.I}</td><td class="num">${a.R}</td>
               <td class="num">${pc===null ? '<span class="surv-nd">—</span>'
                 : `<span class="pc ${pc>=80?"bon":pc>=50?"moyen":"bas"}">${pc} %</span>`}</td></tr>`;
@@ -5789,7 +5803,7 @@ function renderSurveillanceLocale(){
         <div class="tbl-cumul"><table><thead><tr><th>Antibiotique</th>`
         + annees.map(a=>`<th>${esc(a)}</th>`).join("") + `</tr></thead><tbody>`;
       Object.keys(codes).sort().forEach(k=>{
-        c += `<tr><td>${esc(ABX[k]?ABX[k].n:k)}</td>`;
+        c += `<tr><td>${esc(nomAbx(k))}</td>`;
         annees.forEach(an=>{
           const a = per[id][an].abx[k];
           c += `<td class="num">${a && a.n ? Math.round(a.S/a.n*100) + " % <span class=\"surv-nd\">(" + a.n + ")</span>" : "—"}</td>`;
@@ -5824,7 +5838,7 @@ function survExporter(){
       lignes.push([i.date, i.laboratoire, i.pays, i.patient, i.genre, i.age, i.typePatient,
                    i.service || "",
                    survNomEspece(i.organism), i.prelevement, i.phenotype, i.referentiel,
-                   (ABX[k]?ABX[k].n:k), k, i.resultats[k],
+                   (nomAbx(k)), k, i.resultats[k],
                    premiers.has(i.cle) ? "oui" : "non",
                    i.transmis ? "oui" : "non"].map(ech).join(";"));
     });
@@ -5900,7 +5914,7 @@ function renderSurvParService(){
         <span class="surv-n">${s.n} isolat${s.n>1?"s":""}</span>
         ${assez ? "" : `<span class="surv-faible">sous le seuil M39 — à lire avec prudence</span>`}</div>`;
     if(especes) h += `<div class="det-vide" style="margin:2px 0 8px">Principales espèces : ${esc(especes)}.</div>`;
-    const codes = Object.keys(s.abx).sort((x,y)=>(ABX[x]?ABX[x].n:x).localeCompare(ABX[y]?ABX[y].n:y));
+    const codes = Object.keys(s.abx).sort((x,y)=>(nomAbx(x)).localeCompare(nomAbx(y)));
     if(!codes.length){ h += `<div class="det-vide">Aucun antibiotique renseigné.</div></div>`; return; }
     h += `<div class="tbl-cumul"><table><thead><tr>
         <th>Antibiotique</th><th>Testés</th><th>Sensibles</th><th>% sensibles</th>
@@ -5908,7 +5922,7 @@ function renderSurvParService(){
     codes.forEach(k=>{
       const a = s.abx[k];
       const pct = a.n ? Math.round(100 * a.S / a.n) : 0;
-      h += `<tr><td>${esc(ABX[k]?ABX[k].n:k)}</td><td>${a.n}</td><td>${a.S}</td>
+      h += `<tr><td>${esc(nomAbx(k))}</td><td>${a.n}</td><td>${a.S}</td>
             <td><b>${pct} %</b></td></tr>`;
     });
     h += `</tbody></table></div></div>`;
@@ -5930,7 +5944,7 @@ function survConstruireRapport(){
   const labo = survMemoire("labo") || "";
 
   const tableau = (titre, n, abx, assez, sous) => {
-    const codes = Object.keys(abx).sort((x,y)=>(ABX[x]?ABX[x].n:x).localeCompare(ABX[y]?ABX[y].n:y));
+    const codes = Object.keys(abx).sort((x,y)=>(nomAbx(x)).localeCompare(nomAbx(y)));
     if(!codes.length) return "";
     let s = `<div class="cqr-bloc"><div class="cqr-bloc-h"><b>${esc(titre)}</b>
       <span class="cqr-etat ${assez?"ok":"hors"}">${n} isolat${n>1?"s":""}${assez?"":" — sous le seuil M39"}</span></div>`;
@@ -5941,7 +5955,7 @@ function survConstruireRapport(){
       const a = abx[k];
       const S = (a.S !== undefined) ? a.S : 0;
       const pct = a.n ? Math.round(100 * S / a.n) : 0;
-      s += `<tr><td>${esc(ABX[k]?ABX[k].n:k)}</td><td class="mic">${a.n}</td>
+      s += `<tr><td>${esc(nomAbx(k))}</td><td class="mic">${a.n}</td>
             <td class="mic">${S}</td><td class="cat">${pct} %</td></tr>`;
     });
     return s + `</tbody></table></div>`;
@@ -6205,7 +6219,7 @@ function buildReport(A){
         ? `<div class="rp-poso${cle==="I"?" rp-poso-i":""}">${cle==="I"?"<b>Forte posologie : </b>":"Schéma du seuil : "}${posoTxt}</div>`
         : "";
       rows+=`<tr>
-        <td>${esc(ABX[k].n)} <span class="rc">${esc(ABX[k].code)}</span></td>
+        <td>${esc(nomAbx(k))} <span class="rc">${esc(ABX[k].code)}</span></td>
         <td class="mic">${mesure?esc(mesure)+unite:"—"}</td>
         <td class="cat cat-${classeCat(cle)}">${cle?esc(lettreCat(cle)):"—"}</td>
         <td class="catf">${catFull}${posoLigne}</td>
@@ -6219,7 +6233,7 @@ function buildReport(A){
   // résultat brut. Un clinicien doit pouvoir voir que la catégorie a été
   // modifiée, et un biologiste refaire le raisonnement.
   const lect = (A.rendu && A.rendu.length)
-    ? A.rendu.map(x=>`<li><b>${esc(ABX[x.abx]?ABX[x.abx].n:x.abx)}</b> : lu ${esc(libelleCat(x.brut).toLowerCase())} (${esc(lettreCat(x.brut))}), rendu résistant (R). ${esc(x.motif)}</li>`).join("")
+    ? A.rendu.map(x=>`<li><b>${esc(nomAbx(x.abx))}</b> : lu ${esc(libelleCat(x.brut).toLowerCase())} (${esc(lettreCat(x.brut))}), rendu résistant (R). ${esc(x.motif)}</li>`).join("")
     : "";
   const alerts = A.alerts.map(a=>`<li class="al-${a.lvl}">${esc(a.txt)}</li>`).join("");
   const rules  = A.rules.length? A.rules.map(r=>`<li><b>${esc(r.k)}</b> ${esc(r.txt)}</li>`).join("") : "";
@@ -6260,7 +6274,7 @@ function buildReport(A){
        ${rcR.masquees.length
           ? `${rcR.masquees.length} molécule${rcR.masquees.length>1?"s":""} testée${rcR.masquees.length>1?"s":""}
              n'${rcR.masquees.length>1?"ont":"a"} pas été rendue${rcR.masquees.length>1?"s":""} :
-             ${esc(rcR.masquees.map(k=>ABX[k]?ABX[k].n:k).join(", "))}.`
+             ${esc(rcR.masquees.map(k=>nomAbx(k)).join(", "))}.`
           : `Dans ce profil, toutes les molécules testées figurent sur la feuille.`}
        ${(rcR.commentaires||[]).some(c=>/complet reste disponible/.test(c.texte))
           ? "" : `<b>L'antibiogramme complet reste disponible sur demande auprès du laboratoire.</b>`}
@@ -7075,7 +7089,7 @@ function renderCaseCard(c){
   let abx="";
   panelComplet(org).forEach(grp=>grp.abx.forEach(k=>{
     const v=c.res[k]; if(!v) return;
-    abx+=`<div class="q-abx-row"><span class="qn">${esc(ABX[k].n)}</span><span class="q-cat ${v}">${v}</span></div>`;
+    abx+=`<div class="q-abx-row"><span class="qn">${esc(nomAbx(k))}</span><span class="q-cat ${v}">${v}</span></div>`;
   }));
   return `<div class="q-case">
       <div class="q-case-h">
@@ -7523,7 +7537,7 @@ function renderBankAbxCtx(){
   const abx=$("#bankAbx"); abx.innerHTML="";
   panelComplet(org).forEach(grp=>grp.abx.forEach(k=>{
     const row=document.createElement("div"); row.className="abx-row";
-    row.innerHTML=`<div class="abx-name"><span class="n">${ABX[k].n}</span><span class="code">${ABX[k].code}</span></div>`;
+    row.innerHTML=`<div class="abx-name"><span class="n">${nomAbx(k)}</span><span class="code">${ABX[k].code}</span></div>`;
     const seg=document.createElement("div"); seg.className="seg";
     ["S","I","R"].forEach(v=>{
       const b=document.createElement("button"); b.dataset.v=v; b.textContent=v;

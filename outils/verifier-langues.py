@@ -403,6 +403,23 @@ def main():
             dits.append("la présentation a ses %d vues dans les deux langues, avec "
                         "le même nombre de repères et d'étapes." % len(FR))
 
+    # LE NOM D'UNE MOLÉCULE EST TENU PAR LE MOTEUR, PAS PAR LA PAGE.
+    #
+    # La page gardait sa propre table de noms : l'interface disait
+    # « Ciprofloxacine » dans le panneau de saisie pendant que l'alerte, juste
+    # en dessous, disait « Ciprofloxacin ». Deux noms pour la même molécule
+    # sur le même écran. ABX ne garde donc plus que ce qui lui est propre —
+    # le code imprimé sur le disque — et le nom passe par nomAbx().
+    restes = re.findall(r"ABX\[[^\]]+\]\.n\b", page)
+    if len(restes) > 1:     # la définition de nomAbx() s'en sert, et elle seule
+        ecarts.append("phenobac.html lit encore %d fois le nom d'une molécule dans sa "
+                      "propre table au lieu de le demander au moteur : l'interface "
+                      "afficherait le nom français au milieu d'un commentaire anglais."
+                      % len(restes))
+    if "function nomAbx(k)" not in page:
+        ecarts.append("phenobac.html n'a plus de nomAbx() : les noms de molécules "
+                      "cesseraient de suivre la langue.")
+
     # --- LES APPELS tr(), UN PAR UN ---
     moteur = open(os.path.join(RACINE, "moteur.js"), encoding="utf-8").read()
     vides, calques = [], []
