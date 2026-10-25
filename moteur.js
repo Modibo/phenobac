@@ -80,6 +80,42 @@ const ABXNAME = {
   // plus répandu des laboratoires à moyens comptés n'avait pas de place.
   TET: "Tétracycline"
 };
+/* LES NOMS D'ANTIBIOTIQUES EN ANGLAIS.
+
+   Ils paraissent dans presque chaque phrase du commentaire : une alerte qui
+   dit « Fosfomycine » au milieu d'un texte anglais trahit tout de suite que la
+   traduction est de surface. Les noms employés sont ceux des Dénominations
+   Communes Internationales en anglais, qui sont aussi ceux du classeur de
+   l'EUCAST — « Benzylpenicillin », « Trimethoprim-sulfamethoxazole » — et non
+   des noms commerciaux.
+
+   Deux mentions ne sont pas des noms de molécule mais des façons de les
+   tester, et elles se traduisent comme telles : « Gentamicine haut niveau »
+   est le dépistage de la résistance de haut niveau aux aminosides, et
+   « Péfloxacine (dépistage FQ) » l'écran des fluoroquinolones. */
+const ABXNAME_EN = {
+  AMX: "Amoxicillin", AMP: "Ampicillin", AMC: "Amoxicillin-clavulanic acid",
+  MEC: "Mecillinam (pivmecillinam)", NIT: "Nitrofurantoin", TMP: "Trimethoprim",
+  CFM: "Cefixime", CRO: "Ceftriaxone", OFX: "Ofloxacin", ATM: "Aztreonam",
+  TZP: "Piperacillin-tazobactam", FOX: "Cefoxitin", CTX: "Cefotaxime (3GC)",
+  CAZ: "Ceftazidime (3GC)", FEP: "Cefepime (4GC)", ETP: "Ertapenem", IPM: "Imipenem",
+  MEM: "Meropenem", CIP: "Ciprofloxacin", GEN: "Gentamicin", AMK: "Amikacin",
+  SXT: "Trimethoprim-sulfamethoxazole", FOS: "Fosfomycin", COL: "Colistin",
+  PEN: "Benzylpenicillin", E: "Erythromycin", DA: "Clindamycin", VA: "Vancomycin",
+  TEC: "Teicoplanin", RD: "Rifampicin", LZD: "Linezolid",
+  HLG: "Gentamicin, high-level screen", CAF: "Chloramphenicol", DOX: "Doxycycline",
+  OXA: "Oxacillin", LVX: "Levofloxacin", PEF: "Pefloxacin (fluoroquinolone screen)",
+  AZM: "Azithromycin", TEM: "Temocillin", FDC: "Cefiderocol", DAP: "Daptomycin",
+  MXF: "Moxifloxacin", MIN: "Minocycline", TET: "Tetracycline"
+};
+
+/* Le nom de la molécule dans la langue courante. Passer par cette fonction
+   plutôt que par ABXNAME directement est ce qui garantit qu'aucune phrase
+   anglaise ne se retrouve avec un nom français au milieu. */
+function nomAbx(code) {
+  return (_lang === "en" ? ABXNAME_EN[code] : ABXNAME[code]) || ABXNAME[code] || code;
+}
+
 
 // concentrations critiques (valeurs par défaut, surchargées par bpOverride côté client)
 /* ============================================================
@@ -532,7 +568,7 @@ function reglesCasfm(A, r) {
   if (g === "pseudo" && (r.MEM === "S" || r.MEM === "I")) {
     const etroites = ["TZP", "CAZ", "FEP"].filter(k => r[k] === "S" || r[k] === "I");
     if (etroites.length) {
-      A.rules.push({ k: "⊘", txt: "CA-SFM : règle de masquage — ne pas rendre le méropénème tant qu'une β-lactamine de spectre plus étroit reste active (" + etroites.map(k => ABXNAME[k] || k).join(", ") + ")." });
+      A.rules.push({ k: "⊘", txt: "CA-SFM : règle de masquage — ne pas rendre le méropénème tant qu'une β-lactamine de spectre plus étroit reste active (" + etroites.map(k => nomAbx(k)).join(", ") + ")." });
     }
   }
 
@@ -620,7 +656,7 @@ function parce(A, r, grille) {
 
   (g.pour || []).forEach(function (cr) {
     const code = cr[0], attendu = cr[1], texte = cr[2];
-    const nom = ABXNAME[code] || code;
+    const nom = nomAbx(code);
     if (!has(r, code)) { A.nonTeste.push({ abx: code, txt: nom + " — " + texte }); return; }
     const v = r[code];
     if (attendu.indexOf(v) !== -1) A.pour.push({ abx: code, cat: v, txt: nom + " " + v + " : " + texte });
@@ -633,7 +669,7 @@ function parce(A, r, grille) {
     const code = cr[0], attendu = cr[1], texte = cr[2];
     if (!has(r, code)) return;
     if (attendu.indexOf(r[code]) !== -1)
-      A.contre.push({ abx: code, cat: r[code], txt: (ABXNAME[code] || code) + " " + r[code] + " : " + texte });
+      A.contre.push({ abx: code, cat: r[code], txt: (nomAbx(code)) + " " + r[code] + " : " + texte });
   });
 
   if (g.confirme) {
@@ -740,7 +776,7 @@ function coherence(A, r, org, c) {
     });
     if (vises.length) {
       A.rules.push({ k: "⟨⟩", txt:
-        "EUCAST : " + vises.map(function (k) { return ABXNAME[k] || k; }).join(", ")
+        "EUCAST : " + vises.map(function (k) { return nomAbx(k); }).join(", ")
         + " — seuil donné entre parenthèses, fondé sur l'ECOFF. Il distingue la souche "
         + "sauvage de celle qui a acquis un mécanisme, et ne prédit PAS le succès "
         + "clinique : la preuve en monothérapie manque le plus souvent. Le référentiel "
@@ -769,7 +805,7 @@ function coherence(A, r, org, c) {
       if (vises.length) {
         ajoute("warn", "Prélèvement déclaré « " + prel + " », mais le contexte « "
           + attendu.dit + " » n'est pas renseigné : "
-          + vises.map(function (k) { return ABXNAME[k] || k; }).join(", ")
+          + vises.map(function (k) { return nomAbx(k); }).join(", ")
           + (vises.length > 1 ? " sont catégorisé" : " est catégorisé")
           + (vises.length > 1 ? "s" : "") + " sur les seuils de site ordinaire, et non sur "
           + attendu.quoi + ".");
@@ -791,10 +827,10 @@ function coherence(A, r, org, c) {
     const seule = x[0], assoc = x[1];
     if (r[seule] !== "S" || !isRI(r[assoc])) return;
     if (inductible) {
-      ajoute("info", `${ABXNAME[seule]} sensible et ${ABXNAME[assoc]} non : chez cette espèce, `
+      ajoute("info", `${nomAbx(seule)} sensible et ${nomAbx(assoc)} non : chez cette espèce, `
         + `l'acide clavulanique INDUIT la céphalosporinase. Le résultat est attendu et n'est pas une erreur.`);
     } else {
-      ajoute("warn", `${ABXNAME[seule]} sensible et ${ABXNAME[assoc]} non : ${x[2]}, `
+      ajoute("warn", `${nomAbx(seule)} sensible et ${nomAbx(assoc)} non : ${x[2]}, `
         + `l'association ne peut donc pas être moins active que la molécule seule. `
         + `Erreur de transcription ou inversion de disques probable — vérifier avant de rendre.`);
     }
@@ -817,7 +853,7 @@ function coherence(A, r, org, c) {
          et un phénotype faux est plus dangereux qu'une absence de
          conclusion. On le dit, et on le dit AVANT le verdict. */
       A.nonSecurise = `${contredites.length} résistances naturelles de cette espèce sont contredites (`
-        + contredites.map(k => ABXNAME[k] || k).join(", ") + `). Une seule serait une erreur de saisie ; `
+        + contredites.map(k => nomAbx(k)).join(", ") + `). Une seule serait une erreur de saisie ; `
         + `plusieurs ensemble évoquent une identification erronée. Reprendre l'identification avant `
         + `d'interpréter cet antibiogramme : le phénotype ci-dessous ne vaut que si l'espèce est la bonne.`;
       ajoute("stop", A.nonSecurise);
@@ -987,7 +1023,7 @@ function commentaireStructure(A) {
      faveur SONT les observations : « céfotaxime R », « céfoxitine S ».
      On reprend la molécule et sa catégorie, sans le commentaire qui les
      explique — celui-ci relève déjà de l'interprétation. */
-  const vus = (A.pour || []).map(x => (ABXNAME[x.abx] || x.abx) + " " + x.cat);
+  const vus = (A.pour || []).map(x => nomAbx(x.abx) + " " + x.cat);
   if (vus.length) m.push({ moment: "Observation", texte: "Profil observé : " + vus.join(", ") + "." });
 
   /* 2. INTERPRÉTATION — le texte rédigé pour ce phénotype. */
@@ -1024,7 +1060,7 @@ function commentaireStructure(A) {
     limites.push("élément(s) discordant(s) : " + A.contre.map(x => x.txt).join(" ; "));
   if ((A.nonTeste || []).length)
     limites.push("molécule(s) clé(s) non testée(s) : "
-      + A.nonTeste.map(x => ABXNAME[x.abx] || x.abx).join(", "));
+      + A.nonTeste.map(x => nomAbx(x.abx)).join(", "));
   if (!A.confirmation && A.aConfirmerPar)
     limites.push("aucun test n'a confirmé le mécanisme");
   if (limites.length) m.push({ moment: "Limites", texte: majuscule(limites.join(" ; ")) + "." });
@@ -1354,7 +1390,7 @@ function rcRestreindre(cle, colonne, prevues, r, c, A) {
     const restent = etroites.filter(actif);
     if (restent.length) {
       oter(carba, "B", "une β-lactamine de spectre plus étroit reste active ("
-                     + restent.map(function (k) { return ABXNAME[k] || k; }).join(", ") + ").");
+                     + restent.map(function (k) { return nomAbx(k); }).join(", ") + ").");
     }
   }
 
@@ -1468,7 +1504,7 @@ function renduCible(A, r, ctx, org, actif) {
   const alertees = {};
   (A.alerts || []).forEach(function (al) {
     Object.keys(r).forEach(function (k) {
-      if (al.txt && ABXNAME[k] && al.txt.indexOf(ABXNAME[k]) !== -1) alertees[k] = true;
+      if (al.txt && nomAbx(k) && al.txt.indexOf(nomAbx(k)) !== -1) alertees[k] = true;
     });
   });
 
@@ -1505,7 +1541,7 @@ function renduCible(A, r, ctx, org, actif) {
     });
     plancher = "Aucune molécule active ne figurait sur la feuille une fois le rendu "
              + "ciblé appliqué. Le masquage a été levé pour "
-             + lever.map(function (k) { return ABXNAME[k] || k; }).join(", ")
+             + lever.map(function (k) { return nomAbx(k); }).join(", ")
              + " : rendre un antibiogramme sans aucun antibiotique utilisable n'aide "
              + "personne.";
   }
@@ -1538,7 +1574,7 @@ function finalize(A, r) {
     for (const k in org.intrinsic) {
       if (r[k] === "S") {
         A.alerts.push({ lvl: "warn",
-          txt: `Incohérence : ${ABXNAME[k] || k} rendue S alors qu'une résistance naturelle est attendue. ${org.intrinsic[k]} Vérifier la saisie.` });
+          txt: `Incohérence : ${nomAbx(k)} rendue S alors qu'une résistance naturelle est attendue. ${org.intrinsic[k]} Vérifier la saisie.` });
       }
     }
   }
@@ -1581,23 +1617,34 @@ function finalize(A, r) {
        référentiel la règle de l'autre est pire qu'un silence. */
     const casfm = estCasfm();
     _depistageEchoue.forEach(d => {
-      A.alerts.push({ lvl: "warn", txt: casfm
-        ? `${ABXNAME[d.abx] || d.abx} : ${d.mm} mm, en dessous du seuil de dépistage (${d.seuil} mm). `
-          + `Le CA-SFM n'autorise pas à conclure « résistant » au disque pour ce couple — la résistance aux `
-          + `β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème `
-          + `technique. Déterminer la CMI avant de priver le malade de son traitement de référence.`
-        : `${ABXNAME[d.abx] || d.abx} : ${d.mm} mm, en dessous du seuil de dépistage (${d.seuil} mm). `
-          + `L'écran est POSITIF : l'EUCAST demande alors de déterminer la sensibilité de chaque `
-          + `molécule de la classe, ou de les rendre résistantes. Le dépistage ne conclut que dans `
-          + `un sens — au-dessus du seuil, il dit « sensible » ; en dessous, il ne dit rien de plus `
-          + `que « il faut regarder ».` });
+      const entete = tr(`${nomAbx(d.abx)} : ${d.mm} mm, en dessous du seuil de dépistage (${d.seuil} mm). `,
+                        `${nomAbx(d.abx)}: ${d.mm} mm, below the screening cut-off (${d.seuil} mm). `);
+      A.alerts.push({ lvl: "warn", txt: entete + (casfm
+        ? tr(`Le CA-SFM n'autorise pas à conclure « résistant » au disque pour ce couple — la résistance aux `
+           + `β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème `
+           + `technique. Déterminer la CMI avant de priver le malade de son traitement de référence.`,
+             `The CA-SFM does not allow "resistant" to be concluded by disk for this pair — beta-lactam `
+           + `resistance is exceptional in this group, and a small zone is first of all a technical `
+           + `problem. Determine the MIC before depriving the patient of the reference treatment.`)
+        : tr(`L'écran est POSITIF : l'EUCAST demande alors de déterminer la sensibilité de chaque `
+           + `molécule de la classe, ou de les rendre résistantes. Le dépistage ne conclut que dans `
+           + `un sens — au-dessus du seuil, il dit « sensible » ; en dessous, il ne dit rien de plus `
+           + `que « il faut regarder ».`,
+             `The screen is POSITIVE: EUCAST then asks for each agent of the class to be tested `
+           + `individually, or reported resistant. A screen concludes in one direction only — above `
+           + `the cut-off it says "susceptible"; below it, it says no more than "this needs looking at".`)) });
     });
     A.rules.push({ k: "≈", txt: casfm
-      ? "CA-SFM : le disque de pénicilline G ne sert ici qu'à reconnaître les souches sensibles. "
-        + "En dessous du seuil, il faut une CMI — le disque ne tranche pas."
-      : "EUCAST : ce disque est un ÉCRAN, pas un seuil clinique. Au-dessus, il autorise à rendre "
-        + "la classe sensible sans autre test ; en dessous, il faut tester chaque molécule ou la "
-        + "rendre résistante." });
+      ? tr("CA-SFM : le disque de pénicilline G ne sert ici qu'à reconnaître les souches sensibles. "
+         + "En dessous du seuil, il faut une CMI — le disque ne tranche pas.",
+           "CA-SFM: here the benzylpenicillin disk serves only to recognise susceptible isolates. "
+         + "Below the cut-off an MIC is required — the disk does not decide.")
+      : tr("EUCAST : ce disque est un ÉCRAN, pas un seuil clinique. Au-dessus, il autorise à rendre "
+         + "la classe sensible sans autre test ; en dessous, il faut tester chaque molécule ou la "
+         + "rendre résistante.",
+           "EUCAST: this disk is a SCREEN, not a clinical breakpoint. Above the cut-off it allows the "
+         + "class to be reported susceptible without further testing; below it, each agent must be "
+         + "tested or reported resistant.") });
   }
 
   /* Diamètres mesurés que le moteur n'a pas traduits. Les taire reviendrait
@@ -1607,7 +1654,8 @@ function finalize(A, r) {
     A.sansDisque = _sansDisque.slice();
     _sansDisque.forEach(d => {
       A.alerts.push({ lvl: "info",
-        txt: `${ABXNAME[d.abx] || d.abx} : ${d.valeur} mm non catégorisé — ${d.raison}.` });
+        txt: tr(`${nomAbx(d.abx)} : ${d.valeur} mm non catégorisé — ${d.raison}.`,
+                `${nomAbx(d.abx)}: ${d.valeur} mm not categorised — ${d.raison}.`) });
     });
   }
 
@@ -1619,22 +1667,28 @@ function finalize(A, r) {
   if (_zit.length) {
     A.zit = _zit.slice();
     _zit.forEach(z => {
-      const nom = ABXNAME[z.abx] || z.abx;
+      const nom = nomAbx(z.abx);
       // L'unité suit la méthode : mg/L pour une CMI, mm pour un diamètre.
       // Sans cela, un diamètre serait annoncé en milligrammes par litre.
       const u = z.unite || "mg/L";
       A.alerts.push({ lvl: "warn",
-        txt: `${nom} à ${z.mic} ${u} : valeur en zone d'incertitude technique (ZIT ${z.valeur} ${u}). ` +
-             `La catégorie « ${z.cat || "—"} » n'est pas reproductible à cette valeur — la traiter comme incertaine.` });
+        txt: tr(`${nom} à ${z.mic} ${u} : valeur en zone d'incertitude technique (ZIT ${z.valeur} ${u}). `
+              + `La catégorie « ${z.cat || "—"} » n'est pas reproductible à cette valeur — la traiter comme incertaine.`,
+                `${nom} at ${z.mic} ${u}: the value falls in the area of technical uncertainty (ATU ${z.valeur} ${u}). `
+              + `The category "${z.cat || "—"}" is not reproducible at this value — treat it as uncertain.`) });
     });
-    A.rules.push({ k: "≈", txt: "Conduite à tenir : répéter le test si une erreur technique est plausible ; recourir à une autre méthode (CMI par microdilution, test génotypique) ; signaler l'incertitude sur le compte rendu." });
+    A.rules.push({ k: "≈", txt: tr("Conduite à tenir : répéter le test si une erreur technique est plausible ; recourir à une autre méthode (CMI par microdilution, test génotypique) ; signaler l'incertitude sur le compte rendu.",
+      "What to do: repeat the test if a technical error is plausible; use another method (MIC by broth microdilution, a genotypic test); state the uncertainty on the report.") });
     A.rules.push(estCasfm()
-      ? { k: "≈", txt: "CA-SFM : ne pas dégrader la catégorie dans celle immédiatement inférieure — la pratique tendrait à devenir systématique et fausserait la surveillance épidémiologique. Signaler l'incertitude plutôt que l'occulter." }
-      : { k: "≈", txt: "EUCAST : dégrader la catégorie (S→I, I→R, S→R) est permis s'il reste d'autres options thérapeutiques, à condition de le commenter et de conserver la souche. PhénoBac ne le fait pas de lui-même." });
+      ? { k: "≈", txt: tr("CA-SFM : ne pas dégrader la catégorie dans celle immédiatement inférieure — la pratique tendrait à devenir systématique et fausserait la surveillance épidémiologique. Signaler l'incertitude plutôt que l'occulter.",
+          "CA-SFM: do not downgrade to the category immediately below — the practice would tend to become routine and would distort resistance surveillance. State the uncertainty rather than conceal it.") }
+      : { k: "≈", txt: tr("EUCAST : dégrader la catégorie (S→I, I→R, S→R) est permis s'il reste d'autres options thérapeutiques, à condition de le commenter et de conserver la souche. PhénoBac ne le fait pas de lui-même.",
+          "EUCAST: downgrading the category (S→I, I→R, S→R) is allowed where other therapeutic options remain, provided it is commented and the isolate is kept. PhénoBac does not do it on its own.") });
   }
 
   if (A.alerts.length === 0) {
-    A.alerts.push({ lvl: "info", txt: "Aucune incohérence détectée avec les résistances naturelles attendues." });
+    A.alerts.push({ lvl: "info", txt: tr("Aucune incohérence détectée avec les résistances naturelles attendues.",
+      "No inconsistency found with the expected intrinsic resistances.") });
   }
   return A;
 }
@@ -3145,6 +3199,39 @@ function horsEucast(groupe, code){
 
 
 // Référentiel de la requête en cours (fixé juste avant le calcul, synchrone).
+/* ====================================================================
+   LA LANGUE DU COMMENTAIRE.
+
+   Le moteur rédige. Mécanisme de résistance, règles expertes, alertes,
+   commentaire du compte rendu : c'est là qu'est la valeur de PhénoBac, et
+   c'était la dernière partie encore uniquement française.
+
+   DEUX FAÇONS DE S'Y PRENDRE, ET UNE SEULE TIENT.
+
+   Sortir les 501 phrases dans un catalogue à clés aurait éloigné le texte du
+   raisonnement qui le produit : on aurait lu « T("staph.sarm.mech") » là où il
+   faut voir ce qui sera écrit au biologiste. Dans un moteur dont la prose EST
+   le produit, cacher la prose est le mauvais choix.
+
+   On écrit donc les deux langues CÔTE À CÔTE, à l'endroit même où la phrase
+   est composée : tr("…", "…"). Le français reste lisible en place — il sert
+   aussi de documentation —, l'anglais se relit en regard, et une phrase
+   ajoutée sans sa traduction se voit à l'œil nu comme au contrôle.
+
+   LE MOTEUR NE DÉPEND PAS DE LA PAGE. Il porte sa propre langue et l'expose ;
+   la page la lui pose quand l'utilisateur bascule. Les bancs d'essai, qui
+   vérifient le texte français, tournent donc inchangés — le défaut par défaut
+   est le français, et c'est voulu : une application mal configurée doit rendre
+   la langue de ceux pour qui elle a été écrite.
+   ==================================================================== */
+let _lang = "fr";
+function fixerLangue(l) { _lang = (l === "en") ? "en" : "fr"; return _lang; }
+function langueCourante() { return _lang; }
+
+/* tr(français, anglais). L'anglais du référentiel n'est pas une traduction :
+   c'est le terme de l'EUCAST, qui publie en anglais. */
+function tr(fr, en) { return _lang === "en" && en ? en : fr; }
+
 let _ref = "eucast";
 const estCasfm = () => _ref === "casfm";
 
@@ -3480,10 +3567,12 @@ function especesDites(group, k) {
 function raisonSansDisque(group, k, ctx) {
   const c = ctx || {};
   if (estCasfm() && dzCasfmDivergent(group, k, c))
-    return "le CA-SFM retient un seuil différent de l'EUCAST pour ce couple, et PhénoBac ne reprend que ses seuils de CMI — saisir une CMI, ou repasser en EUCAST";
+    return tr("le CA-SFM retient un seuil différent de l'EUCAST pour ce couple, et PhénoBac ne reprend que ses seuils de CMI — saisir une CMI, ou repasser en EUCAST",
+              "the CA-SFM sets a different breakpoint from EUCAST for this pair, and PhénoBac carries only its MIC values — enter an MIC, or switch back to EUCAST");
   if (c.mening === "Oui" && !(DZ_MENINGE[group] && DZ_MENINGE[group][k])
       && BP_MENINGE[group] && BP_MENINGE[group][k])
-    return "l'EUCAST ne chiffre pas ce couple au disque dans le LCR et renvoie à la CMI — le seuil ordinaire serait trop permissif pour une méningite";
+    return tr("l'EUCAST ne chiffre pas ce couple au disque dans le LCR et renvoie à la CMI — le seuil ordinaire serait trop permissif pour une méningite",
+              "EUCAST gives no zone diameter for this pair in CSF and refers to the MIC — the ordinary breakpoint would be too permissive for meningitis");
   /* UNE ABSENCE DOIT DIRE SA PROPRE RAISON, pas la plus courante.
 
      « L'EUCAST ne reconnaît pas la méthode des disques pour ce couple » était
@@ -3502,20 +3591,30 @@ function raisonSansDisque(group, k, ctx) {
     // RÉPARABLE par l'utilisateur, et l'annoncer serait lui faire cocher une
     // question qui ne changera rien.
     if (urinaire && !especeAutorisee(group, k))
-      return "l'EUCAST ne chiffre ce couple que pour " + especesDites(group, k)
-           + " — pour les autres espèces du groupe, le document renvoie à une note "
-           + "et ne donne aucun seuil, ni au disque ni en CMI";
+      return tr("l'EUCAST ne chiffre ce couple que pour ", "EUCAST sets this breakpoint only for ")
+           + especesDites(group, k)
+           + tr(" — pour les autres espèces du groupe, le document renvoie à une note "
+              + "et ne donne aucun seuil, ni au disque ni en CMI",
+                " — for the other species in the group the document refers to a note "
+              + "and gives no breakpoint at all, neither by disk nor by MIC");
     if (urinaire && c.urin !== "Oui")
-      return "l'EUCAST ne chiffre ce couple que pour l'infection urinaire — répondre à "
-           + "la question du contexte, en haut de la page, suffit à le catégoriser";
+      return tr("l'EUCAST ne chiffre ce couple que pour l'infection urinaire — répondre à "
+              + "la question du contexte, en haut de la page, suffit à le catégoriser",
+                "EUCAST sets this breakpoint for urinary tract infection only — answering "
+              + "the context question at the top of the page is enough to categorise it");
     return horsEucast(group, k)
-      ? "l'EUCAST ne chiffre ce couple ni en CMI ni au disque ; PhénoBac ne dispose que d'une convention de laboratoire, applicable à une CMI — saisir une CMI"
-      : "l'EUCAST ne reconnaît pas la méthode des disques pour ce couple — une CMI est nécessaire";
+      ? tr("l'EUCAST ne chiffre ce couple ni en CMI ni au disque ; PhénoBac ne dispose que d'une convention de laboratoire, applicable à une CMI — saisir une CMI",
+           "EUCAST gives no breakpoint for this pair, by MIC or by disk; PhénoBac has only a local laboratory convention, which applies to an MIC — enter an MIC")
+      : tr("l'EUCAST ne reconnaît pas la méthode des disques pour ce couple — une CMI est nécessaire",
+           "EUCAST does not accept disk diffusion for this pair — an MIC is required");
   }
   if (!especeAutorisee(group, k))
-    return "l'EUCAST ne chiffre ce couple que pour " + especesDites(group, k)
-         + " — pour les autres espèces du groupe, le document ne donne aucun seuil";
-  return "valeur illisible : un diamètre s'écrit en millimètres, entre 6 (pas de zone) et 60";
+    return tr("l'EUCAST ne chiffre ce couple que pour ", "EUCAST sets this breakpoint only for ")
+         + especesDites(group, k)
+         + tr(" — pour les autres espèces du groupe, le document ne donne aucun seuil",
+              " — for the other species in the group the document gives no breakpoint");
+  return tr("valeur illisible : un diamètre s'écrit en millimètres, entre 6 (pas de zone) et 60",
+            "unreadable value: a zone diameter is written in millimetres, between 6 (no zone) and 60");
 }
 
 /* ---------- Pneumocoque : le dépistage par l'oxacilline 1 µg ----------
@@ -3554,7 +3653,7 @@ function depistagePneumo(group, dia, results) {
   if (p.v >= OXA_PNEUMO) {
     const mis = [];
     BETALACT_PNEUMO.forEach(k => {
-      if (results[k] === undefined) { results[k] = "S"; mis.push(ABXNAME[k] || k); }
+      if (results[k] === undefined) { results[k] = "S"; mis.push(nomAbx(k)); }
     });
     A.rules.push({ k: "✚", txt:
       `Dépistage à l'oxacilline 1 µg négatif (${p.v} mm ≥ ${OXA_PNEUMO} mm) : absence de mécanisme de résistance ` +
@@ -3612,6 +3711,7 @@ function runInterpretation(input) {
   // passeraient pour des entrées du registre alors qu'ils viennent du
   // prototype, et le référentiel renvoyé n'aurait plus de sens.
   cadrer(input.ref, organism);
+  if (input.lang) fixerLangue(input.lang);
 
   // _activeId est posé par cadrer(), ci-dessus : AVANT la traduction des
   // mesures, et non seulement avant le calcul — la restriction d'espèce des
@@ -3695,6 +3795,7 @@ const MOTEUR = {
   catFromMic, catFromDiam, parseMic, parseDiam,
   getBP, getDZ, disquePour, zitPour, zitZonePour, enZit, enZitZone,
   horsEucast, depistageSeuil, estCasfm, seuilEcoff, ECOFF, cadrer,
+  fixerLangue, langueCourante,
   // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
   CONDITIONS, conditionsTechniques,
   // rendu ciblé (HAS 2023)
@@ -3709,7 +3810,7 @@ const MOTEUR = {
   // § 15 : le commentaire en cinq moments
   COMMENT_MOMENTS, commentaireStructure, commentaireCopiable,
   // tables, pour l'affichage des seuils et des aides de saisie
-  REFERENTIELS, ORG, ABXNAME,
+  REFERENTIELS, ORG, ABXNAME, ABXNAME_EN, nomAbx,
   BP, BP_MENINGE, BP_URIN, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
   DZ, DZ_MENINGE, DZ_URIN, DZ_CASFM, DZ_CASFM_URIN, DZ_CASFM_ESPECE, DZ_TEMOIN,
   DISQUE, DISQUE_CASFM, OXA_PNEUMO, DEPISTAGE, DEPISTAGE_CASFM,

@@ -197,6 +197,14 @@ jobs:
       - name: PhénoBac dit la même chose en français et en anglais
         run: python3 outils/verifier-langues.py
 
+      # Le contrôle ci-dessus lit le TEXTE des fichiers ; celui-ci fait
+      # TOURNER le moteur dans les deux langues. Entre les deux il y a tout ce
+      # qui peut mal tourner — et surtout une langue qui déteint sur
+      # l'interprétation suivante, le moteur rendant alors en anglais à un
+      # laboratoire francophone.
+      - name: Le moteur rend vraiment dans les deux langues
+        run: node outils/essai-langue.js
+
       # « 37 espèces » était écrit à la main en dix endroits. Le jour où deux
       # entérobactéries sont arrivées, les dix sont devenus faux en même temps
       # — et personne ne l'aurait vu : un texte ne tombe jamais au rouge.

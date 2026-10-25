@@ -50,7 +50,9 @@ PLAFOND = {
     # Relevés par le balayage d'états, qui est le seul juste : les premiers
     # chiffres — 411, 671, 37 — venaient d'un comptage faux.
     # Fichiers JavaScript PURS : le balayage d'états y est juste.
-    "moteur.js": 501,
+    # 501 au départ. Chaque appel tr(français, anglais) en retire autant que
+    # la phrase en comptait : le nombre ne descend qu'en traduisant.
+    "moteur.js": 415,
     "rendu-cible.js": 43,
 }
 
@@ -190,6 +192,47 @@ def texte_visible(page):
     sans = sans.replace("&nbsp;", " ").replace("&amp;", "&").replace("&times;", " ")
     morceaux = [" ".join(l.split()) for l in sans.splitlines()]
     return [m for m in morceaux if len(m) > 3]
+
+
+def sans_tr(src):
+    """Le code, les appels tr(français, anglais) retirés.
+
+    Le moteur écrit les deux langues CÔTE À CÔTE : tr("…", "…"). Le français
+    y est donc toujours présent dans le fichier — et un compteur naïf le
+    compterait comme non traduit, si bien que traduire ne ferait jamais
+    baisser le nombre. On retire donc chaque appel tr(…) complet avant de
+    compter : ce qui reste est le français qui n'a PAS encore son anglais.
+
+    On apparie les parenthèses en respectant les chaînes : une parenthèse
+    dans « (dépistage) » ne ferme rien."""
+    out, i, n = [], 0, len(src)
+    while i < n:
+        j = src.find("tr(", i)
+        # « tr( » doit être un appel, pas la fin d'un autre mot (« montr(… »).
+        while j != -1 and j > 0 and (src[j - 1].isalnum() or src[j - 1] in "_$."):
+            j = src.find("tr(", j + 1)
+        if j == -1:
+            out.append(src[i:])
+            break
+        out.append(src[i:j])
+        k, prof, delim = j + 3, 1, ""
+        while k < n and prof:
+            c = src[k]
+            if delim:
+                if c == "\\":
+                    k += 2
+                    continue
+                if c == delim:
+                    delim = ""
+            elif c in "\"'`":
+                delim = c
+            elif c == "(":
+                prof += 1
+            elif c == ")":
+                prof -= 1
+            k += 1
+        i = k
+    return "".join(out)
 
 
 def catalogue():
@@ -360,6 +403,71 @@ def main():
             dits.append("la présentation a ses %d vues dans les deux langues, avec "
                         "le même nombre de repères et d'étapes." % len(FR))
 
+    # --- LES APPELS tr(), UN PAR UN ---
+    moteur = open(os.path.join(RACINE, "moteur.js"), encoding="utf-8").read()
+    vides, calques = [], []
+    for m in re.finditer(r'(?<![\w.$])tr\(', moteur):
+        j, prof, delim, k = m.end(), 1, "", m.end()
+        while k < len(moteur) and prof:
+            c = moteur[k]
+            if delim:
+                if c == "\\":
+                    k += 2
+                    continue
+                if c == delim:
+                    delim = ""
+            elif c in "\"'`":
+                delim = c
+            elif c == "(":
+                prof += 1
+            elif c == ")":
+                prof -= 1
+            k += 1
+        corps = moteur[j:k - 1]
+        # Les deux arguments, séparés par la virgule de premier niveau.
+        prof, delim, coupe = 0, "", -1
+        for p, c in enumerate(corps):
+            if delim:
+                if c == "\\":
+                    continue
+                if c == delim:
+                    delim = ""
+            elif c in "\"'`":
+                delim = c
+            elif c in "([{":
+                prof += 1
+            elif c in ")]}":
+                prof -= 1
+            elif c == "," and prof == 0:
+                coupe = p
+                break
+        # LA DÉFINITION N'EST PAS UN APPEL. « function tr(fr, en) » et la
+        # phrase « tr(français, anglais) » d'un commentaire tombaient dans le
+        # filet, et le contrôle criait sur lui-même — un voyant toujours rouge
+        # n'apprend rien. On ne retient que les appels dont le premier
+        # argument est une CHAÎNE.
+        if not re.match(r"\s*[\"'`]", corps):
+            continue
+        if coupe < 0:
+            vides.append(corps[:40])
+            continue
+        fr_, en_ = corps[:coupe], corps[coupe + 1:]
+        if not re.search(r"[\"'`]\s*\S", en_):
+            vides.append(fr_.strip()[:50])
+        elif francaises(chaines(en_)):
+            calques.append(en_.strip()[:60])
+    if vides:
+        ecarts.append("appels tr() sans anglais : %s. La phrase resterait française "
+                      "en mode anglais, sans que rien ne le dise."
+                      % " ; ".join(vides[:4]))
+    if calques:
+        ecarts.append("appels tr() dont le second argument est encore du FRANÇAIS : %s. "
+                      "Un copier-coller laissé en place est pire qu'une absence : il "
+                      "passe pour une traduction." % " ; ".join(calques[:4]))
+    if not (vides or calques):
+        n = len(re.findall(r"(?<![\w.$])tr\(", moteur))
+        dits.append("les %d phrases bilingues du moteur ont leurs deux langues." % n)
+
     # --- LE PLAFOND ---
     restes, monte, limites = {}, [], dict(PLAFOND)
     limites["phenobac.html (texte visible)"] = PLAFOND_VISIBLE
@@ -368,7 +476,7 @@ def main():
             n = len(francaises(texte_visible(page)))
         else:
             src = open(os.path.join(RACINE, f), encoding="utf-8").read()
-            n = len(francaises(chaines(src)))
+            n = len(francaises(chaines(sans_tr(src))))
         restes[f] = n
         if n > limite:
             monte.append("%s : %d chaînes françaises, contre %d au plafond — la "

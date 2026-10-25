@@ -1986,6 +1986,10 @@ function avertirTraductionPartielle() {
 
 function fixerLangue(l) {
   _L.fixer(l);
+  // LE MOTEUR A SA PROPRE LANGUE, et il ne lit pas celle de la page : c'est
+  // ce qui lui permet de tourner sous Node, dans les bancs d'essai et sur le
+  // serveur sans rien savoir de l'interface. La page la lui pose donc.
+  if (_M.fixerLangue) _M.fixerLangue(_L.courante());
   try { localStorage.setItem(MEM_LANGUE, _L.courante()); } catch (e) {}
   traduire();
   // Tout ce qui est rendu par le script doit être refait : les panels, les
@@ -1996,6 +2000,7 @@ function fixerLangue(l) {
 }
 
 _L.fixer(_L.resoudre(location.search, langueMemorisee(), navigator.language));
+if (_M.fixerLangue) _M.fixerLangue(_L.courante());
 
 document.addEventListener("DOMContentLoaded", function () {
   const b = document.getElementById("langSwitch");
