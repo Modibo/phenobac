@@ -40,6 +40,50 @@ if (typeof require === "function" && typeof module === "object" && module.export
 }
 
 function dire(s) { (typeof console === "object" ? console.log : print)(s); }
+function verifPremier(ok, txt) { ok ? OK++ : KO++; dire((ok ? "  ok   " : "  ÉCHEC") + "  " + txt); }
+
+/* ---------- 0. LANGUE.JS SE CHARGE-T-IL SEULEMENT ?
+
+   LE 25 OCTOBRE 2026, IL NE SE CHARGEAIT PLUS, ET TOUT ÉTAIT AU VERT.
+   Un script avait écrit dans le catalogue des chaînes contenant de VRAIS
+   retours à la ligne : JavaScript ne l'admet pas dans un littéral entre
+   guillemets, et le fichier échouait à l'analyse. La page affichait son
+   HTML français, le bouton de langue ne faisait rien, et personne ne
+   signalait quoi que ce soit — parce que verifier-langues.py LIT le
+   fichier avec une expression régulière au lieu de le CHARGER. Un lecteur
+   indulgent trouvait ses 126 entrées dans un fichier qu'aucun navigateur
+   n'aurait exécuté.
+
+   Ici on le charge pour de bon, et on lui demande de rendre quelque chose.
+   C'est le premier contrôle du banc : si le catalogue est cassé, rien de ce
+   qui suit n'a de sens. */
+dire("\nLe catalogue se charge-t-il, et répond-il ?");
+(function () {
+  var LA = null, souci = null;
+  try {
+    if (typeof require === "function" && typeof module === "object" && module.exports) {
+      LA = require("../langue");
+    } else {
+      var m = { exports: {} };
+      (new Function("module", "exports", readFile("langue.js")))(m, m.exports);
+      LA = m.exports;
+    }
+  } catch (e) { souci = String(e); }
+  verifPremier(!!LA, LA ? "langue.js s'analyse et s'exécute"
+                        : "langue.js NE SE CHARGE PAS : " + souci
+                          + " — la page resterait en français, le bouton de langue sans effet, "
+                          + "et aucun contrôle qui LIT le fichier ne le verrait");
+  if (!LA) return;
+  var n = Object.keys(LA.CATALOGUE || {}).length;
+  verifPremier(n >= 120, n + " entrées au catalogue : un catalogue vidé passerait au vert");
+  LA.fixer("fr");
+  var fr = LA.L("ap.nest.titre");
+  LA.fixer("en");
+  var en = LA.L("ap.nest.titre");
+  verifPremier(fr && en && fr !== en && fr.indexOf("⟦") !== 0,
+               "une clé prise au hasard rend deux textes différents : « " + fr + " » / « " + en + " »");
+  LA.fixer("fr");
+})();
 function verif(ok, txt) { ok ? OK++ : KO++; dire((ok ? "  ok   " : "  ÉCHEC") + "  " + txt); }
 
 function textes(o) {

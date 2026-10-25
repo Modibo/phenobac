@@ -775,8 +775,11 @@ function parce(A, r, grille) {
     const nom = nomAbx(code);
     if (!has(r, code)) { A.nonTeste.push({ abx: code, txt: nom + " — " + texte }); return; }
     const v = r[code];
-    if (attendu.indexOf(v) !== -1) A.pour.push({ abx: code, cat: v, txt: nom + " " + v + " : " + texte });
-    else A.contre.push({ abx: code, cat: v, txt: nom + " " + v + " : " + texte + " — attendu ici" });
+    // L'espace devant les deux-points est française. « Cefoxitin R : affected »
+    // trahit la traduction là où tout le reste de la phrase est anglais.
+    const sep = tr(" : ", ": ");
+    if (attendu.indexOf(v) !== -1) A.pour.push({ abx: code, cat: v, txt: nom + " " + v + sep + texte });
+    else A.contre.push({ abx: code, cat: v, txt: nom + " " + v + sep + texte + tr(" — attendu ici", " — expected here") });
   });
 
   // Ce qui, si on l'observe, affaiblit l'hypothèse. Son absence ne prouve
@@ -785,7 +788,7 @@ function parce(A, r, grille) {
     const code = cr[0], attendu = cr[1], texte = cr[2];
     if (!has(r, code)) return;
     if (attendu.indexOf(r[code]) !== -1)
-      A.contre.push({ abx: code, cat: r[code], txt: (nomAbx(code)) + " " + r[code] + " : " + texte });
+      A.contre.push({ abx: code, cat: r[code], txt: (nomAbx(code)) + " " + r[code] + tr(" : ", ": ") + texte });
   });
 
   if (g.confirme) {

@@ -63,12 +63,26 @@ PLAFOND = {
     # soixante espèces et on compte celles dont le rendu contient encore du
     # français. C'est exact, c'est ce que l'utilisateur voit, et cela ne peut
     # descendre qu'en traduisant.
+    # CE PLAFOND-CI N'EST PAS UNE DETTE, C'EST UN PLANCHER.
+    #
+    # Les 43 chaînes françaises de rendu-cible.js sont les commentaires et les
+    # notes que la HAS impose au compte rendu, recopiés mot pour mot d'une
+    # recommandation qui n'existe qu'en français. Les traduire produirait un
+    # texte qui ressemble à la recommandation sans en être une, et qu'un
+    # laboratoire recopierait en croyant citer la HAS. Elles ne descendront
+    # pas, et le rendu porte en anglais la phrase qui dit pourquoi (champ
+    # « citation » de renduCible). Ce qui reste utile ici, c'est qu'elles
+    # n'AUGMENTENT pas.
     "rendu-cible.js": 43,
 }
 
 # Le texte VISIBLE encore en français, morceaux. Mesuré à part des fichiers
 # JavaScript, et par une lecture HTML : voir texte_visible().
-PLAFOND_VISIBLE = 124
+#
+# 124 au relevé du 25 octobre 2026, 0 le même jour. ZÉRO EST LE MOMENT OÙ CE
+# PLAFOND SERT LE PLUS : n'importe quelle phrase française ajoutée à la page
+# sans son entrée de catalogue le fait échouer. Il ne remonte pas.
+PLAFOND_VISIBLE = 0
 
 ACCENTS = re.compile(r'[àâäéèêëîïôöùûüçœÀÉÈÊÎÔÛÇ]')
 
@@ -79,7 +93,9 @@ ACCENTS = re.compile(r'[àâäéèêëîïôöùûüçœÀÉÈÊÎÔÛÇ]')
 # douze mille caractères de traduction anglaise faisaient MONTER le reliquat.
 # Un compteur qui se trompe dans ce sens-là est pire qu'absent : il décourage
 # précisément le travail qu'il est censé encourager.
-PROPRES = re.compile(r'Phéno\s*Bac|Sominé\s*DOLO|Mopti|Modibo|Coulibaly|'
+# « Phéno » seul, parce que le logo coupe le nom en deux : « Phéno<b>Bac</b> ».
+# Le morceau de gauche arrivait au compteur comme un mot français accentué.
+PROPRES = re.compile(r'Phéno\s*Bac|^Phéno$|Sominé\s*DOLO|Mopti|Modibo|Coulibaly|'
                      r'Céfidérocol|Témocilline', re.I)
 MOTS_FR = re.compile(r'\b(le|la|les|des|une|un|aux|est|pas|qui|que|pour|sur|dans|avec)\b')
 
@@ -178,6 +194,61 @@ def compte_items(corps, nom):
     return items
 
 
+def _fermant(html, depart, balise):
+    """L'indice du fermant qui referme VRAIMENT la balise ouverte, niveaux
+    comptés. -1 si le document s'achève avant."""
+    niveau, j = 1, depart
+    jeton = re.compile(r'<(/?)%s\b[^>]*>' % re.escape(balise))
+    while niveau:
+        t = jeton.search(html, j)
+        if not t:
+            return -1
+        niveau += -1 if t.group(1) else (0 if t.group(0).endswith("/>") else 1)
+        j = t.end()
+    return j - len(balise) - 3
+
+
+def _oter_marques(html):
+    """Le contenu des éléments marqués, retiré EN COMPTANT LES NIVEAUX.
+
+    « <(\\w+)[^>]*data-i18n=…>.*?</\\1> » s'arrêtait au PREMIER fermant du même
+    nom. Or le gabarit de l'application est
+
+        <span class="eyebrow" data-i18n="cr.regles"><span class="num">R</span>Règles appliquées</span>
+
+    et le « </span> » du numéro refermait le motif : « Règles appliquées »
+    ressortait, compté comme français non traduit alors qu'il l'était depuis
+    le début. Quatorze libellés étaient dans ce cas, et le plafond portait
+    donc quatorze dettes imaginaires — on aurait traduit sans voir le nombre
+    bouger, ce qui est la façon la plus sûre de faire abandonner un travail.
+
+    On compte les ouvrants et les fermants de même nom."""
+    out, i = [], 0
+    marque = re.compile(r'<(\w+)(?=[^>]*\sdata-i18n(?:-html)?=")[^>]*>')
+    while True:
+        m = marque.search(html, i)
+        if not m:
+            out.append(html[i:])
+            break
+        out.append(html[i:m.start()])
+        out.append(" ")
+        nom = m.group(1)
+        if m.group(0).endswith("/>"):
+            i = m.end()
+            continue
+        niveau, j = 1, m.end()
+        jeton = re.compile(r'<(/?)%s\b[^>]*>' % re.escape(nom))
+        while niveau and j < len(html):
+            t = jeton.search(html, j)
+            if not t:
+                j = len(html)
+                break
+            niveau += -1 if t.group(1) else (0 if t.group(0).endswith("/>") else 1)
+            j = t.end()
+        i = j
+    return "".join(out)
+
+
 def texte_visible(page):
     """Le texte FRANÇAIS encore visible à l'écran, morceau par morceau.
 
@@ -196,9 +267,22 @@ def texte_visible(page):
     sans = re.sub(r"<script\b.*?</script>", " ", page, flags=re.S | re.I)
     sans = re.sub(r"<style\b.*?</style>", " ", sans, flags=re.S | re.I)
     sans = re.sub(r"<!--.*?-->", " ", sans, flags=re.S)
+    # Le <title> est remplacé par traduire(), qui fait
+    # « document.title = L("page.titre") » : il est traduit, mais aucun
+    # data-i18n ne peut le marquer puisqu'on ne traduit pas son contenu mais
+    # la propriété du document. Le maillon ci-dessous vérifie que cette ligne
+    # existe toujours ; sans elle, ce retrait masquerait un vrai oubli.
+    sans = re.sub(r"<title\b.*?</title>", " ", sans, flags=re.S | re.I)
     # Retirer le CONTENU des éléments déjà marqués : ils sont traduits au
     # chargement, et les compter ferait stagner le nombre quoi qu'on traduise.
-    sans = re.sub(r"<(\w+)[^>]*data-i18n=\"[^\"]+\"[^>]*>.*?</\1>", " ", sans, flags=re.S)
+    #
+    # data-i18n-html AUSSI, et son oubli faisait exactement cela : onze blocs
+    # traduits — toute la présentation et la page « À propos » — restaient
+    # comptés comme français, parce que leur texte DOIT figurer dans la page
+    # pour s'afficher avant que langue.js ait tourné. Le nombre ne bougeait
+    # presque pas alors que le travail avançait, et un nombre qui ne suit pas
+    # le travail ne mesure pas le travail.
+    sans = _oter_marques(sans)
     sans = re.sub(r"<[^>]+>", "\n", sans)
     sans = sans.replace("&nbsp;", " ").replace("&amp;", "&").replace("&times;", " ")
     morceaux = [" ".join(l.split()) for l in sans.splitlines()]
@@ -320,7 +404,14 @@ def catalogue():
         for nom in ("fr", "en"):
             t = re.search(r'\b%s:\s*"((?:[^"\\]|\\.)*)"' % nom, champs, re.S)
             if t:
-                e[nom] = t.group(1)
+                # DÉFAIRE LES ÉCHAPPEMENTS. Le motif les traverse correctement
+                # mais les RESTITUE tels quels : « class=\\"ck\\" » arrivait avec
+                # ses barres, là où la page porte « class="ck" ». La
+                # confrontation page/catalogue criait à la divergence sur le
+                # premier bloc riche contenant un attribut HTML — c'est-à-dire
+                # sur tous ceux qui comptent.
+                e[nom] = (t.group(1).replace('\\"', '"').replace("\\n", "\n")
+                                    .replace("\\t", "\t").replace("\\\\", "\\"))
         e["meme"] = bool(re.search(r'\bmeme:\s*true', champs))
         out[cle] = e
     return out
@@ -381,10 +472,89 @@ def main():
                       "l'ignore, l'élément n'est jamais traduit, et rien ne le "
                       "signale." % ", ".join(sorted(set(fermantes))))
 
+    # --- LES BLOCS RICHES : LE MÊME FRANÇAIS À DEUX ENDROITS ---
+    #
+    # data-i18n-html remplace un bloc ENTIER, balisage compris : c'est ce qui
+    # permet de traduire un paragraphe où le gras porte une partie du sens,
+    # au lieu d'en découper douze fragments sans phrase.
+    #
+    # Mais la page doit s'afficher AVANT que langue.js ait tourné. Le
+    # français vit donc aux deux endroits — dans phenobac.html et dans le
+    # catalogue — et deux copies d'une même donnée divergent : on corrige une
+    # tournure dans la page, le catalogue garde l'ancienne, et au premier
+    # changement de langue le texte REVIENT EN ARRIÈRE sous les yeux du
+    # lecteur. C'est exactement la panne qui avait fait rendre « S » à l'écran
+    # pour un seuil que le rapport jugeait autrement.
+    #
+    # On confronte donc, bloc par bloc.
+    riches = re.findall(r'data-i18n-html="([\w.]+)"', page)
+    manquantes = sorted(set(k for k in riches if k not in C))
+    if manquantes:
+        ecarts.append("la page réclame des blocs riches absents du catalogue : %s — "
+                      "ils s'afficheraient entre crochets dès le premier changement "
+                      "de langue." % ", ".join(manquantes))
+
+    def _norm(t):
+        return re.sub(r"\s+", " ", t).strip()
+
+    divergent, relus = [], 0
+    for cle in riches:
+        if cle in manquantes:
+            continue
+        # « [a-zA-Z]+ » attrapait « h » dans « h1 » et cherchait « </h> » :
+        # le contrôle annonçait un bloc non refermé là où tout allait bien.
+        m = re.search(r'<([a-zA-Z][a-zA-Z0-9]*)([^>]*?)data-i18n-html="%s"([^>]*)>'
+                      % re.escape(cle), page)
+        if not m:
+            continue
+        balise, j = m.group(1), m.end()
+        # EN COMPTANT LES NIVEAUX. « page.find("</span>") » s'arrêtait au
+        # fermant du span IMBRIQUÉ — celui du compteur d'espèces, celui des
+        # zones remplies par le script — et le contrôle criait à la
+        # divergence sur deux blocs parfaitement identiques. Un contrôle qui
+        # crie à tort finit par être ignoré, ce qui revient à ne plus l'avoir.
+        fin = _fermant(page, j, balise)
+        if fin < 0:
+            ecarts.append("le bloc riche « %s » n'est pas refermé dans la page." % cle)
+            continue
+        relus += 1
+        if _norm(page[j:fin]) != _norm(C[cle].get("fr", "")):
+            divergent.append(cle)
+    if divergent:
+        ecarts.append("le HTML de la page et le français du catalogue ont divergé pour "
+                      "%s. Le lecteur verrait le texte CHANGER au premier basculement "
+                      "de langue, et revenir à une version qu'on croyait corrigée."
+                      % ", ".join(sorted(divergent)))
+
+    # Une entrée du catalogue est injectée par innerHTML. Elle vient d'un
+    # fichier de l'application, jamais d'une saisie — mais une règle qu'on ne
+    # vérifie pas n'est qu'une intention.
+    dangereuses = sorted(k for k in riches if k in C and any(
+        re.search(r"<\s*script|\son\w+\s*=", (C[k].get(l) or ""), re.I)
+        for l in ("fr", "en")))
+    if dangereuses:
+        ecarts.append("un bloc riche porte du script ou un gestionnaire d'événement : "
+                      "%s. Ces entrées sont injectées par innerHTML ; elles ne "
+                      "contiennent que de la mise en forme." % ", ".join(dangereuses))
+
+    if riches and not manquantes and not divergent and not dangereuses:
+        # Le compte est dit : un contrôle qui ne confronterait plus rien
+        # passerait au vert en silence.
+        dits.append("les %d blocs riches de la page disent le même français que le "
+                    "catalogue, et aucun ne porte de script." % relus)
+    elif not riches and "data-i18n-html" in page:
+        ecarts.append("phenobac.html contient « data-i18n-html » mais ce contrôle n'en "
+                      "relève aucun : l'écriture de l'attribut a changé et la "
+                      "confrontation page/catalogue ne se fait plus.")
+
     for maillon, pourquoi in (
             ('<script src="langue.js">', "le catalogue ne serait pas chargé"),
             ('id="langSwitch"', "il n'y aurait aucun moyen de changer de langue"),
             ("function traduire()", "les éléments marqués ne seraient jamais remplis"),
+            ('document.title = L("page.titre")',
+             "l'onglet du navigateur garderait son titre français, et le compteur de "
+             "texte visible — qui retire le <title> en comptant sur cette ligne — "
+             "cesserait de voir l'oubli"),
             ("avertirTraductionPartielle", "l'utilisateur anglophone ne serait pas "
              "averti que le commentaire clinique est encore en français")):
         if maillon not in page:
@@ -613,6 +783,95 @@ def main():
         else:
             dits.append("le niveau de confiance est affiché par son libellé, jamais par sa "
                         "clé : « confirmed » en anglais, « confirmé » en français.")
+
+    # --- LA TYPOGRAPHIE FRANÇAISE DANS UNE PHRASE ANGLAISE ---
+    #
+    # Le français met une espace devant « : », « ; », « ! », « ? », et des
+    # guillemets « ainsi ». L'anglais ne fait ni l'un ni l'autre, et une
+    # phrase anglaise qui garde ces usages se lit comme une traduction faite
+    # à la hâte — « EUCAST : Gentamicin » au lieu de « EUCAST: Gentamicin ».
+    #
+    # LE RECENSEMENT DE essai-langue.js NE PEUT PAS LE VOIR : il cherche des
+    # MOTS français, et il n'y a pas de mot ici. C'est un défaut qui ne se
+    # trouve qu'en le cherchant exprès.
+    typo = re.compile(r" [:;!?»]|« ")
+    fautives = []
+    for cle, e in sorted(C.items()):
+        if e.get("en") and typo.search(e["en"]):
+            fautives.append("catalogue:" + cle)
+    for m in re.finditer(r'tr\(\s*"(?:[^"\\]|\\.)*"\s*,\s*(?:\n\s*)?"((?:[^"\\]|\\.)*)"',
+                         moteur, re.S):
+        if typo.search(m.group(1)):
+            fautives.append("moteur.js:" + str(moteur.count("\n", 0, m.start()) + 1))
+    if fautives:
+        ecarts.append("%d phrase(s) anglaise(s) gardent la typographie française "
+                      "(espace avant « : », guillemets français) : %s. L'anglais n'en "
+                      "met pas, et le recensement par mots français ne peut pas le "
+                      "voir." % (len(fautives), ", ".join(fautives[:8])))
+    else:
+        dits.append("aucune phrase anglaise ne garde l'espace française devant les "
+                    "deux-points ni les guillemets français.")
+
+    # --- LES ÉTIQUETTES QUE LE SCRIPT DE LA PAGE FABRIQUE ---
+    #
+    # texte_visible() écarte les <script>, à bon droit : trois tentatives de
+    # balayage s'y sont cassées, et le compte a valu 618, 617, 758 puis 821
+    # sans qu'une ligne change. Mais le script ÉCRIT du texte visible — le
+    # verdict phénotypique, les degrés de gravité, les quatre niveaux
+    # d'alerte, « Pourquoi ce phénotype », « non testé ». Au navigateur, le
+    # 25 octobre 2026, le moteur rendait un MRSA entièrement en anglais dans
+    # un panneau dont toutes les étiquettes étaient restées françaises.
+    #
+    # ON NE POSE PAS DE PLAFOND SUR UN NOMBRE QUI NE SUIT PAS LE TRAVAIL :
+    # mesuré par chaines(), le script donne 529, dont des commentaires avalés
+    # et la table française des noms de molécules, qui a son pendant anglais
+    # dans le moteur. Un tel plafond ne retiendrait rien et se ferait lever.
+    #
+    # On garde donc une LISTE DE NON-RETOUR : les littéraux précis qui ont été
+    # traduits ici, et qui ne doivent pas revenir nus. C'est étroit, et cela
+    # ne prétend pas mesurer le reste — la mesure complète du texte engendré
+    # est un recensement au navigateur, qui n'est pas dans la chaîne.
+    # Chaque entrée est la forme NUE, celle d'avant la traduction. Elle doit
+    # être assez précise pour ne pas s'apparier avec le premier membre d'un
+    # T() — « "Alerte majeure" » existe toujours, à l'intérieur de T(), et
+    # l'y chercher ferait un contrôle qui crie toujours.
+    NON_RETOUR = [
+        '>Verdict phénotypique · $',
+        '>Pourquoi&nbsp;? — dérouler le raisonnement<',
+        '<div class="sect-t">Pourquoi ce phénotype',
+        '<div class="sect-t">Alertes &amp; cohérence<',
+        'crit:["!!","Alerte majeure"]',
+        'warn:["!","À vérifier"]',
+        'stop:["⊘","Interprétation impossible"]',
+        '${esc(x.txt)} — non testé</span>',
+        '} · base de connaissances $',
+        '<span>Pour trancher : $',
+        '<span>Confirmé par : $',
+        '<div class="ns-t">⊘ Interprétation automatique non sécurisée</div>',
+        'const sevLbl = SEV_LBL[A.sev];',
+        '<div class="sect-t">Lecture interprétative — résultat rendu<',
+        '"possible": ["poss", "Un élément discorde',
+        '<div class="sect-t">Résistances naturelles de cette espèce<',
+        '<div class="sect-t">Posologies qui fondent ces seuils<',
+        '>↥ Verser cet isolat à la surveillance<',
+        '⎙</span> Exporter le compte-rendu (PDF)<',
+        '<div class="poso-dit">Schémas employés',
+        '<div class="nat-dit">Attendues,',
+        '<div class="sect-t">Commentaire du compte-rendu<',
+        'id="copyBtn">Copier<',
+        '<span class="cr-m-x">Validation biologique requise.</span>',
+        '+ "pas un dispositif médical de diagnostic in vitro. Validation biologique requise.");',
+    ]
+    revenus = [t for t in NON_RETOUR if t in page]
+    if revenus:
+        ecarts.append("%d étiquette(s) du panneau d'interprétation sont redevenues "
+                      "françaises nues, sans passer par T() : %s. Le moteur rendrait "
+                      "son commentaire en anglais dans un cadre français."
+                      % (len(revenus), ", ".join(repr(t) for t in revenus[:5])))
+    else:
+        dits.append("les %d étiquettes du panneau d'interprétation passent toutes par "
+                    "T() — le cadre suit la langue du commentaire qu'il entoure."
+                    % len(NON_RETOUR))
 
     if ecarts:
         print("LE BILINGUISME EST ABÎMÉ :")
