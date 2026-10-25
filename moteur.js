@@ -116,6 +116,108 @@ function nomAbx(code) {
   return (_lang === "en" ? ABXNAME_EN[code] : ABXNAME[code]) || ABXNAME[code] || code;
 }
 
+/* ---------- LES PHRASES DE RÉSISTANCE NATURELLE ----------
+
+   Les valeurs de ORG[...].intrinsic sont des CITATIONS du document EUCAST
+   « Expected Resistant Phenotypes v1.2 », et outils/verifier-naturelles.py
+   les confronte à ce document : on n'y touche pas. Mais il y en a 101, pour
+   72 phrases distinctes, et elles ne sont pas 72 phrases : ce sont DEUX
+   morceaux assemblés —
+
+       « Résistance naturelle attendue — <agent>. »
+     + « EUCAST, phénotypes résistants attendus v1.2, règle <n>. »
+
+   Poser tr() sur chacune aurait demandé 72 paires, et la soixante-treizième
+   — celle qu'un ajout de règle fabriquera — serait arrivée MUETTE, rendue en
+   français au milieu d'un rapport anglais, sans que rien ne le signale.
+   On traduit donc les morceaux, et le banc outils/essai-langue.js vérifie
+   que CHAQUE phrase présente dans ORG se traduit entièrement. Une phrase
+   qu'on ne sait pas traduire fait ÉCHOUER le banc ; elle n'est jamais
+   devinée (§ 26 : on ne remplace pas une règle scientifique absente par une
+   valeur inventée — ici, par une traduction approchée). */
+const NATURELLE_QUEUE_FR = " EUCAST, phénotypes résistants attendus v1.2, règle ";
+const NATURELLE_QUEUE_EN = " EUCAST expected resistant phenotypes v1.2, rule ";
+
+// L'agent, tel qu'il est nommé dans « Résistance naturelle attendue — … ».
+const NATURELLE_AGENT_EN = {
+  "aminopénicilline + inhibiteur": "aminopenicillin plus inhibitor",
+  "aminopénicillines": "the aminopenicillins",
+  "aminosides": "the aminoglycosides",
+  "aminosides (bas niveau)": "the aminoglycosides (low level)",
+  "aminosides (bas niveau) ; la synergie avec les β-lactamines reste acquise":
+    "the aminoglycosides (low level); synergy with the beta-lactams is retained",
+  "ceftazidime": "ceftazidime",
+  "chloramphénicol": "chloramphenicol",
+  "ciprofloxacine": "ciprofloxacin",
+  "céfotaxime / ceftriaxone": "cefotaxime / ceftriaxone",
+  "céphalosporines (hors ceftazidime)": "the cephalosporins (ceftazidime excepted)",
+  "ertapénème": "ertapenem",
+  "fosfomycine": "fosfomycin",
+  "lincosamides": "the lincosamides",
+  "macrolides": "the macrolides",
+  "nitrofurantoïne": "nitrofurantoin",
+  "pipéracilline-tazobactam": "piperacillin-tazobactam",
+  "polymyxines": "the polymyxins",
+  "tétracyclines": "the tetracyclines"
+};
+
+// Les phrases qui ne suivent pas le gabarit « attendue — <agent> ».
+const NATURELLE_TETE_EN = {
+  "Céphalosporines / céphamycines naturellement inactives.":
+    "Cephalosporins and cephamycins intrinsically inactive.",
+  "Céphalosporines naturellement inactives (toutes, dont C3G).":
+    "Cephalosporins intrinsically inactive — all of them, the third generation included.",
+  "Résistance naturelle (AmpC non inhibée par le clavulanate).":
+    "Intrinsic resistance: an AmpC that clavulanate does not inhibit.",
+  "Résistance naturelle (AmpC).": "Intrinsic resistance (AmpC).",
+  "Résistance naturelle (carbapénémase L1) — carbapénème inactif in vivo.":
+    "Intrinsic resistance (the L1 carbapenemase) — the carbapenem is inactive in vivo.",
+  "Résistance naturelle (céphalosporinase AmpC chromosomique inductible).":
+    "Intrinsic resistance (an inducible chromosomal AmpC cephalosporinase).",
+  "Résistance naturelle (céphalosporinase AmpC chromosomique inductible) aux aminopénicillines.":
+    "Intrinsic resistance to the aminopenicillins (an inducible chromosomal AmpC cephalosporinase).",
+  "Résistance naturelle (céphalosporinase chromosomique K1) aux aminopénicillines.":
+    "Intrinsic resistance to the aminopenicillins (the chromosomal K1 cephalosporinase).",
+  "Résistance naturelle (pénicillinase SHV chromosomique) aux aminopénicillines.":
+    "Intrinsic resistance to the aminopenicillins (a chromosomal SHV penicillinase).",
+  "Résistance naturelle (pénicillinase chromosomique K1/OXY) aux aminopénicillines.":
+    "Intrinsic resistance to the aminopenicillins (the chromosomal K1/OXY penicillinase).",
+  "Résistance naturelle aux aminosides.": "Intrinsic resistance to the aminoglycosides.",
+  "Résistance naturelle aux carbapénèmes.": "Intrinsic resistance to the carbapenems.",
+  "Résistance naturelle aux polymyxines (colistine).":
+    "Intrinsic resistance to the polymyxins (colistin).",
+  "Résistance naturelle à la colistine (à ne pas rendre sensible).":
+    "Intrinsic resistance to colistin — never report it susceptible.",
+  "Résistance naturelle — l'acide clavulanique n'inhibe pas l'AmpC.":
+    "Intrinsic resistance — clavulanic acid does not inhibit AmpC."
+};
+
+/* La traduction anglaise d'une phrase de résistance naturelle, ou null si
+   on ne sait pas la traduire. RENDRE null PLUTÔT QUE LE FRANÇAIS est
+   délibéré : c'est ce qui permet au banc de distinguer « traduit » de
+   « laissé tel quel », et donc d'échouer. */
+function naturelleEn(fr) {
+  if (!fr) return fr;
+  let tete = fr, queue = "";
+  const i = fr.indexOf(NATURELLE_QUEUE_FR);
+  if (i >= 0) {
+    tete = fr.slice(0, i);
+    queue = NATURELLE_QUEUE_EN + fr.slice(i + NATURELLE_QUEUE_FR.length);
+  }
+  if (NATURELLE_TETE_EN[tete]) return NATURELLE_TETE_EN[tete] + queue;
+  const m = /^Résistance naturelle attendue — (.+)\.$/.exec(tete);
+  if (m && NATURELLE_AGENT_EN[m[1]]) {
+    return "Expected intrinsic resistance — " + NATURELLE_AGENT_EN[m[1]] + "." + queue;
+  }
+  return null;
+}
+
+// Ce que le rapport affiche : l'anglais quand on l'a, le français sinon —
+// visible, et le banc l'aura déjà signalé.
+function naturelle(fr) {
+  return _lang === "en" ? (naturelleEn(fr) || fr) : fr;
+}
+
 
 // concentrations critiques (valeurs par défaut, surchargées par bpOverride côté client)
 /* ============================================================
@@ -857,10 +959,16 @@ function coherence(A, r, org, c) {
          probablement fausse, le phénotype qu'on en tirerait l'est aussi —
          et un phénotype faux est plus dangereux qu'une absence de
          conclusion. On le dit, et on le dit AVANT le verdict. */
-      A.nonSecurise = `${contredites.length} résistances naturelles de cette espèce sont contredites (`
-        + contredites.map(k => nomAbx(k)).join(", ") + `). Une seule serait une erreur de saisie ; `
-        + `plusieurs ensemble évoquent une identification erronée. Reprendre l'identification avant `
-        + `d'interpréter cet antibiogramme : le phénotype ci-dessous ne vaut que si l'espèce est la bonne.`;
+      const listeContredites = contredites.map(k => nomAbx(k)).join(", ");
+      A.nonSecurise = tr(
+        `${contredites.length} résistances naturelles de cette espèce sont contredites (${listeContredites}). `
+        + `Une seule serait une erreur de saisie ; plusieurs ensemble évoquent une identification `
+        + `erronée. Reprendre l'identification avant d'interpréter cet antibiogramme : le phénotype `
+        + `ci-dessous ne vaut que si l'espèce est la bonne.`,
+        `${contredites.length} intrinsic resistances of this species are contradicted (${listeContredites}). `
+        + `One alone would be a data-entry error; several together suggest a wrong identification. `
+        + `Repeat the identification before interpreting this susceptibility test: the phenotype below `
+        + `holds only if the species is right.`);
       ajoute("stop", A.nonSecurise);
     }
   }
@@ -1579,7 +1687,8 @@ function finalize(A, r) {
     for (const k in org.intrinsic) {
       if (r[k] === "S") {
         A.alerts.push({ lvl: "warn",
-          txt: `Incohérence : ${nomAbx(k)} rendue S alors qu'une résistance naturelle est attendue. ${org.intrinsic[k]} Vérifier la saisie.` });
+          txt: tr(`Incohérence : ${nomAbx(k)} rendue S alors qu'une résistance naturelle est attendue. ${naturelle(org.intrinsic[k])} Vérifier la saisie.`,
+                  `Inconsistency: ${nomAbx(k)} reported S where intrinsic resistance is expected. ${naturelle(org.intrinsic[k])} Check the data entry.`) });
       }
     }
   }
@@ -1918,7 +2027,7 @@ function enteroInterpret(r, c, { amino, species, klebsiella, imipenemIntrinsic }
 
 function enterobacterInterpret(r, c, a) {
   const sp = (a && a.species) || "Enterobacter cloacae";
-  const A = { sev: "wild", name: "AmpC à bas niveau (phénotype de base)",
+  const A = { sev: "wild", name: tr("AmpC à bas niveau (phénotype de base)", "Low-level AmpC (baseline phenotype)"),
     mech: `${sp} exprime naturellement une céphalosporinase AmpC inductible.`, alerts: [], rules: [], comment: "" };
   const carba = ["ETP", "IPM", "MEM"].some(k => isRI(r[k]));
   const c3g = isRI(r.CTX) || isRI(r.CAZ);
@@ -1941,72 +2050,102 @@ function enterobacterInterpret(r, c, a) {
     if (estCasfm()) {
       const cb = carbaConfirmee(c);
       if (cb.confirmee) {
-        A.name = "Carbapénémase confirmée (sur fond d'AmpC)";
-        A.mech = "Carbapénémase confirmée chez une souche à AmpC naturelle. Le CA-SFM 2026 rend les carbapénèmes résistants quelles que soient les CMI.";
+        A.name = tr("Carbapénémase confirmée (sur fond d'AmpC)", "Confirmed carbapenemase (on an AmpC background)");
+        A.mech = tr("Carbapénémase confirmée chez une souche à AmpC naturelle. Le CA-SFM 2026 rend les carbapénèmes résistants quelles que soient les CMI.",
+                    "A confirmed carbapenemase in an isolate with a natural AmpC. CA-SFM 2026 reports carbapenems as resistant whatever the MICs.");
         A.rules = A.rules.filter(x => x.txt.indexOf("jusqu'à confirmation") === -1);
         rendreR(A, r, ["ETP", "IPM", "MEM"],
-          "Carbapénémase confirmée — CA-SFM 2026, chapitre 5.1 et annexe 5.");
-        A.rules.push({ k: "→R", txt: "CA-SFM : carbapénèmes rendus résistants quelles que soient les CMI." });
+          tr("Carbapénémase confirmée — CA-SFM 2026, chapitre 5.1 et annexe 5.",
+             "Confirmed carbapenemase — CA-SFM 2026, chapter 5.1 and appendix 5."));
+        A.rules.push({ k: "→R", txt: tr("CA-SFM : carbapénèmes rendus résistants quelles que soient les CMI.",
+          "CA-SFM: carbapenems reported resistant whatever the MICs.") });
         if (cb.oxa48) {
-          rendreR(A, r, ["CTX"], "OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.");
-          A.rules.push({ k: "→R", txt: "OXA-48 : céfotaxime et ceftriaxone rendus résistants." });
+          rendreR(A, r, ["CTX"], tr("OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.",
+            "OXA-48 — CA-SFM: cefotaxime and ceftriaxone reported resistant."));
+          A.rules.push({ k: "→R", txt: tr("OXA-48 : céfotaxime et ceftriaxone rendus résistants.",
+            "OXA-48: cefotaxime and ceftriaxone reported resistant.") });
         }
-        A.comment = `${sp} producteur d'une carbapénémase confirmée. Conformément au CA-SFM, les carbapénèmes sont rendus résistants quelles que soient les concentrations minimales inhibitrices. Souche à signaler.`;
+        A.comment = tr(`${sp} producteur d'une carbapénémase confirmée. Conformément au CA-SFM, les carbapénèmes sont rendus résistants quelles que soient les concentrations minimales inhibitrices. Souche à signaler.`,
+          `${sp} producing a confirmed carbapenemase. Following CA-SFM, carbapenems are reported resistant whatever the minimum inhibitory concentrations. Notifiable isolate.`);
       } else {
-        A.alerts.push({ lvl: "warn", txt: "CA-SFM : confirmez le mécanisme. Une carbapénémase confirmée fait rendre les carbapénèmes résistants quelles que soient les CMI." });
+        A.alerts.push({ lvl: "warn", txt: tr("CA-SFM : confirmez le mécanisme. Une carbapénémase confirmée fait rendre les carbapénèmes résistants quelles que soient les CMI.",
+          "CA-SFM: confirm the mechanism. A confirmed carbapenemase makes carbapenems reportable as resistant whatever the MICs.") });
       }
     }
   } else if (c3g) {
     if (c && c.syn === "Positif") {
-      A.sev = "crit"; A.name = "AmpC + BLSE surajoutée";
-      A.mech = "Résistance C3G avec synergie clavulanate positive : BLSE en plus de la céphalosporinase naturelle.";
+      A.sev = "crit"; A.name = tr("AmpC + BLSE surajoutée", "AmpC plus a superimposed ESBL");
+      A.mech = tr("Résistance C3G avec synergie clavulanate positive : BLSE en plus de la céphalosporinase naturelle.",
+                  "Third-generation cephalosporin resistance with a positive clavulanate synergy: an ESBL on top of the natural cephalosporinase.");
       parce(A, r, {
-        pour: [["CTX", "RI", "céfotaxime atteinte"],
-               ["CAZ", "RI", "ceftazidime atteinte"]],
+        pour: [["CTX", "RI", tr("céfotaxime atteinte", "cefotaxime affected")],
+               ["CAZ", "RI", tr("ceftazidime atteinte", "ceftazidime affected")]],
         // La céphalosporinase naturelle n'atteint pas le céfépime ; une BLSE,
         // si. C'est ce qui sépare les deux hypothèses une fois la synergie vue.
-        contre: [["FEP", "S", "céfépime conservé : attendu face à l'AmpC seule, plus surprenant si une BLSE s'y ajoute — vérifier la CMI"]],
-        confirme: "synergie C3G + acide clavulanique positive"
+        contre: [["FEP", "S", tr("céfépime conservé : attendu face à l'AmpC seule, plus surprenant si une BLSE s'y ajoute — vérifier la CMI",
+                                 "cefepime preserved: expected against AmpC alone, more surprising if an ESBL is added — check the MIC")]],
+        confirme: tr("synergie C3G + acide clavulanique positive", "a positive cephalosporin plus clavulanate synergy")
       });
-      A.rules.push({ k: "?", txt: "Céfépime souvent touché en cas de BLSE + AmpC — vérifier la CMI." });
+      A.rules.push({ k: "?", txt: tr("Céfépime souvent touché en cas de BLSE + AmpC — vérifier la CMI.",
+        "Cefepime is often affected when an ESBL joins an AmpC — check the MIC.") });
       if (estCasfm()) {
-        A.rules.push({ k: "→R", txt: "CA-SFM : lecture interprétative — pénicillines, C1G à C3G et aztréonam rendus R." });
-        rendreR(A, r, ["AMX", "AMP", "CTX", "CAZ"], "BLSE surajoutée — lecture interprétative du CA-SFM.");
-        A.comment = `${sp} producteur d'une BLSE surajoutée à sa céphalosporinase naturelle. Conformément au CA-SFM, pénicillines, C1G à C3G et aztréonam sont rendus résistants. Souche à signaler.`;
+        A.rules.push({ k: "→R", txt: tr("CA-SFM : lecture interprétative — pénicillines, C1G à C3G et aztréonam rendus R.",
+          "CA-SFM: interpretive reading — penicillins, 1st to 3rd generation cephalosporins and aztreonam reported R.") });
+        rendreR(A, r, ["AMX", "AMP", "CTX", "CAZ"], tr("BLSE surajoutée — lecture interprétative du CA-SFM.",
+          "Superimposed ESBL — CA-SFM interpretive reading."));
+        A.comment = tr(`${sp} producteur d'une BLSE surajoutée à sa céphalosporinase naturelle. Conformément au CA-SFM, pénicillines, C1G à C3G et aztréonam sont rendus résistants. Souche à signaler.`,
+          `${sp} producing an ESBL on top of its natural cephalosporinase. Following CA-SFM, penicillins, 1st to 3rd generation cephalosporins and aztreonam are reported resistant. Notifiable isolate.`);
       } else {
-        A.rules.push({ k: "=", txt: "EUCAST : pas de réinterprétation — céphalosporines et aztréonam rendus tels que testés." });
-        A.comment = `${sp} producteur d'une BLSE surajoutée à sa céphalosporinase naturelle. Conformément à l'EUCAST, les céphalosporines et l'aztréonam sont rendus tels qu'ils ont été testés. Souche à signaler.`;
+        A.rules.push({ k: "=", txt: tr("EUCAST : pas de réinterprétation — céphalosporines et aztréonam rendus tels que testés.",
+          "EUCAST: no reinterpretation — cephalosporins and aztreonam reported as tested.") });
+        A.comment = tr(`${sp} producteur d'une BLSE surajoutée à sa céphalosporinase naturelle. Conformément à l'EUCAST, les céphalosporines et l'aztréonam sont rendus tels qu'ils ont été testés. Souche à signaler.`,
+          `${sp} producing an ESBL on top of its natural cephalosporinase. Following EUCAST, cephalosporins and aztreonam are reported exactly as tested. Notifiable isolate.`);
       }
     } else {
-      A.sev = "high"; A.name = "Céphalosporinase déréprimée (AmpC hyperproduite)";
-      A.mech = "Résistance C3G sans synergie clavulanate : dérepression de l'AmpC chromosomique.";
+      A.sev = "high"; A.name = tr("Céphalosporinase déréprimée (AmpC hyperproduite)", "Derepressed cephalosporinase (AmpC overproduction)");
+      A.mech = tr("Résistance C3G sans synergie clavulanate : dérepression de l'AmpC chromosomique.",
+                  "Third-generation cephalosporin resistance with no clavulanate synergy: derepression of the chromosomal AmpC.");
       parce(A, r, {
-        pour: [["CTX", "RI", "céfotaxime atteinte"],
-               ["CAZ", "RI", "ceftazidime atteinte"],
-               ["AMC", "RI", "l'acide clavulanique ne restaure rien : il n'inhibe pas l'AmpC, à la différence d'une BLSE"]],
-        contre: [["FEP", "RI", "céfépime atteint : il est habituellement conservé face à une céphalosporinase — atteint, il évoque une BLSE surajoutée"]],
-        aConfirmerPar: "recherche de synergie C3G + acide clavulanique, pour écarter une BLSE surajoutée, et CMI du céfépime"
+        pour: [["CTX", "RI", tr("céfotaxime atteinte", "cefotaxime affected")],
+               ["CAZ", "RI", tr("ceftazidime atteinte", "ceftazidime affected")],
+               ["AMC", "RI", tr("l'acide clavulanique ne restaure rien : il n'inhibe pas l'AmpC, à la différence d'une BLSE",
+                                "clavulanic acid restores nothing: unlike with an ESBL, it does not inhibit AmpC")]],
+        contre: [["FEP", "RI", tr("céfépime atteint : il est habituellement conservé face à une céphalosporinase — atteint, il évoque une BLSE surajoutée",
+                                  "cefepime affected: it is usually preserved against a cephalosporinase, so being affected suggests a superimposed ESBL")]],
+        aConfirmerPar: tr("recherche de synergie C3G + acide clavulanique, pour écarter une BLSE surajoutée, et CMI du céfépime",
+          "a cephalosporin plus clavulanic acid synergy test, to rule out a superimposed ESBL, and a cefepime MIC")
       });
-      A.rules.push({ k: "?", txt: "Céfépime habituellement conservé (stable vis-à-vis de l'AmpC) — vérifier la CMI." });
+      A.rules.push({ k: "?", txt: tr("Céfépime habituellement conservé (stable vis-à-vis de l'AmpC) — vérifier la CMI.",
+        "Cefepime usually preserved, being stable to AmpC — check the MIC.") });
       if (estCasfm()) {
-        A.rules.push({ k: "→R", txt: "CA-SFM : lecture interprétative — C1G à C3G rendues R ; associations avec inhibiteur inefficaces." });
-        rendreR(A, r, ["AMX", "AMP", "AMC", "CTX", "CAZ"], "Céphalosporinase déréprimée — lecture interprétative du CA-SFM.");
+        A.rules.push({ k: "→R", txt: tr("CA-SFM : lecture interprétative — C1G à C3G rendues R ; associations avec inhibiteur inefficaces.",
+          "CA-SFM: interpretive reading — 1st to 3rd generation cephalosporins reported R; inhibitor combinations are ineffective.") });
+        rendreR(A, r, ["AMX", "AMP", "AMC", "CTX", "CAZ"], tr("Céphalosporinase déréprimée — lecture interprétative du CA-SFM.",
+          "Derepressed cephalosporinase — CA-SFM interpretive reading."));
       } else {
-        A.rules.push({ k: "=", txt: "EUCAST : pas de réinterprétation — céphalosporines rendues telles que testées ; associations avec inhibiteur inefficaces." });
+        A.rules.push({ k: "=", txt: tr("EUCAST : pas de réinterprétation — céphalosporines rendues telles que testées ; associations avec inhibiteur inefficaces.",
+          "EUCAST: no reinterpretation — cephalosporins reported as tested; inhibitor combinations are ineffective.") });
       }
-      A.comment = `${sp} exprimant une céphalosporinase déréprimée (AmpC hyperproduite). C3G résistantes, céfépime à interpréter selon la CMI. Attention au risque de sélection de mutants sous C3G.`;
+      A.comment = tr(`${sp} exprimant une céphalosporinase déréprimée (AmpC hyperproduite). C3G résistantes, céfépime à interpréter selon la CMI. Attention au risque de sélection de mutants sous C3G.`,
+        `${sp} expressing a derepressed cephalosporinase (AmpC overproduction). Third-generation cephalosporins resistant, cefepime to be interpreted on the MIC. Beware the risk of selecting mutants under third-generation cephalosporin treatment.`);
     }
   } else {
-    A.mech = "Phénotype AmpC inductible de base : C3G actives in vitro mais risque de dérepression sous traitement.";
+    A.mech = tr("Phénotype AmpC inductible de base : C3G actives in vitro mais risque de dérepression sous traitement.",
+                "Baseline inducible AmpC phenotype: third-generation cephalosporins active in vitro, but derepression may occur under treatment.");
     // Conclure « pas de dérepression » SANS avoir testé une C3G n'est pas une
     // conclusion : parce() range la molécule non testée et rend « possible ».
     parce(A, r, {
-      pour: [["CTX", "S", "céfotaxime conservée : l'AmpC naturelle reste réprimée"],
-             ["CAZ", "S", "ceftazidime conservée — c'est elle que la dérepression touche le plus vite"]],
-      aConfirmerPar: "aucun test ne confirme l'absence de dérepression : c'est le traitement par C3G qui la révélerait, d'où la surveillance"
+      pour: [["CTX", "S", tr("céfotaxime conservée : l'AmpC naturelle reste réprimée",
+                             "cefotaxime preserved: the natural AmpC remains repressed")],
+             ["CAZ", "S", tr("ceftazidime conservée — c'est elle que la dérepression touche le plus vite",
+                             "ceftazidime preserved — it is the first to be affected by derepression")]],
+      aConfirmerPar: tr("aucun test ne confirme l'absence de dérepression : c'est le traitement par C3G qui la révélerait, d'où la surveillance",
+        "no test confirms the absence of derepression: third-generation cephalosporin treatment is what would reveal it, hence the monitoring")
     });
-    A.alerts.push({ lvl: "info", txt: "Sous C3G, risque de sélection de mutants déréprimés : surveillance recommandée." });
-    A.comment = `${sp} de phénotype AmpC inductible sans dérepression détectée. Prudence avec les C3G (risque d'échappement par dérepression).`;
+    A.alerts.push({ lvl: "info", txt: tr("Sous C3G, risque de sélection de mutants déréprimés : surveillance recommandée.",
+      "Under third-generation cephalosporins, derepressed mutants may be selected: monitoring is advised.") });
+    A.comment = tr(`${sp} de phénotype AmpC inductible sans dérepression détectée. Prudence avec les C3G (risque d'échappement par dérepression).`,
+      `${sp} with an inducible AmpC phenotype and no derepression detected. Use third-generation cephalosporins with caution: derepression may allow escape.`);
   }
   return finalize(A, r);
 }
@@ -2352,7 +2491,8 @@ function acinetoInterpret(r, c) {
 function proteusInterpret(r, c, a) {
   const sp = (a && a.species) || "Proteus mirabilis";
   const A = enteroInterpret(r, c, { amino: "AMX", species: sp, imipenemIntrinsic: true });
-  A.alerts.push({ lvl: "info", txt: `Rappel : ${sp} est naturellement résistant à la colistine, aux tétracyclines, à la tigécycline et à la nitrofurantoïne (à ne pas rendre sensibles).` });
+  A.alerts.push({ lvl: "info", txt: tr(`Rappel : ${sp} est naturellement résistant à la colistine, aux tétracyclines, à la tigécycline et à la nitrofurantoïne (à ne pas rendre sensibles).`,
+    `Reminder: ${sp} is intrinsically resistant to colistin, the tetracyclines, tigecycline and nitrofurantoin — never report them susceptible.`) });
   if (r.IPM === "I" && !isRI(r.MEM) && !isRI(r.ETP)) {
     A.alerts.push({ lvl: "info", txt: "Imipénème « I » isolé : sensibilité naturellement diminuée chez Proteus, sans valeur de carbapénémase. Se fier au méropénème." });
   }
@@ -2365,10 +2505,13 @@ function salmonellaInterpret(r, c) {
   const fqLow = isRI(r.PEF) || r.CIP === "I";
   const fqHigh = r.CIP === "R";
   if (fqHigh) {
-    if (A.sev === "wild" || A.sev === "mod") { A.sev = "high"; A.name = "Résistance aux fluoroquinolones"; }
-    A.alerts.push({ lvl: "warn", txt: "Ciprofloxacine R : ne pas utiliser les fluoroquinolones en cas de fièvre typhoïde / infection invasive." });
-    A.rules.push({ k: "✕", txt: "Fluoroquinolones à proscrire (échec clinique documenté sur les infections invasives à Salmonella)." });
-    A.comment += " Résistance aux fluoroquinolones : privilégier C3G ou azithromycine selon le site.";
+    if (A.sev === "wild" || A.sev === "mod") { A.sev = "high"; A.name = tr("Résistance aux fluoroquinolones", "Fluoroquinolone resistance"); }
+    A.alerts.push({ lvl: "warn", txt: tr("Ciprofloxacine R : ne pas utiliser les fluoroquinolones en cas de fièvre typhoïde / infection invasive.",
+      "Ciprofloxacin R: do not use the fluoroquinolones in typhoid fever or invasive infection.") });
+    A.rules.push({ k: "✕", txt: tr("Fluoroquinolones à proscrire (échec clinique documenté sur les infections invasives à Salmonella).",
+      "The fluoroquinolones are contraindicated: clinical failure is documented in invasive Salmonella infection.") });
+    A.comment += tr(" Résistance aux fluoroquinolones : privilégier C3G ou azithromycine selon le site.",
+      " Fluoroquinolone resistance: prefer a third-generation cephalosporin or azithromycin, according to the site.");
   } else if (fqLow) {
     if (A.sev === "wild") { A.sev = "mod"; A.name = "Résistance de bas niveau aux fluoroquinolones"; }
     // C'EST LE CAS OÙ L'EXPLICATION COMPTE LE PLUS : l'antibiogramme peut
@@ -2385,7 +2528,8 @@ function salmonellaInterpret(r, c) {
     A.comment += " Résistance de bas niveau aux fluoroquinolones détectée (dépistage péfloxacine) : fluoroquinolones déconseillées, préférer C3G ou azithromycine.";
   }
 
-  A.alerts.push({ lvl: "info", txt: "Rappel Salmonella : aminosides et C1G/C2G actifs in vitro mais inefficaces in vivo — ne pas les proposer pour une infection systémique." });
+  A.alerts.push({ lvl: "info", txt: tr("Rappel Salmonella : aminosides et C1G/C2G actifs in vitro mais inefficaces in vivo — ne pas les proposer pour une infection systémique.",
+    "Salmonella reminder: aminoglycosides and 1st/2nd generation cephalosporins are active in vitro but ineffective in vivo — do not offer them for systemic infection.") });
   return A;
 }
 
@@ -2553,53 +2697,73 @@ function strepInterpret(r, c, a) {
 function stenoburkInterpret(r, c, a) {
   const sp = (a && a.species) || "Bacille non fermentant";
   const type = (a && a.type) || "steno";
-  const A = { sev: "high", name: `${sp} — multirésistance naturelle`, mech: "", alerts: [], rules: [], comment: "" };
+  const A = { sev: "high", name: tr(`${sp} — multirésistance naturelle`, `${sp} — intrinsic multidrug resistance`),
+              mech: "", alerts: [], rules: [], comment: "" };
 
   if (type === "steno") {
-    A.mech = "Stenotrophomonas maltophilia : deux β-lactamases chromosomiques (L1 métallo-carbapénémase + L2 céphalosporinase) et résistance naturelle aux aminosides.";
-    A.rules.push({ k: "✕", txt: "Carbapénèmes intrinsèquement inactifs (L1) — ne pas utiliser même si « S » in vitro." });
-    A.rules.push({ k: "✕", txt: "Aminosides naturellement inactifs." });
-    A.rules.push({ k: "✚", txt: "Cotrimoxazole = référence ; alternatives : lévofloxacine, minocycline, ceftazidime (selon CMI)." });
+    A.mech = tr("Stenotrophomonas maltophilia : deux β-lactamases chromosomiques (L1 métallo-carbapénémase + L2 céphalosporinase) et résistance naturelle aux aminosides.",
+                "Stenotrophomonas maltophilia: two chromosomal beta-lactamases (the L1 metallo-carbapenemase and the L2 cephalosporinase) and intrinsic resistance to the aminoglycosides.");
+    A.rules.push({ k: "✕", txt: tr("Carbapénèmes intrinsèquement inactifs (L1) — ne pas utiliser même si « S » in vitro.",
+      "Carbapenems intrinsically inactive (L1) — do not use them even when they test \u0022S\u0022 in vitro.") });
+    A.rules.push({ k: "✕", txt: tr("Aminosides naturellement inactifs.", "Aminoglycosides intrinsically inactive.") });
+    A.rules.push({ k: "✚", txt: tr("Cotrimoxazole = référence ; alternatives : lévofloxacine, minocycline, ceftazidime (selon CMI).",
+      "Co-trimoxazole is the reference treatment; alternatives are levofloxacin, minocycline and ceftazidime, on the MIC.") });
     // Ici l'argument n'est pas une résistance acquise : c'est que le
     // traitement de référence tient encore. Le reste du profil est naturel,
     // et l'invoquer comme argument ferait passer l'espèce pour résistante.
     parce(A, r, {
-      pour: [["SXT", "S", "cotrimoxazole actif — c'est le traitement de référence de cette espèce"]],
-      contre: [["SXT", "R", "cotrimoxazole résistant : le traitement de référence tombe, avis référent indispensable"],
-               ["IPM", "S", "imipénème rendu sensible : la carbapénémase L1 est NATURELLE chez cette espèce — ne pas s'y fier"]],
-      aConfirmerPar: "CMI du cotrimoxazole et de la lévofloxacine si le traitement de référence est mis en défaut"
+      pour: [["SXT", "S", tr("cotrimoxazole actif — c'est le traitement de référence de cette espèce",
+                             "co-trimoxazole active — it is the reference treatment for this species")]],
+      contre: [["SXT", "R", tr("cotrimoxazole résistant : le traitement de référence tombe, avis référent indispensable",
+                               "co-trimoxazole resistant: the reference treatment is lost, specialist advice is essential")],
+               ["IPM", "S", tr("imipénème rendu sensible : la carbapénémase L1 est NATURELLE chez cette espèce — ne pas s'y fier",
+                               "imipenem reported susceptible: the L1 carbapenemase is INTRINSIC in this species — do not rely on it")]],
+      aConfirmerPar: tr("CMI du cotrimoxazole et de la lévofloxacine si le traitement de référence est mis en défaut",
+        "co-trimoxazole and levofloxacin MICs if the reference treatment is in doubt")
     });
-    A.comment = "Stenotrophomonas maltophilia : multirésistance naturelle. Les carbapénèmes et les aminosides sont naturellement inactifs (à ne pas rendre sensibles). Le cotrimoxazole est le traitement de référence.";
+    A.comment = tr("Stenotrophomonas maltophilia : multirésistance naturelle. Les carbapénèmes et les aminosides sont naturellement inactifs (à ne pas rendre sensibles). Le cotrimoxazole est le traitement de référence.",
+      "Stenotrophomonas maltophilia: intrinsic multidrug resistance. Carbapenems and aminoglycosides are intrinsically inactive and must never be reported susceptible. Co-trimoxazole is the reference treatment.");
     if (isR(r.SXT)) {
       A.sev = "crit";
-      A.alerts.push({ lvl: "crit", txt: "Cotrimoxazole résistant : perte du traitement de référence — avis référent en antibiothérapie indispensable." });
-      A.comment += " Cotrimoxazole résistant : options très limitées, avis spécialisé.";
+      A.alerts.push({ lvl: "crit", txt: tr("Cotrimoxazole résistant : perte du traitement de référence — avis référent en antibiothérapie indispensable.",
+        "Co-trimoxazole resistant: the reference treatment is lost — specialist antimicrobial advice is essential.") });
+      A.comment += tr(" Cotrimoxazole résistant : options très limitées, avis spécialisé.",
+        " Co-trimoxazole resistant: options are very limited, seek specialist advice.");
     }
-    A.alerts.push({ lvl: "info", txt: "Colistine : activité inconstante sur S. maltophilia — ne pas s'y fier." });
+    A.alerts.push({ lvl: "info", txt: tr("Colistine : activité inconstante sur S. maltophilia — ne pas s'y fier.",
+      "Colistin: activity against S. maltophilia is inconsistent — do not rely on it.") });
   } else {
-    A.mech = "Burkholderia cepacia : résistance naturelle aux aminosides et aux polymyxines (colistine), et à de nombreux β-lactames.";
-    A.rules.push({ k: "✕", txt: "Colistine / polymyxines intrinsèquement inactives — ne jamais rendre sensibles." });
-    A.rules.push({ k: "✕", txt: "Aminosides naturellement inactifs." });
-    A.rules.push({ k: "✚", txt: "Options : cotrimoxazole, ceftazidime, méropénème, minocycline (selon CMI)." });
+    A.mech = tr("Burkholderia cepacia : résistance naturelle aux aminosides et aux polymyxines (colistine), et à de nombreux β-lactames.",
+                "Burkholderia cepacia: intrinsic resistance to the aminoglycosides, to the polymyxins (colistin) and to many beta-lactams.");
+    A.rules.push({ k: "✕", txt: tr("Colistine / polymyxines intrinsèquement inactives — ne jamais rendre sensibles.",
+      "Colistin and the polymyxins intrinsically inactive — never report them susceptible.") });
+    A.rules.push({ k: "✕", txt: tr("Aminosides naturellement inactifs.", "Aminoglycosides intrinsically inactive.") });
+    A.rules.push({ k: "✚", txt: tr("Options : cotrimoxazole, ceftazidime, méropénème, minocycline (selon CMI).",
+      "Options: co-trimoxazole, ceftazidime, meropenem and minocycline, on the MIC.") });
     parce(A, r, {
-      pour: [["SXT", "S", "cotrimoxazole actif"],
-             ["CAZ", "S", "ceftazidime active"],
-             ["MEM", "S", "méropénème actif"]],
-      contre: [["COL", "S", "colistine rendue sensible : la résistance aux polymyxines est NATURELLE chez cette espèce — ne jamais la rendre sensible"]],
-      aConfirmerPar: "CMI des options retenues : chez Burkholderia, le rendu catégoriel par diffusion est peu fiable"
+      pour: [["SXT", "S", tr("cotrimoxazole actif", "co-trimoxazole active")],
+             ["CAZ", "S", tr("ceftazidime active", "ceftazidime active")],
+             ["MEM", "S", tr("méropénème actif", "meropenem active")]],
+      contre: [["COL", "S", tr("colistine rendue sensible : la résistance aux polymyxines est NATURELLE chez cette espèce — ne jamais la rendre sensible",
+                               "colistin reported susceptible: polymyxin resistance is INTRINSIC in this species — never report it susceptible")]],
+      aConfirmerPar: tr("CMI des options retenues : chez Burkholderia, le rendu catégoriel par diffusion est peu fiable",
+        "MICs for the options chosen: in Burkholderia, categorical reporting by disc diffusion is unreliable")
     });
-    A.comment = "Burkholderia cepacia : multirésistance naturelle. Colistine et aminosides naturellement inactifs (à ne pas rendre sensibles). Options : cotrimoxazole, ceftazidime, méropénème, minocycline selon la CMI.";
+    A.comment = tr("Burkholderia cepacia : multirésistance naturelle. Colistine et aminosides naturellement inactifs (à ne pas rendre sensibles). Options : cotrimoxazole, ceftazidime, méropénème, minocycline selon la CMI.",
+      "Burkholderia cepacia: intrinsic multidrug resistance. Colistin and the aminoglycosides are intrinsically inactive and must never be reported susceptible. Options: co-trimoxazole, ceftazidime, meropenem and minocycline, on the MIC.");
     if (isR(r.SXT) && isRI(r.CAZ) && isRI(r.MEM)) {
       A.sev = "crit";
-      A.alerts.push({ lvl: "crit", txt: "Cotrimoxazole, ceftazidime et méropénème inactifs : impasse thérapeutique — avis référent indispensable." });
+      A.alerts.push({ lvl: "crit", txt: tr("Cotrimoxazole, ceftazidime et méropénème inactifs : impasse thérapeutique — avis référent indispensable.",
+        "Co-trimoxazole, ceftazidime and meropenem all inactive: a therapeutic dead end — specialist advice is essential.") });
     }
   }
-  A.alerts.push({ lvl: "warn", txt: "Précautions complémentaires contact ; germe d'intérêt en réanimation et mucoviscidose." });
+  A.alerts.push({ lvl: "warn", txt: tr("Précautions complémentaires contact ; germe d'intérêt en réanimation et mucoviscidose.",
+    "Contact precautions; an organism of concern in intensive care and in cystic fibrosis.") });
   return finalize(A, r);
 }
 
 function fastidInterpret(r, c, a) {
-  const sp = (a && a.species) || "Bactérie exigeante";
+  const sp = (a && a.species) || tr("Bactérie exigeante", "Fastidious organism");
   const type = (a && a.type) || "haemophilus";
   const A = { sev: "wild", name: "", mech: "", alerts: [], rules: [], comment: "" };
   const blac = c && c.blac;
@@ -2609,141 +2773,191 @@ function fastidInterpret(r, c, a) {
     const amcR = isRI(r.AMC);
     if (blac === "Positif") {
       if (amcR) {
-        A.sev = "high"; A.name = "BLPACR (β-lactamase + PLP3)";
-        A.mech = "Double mécanisme : β-lactamase ET modification de PLP3 (ftsI).";
+        A.sev = "high"; A.name = tr("BLPACR (β-lactamase + PLP3)", "BLPACR (beta-lactamase + altered PBP3)");
+        A.mech = tr("Double mécanisme : β-lactamase ET modification de PLP3 (ftsI).",
+                    "Two mechanisms at once: a beta-lactamase AND an altered PBP3 (ftsI).");
         parce(A, r, {
-          pour: [["AMP", "RI", "ampicilline atteinte"],
-                 ["AMC", "RI", "l'association avec le clavulanate reste atteinte : l'inhibiteur ne restaure pas tout, donc une PLP3 modifiée s'ajoute à l'enzyme"]],
-          confirme: "test à la β-lactamase (nitrocéfine) positif"
+          pour: [["AMP", "RI", tr("ampicilline atteinte", "ampicillin affected")],
+                 ["AMC", "RI", tr("l'association avec le clavulanate reste atteinte : l'inhibiteur ne restaure pas tout, donc une PLP3 modifiée s'ajoute à l'enzyme",
+                                  "the clavulanate combination is still affected: the inhibitor does not restore everything, so an altered PBP3 is present on top of the enzyme")]],
+          confirme: tr("test à la β-lactamase (nitrocéfine) positif", "a positive beta-lactamase (nitrocefin) test")
         });
-        A.rules.push({ k: "→R", txt: "Aminopénicillines et associations avec inhibiteur R ; sensibilité aux C3G diminuée — vérifier la CMI de céfotaxime." });
-        A.comment = `${sp} BLPACR (β-lactamase + PLP3 modifiée). Aminopénicillines et amoxicilline-clavulanate résistantes ; C3G à interpréter selon la CMI.`;
+        A.rules.push({ k: "→R", txt: tr("Aminopénicillines et associations avec inhibiteur R ; sensibilité aux C3G diminuée — vérifier la CMI de céfotaxime.",
+          "Aminopenicillins and inhibitor combinations R; reduced susceptibility to third-generation cephalosporins — check the cefotaxime MIC.") });
+        A.comment = tr(`${sp} BLPACR (β-lactamase + PLP3 modifiée). Aminopénicillines et amoxicilline-clavulanate résistantes ; C3G à interpréter selon la CMI.`,
+          `${sp}, BLPACR (beta-lactamase plus altered PBP3). Aminopenicillins and amoxicillin-clavulanate resistant; interpret third-generation cephalosporins on the MIC.`);
       } else {
-        A.sev = "mod"; A.name = "BLPAR (β-lactamase +)";
-        A.mech = "β-lactamase (TEM-1 le plus souvent) : aminopénicillines hydrolysées, restaurées par le clavulanate.";
+        A.sev = "mod"; A.name = tr("BLPAR (β-lactamase +)", "BLPAR (beta-lactamase positive)");
+        A.mech = tr("β-lactamase (TEM-1 le plus souvent) : aminopénicillines hydrolysées, restaurées par le clavulanate.",
+                    "A beta-lactamase, usually TEM-1: aminopenicillins are hydrolysed and restored by clavulanate.");
         parce(A, r, {
-          pour: [["AMP", "RI", "ampicilline atteinte — l'enzyme l'hydrolyse"],
-                 ["AMC", "S", "le clavulanate restaure l'activité : c'est la signature d'une β-lactamase seule"]],
-          confirme: "test à la β-lactamase (nitrocéfine) positif"
+          pour: [["AMP", "RI", tr("ampicilline atteinte — l'enzyme l'hydrolyse", "ampicillin affected — the enzyme hydrolyses it")],
+                 ["AMC", "S", tr("le clavulanate restaure l'activité : c'est la signature d'une β-lactamase seule",
+                                 "clavulanate restores activity: that is the signature of a beta-lactamase alone")]],
+          confirme: tr("test à la β-lactamase (nitrocéfine) positif", "a positive beta-lactamase (nitrocefin) test")
         });
-        A.rules.push({ k: "→R", txt: "Ampicilline / amoxicilline R ; amoxicilline-clavulanate et C3G actives." });
-        A.comment = `${sp} producteur de β-lactamase (BLPAR). Ampicilline/amoxicilline résistantes ; amoxicilline-clavulanate et céphalosporines de 3e génération actives.`;
+        A.rules.push({ k: "→R", txt: tr("Ampicilline / amoxicilline R ; amoxicilline-clavulanate et C3G actives.",
+          "Ampicillin and amoxicillin R; amoxicillin-clavulanate and third-generation cephalosporins active.") });
+        A.comment = tr(`${sp} producteur de β-lactamase (BLPAR). Ampicilline/amoxicilline résistantes ; amoxicilline-clavulanate et céphalosporines de 3e génération actives.`,
+          `${sp} producing a beta-lactamase (BLPAR). Ampicillin and amoxicillin resistant; amoxicillin-clavulanate and third-generation cephalosporins active.`);
       }
     } else if (ampR) {
       if (amcR || blac === "Négatif") {
-        A.sev = "high"; A.name = "BLNAR (PLP3 modifiée)";
-        A.mech = "Résistance à l'ampicilline sans β-lactamase : modification de PLP3 (ftsI). Le clavulanate ne restaure pas l'activité.";
+        A.sev = "high"; A.name = tr("BLNAR (PLP3 modifiée)", "BLNAR (altered PBP3)");
+        A.mech = tr("Résistance à l'ampicilline sans β-lactamase : modification de PLP3 (ftsI). Le clavulanate ne restaure pas l'activité.",
+                    "Ampicillin resistance without a beta-lactamase: an altered PBP3 (ftsI). Clavulanate does not restore activity.");
         parce(A, r, {
-          pour: [["AMP", "RI", "ampicilline atteinte"],
-                 ["AMC", "RI", "le clavulanate ne restaure rien : la cible est modifiée, il n'y a pas d'enzyme à inhiber"]],
-          confirme: blac === "Négatif" ? "test à la β-lactamase (nitrocéfine) négatif" : null,
-          aConfirmerPar: blac === "Négatif" ? null : "test à la β-lactamase (nitrocéfine), qui sépare ce phénotype d'une β-lactamase"
+          pour: [["AMP", "RI", tr("ampicilline atteinte", "ampicillin affected")],
+                 ["AMC", "RI", tr("le clavulanate ne restaure rien : la cible est modifiée, il n'y a pas d'enzyme à inhiber",
+                                  "clavulanate restores nothing: the target is altered, there is no enzyme to inhibit")]],
+          confirme: blac === "Négatif" ? tr("test à la β-lactamase (nitrocéfine) négatif", "a negative beta-lactamase (nitrocefin) test") : null,
+          aConfirmerPar: blac === "Négatif" ? null : tr("test à la β-lactamase (nitrocéfine), qui sépare ce phénotype d'une β-lactamase",
+            "a beta-lactamase (nitrocefin) test, which separates this phenotype from a beta-lactamase")
         });
-        A.rules.push({ k: "→R", txt: "Aminopénicillines R ; associations avec inhibiteur peu fiables ; sensibilité aux C3G diminuée — vérifier la CMI." });
-        A.alerts.push({ lvl: "warn", txt: "BLNAR : privilégier une C3G (céfotaxime/ceftriaxone) pour les formes invasives, après vérification de la CMI." });
-        A.comment = `${sp} BLNAR (PLP3 modifiée, β-lactamase négative). Aminopénicillines résistantes non restaurées par le clavulanate ; C3G selon la CMI.`;
+        A.rules.push({ k: "→R", txt: tr("Aminopénicillines R ; associations avec inhibiteur peu fiables ; sensibilité aux C3G diminuée — vérifier la CMI.",
+          "Aminopenicillins R; inhibitor combinations unreliable; reduced susceptibility to third-generation cephalosporins — check the MIC.") });
+        A.alerts.push({ lvl: "warn", txt: tr("BLNAR : privilégier une C3G (céfotaxime/ceftriaxone) pour les formes invasives, après vérification de la CMI.",
+          "BLNAR: prefer a third-generation cephalosporin (cefotaxime or ceftriaxone) for invasive disease, after checking the MIC.") });
+        A.comment = tr(`${sp} BLNAR (PLP3 modifiée, β-lactamase négative). Aminopénicillines résistantes non restaurées par le clavulanate ; C3G selon la CMI.`,
+          `${sp}, BLNAR (altered PBP3, beta-lactamase negative). Aminopenicillins resistant and not restored by clavulanate; third-generation cephalosporins on the MIC.`);
       } else {
-        A.sev = "mod"; A.name = "Ampicilline R — mécanisme à préciser";
+        A.sev = "mod"; A.name = tr("Ampicilline R — mécanisme à préciser", "Ampicillin R — mechanism undetermined");
         parce(A, r, {
-          pour: [["AMP", "RI", "ampicilline atteinte"],
-                 ["AMC", "S", "le clavulanate restaure l'activité, ce qui oriente vers une β-lactamase — mais sans la nitrocéfine, ce n'est qu'une orientation"]],
-          aConfirmerPar: "test à la β-lactamase (nitrocéfine) : c'est lui qui sépare BLPAR de BLNAR, et les deux ne se traitent pas de la même façon"
+          pour: [["AMP", "RI", tr("ampicilline atteinte", "ampicillin affected")],
+                 ["AMC", "S", tr("le clavulanate restaure l'activité, ce qui oriente vers une β-lactamase — mais sans la nitrocéfine, ce n'est qu'une orientation",
+                                 "clavulanate restores activity, which points to a beta-lactamase — but without the nitrocefin test this is only a pointer")]],
+          aConfirmerPar: tr("test à la β-lactamase (nitrocéfine) : c'est lui qui sépare BLPAR de BLNAR, et les deux ne se traitent pas de la même façon",
+            "a beta-lactamase (nitrocefin) test: it is what separates BLPAR from BLNAR, and the two are not treated the same way")
         });
-        A.alerts.push({ lvl: "info", txt: "Réaliser le test à la β-lactamase (nitrocéfine) pour distinguer BLPAR de BLNAR." });
-        A.comment = `${sp} : ampicilline résistante, mécanisme à préciser (test β-lactamase recommandé).`;
+        A.alerts.push({ lvl: "info", txt: tr("Réaliser le test à la β-lactamase (nitrocéfine) pour distinguer BLPAR de BLNAR.",
+          "Perform the beta-lactamase (nitrocefin) test to tell BLPAR from BLNAR.") });
+        A.comment = tr(`${sp} : ampicilline résistante, mécanisme à préciser (test β-lactamase recommandé).`,
+          `${sp}: ampicillin resistant, mechanism undetermined (a beta-lactamase test is recommended).`);
       }
     } else {
-      A.name = `${sp} — sensible à l'ampicilline`;
-      A.mech = "Pas de β-lactamase ni de modification de PLP détectée.";
+      A.name = tr(`${sp} — sensible à l'ampicilline`, `${sp} — ampicillin-susceptible`);
+      A.mech = tr("Pas de β-lactamase ni de modification de PLP détectée.",
+                  "Neither a beta-lactamase nor an altered penicillin-binding protein detected.");
       parce(A, r, {
-        pour: [["AMP", "S", "ampicilline active : ni β-lactamase, ni PLP3 modifiée"],
-               ["AMC", "S", "association clavulanique active"]]
+        pour: [["AMP", "S", tr("ampicilline active : ni β-lactamase, ni PLP3 modifiée",
+                               "ampicillin active: no beta-lactamase and no altered PBP3")],
+               ["AMC", "S", tr("association clavulanique active", "the clavulanate combination is active")]]
       });
-      A.comment = `${sp} sensible à l'ampicilline (souche sauvage).`;
+      A.comment = tr(`${sp} sensible à l'ampicilline (souche sauvage).`, `${sp} susceptible to ampicillin (wild type).`);
     }
-    if (isRI(r.CTX)) A.alerts.push({ lvl: "warn", txt: "Sensibilité diminuée au céfotaxime : inhabituel — vérifier la CMI (BLNAR/BLPACR de haut niveau)." });
-    A.alerts.push({ lvl: "info", txt: "Formes invasives / méningite : C3G (céfotaxime, ceftriaxone) = référence." });
+    if (isRI(r.CTX)) A.alerts.push({ lvl: "warn", txt: tr("Sensibilité diminuée au céfotaxime : inhabituel — vérifier la CMI (BLNAR/BLPACR de haut niveau).",
+      "Reduced cefotaxime susceptibility: unusual — check the MIC (high-level BLNAR or BLPACR).") });
+    A.alerts.push({ lvl: "info", txt: tr("Formes invasives / méningite : C3G (céfotaxime, ceftriaxone) = référence.",
+      "Invasive disease and meningitis: a third-generation cephalosporin (cefotaxime, ceftriaxone) is the reference treatment.") });
   }
 
   else if (type === "meningitidis") {
     const penRI = isRI(r.PEN) || isRI(r.AMX);
     if (penRI) {
-      A.sev = "mod"; A.name = "Sensibilité diminuée à la pénicilline (penA/PLP2)";
-      A.mech = "Modification de PLP2 : sensibilité diminuée à la pénicilline G et à l'amoxicilline.";
+      A.sev = "mod"; A.name = tr("Sensibilité diminuée à la pénicilline (penA/PLP2)", "Reduced penicillin susceptibility (penA / PBP2)");
+      A.mech = tr("Modification de PLP2 : sensibilité diminuée à la pénicilline G et à l'amoxicilline.",
+                  "An altered PBP2: reduced susceptibility to benzylpenicillin and amoxicillin.");
       parce(A, r, {
-        pour: [["PEN", "RI", "pénicilline G atteinte sans β-lactamase décelée — la cible est modifiée"]],
-        aConfirmerPar: "CMI de ceftriaxone, qui conditionne le traitement"
+        pour: [["PEN", "RI", tr("pénicilline G atteinte sans β-lactamase décelée — la cible est modifiée",
+                                "benzylpenicillin affected with no beta-lactamase detected — the target is altered")]],
+        aConfirmerPar: tr("CMI de ceftriaxone, qui conditionne le traitement", "a ceftriaxone MIC, which determines the treatment")
       });
-      A.rules.push({ k: "CMI", txt: "Rendre la pénicilline selon la CMI ; la C3G reste active." });
-      A.comment = `${sp} de sensibilité diminuée à la pénicilline. La céfotaxime/ceftriaxone reste le traitement de référence des formes invasives.`;
+      A.rules.push({ k: "CMI", txt: tr("Rendre la pénicilline selon la CMI ; la C3G reste active.",
+        "Report penicillin on the MIC; the third-generation cephalosporin remains active.") });
+      A.comment = tr(`${sp} de sensibilité diminuée à la pénicilline. La céfotaxime/ceftriaxone reste le traitement de référence des formes invasives.`,
+        `${sp} with reduced penicillin susceptibility. Cefotaxime or ceftriaxone remains the reference treatment for invasive disease.`);
     } else {
-      A.name = `${sp} — sensible à la pénicilline`;
+      A.name = tr(`${sp} — sensible à la pénicilline`, `${sp} — penicillin-susceptible`);
       parce(A, r, {
-        pour: [["PEN", "S", "pénicilline G active : protéine liant la pénicilline PLP2 non modifiée"],
-               ["CTX", "S", "céfotaxime active — c'est elle qui traite les formes invasives"]]
+        pour: [["PEN", "S", tr("pénicilline G active : protéine liant la pénicilline PLP2 non modifiée",
+                               "benzylpenicillin active: penicillin-binding protein PBP2 unaltered")],
+               ["CTX", "S", tr("céfotaxime active — c'est elle qui traite les formes invasives",
+                               "cefotaxime active — it is what treats invasive disease")]]
       });
-      A.comment = `${sp} sensible à la pénicilline. Céfotaxime/ceftriaxone = référence des formes invasives.`;
+      A.comment = tr(`${sp} sensible à la pénicilline. Céfotaxime/ceftriaxone = référence des formes invasives.`,
+        `${sp} susceptible to penicillin. Cefotaxime or ceftriaxone is the reference treatment for invasive disease.`);
     }
-    if (isRI(r.CTX)) { A.sev = "crit"; A.alerts.unshift({ lvl: "crit", txt: "Sensibilité diminuée à la C3G chez un méningocoque : exceptionnel — vérifier d'urgence." }); }
-    A.alerts.push({ lvl: "info", txt: "Prophylaxie des sujets contacts : rifampicine ou ciprofloxacine (vérifier leur sensibilité)." });
+    if (isRI(r.CTX)) { A.sev = "crit"; A.alerts.unshift({ lvl: "crit", txt: tr("Sensibilité diminuée à la C3G chez un méningocoque : exceptionnel — vérifier d'urgence.",
+      "Reduced third-generation cephalosporin susceptibility in a meningococcus: exceptional — verify urgently.") }); }
+    A.alerts.push({ lvl: "info", txt: tr("Prophylaxie des sujets contacts : rifampicine ou ciprofloxacine (vérifier leur sensibilité).",
+      "Prophylaxis of close contacts: rifampicin or ciprofloxacin (check their susceptibility).") });
   }
 
   else if (type === "gonorrhoeae") {
     const ppng = blac === "Positif" || isRI(r.PEN);
     if (isRI(r.CTX)) {
-      A.sev = "crit"; A.name = "Sensibilité diminuée à la ceftriaxone";
-      A.mech = "Sensibilité diminuée aux C3G : menace majeure (échecs thérapeutiques).";
+      A.sev = "crit"; A.name = tr("Sensibilité diminuée à la ceftriaxone", "Reduced ceftriaxone susceptibility");
+      A.mech = tr("Sensibilité diminuée aux C3G : menace majeure (échecs thérapeutiques).",
+                  "Reduced susceptibility to third-generation cephalosporins: a major threat, with treatment failures.");
       parce(A, r, {
-        pour: [["CTX", "RI", "céfotaxime/ceftriaxone atteinte — c'est le dernier traitement de première intention du gonocoque"]],
-        aConfirmerPar: "CMI de la ceftriaxone et envoi au centre national de référence : ce rendu engage une déclaration"
+        pour: [["CTX", "RI", tr("céfotaxime/ceftriaxone atteinte — c'est le dernier traitement de première intention du gonocoque",
+                                "cefotaxime or ceftriaxone affected — it is the last remaining first-line treatment for gonorrhoea")]],
+        aConfirmerPar: tr("CMI de la ceftriaxone et envoi au centre national de référence : ce rendu engage une déclaration",
+          "a ceftriaxone MIC and referral to the national reference centre: this result triggers a notification")
       });
-      A.alerts.push({ lvl: "crit", txt: "Sensibilité diminuée à la ceftriaxone/céfotaxime : signalement et avis référent — enjeu de santé publique." });
-      A.comment = `${sp} de sensibilité diminuée à la ceftriaxone. Souche à signaler ; avis spécialisé indispensable.`;
+      A.alerts.push({ lvl: "crit", txt: tr("Sensibilité diminuée à la ceftriaxone/céfotaxime : signalement et avis référent — enjeu de santé publique.",
+        "Reduced ceftriaxone or cefotaxime susceptibility: notify and seek specialist advice — this is a public health matter.") });
+      A.comment = tr(`${sp} de sensibilité diminuée à la ceftriaxone. Souche à signaler ; avis spécialisé indispensable.`,
+        `${sp} with reduced ceftriaxone susceptibility. Notifiable isolate; specialist advice is essential.`);
     } else if (ppng) {
-      A.sev = "high"; A.name = "PPNG (β-lactamase +)";
-      A.mech = "Pénicillinase plasmidique : pénicilline inactive.";
+      A.sev = "high"; A.name = tr("PPNG (β-lactamase +)", "PPNG (penicillinase-producing)");
+      A.mech = tr("Pénicillinase plasmidique : pénicilline inactive.", "A plasmid-borne penicillinase: penicillin is inactive.");
       parce(A, r, {
-        pour: [["PEN", "RI", "pénicilline G atteinte — la pénicillinase plasmidique l'hydrolyse"],
-               ["CTX", "S", "ceftriaxone conservée : l'enzyme ne l'atteint pas, le traitement de référence tient"]],
-        confirme: blac === "Positif" ? "test à la β-lactamase (nitrocéfine) positif" : null,
+        pour: [["PEN", "RI", tr("pénicilline G atteinte — la pénicillinase plasmidique l'hydrolyse",
+                                "benzylpenicillin affected — the plasmid-borne penicillinase hydrolyses it")],
+               ["CTX", "S", tr("ceftriaxone conservée : l'enzyme ne l'atteint pas, le traitement de référence tient",
+                               "ceftriaxone preserved: the enzyme does not reach it, the reference treatment still holds")]],
+        confirme: blac === "Positif" ? tr("test à la β-lactamase (nitrocéfine) positif", "a positive beta-lactamase (nitrocefin) test") : null,
         aConfirmerPar: blac === "Positif" ? null
-          : "test à la β-lactamase (nitrocéfine) : la résistance à la pénicilline peut aussi venir d'une mutation chromosomique"
+          : tr("test à la β-lactamase (nitrocéfine) : la résistance à la pénicilline peut aussi venir d'une mutation chromosomique",
+               "a beta-lactamase (nitrocefin) test: penicillin resistance may also arise from a chromosomal mutation")
       });
-      A.rules.push({ k: "→R", txt: "Pénicilline / amoxicilline R. Ceftriaxone = traitement de référence." });
-      A.comment = `${sp} producteur de pénicillinase (PPNG). Pénicilline résistante ; ceftriaxone = référence.`;
+      A.rules.push({ k: "→R", txt: tr("Pénicilline / amoxicilline R. Ceftriaxone = traitement de référence.",
+        "Penicillin and amoxicillin R. Ceftriaxone is the reference treatment.") });
+      A.comment = tr(`${sp} producteur de pénicillinase (PPNG). Pénicilline résistante ; ceftriaxone = référence.`,
+        `${sp} producing a penicillinase (PPNG). Penicillin resistant; ceftriaxone is the reference treatment.`);
     } else {
-      A.name = `${sp} — sensible à la pénicilline`;
+      A.name = tr(`${sp} — sensible à la pénicilline`, `${sp} — penicillin-susceptible`);
       parce(A, r, {
-        pour: [["PEN", "S", "pénicilline G active : pas de pénicillinase"],
-               ["CTX", "S", "ceftriaxone active — traitement de référence"]]
+        pour: [["PEN", "S", tr("pénicilline G active : pas de pénicillinase", "benzylpenicillin active: no penicillinase")],
+               ["CTX", "S", tr("ceftriaxone active — traitement de référence", "ceftriaxone active — the reference treatment")]]
       });
-      A.comment = `${sp} sans mécanisme de résistance majeur détecté. Ceftriaxone = traitement de référence.`;
+      A.comment = tr(`${sp} sans mécanisme de résistance majeur détecté. Ceftriaxone = traitement de référence.`,
+        `${sp} with no major resistance mechanism detected. Ceftriaxone is the reference treatment.`);
     }
-    if (isR(r.AZM)) A.alerts.push({ lvl: "warn", txt: "Azithromycine résistante : à prendre en compte dans le schéma." });
-    if (isR(r.CIP)) A.alerts.push({ lvl: "info", txt: "Ciprofloxacine résistante : fréquent chez le gonocoque, fluoroquinolones à éviter en probabiliste." });
+    if (isR(r.AZM)) A.alerts.push({ lvl: "warn", txt: tr("Azithromycine résistante : à prendre en compte dans le schéma.",
+      "Azithromycin resistant: to be taken into account in the regimen.") });
+    if (isR(r.CIP)) A.alerts.push({ lvl: "info", txt: tr("Ciprofloxacine résistante : fréquent chez le gonocoque, fluoroquinolones à éviter en probabiliste.",
+      "Ciprofloxacin resistant: common in gonococci, so avoid fluoroquinolones empirically.") });
   }
 
   else {
     const blR = blac === "Positif" || isRI(r.PEN) || isRI(r.AMX);
     if (blR) {
-      A.sev = "mod"; A.name = "β-lactamase (BRO) +";
-      A.mech = "β-lactamase BRO (quasi constante chez M. catarrhalis) : aminopénicillines hydrolysées.";
+      A.sev = "mod"; A.name = tr("β-lactamase (BRO) +", "BRO beta-lactamase positive");
+      A.mech = tr("β-lactamase BRO (quasi constante chez M. catarrhalis) : aminopénicillines hydrolysées.",
+                  "The BRO beta-lactamase, almost constant in M. catarrhalis: aminopenicillins are hydrolysed.");
       parce(A, r, {
-        pour: [["PEN", "RI", "pénicilline atteinte — la β-lactamase BRO l'hydrolyse"],
-               ["AMX", "RI", "amoxicilline atteinte"],
-               ["AMC", "S", "le clavulanate restaure l'activité : l'enzyme est inhibée"]],
-        confirme: blac === "Positif" ? "test à la β-lactamase (nitrocéfine) positif" : null
+        pour: [["PEN", "RI", tr("pénicilline atteinte — la β-lactamase BRO l'hydrolyse", "penicillin affected — the BRO beta-lactamase hydrolyses it")],
+               ["AMX", "RI", tr("amoxicilline atteinte", "amoxicillin affected")],
+               ["AMC", "S", tr("le clavulanate restaure l'activité : l'enzyme est inhibée", "clavulanate restores activity: the enzyme is inhibited")]],
+        confirme: blac === "Positif" ? tr("test à la β-lactamase (nitrocéfine) positif", "a positive beta-lactamase (nitrocefin) test") : null
       });
-      A.rules.push({ k: "→R", txt: "Ampicilline/amoxicilline R ; amoxicilline-clavulanate, céphalosporines et macrolides actifs." });
-      A.comment = `${sp} producteur de β-lactamase BRO. Aminopénicillines résistantes ; amoxicilline-clavulanate, C2G/C3G et macrolides actifs.`;
+      A.rules.push({ k: "→R", txt: tr("Ampicilline/amoxicilline R ; amoxicilline-clavulanate, céphalosporines et macrolides actifs.",
+        "Ampicillin and amoxicillin R; amoxicillin-clavulanate, cephalosporins and macrolides active.") });
+      A.comment = tr(`${sp} producteur de β-lactamase BRO. Aminopénicillines résistantes ; amoxicilline-clavulanate, C2G/C3G et macrolides actifs.`,
+        `${sp} producing the BRO beta-lactamase. Aminopenicillins resistant; amoxicillin-clavulanate, 2nd and 3rd generation cephalosporins and macrolides active.`);
     } else {
-      A.name = `${sp} — β-lactamase négative`;
+      A.name = tr(`${sp} — β-lactamase négative`, `${sp} — beta-lactamase negative`);
       parce(A, r, {
-        pour: [["AMX", "S", "amoxicilline active — rare chez M. catarrhalis, où la β-lactamase BRO est quasi constante"],
-               ["PEN", "S", "pénicilline active"]],
-        aConfirmerPar: "test à la β-lactamase (nitrocéfine) : l'absence d'enzyme est ici l'exception, elle mérite d'être vérifiée"
+        pour: [["AMX", "S", tr("amoxicilline active — rare chez M. catarrhalis, où la β-lactamase BRO est quasi constante",
+                               "amoxicillin active — rare in M. catarrhalis, where the BRO beta-lactamase is almost constant")],
+               ["PEN", "S", tr("pénicilline active", "penicillin active")]],
+        aConfirmerPar: tr("test à la β-lactamase (nitrocéfine) : l'absence d'enzyme est ici l'exception, elle mérite d'être vérifiée",
+          "a beta-lactamase (nitrocefin) test: the absence of the enzyme is the exception here, and deserves checking")
       });
-      A.comment = `${sp} β-lactamase négative (rare). Aminopénicillines actives.`;
+      A.comment = tr(`${sp} β-lactamase négative (rare). Aminopénicillines actives.`,
+        `${sp}, beta-lactamase negative (rare). Aminopenicillins active.`);
     }
   }
 
@@ -2751,28 +2965,39 @@ function fastidInterpret(r, c, a) {
 }
 
 function gramposrodInterpret(r, c, a) {
-  const sp = (a && a.species) || "Bacille à Gram positif";
+  const sp = (a && a.species) || tr("Bacille à Gram positif", "Gram-positive rod");
   const type = (a && a.type) || "listeria";
   const A = { sev: "wild", name: "", mech: "", alerts: [], rules: [], comment: "" };
 
   if (type === "listeria") {
     A.sev = "mod";
-    A.name = "Listeria monocytogenes — céphalosporines naturellement inactives";
-    A.mech = "Résistance naturelle à TOUTES les céphalosporines (C1G–C4G, C3G comprises) et à la fosfomycine.";
-    A.rules.push({ k: "✕", txt: "Céphalosporines naturellement inactives — ne jamais utiliser ni rendre S (piège classique en méningite)." });
-    A.rules.push({ k: "✚", txt: "Ampicilline / amoxicilline = référence ; associer la gentamicine (synergie) dans les formes neuroméningées ou sévères." });
-    A.rules.push({ k: "✚", txt: "Cotrimoxazole = alternative (allergie aux β-lactamines)." });
+    A.name = tr("Listeria monocytogenes — céphalosporines naturellement inactives",
+                "Listeria monocytogenes — cephalosporins intrinsically inactive");
+    A.mech = tr("Résistance naturelle à TOUTES les céphalosporines (C1G–C4G, C3G comprises) et à la fosfomycine.",
+                "Intrinsic resistance to ALL cephalosporins, first to fourth generation, the third generation included, and to fosfomycin.");
+    A.rules.push({ k: "✕", txt: tr("Céphalosporines naturellement inactives — ne jamais utiliser ni rendre S (piège classique en méningite).",
+      "Cephalosporins intrinsically inactive — never use them, never report them S; this is the classic trap in meningitis.") });
+    A.rules.push({ k: "✚", txt: tr("Ampicilline / amoxicilline = référence ; associer la gentamicine (synergie) dans les formes neuroméningées ou sévères.",
+      "Ampicillin or amoxicillin is the reference treatment; add gentamicin, which is synergistic, in neuromeningeal or severe disease.") });
+    A.rules.push({ k: "✚", txt: tr("Cotrimoxazole = alternative (allergie aux β-lactamines).",
+      "Co-trimoxazole is the alternative, for beta-lactam allergy.") });
     parce(A, r, {
-      pour: [["AMP", "S", "ampicilline active — c'est le traitement de référence, les céphalosporines étant naturellement inactives"],
-             ["AMX", "S", "amoxicilline active"],
-             ["GEN", "S", "gentamicine active : on l'associe dans les formes sévères"]],
-      contre: [["AMP", "RI", "ampicilline non sensible : exceptionnel chez Listeria — vérifier l'identification avant tout"]]
+      pour: [["AMP", "S", tr("ampicilline active — c'est le traitement de référence, les céphalosporines étant naturellement inactives",
+                             "ampicillin active — it is the reference treatment, the cephalosporins being intrinsically inactive")],
+             ["AMX", "S", tr("amoxicilline active", "amoxicillin active")],
+             ["GEN", "S", tr("gentamicine active : on l'associe dans les formes sévères",
+                             "gentamicin active: it is added in severe disease")]],
+      contre: [["AMP", "RI", tr("ampicilline non sensible : exceptionnel chez Listeria — vérifier l'identification avant tout",
+                                "ampicillin not susceptible: exceptional in Listeria — check the identification first of all")]]
     });
-    A.comment = "Listeria monocytogenes. Rappel majeur : les céphalosporines (dont les C3G) sont naturellement inactives — ampicilline/amoxicilline = traitement de référence, associées à la gentamicine dans les formes sévères.";
+    A.comment = tr("Listeria monocytogenes. Rappel majeur : les céphalosporines (dont les C3G) sont naturellement inactives — ampicilline/amoxicilline = traitement de référence, associées à la gentamicine dans les formes sévères.",
+      "Listeria monocytogenes. The point to remember: the cephalosporins, the third generation included, are intrinsically inactive — ampicillin or amoxicillin is the reference treatment, with gentamicin added in severe disease.");
     if (isRI(r.AMP) || isRI(r.AMX)) {
       A.sev = "high";
-      A.alerts.push({ lvl: "warn", txt: "Ampicilline non sensible chez Listeria : exceptionnel — vérifier l'identification et la CMI." });
-      A.comment += " Ampicilline non sensible : à confirmer d'urgence.";
+      A.alerts.push({ lvl: "warn", txt: tr("Ampicilline non sensible chez Listeria : exceptionnel — vérifier l'identification et la CMI.",
+        "Ampicillin not susceptible in Listeria: exceptional — check the identification and the MIC.") });
+      A.comment += tr(" Ampicilline non sensible : à confirmer d'urgence.",
+        " Ampicillin not susceptible: to be confirmed urgently.");
     }
   } else if (type === "diphtheriae") {
     /* LA SEULE ESPÈCE DE PHÉNOBAC OÙ L'ANTIBIOGRAMME N'EST PAS LA QUESTION.
@@ -2782,58 +3007,96 @@ function gramposrodInterpret(r, c, a) {
        c'est répondre à côté. */
     const ulc = !!(a && a.ulcerans);
     A.sev = "crit";
-    A.name = sp + " — URGENCE : l'antitoxine avant l'antibiotique";
-    A.mech = "La gravité tient à la TOXINE diphtérique, pas au germe. Le caractère "
-           + "toxinogène se cherche par le gène tox (PCR) ou le test d'Elek — "
-           + "l'antibiogramme ne le dit pas.";
-    A.alerts.push({ lvl: "crit", txt: "Suspicion de diphtérie : prévenir le clinicien "
+    A.name = sp + tr(" — URGENCE : l'antitoxine avant l'antibiotique",
+                     " — EMERGENCY: antitoxin before antibiotic");
+    A.mech = tr("La gravité tient à la TOXINE diphtérique, pas au germe. Le caractère "
+              + "toxinogène se cherche par le gène tox (PCR) ou le test d'Elek — "
+              + "l'antibiogramme ne le dit pas.",
+                "The severity comes from the diphtheria TOXIN, not from the organism. "
+              + "Toxigenicity is sought by the tox gene (PCR) or the Elek test — the "
+              + "susceptibility test does not tell you.");
+    A.alerts.push({ lvl: "crit", txt: tr("Suspicion de diphtérie : prévenir le clinicien "
       + "IMMÉDIATEMENT, sans attendre l'antibiogramme. L'antitoxine se donne sur la "
-      + "présomption clinique ; chaque heure compte. Maladie à déclaration obligatoire." });
-    A.rules.push({ k: "!", txt: "Chercher le caractère toxinogène (gène tox / test d'Elek) : "
-      + "c'est lui qui décide de la conduite, pas la sensibilité aux antibiotiques." });
-    A.rules.push({ k: "✚", txt: "Antibiotique : pénicilline G ou érythromycine (14 jours), "
+      + "présomption clinique ; chaque heure compte. Maladie à déclaration obligatoire.",
+        "Suspected diphtheria: tell the clinician IMMEDIATELY, without waiting for the "
+      + "susceptibility test. Antitoxin is given on clinical suspicion; every hour counts. "
+      + "A notifiable disease.") });
+    A.rules.push({ k: "!", txt: tr("Chercher le caractère toxinogène (gène tox / test d'Elek) : "
+      + "c'est lui qui décide de la conduite, pas la sensibilité aux antibiotiques.",
+        "Seek toxigenicity (tox gene or Elek test): that is what decides management, not "
+      + "antibiotic susceptibility.") });
+    A.rules.push({ k: "✚", txt: tr("Antibiotique : pénicilline G ou érythromycine (14 jours), "
       + "pour interrompre la contagion et tarir le portage. Dépistage et antibioprophylaxie "
-      + "de l'entourage ; mise à jour de la vaccination." });
-    A.rules.push({ k: "!", txt: "L'EUCAST ne reconnaît AUCUNE catégorie « sensible » à "
+      + "de l'entourage ; mise à jour de la vaccination.",
+        "Antibiotic: benzylpenicillin or erythromycin for 14 days, to stop transmission and "
+      + "clear carriage. Screen and give prophylaxis to close contacts; bring vaccination "
+      + "up to date.") });
+    A.rules.push({ k: "!", txt: tr("L'EUCAST ne reconnaît AUCUNE catégorie « sensible » à "
       + "posologie standard pour la pénicilline G, la céfotaxime et la ciprofloxacine chez "
-      + "cette espèce (note 13 du classeur) : elles ne se rendent qu'en I ou en R." });
+      + "cette espèce (note 13 du classeur) : elles ne se rendent qu'en I ou en R.",
+        "EUCAST recognises NO \u0022susceptible, standard dosing\u0022 category for "
+      + "benzylpenicillin, cefotaxime or ciprofloxacin in this species (note 13 of the "
+      + "breakpoint tables): they can only be reported I or R.") });
     if (ulc) {
-      A.rules.push({ k: "!", txt: "C. ulcerans est une ZOONOSE — lait cru, bovins, animaux "
+      A.rules.push({ k: "!", txt: tr("C. ulcerans est une ZOONOSE — lait cru, bovins, animaux "
         + "de compagnie — et non une transmission interhumaine : l'enquête ne vise pas le "
         + "même entourage. L'EUCAST ne lui donne pas de seuil de clindamycine : « le "
-        + "sauvage y est moins sensible »." });
+        + "sauvage y est moins sensible ».",
+          "C. ulcerans is a ZOONOSIS — raw milk, cattle, companion animals — not a "
+        + "person-to-person infection: the contact investigation looks elsewhere. EUCAST "
+        + "gives it no clindamycin breakpoint: \u0022the wild type is less susceptible\u0022.") });
     }
     parce(A, r, {
-      pour: [["E", "S", "érythromycine active — c'est le traitement qui tarit le portage"],
-             ["PEN", "I", "pénicilline G utilisable à forte exposition : l'EUCAST ne lui reconnaît pas de catégorie S chez cette espèce"]],
-      contre: [["E", "R", "érythromycine résistante : il reste la pénicilline G, et l'avis spécialisé"]],
-      aConfirmerPar: "la recherche du gène tox ou le test d'Elek : c'est le caractère "
-                   + "toxinogène, et non l'antibiogramme, qui commande le traitement"
+      pour: [["E", "S", tr("érythromycine active — c'est le traitement qui tarit le portage",
+                           "erythromycin active — it is the treatment that clears carriage")],
+             ["PEN", "I", tr("pénicilline G utilisable à forte exposition : l'EUCAST ne lui reconnaît pas de catégorie S chez cette espèce",
+                             "benzylpenicillin usable at increased exposure: EUCAST recognises no S category for it in this species")]],
+      contre: [["E", "R", tr("érythromycine résistante : il reste la pénicilline G, et l'avis spécialisé",
+                             "erythromycin resistant: benzylpenicillin remains, and specialist advice")]],
+      aConfirmerPar: tr("la recherche du gène tox ou le test d'Elek : c'est le caractère "
+                      + "toxinogène, et non l'antibiogramme, qui commande le traitement",
+                        "a tox gene assay or the Elek test: it is toxigenicity, not the "
+                      + "susceptibility test, that governs treatment")
     });
-    A.comment = sp + " : " + (ulc ? "zoonose (lait cru, animaux). " : "")
-              + "LA PRIORITÉ EST L'ANTITOXINE, donnée sur la présomption clinique — "
-              + "c'est la toxine qui tue. L'antibiotique (pénicilline G ou érythromycine, "
-              + "14 jours) interrompt la contagion. Chercher le caractère toxinogène ; "
-              + "déclaration obligatoire ; entourage à dépister et à vacciner.";
+    A.comment = sp + " : " + (ulc ? tr("zoonose (lait cru, animaux). ", "a zoonosis (raw milk, animals). ") : "")
+              + tr("LA PRIORITÉ EST L'ANTITOXINE, donnée sur la présomption clinique — "
+                 + "c'est la toxine qui tue. L'antibiotique (pénicilline G ou érythromycine, "
+                 + "14 jours) interrompt la contagion. Chercher le caractère toxinogène ; "
+                 + "déclaration obligatoire ; entourage à dépister et à vacciner.",
+                   "THE PRIORITY IS THE ANTITOXIN, given on clinical suspicion — it is the "
+                 + "toxin that kills. The antibiotic (benzylpenicillin or erythromycin, 14 "
+                 + "days) stops transmission. Seek toxigenicity; a notifiable disease; "
+                 + "screen and vaccinate close contacts.");
   } else {
     if (isR(r.PEN)) {
-      A.sev = "high"; A.name = "Corynebacterium multirésistant probable (groupe JK)";
-      A.mech = "Les Corynebacterium du groupe JK (C. jeikeium) sont souvent multirésistants.";
+      A.sev = "high"; A.name = tr("Corynebacterium multirésistant probable (groupe JK)",
+                                  "Probably multidrug-resistant Corynebacterium (group JK)");
+      A.mech = tr("Les Corynebacterium du groupe JK (C. jeikeium) sont souvent multirésistants.",
+                  "Group JK corynebacteria (C. jeikeium) are often multidrug-resistant.");
       parce(A, r, {
-        pour: [["PEN", "R", "pénicilline résistante — chez Corynebacterium, cela oriente vers le groupe JK"],
-               ["VA", "S", "vancomycine active : elle l'est constamment dans ce genre, et c'est elle qui traite"]],
-        aConfirmerPar: "identification de l'espèce : « groupe JK » reste une orientation tirée du profil, pas une identification"
+        pour: [["PEN", "R", tr("pénicilline résistante — chez Corynebacterium, cela oriente vers le groupe JK",
+                               "penicillin resistant — in Corynebacterium this points to group JK")],
+               ["VA", "S", tr("vancomycine active : elle l'est constamment dans ce genre, et c'est elle qui traite",
+                              "vancomycin active: it always is in this genus, and it is what treats")]],
+        aConfirmerPar: tr("identification de l'espèce : « groupe JK » reste une orientation tirée du profil, pas une identification",
+          "species identification: \u0022group JK\u0022 remains a pointer drawn from the phenotype, not an identification")
       });
-      A.rules.push({ k: "✚", txt: "Vancomycine = référence (constamment active). Pénicilline résistante." });
-      A.comment = `${sp} (groupe JK probable) : profil multirésistant — vancomycine constamment active, traitement de référence.`;
+      A.rules.push({ k: "✚", txt: tr("Vancomycine = référence (constamment active). Pénicilline résistante.",
+        "Vancomycin is the reference treatment, always active. Penicillin resistant.") });
+      A.comment = tr(`${sp} (groupe JK probable) : profil multirésistant — vancomycine constamment active, traitement de référence.`,
+        `${sp} (probably group JK): a multidrug-resistant phenotype — vancomycin is always active and is the reference treatment.`);
     } else {
-      A.name = `${sp} — sensible à la pénicilline`;
+      A.name = tr(`${sp} — sensible à la pénicilline`, `${sp} — penicillin-susceptible`);
       parce(A, r, {
-        pour: [["PEN", "S", "pénicilline active : profil éloigné de celui du groupe JK"],
-               ["VA", "S", "vancomycine active — recours constant dans ce genre"]]
+        pour: [["PEN", "S", tr("pénicilline active : profil éloigné de celui du groupe JK",
+                               "penicillin active: a phenotype far from that of group JK")],
+               ["VA", "S", tr("vancomycine active — recours constant dans ce genre",
+                              "vancomycin active — the constant fallback in this genus")]]
       });
-      A.rules.push({ k: "✚", txt: "Vancomycine constamment active (recours)." });
-      A.comment = `${sp} sensible à la pénicilline. La vancomycine reste constamment active.`;
+      A.rules.push({ k: "✚", txt: tr("Vancomycine constamment active (recours).",
+        "Vancomycin always active, as the fallback.") });
+      A.comment = tr(`${sp} sensible à la pénicilline. La vancomycine reste constamment active.`,
+        `${sp}, penicillin-susceptible. Vancomycin remains always active.`);
     }
   }
   return finalize(A, r);
@@ -3176,121 +3439,198 @@ function anaerobeInterpret(r, c, a) {
    l'espèce est rare — une liste de S et de R ne dit pas quoi en faire.
    ============================================================ */
 function autresbgnInterpret(r, c, a) {
-  const sp = (a && a.species) || "Bacille à Gram négatif";
+  const sp = (a && a.species) || tr("Bacille à Gram négatif", "Gram-negative rod");
   const type = (a && a.type) || "pasteurella";
   const A = { sev: "wild", name: "", mech: "", alerts: [], rules: [], comment: "" };
 
   if (type === "pasteurella") {
-    A.name = "Pasteurella multocida — morsure animale";
-    A.mech = "Flore buccale du chien et du chat. Cellulite d'installation RAPIDE, "
-           + "souvent en moins de 24 heures après la morsure.";
-    A.rules.push({ k: "✚", txt: "Amoxicilline-acide clavulanique = référence : elle couvre "
+    A.name = tr("Pasteurella multocida — morsure animale", "Pasteurella multocida — animal bite");
+    A.mech = tr("Flore buccale du chien et du chat. Cellulite d'installation RAPIDE, "
+              + "souvent en moins de 24 heures après la morsure.",
+                "Oral flora of dogs and cats. A RAPIDLY developing cellulitis, often "
+              + "within 24 hours of the bite.");
+    A.rules.push({ k: "✚", txt: tr("Amoxicilline-acide clavulanique = référence : elle couvre "
       + "Pasteurella, les anaérobies de la gueule et les staphylocoques de la peau, qui "
-      + "sont ensemble dans la plaie." });
-    A.rules.push({ k: "✕", txt: "PIÈGE CLASSIQUE : oxacilline, céphalosporines de première "
+      + "sont ensemble dans la plaie.",
+        "Amoxicillin-clavulanic acid is the reference treatment: it covers Pasteurella, the "
+      + "anaerobes from the animal's mouth and the staphylococci from the skin, which are "
+      + "together in the wound.") });
+    A.rules.push({ k: "✕", txt: tr("PIÈGE CLASSIQUE : oxacilline, céphalosporines de première "
       + "génération et clindamycine sont INACTIVES sur Pasteurella. Traiter une morsure "
-      + "« comme une infection cutanée » avec un antistaphylococcique, c'est passer à côté." });
-    A.rules.push({ k: "!", txt: "La morsure pose aussi les questions de la rage et du tétanos : "
-      + "elles ne se lisent pas sur un antibiogramme." });
+      + "« comme une infection cutanée » avec un antistaphylococcique, c'est passer à côté.",
+        "THE CLASSIC TRAP: oxacillin, first-generation cephalosporins and clindamycin are "
+      + "INACTIVE against Pasteurella. Treating a bite \u0022as a skin infection\u0022 with an "
+      + "anti-staphylococcal agent misses the organism.") });
+    A.rules.push({ k: "!", txt: tr("La morsure pose aussi les questions de la rage et du tétanos : "
+      + "elles ne se lisent pas sur un antibiogramme.",
+        "A bite also raises rabies and tetanus: neither can be read off a susceptibility test.") });
     parce(A, r, {
-      pour: [["AMC", "S", "amoxicilline-clavulanate active — c'est le traitement de référence de la morsure"],
-             ["PEN", "S", "pénicilline G active : Pasteurella l'est habituellement"],
-             ["DOX", "S", "doxycycline active : alternative en cas d'allergie aux β-lactamines"]],
-      contre: [["PEN", "RI", "pénicilline G atteinte : inhabituel, à confirmer"]]
+      pour: [["AMC", "S", tr("amoxicilline-clavulanate active — c'est le traitement de référence de la morsure",
+                             "amoxicillin-clavulanate active — it is the reference treatment for a bite")],
+             ["PEN", "S", tr("pénicilline G active : Pasteurella l'est habituellement",
+                             "benzylpenicillin active: Pasteurella usually is")],
+             ["DOX", "S", tr("doxycycline active : alternative en cas d'allergie aux β-lactamines",
+                             "doxycycline active: the alternative in beta-lactam allergy")]],
+      contre: [["PEN", "RI", tr("pénicilline G atteinte : inhabituel, à confirmer",
+                                "benzylpenicillin affected: unusual, to be confirmed")]]
     });
-    A.comment = "Pasteurella multocida : morsure de chien ou de chat, cellulite rapide. "
-              + "Amoxicilline-acide clavulanique = traitement de référence. Oxacilline, "
-              + "C1G et clindamycine sont inactives — ne pas traiter comme une infection "
-              + "cutanée banale. Penser rage et tétanos.";
+    A.comment = tr("Pasteurella multocida : morsure de chien ou de chat, cellulite rapide. "
+                 + "Amoxicilline-acide clavulanique = traitement de référence. Oxacilline, "
+                 + "C1G et clindamycine sont inactives — ne pas traiter comme une infection "
+                 + "cutanée banale. Penser rage et tétanos.",
+                   "Pasteurella multocida: a dog or cat bite with rapid cellulitis. "
+                 + "Amoxicillin-clavulanic acid is the reference treatment. Oxacillin, "
+                 + "first-generation cephalosporins and clindamycin are inactive — do not "
+                 + "treat this as an ordinary skin infection. Consider rabies and tetanus.");
     if (isRI(r.PEN) || isRI(r.AMX)) {
       A.sev = "mod";
-      A.alerts.push({ lvl: "info", txt: "β-lactamase possible chez Pasteurella : rare, mais "
-        + "décrite. L'amoxicilline-acide clavulanique reste alors active." });
+      A.alerts.push({ lvl: "info", txt: tr("β-lactamase possible chez Pasteurella : rare, mais "
+        + "décrite. L'amoxicilline-acide clavulanique reste alors active.",
+          "A beta-lactamase is possible in Pasteurella: rare, but described. "
+        + "Amoxicillin-clavulanic acid then remains active.") });
     }
   }
   else if (type === "aeromonas") {
     A.sev = "mod";
-    A.name = "Aeromonas spp. — plaie souillée d'eau douce";
-    A.mech = "Eaux douces et saumâtres. Plaies souillées, diarrhées, et bactériémies "
-           + "graves chez le cirrhotique. L'espèce porte plusieurs β-lactamases "
-           + "INDUCTIBLES — céphalosporinase, pénicillinase et carbapénémase — d'où une "
-           + "résistance qui peut apparaître SOUS traitement.";
-    A.rules.push({ k: "!", txt: "β-lactamases inductibles : une souche rendue sensible à une "
+    A.name = tr("Aeromonas spp. — plaie souillée d'eau douce",
+                "Aeromonas spp. — a wound contaminated by fresh water");
+    A.mech = tr("Eaux douces et saumâtres. Plaies souillées, diarrhées, et bactériémies "
+              + "graves chez le cirrhotique. L'espèce porte plusieurs β-lactamases "
+              + "INDUCTIBLES — céphalosporinase, pénicillinase et carbapénémase — d'où une "
+              + "résistance qui peut apparaître SOUS traitement.",
+                "Fresh and brackish water. Contaminated wounds, diarrhoea, and severe "
+              + "bacteraemia in cirrhotic patients. The genus carries several INDUCIBLE "
+              + "beta-lactamases — a cephalosporinase, a penicillinase and a carbapenemase "
+              + "— so resistance can appear DURING treatment.");
+    A.rules.push({ k: "!", txt: tr("β-lactamases inductibles : une souche rendue sensible à une "
       + "β-lactamine peut se dérépresser en cours de traitement. Sur une infection grave, "
-      + "refaire un antibiogramme si l'évolution n'est pas celle qu'on attend." });
-    A.rules.push({ k: "✚", txt: "Ciprofloxacine ou cotrimoxazole = appuis habituels ; "
-      + "céfépime et ceftazidime chiffrées par l'EUCAST." });
-    A.rules.push({ k: "!", txt: "L'EUCAST ne chiffre pour ce genre NI aminopénicilline, NI "
+      + "refaire un antibiogramme si l'évolution n'est pas celle qu'on attend.",
+        "Inducible beta-lactamases: an isolate reported susceptible to a beta-lactam may "
+      + "derepress during treatment. In severe infection, repeat the susceptibility test "
+      + "if the course is not what you expect.") });
+    A.rules.push({ k: "✚", txt: tr("Ciprofloxacine ou cotrimoxazole = appuis habituels ; "
+      + "céfépime et ceftazidime chiffrées par l'EUCAST.",
+        "Ciprofloxacin or co-trimoxazole are the usual mainstays; EUCAST gives breakpoints "
+      + "for cefepime and ceftazidime.") });
+    A.rules.push({ k: "!", txt: tr("L'EUCAST ne chiffre pour ce genre NI aminopénicilline, NI "
       + "céphalosporine de première génération, NI carbapénème : ces molécules ne se "
-      + "catégorisent pas, et ce silence du document est lui-même une indication." });
+      + "catégorisent pas, et ce silence du document est lui-même une indication.",
+        "For this genus EUCAST gives NO breakpoint for an aminopenicillin, a "
+      + "first-generation cephalosporin or a carbapenem: these agents cannot be "
+      + "categorised, and the document's silence is itself informative.") });
     parce(A, r, {
-      pour: [["CIP", "S", "ciprofloxacine active — appui habituel, et non soumise aux β-lactamases"],
-             ["SXT", "S", "cotrimoxazole actif : alternative"],
-             ["CAZ", "S", "ceftazidime active"]],
-      contre: [["CIP", "RI", "ciprofloxacine atteinte : les options se réduisent aux β-lactamines, que les enzymes inductibles menacent"]]
+      pour: [["CIP", "S", tr("ciprofloxacine active — appui habituel, et non soumise aux β-lactamases",
+                             "ciprofloxacin active — a usual mainstay, and not subject to the beta-lactamases")],
+             ["SXT", "S", tr("cotrimoxazole actif : alternative", "co-trimoxazole active: the alternative")],
+             ["CAZ", "S", tr("ceftazidime active", "ceftazidime active")]],
+      contre: [["CIP", "RI", tr("ciprofloxacine atteinte : les options se réduisent aux β-lactamines, que les enzymes inductibles menacent",
+                                "ciprofloxacin affected: the options narrow to the beta-lactams, which the inducible enzymes threaten")]]
     });
-    A.comment = "Aeromonas : plaie souillée d'eau douce, diarrhée, bactériémie du "
-              + "cirrhotique. β-lactamases inductibles — une résistance peut apparaître "
-              + "sous traitement. Fluoroquinolone ou cotrimoxazole en appui.";
+    A.comment = tr("Aeromonas : plaie souillée d'eau douce, diarrhée, bactériémie du "
+                 + "cirrhotique. β-lactamases inductibles — une résistance peut apparaître "
+                 + "sous traitement. Fluoroquinolone ou cotrimoxazole en appui.",
+                   "Aeromonas: a wound contaminated by fresh water, diarrhoea, bacteraemia "
+                 + "in a cirrhotic patient. Inducible beta-lactamases — resistance may "
+                 + "appear during treatment. A fluoroquinolone or co-trimoxazole as the mainstay.");
   }
   else if (type === "achromobacter") {
     A.sev = "mod";
-    A.name = "Achromobacter xylosoxidans — bacille non fermentant";
-    A.mech = "Non fermentant de l'environnement hydrique. Colonisation et infection "
-           + "respiratoire de la mucoviscidose, infections sur cathéter et en "
-           + "réanimation. Naturellement peu sensible : le document ne chiffre que "
-           + "quatre molécules, et c'est la réponse.";
-    A.rules.push({ k: "✚", txt: "Pipéracilline-tazobactam, méropénème et cotrimoxazole : "
-      + "ce sont les trois seules molécules que l'EUCAST chiffre pour cette espèce." });
-    A.rules.push({ k: "✕", txt: "Aminosides, ceftriaxone et céfotaxime, aztréonam : pas de "
-      + "seuil, et une activité qu'on ne peut pas affirmer. Ne pas les rendre." });
-    A.rules.push({ k: "!", txt: "Céfidérocol : l'EUCAST ne fixe pas de seuil clinique, faute "
+    A.name = tr("Achromobacter xylosoxidans — bacille non fermentant",
+                "Achromobacter xylosoxidans — a non-fermenting rod");
+    A.mech = tr("Non fermentant de l'environnement hydrique. Colonisation et infection "
+              + "respiratoire de la mucoviscidose, infections sur cathéter et en "
+              + "réanimation. Naturellement peu sensible : le document ne chiffre que "
+              + "quatre molécules, et c'est la réponse.",
+                "A non-fermenter from water environments. Respiratory colonisation and "
+              + "infection in cystic fibrosis, catheter infections and infections in "
+              + "intensive care. Intrinsically poorly susceptible: the document gives "
+              + "breakpoints for only four agents, and that is the answer.");
+    A.rules.push({ k: "✚", txt: tr("Pipéracilline-tazobactam, méropénème et cotrimoxazole : "
+      + "ce sont les trois seules molécules que l'EUCAST chiffre pour cette espèce.",
+        "Piperacillin-tazobactam, meropenem and co-trimoxazole: these are the only three "
+      + "agents EUCAST gives breakpoints for in this species.") });
+    A.rules.push({ k: "✕", txt: tr("Aminosides, ceftriaxone et céfotaxime, aztréonam : pas de "
+      + "seuil, et une activité qu'on ne peut pas affirmer. Ne pas les rendre.",
+        "Aminoglycosides, ceftriaxone and cefotaxime, aztreonam: no breakpoint, and an "
+      + "activity that cannot be asserted. Do not report them.") });
+    A.rules.push({ k: "!", txt: tr("Céfidérocol : l'EUCAST ne fixe pas de seuil clinique, faute "
       + "de données. Une CMI ≤ 0,5 mg/L signale une souche sans mécanisme acquis, sans "
-      + "promettre le résultat clinique." });
+      + "promettre le résultat clinique.",
+        "Cefiderocol: EUCAST sets no clinical breakpoint, for lack of data. An MIC of "
+      + "0.5 mg/L or less marks an isolate without an acquired mechanism, without "
+      + "promising a clinical outcome.") });
     parce(A, r, {
-      pour: [["SXT", "S", "cotrimoxazole actif — souvent la meilleure option dans cette espèce"],
-             ["MEM", "S", "méropénème actif"],
-             ["TZP", "S", "pipéracilline-tazobactam active"]],
-      contre: [["MEM", "RI", "méropénème atteint : les options deviennent très étroites, avis spécialisé"],
-               ["SXT", "RI", "cotrimoxazole atteint"]]
+      pour: [["SXT", "S", tr("cotrimoxazole actif — souvent la meilleure option dans cette espèce",
+                             "co-trimoxazole active — often the best option in this species")],
+             ["MEM", "S", tr("méropénème actif", "meropenem active")],
+             ["TZP", "S", tr("pipéracilline-tazobactam active", "piperacillin-tazobactam active")]],
+      contre: [["MEM", "RI", tr("méropénème atteint : les options deviennent très étroites, avis spécialisé",
+                                "meropenem affected: the options become very narrow, seek specialist advice")],
+               ["SXT", "RI", tr("cotrimoxazole atteint", "co-trimoxazole affected")]]
     });
-    A.comment = "Achromobacter xylosoxidans : non fermentant de la mucoviscidose, du "
-              + "cathéter et de la réanimation. L'EUCAST ne chiffre que la "
-              + "pipéracilline-tazobactam, le méropénème et le cotrimoxazole — les autres "
-              + "molécules ne se catégorisent pas.";
+    A.comment = tr("Achromobacter xylosoxidans : non fermentant de la mucoviscidose, du "
+                 + "cathéter et de la réanimation. L'EUCAST ne chiffre que la "
+                 + "pipéracilline-tazobactam, le méropénème et le cotrimoxazole — les autres "
+                 + "molécules ne se catégorisent pas.",
+                   "Achromobacter xylosoxidans: a non-fermenter of cystic fibrosis, "
+                 + "catheters and intensive care. EUCAST gives breakpoints only for "
+                 + "piperacillin-tazobactam, meropenem and co-trimoxazole — the other "
+                 + "agents cannot be categorised.");
     if (isRI(r.MEM) && isRI(r.SXT)) {
       A.sev = "high";
-      A.alerts.push({ lvl: "warn", txt: "Méropénème ET cotrimoxazole atteints : il ne reste "
+      A.alerts.push({ lvl: "warn", txt: tr("Méropénème ET cotrimoxazole atteints : il ne reste "
         + "presque rien de chiffré pour cette espèce — avis spécialisé, et discuter une "
-        + "association." });
+        + "association.",
+          "Meropenem AND co-trimoxazole both affected: almost nothing with a breakpoint "
+        + "remains for this species — seek specialist advice, and discuss a combination.") });
     }
   }
   else {
-    A.name = "Kingella kingae — infection ostéo-articulaire de l'enfant";
-    A.mech = "Groupe HACEK, flore oropharyngée du petit enfant. Première cause "
-           + "d'arthrite et de spondylodiscite entre 6 mois et 4 ans.";
-    A.rules.push({ k: "!", txt: "ELLE POUSSE MAL SUR GÉLOSE : ensemencer le liquide "
+    A.name = tr("Kingella kingae — infection ostéo-articulaire de l'enfant",
+                "Kingella kingae — bone and joint infection in children");
+    A.mech = tr("Groupe HACEK, flore oropharyngée du petit enfant. Première cause "
+              + "d'arthrite et de spondylodiscite entre 6 mois et 4 ans.",
+                "A HACEK organism, part of the oropharyngeal flora of young children. The "
+              + "leading cause of septic arthritis and discitis between 6 months and 4 years.");
+    A.rules.push({ k: "!", txt: tr("ELLE POUSSE MAL SUR GÉLOSE : ensemencer le liquide "
       + "articulaire dans un FLACON D'HÉMOCULTURE, et penser à la PCR. Une culture "
       + "classique négative n'écarte pas Kingella — c'est ainsi qu'on rend « stérile » "
-      + "une arthrite qui ne l'est pas." });
-    A.rules.push({ k: "✚", txt: "Amoxicilline ou céphalosporine de troisième génération = "
-      + "référence ; l'évolution est habituellement rapide." });
-    A.rules.push({ k: "!", txt: "β-lactamase : rare mais décrite. Sa détection (céphalosporine "
+      + "une arthrite qui ne l'est pas.",
+        "IT GROWS POORLY ON AGAR: inoculate the joint fluid into a BLOOD CULTURE BOTTLE, "
+      + "and consider PCR. A negative conventional culture does not rule Kingella out — "
+      + "that is how a septic arthritis gets reported \u0022sterile\u0022.") });
+    A.rules.push({ k: "✚", txt: tr("Amoxicilline ou céphalosporine de troisième génération = "
+      + "référence ; l'évolution est habituellement rapide.",
+        "Amoxicillin or a third-generation cephalosporin is the reference treatment; "
+      + "recovery is usually rapid.") });
+    A.rules.push({ k: "!", txt: tr("β-lactamase : rare mais décrite. Sa détection (céphalosporine "
       + "chromogène) suffit à rendre résistantes les pénicillines SANS inhibiteur ; aucun "
-      + "autre mécanisme de résistance aux β-lactamines n'est connu dans l'espèce." });
+      + "autre mécanisme de résistance aux β-lactamines n'est connu dans l'espèce.",
+        "Beta-lactamase: rare but described. Detecting it (chromogenic cephalosporin) is "
+      + "enough to report the penicillins WITHOUT an inhibitor as resistant; no other "
+      + "beta-lactam resistance mechanism is known in the species.") });
     parce(A, r, {
-      pour: [["AMX", "S", "amoxicilline active — traitement de référence"],
-             ["CRO", "S", "ceftriaxone active"],
-             ["PEN", "S", "pénicilline G active : le profil habituel de l'espèce"]],
-      contre: [["PEN", "R", "pénicilline G résistante : chercher la β-lactamase, seul mécanisme décrit"]]
+      pour: [["AMX", "S", tr("amoxicilline active — traitement de référence",
+                             "amoxicillin active — the reference treatment")],
+             ["CRO", "S", tr("ceftriaxone active", "ceftriaxone active")],
+             ["PEN", "S", tr("pénicilline G active : le profil habituel de l'espèce",
+                             "benzylpenicillin active: the usual phenotype of the species")]],
+      contre: [["PEN", "R", tr("pénicilline G résistante : chercher la β-lactamase, seul mécanisme décrit",
+                               "benzylpenicillin resistant: look for the beta-lactamase, the only mechanism described")]]
     });
-    A.comment = "Kingella kingae : arthrite ou spondylodiscite du petit enfant. Ensemencer "
-              + "en flacon d'hémoculture et penser à la PCR — elle pousse mal sur gélose. "
-              + "Amoxicilline ou C3G = traitement de référence.";
+    A.comment = tr("Kingella kingae : arthrite ou spondylodiscite du petit enfant. Ensemencer "
+                 + "en flacon d'hémoculture et penser à la PCR — elle pousse mal sur gélose. "
+                 + "Amoxicilline ou C3G = traitement de référence.",
+                   "Kingella kingae: septic arthritis or discitis in a young child. "
+                 + "Inoculate a blood culture bottle and consider PCR — it grows poorly on "
+                 + "agar. Amoxicillin or a third-generation cephalosporin is the reference "
+                 + "treatment.");
     if (isR(r.PEN)) {
       A.sev = "mod";
-      A.alerts.push({ lvl: "info", txt: "Pénicilline G résistante : rechercher la β-lactamase. "
-        + "Les pénicillines avec inhibiteur et les C3G restent actives." });
+      A.alerts.push({ lvl: "info", txt: tr("Pénicilline G résistante : rechercher la β-lactamase. "
+        + "Les pénicillines avec inhibiteur et les C3G restent actives.",
+          "Benzylpenicillin resistant: look for the beta-lactamase. The penicillins with an "
+        + "inhibitor and the third-generation cephalosporins remain active.") });
     }
   }
   return finalize(A, r);
@@ -3306,66 +3646,101 @@ function autresbgnInterpret(r, c, a) {
    ============================================================ */
 function aerococcusInterpret(r, c, a) {
   const sp = (a && a.species) || "Aerococcus spp.";
-  const A = { sev: "wild", name: sp + " — infection urinaire de l'homme âgé",
+  const A = { sev: "wild", name: sp + tr(" — infection urinaire de l'homme âgé",
+                                         " — urinary tract infection in older men"),
               mech: "", alerts: [], rules: [], comment: "" };
-  A.mech = "Coque à Gram positif, catalase négative, en amas ou en courtes chaînes : on "
-         + "le rend souvent pour un streptocoque ou un staphylocoque. Infections "
-         + "urinaires de l'homme âgé — obstacle prostatique, sonde — et parfois "
-         + "endocardite.";
-  A.rules.push({ k: "✚", txt: "Pénicilline G / amoxicilline = référence ; la vancomycine "
-    + "est constamment active et reste le recours." });
-  A.rules.push({ k: "!", txt: "Identification : catalase NÉGATIVE, ce qui l'écarte des "
+  A.mech = tr("Coque à Gram positif, catalase négative, en amas ou en courtes chaînes : on "
+            + "le rend souvent pour un streptocoque ou un staphylocoque. Infections "
+            + "urinaires de l'homme âgé — obstacle prostatique, sonde — et parfois "
+            + "endocardite.",
+              "A catalase-negative Gram-positive coccus, in clusters or short chains: it is "
+            + "often taken for a streptococcus or a staphylococcus. Urinary tract infection "
+            + "in older men — prostatic obstruction, a catheter — and sometimes endocarditis.");
+  A.rules.push({ k: "✚", txt: tr("Pénicilline G / amoxicilline = référence ; la vancomycine "
+    + "est constamment active et reste le recours.",
+      "Benzylpenicillin or amoxicillin is the reference treatment; vancomycin is always "
+    + "active and remains the fallback.") });
+  A.rules.push({ k: "!", txt: tr("Identification : catalase NÉGATIVE, ce qui l'écarte des "
     + "staphylocoques. Un « streptocoque » isolé d'une urine chez un homme âgé mérite "
-    + "d'être regardé de près." });
-  A.rules.push({ k: "!", txt: "Ciprofloxacine, lévofloxacine et nitrofurantoïne : l'EUCAST "
+    + "d'être regardé de près.",
+      "Identification: catalase NEGATIVE, which rules out the staphylococci. A "
+    + "\u0022streptococcus\u0022 from the urine of an older man deserves a closer look.") });
+  A.rules.push({ k: "!", txt: tr("Ciprofloxacine, lévofloxacine et nitrofurantoïne : l'EUCAST "
     + "ne les chiffre que pour la CYSTITE SIMPLE. Sur une hémoculture, ces seuils ne "
-    + "s'appliquent pas." });
-  A.rules.push({ k: "!", txt: "Un Aerococcus en HÉMOCULTURE fait chercher une endocardite : "
-    + "l'espèce en donne, et la porte d'entrée est urinaire." });
+    + "s'appliquent pas.",
+      "Ciprofloxacin, levofloxacin and nitrofurantoin: EUCAST gives breakpoints for them "
+    + "only in UNCOMPLICATED CYSTITIS. On a blood culture, those breakpoints do not apply.") });
+  A.rules.push({ k: "!", txt: tr("Un Aerococcus en HÉMOCULTURE fait chercher une endocardite : "
+    + "l'espèce en donne, et la porte d'entrée est urinaire.",
+      "An Aerococcus in a BLOOD CULTURE calls for a search for endocarditis: the species "
+    + "causes it, and the portal of entry is urinary.") });
   parce(A, r, {
-    pour: [["AMP", "S", "ampicilline active — c'est le traitement de référence"],
-           ["PEN", "S", "pénicilline G active"],
-           ["VA", "S", "vancomycine active : recours constant dans ce genre"]],
-    contre: [["PEN", "RI", "pénicilline G atteinte : inhabituel, vérifier l'identification"]]
+    pour: [["AMP", "S", tr("ampicilline active — c'est le traitement de référence",
+                           "ampicillin active — it is the reference treatment")],
+           ["PEN", "S", tr("pénicilline G active", "benzylpenicillin active")],
+           ["VA", "S", tr("vancomycine active : recours constant dans ce genre",
+                          "vancomycin active: the constant fallback in this genus")]],
+    contre: [["PEN", "RI", tr("pénicilline G atteinte : inhabituel, vérifier l'identification",
+                              "benzylpenicillin affected: unusual, check the identification")]]
   });
-  A.comment = "Aerococcus urinae / sanguinicola : coque à Gram positif catalase négative, "
-            + "infection urinaire de l'homme âgé. Pénicilline G / amoxicilline = "
-            + "référence, vancomycine constamment active. Les seuils de ciprofloxacine, "
-            + "lévofloxacine et nitrofurantoïne ne valent que pour la cystite simple ; "
-            + "en hémoculture, chercher une endocardite.";
+  A.comment = tr("Aerococcus urinae / sanguinicola : coque à Gram positif catalase négative, "
+               + "infection urinaire de l'homme âgé. Pénicilline G / amoxicilline = "
+               + "référence, vancomycine constamment active. Les seuils de ciprofloxacine, "
+               + "lévofloxacine et nitrofurantoïne ne valent que pour la cystite simple ; "
+               + "en hémoculture, chercher une endocardite.",
+                 "Aerococcus urinae / sanguinicola: a catalase-negative Gram-positive "
+               + "coccus causing urinary tract infection in older men. Benzylpenicillin or "
+               + "amoxicillin is the reference treatment, vancomycin is always active. The "
+               + "ciprofloxacin, levofloxacin and nitrofurantoin breakpoints hold only for "
+               + "uncomplicated cystitis; on a blood culture, look for endocarditis.");
   return finalize(A, r);
 }
 
 function curvedInterpret(r, c, a) {
-  const sp = (a && a.species) || "Bacille courbe";
+  const sp = (a && a.species) || tr("Bacille courbe", "Curved rod");
   const type = (a && a.type) || "campylobacter";
   const A = { sev: "wild", name: "", mech: "", alerts: [], rules: [], comment: "" };
 
   if (type === "campylobacter") {
     A.name = "Campylobacter jejuni";
-    A.mech = "Macrolides = référence ; fluoroquinolones souvent résistantes (mutation gyrA).";
-    A.rules.push({ k: "✚", txt: "Azithromycine / érythromycine = traitement de référence." });
+    A.mech = tr("Macrolides = référence ; fluoroquinolones souvent résistantes (mutation gyrA).",
+                "The macrolides are the reference treatment; the fluoroquinolones are often resistant (a gyrA mutation).");
+    A.rules.push({ k: "✚", txt: tr("Azithromycine / érythromycine = traitement de référence.",
+      "Azithromycin or erythromycin is the reference treatment.") });
     parce(A, r, {
-      pour: [["AZM", "S", "azithromycine active — c'est le traitement de référence"],
-             ["E", "S", "érythromycine active"]],
-      contre: [["AZM", "R", "macrolide résistant : perte du traitement de référence"],
-               ["CIP", "RI", "ciprofloxacine atteinte (mutation gyrA) : fréquent, et c'est pourquoi les fluoroquinolones ne conviennent pas en probabiliste"]]
+      pour: [["AZM", "S", tr("azithromycine active — c'est le traitement de référence",
+                             "azithromycin active — it is the reference treatment")],
+             ["E", "S", tr("érythromycine active", "erythromycin active")]],
+      contre: [["AZM", "R", tr("macrolide résistant : perte du traitement de référence",
+                               "macrolide resistant: the reference treatment is lost")],
+               ["CIP", "RI", tr("ciprofloxacine atteinte (mutation gyrA) : fréquent, et c'est pourquoi les fluoroquinolones ne conviennent pas en probabiliste",
+                                "ciprofloxacin affected (a gyrA mutation): common, and that is why the fluoroquinolones are not suitable empirically")]]
     });
-    A.comment = "Campylobacter jejuni : macrolides (azithromycine) = traitement de référence.";
-    if (isRI(r.CIP)) A.alerts.push({ lvl: "info", txt: "Ciprofloxacine résistante : fréquent — fluoroquinolones à éviter en probabiliste." });
-    if (isR(r.AZM) || isR(r.E)) { A.sev = "high"; A.alerts.push({ lvl: "warn", txt: "Macrolide résistant : perte du traitement de référence — avis spécialisé." }); A.comment += " Macrolide résistant : options limitées."; }
+    A.comment = tr("Campylobacter jejuni : macrolides (azithromycine) = traitement de référence.",
+      "Campylobacter jejuni: a macrolide, azithromycin, is the reference treatment.");
+    if (isRI(r.CIP)) A.alerts.push({ lvl: "info", txt: tr("Ciprofloxacine résistante : fréquent — fluoroquinolones à éviter en probabiliste.",
+      "Ciprofloxacin resistant: common — avoid the fluoroquinolones empirically.") });
+    if (isR(r.AZM) || isR(r.E)) { A.sev = "high"; A.alerts.push({ lvl: "warn", txt: tr("Macrolide résistant : perte du traitement de référence — avis spécialisé.",
+      "Macrolide resistant: the reference treatment is lost — seek specialist advice.") });
+      A.comment += tr(" Macrolide résistant : options limitées.", " Macrolide resistant: options are limited."); }
   } else {
     A.name = "Vibrio cholerae";
-    A.mech = "Traitement adjuvant à la réhydratation ; doxycycline = référence, azithromycine en alternative.";
-    A.rules.push({ k: "✚", txt: "Doxycycline = référence ; azithromycine / fluoroquinolone selon la sensibilité. La réhydratation reste le pilier du traitement." });
+    A.mech = tr("Traitement adjuvant à la réhydratation ; doxycycline = référence, azithromycine en alternative.",
+                "Treatment is adjunctive to rehydration; doxycycline is the reference, azithromycin the alternative.");
+    A.rules.push({ k: "✚", txt: tr("Doxycycline = référence ; azithromycine / fluoroquinolone selon la sensibilité. La réhydratation reste le pilier du traitement.",
+      "Doxycycline is the reference treatment; azithromycin or a fluoroquinolone according to susceptibility. Rehydration remains the mainstay.") });
     parce(A, r, {
-      pour: [["DOX", "S", "doxycycline active — antibiotique de référence, en appoint de la réhydratation"],
-             ["AZM", "S", "azithromycine active : alternative"]],
-      contre: [["DOX", "R", "doxycycline résistante"],
-               ["SXT", "R", "cotrimoxazole résistant : profil multirésistant fréquent en contexte épidémique"]]
+      pour: [["DOX", "S", tr("doxycycline active — antibiotique de référence, en appoint de la réhydratation",
+                             "doxycycline active — the reference antibiotic, alongside rehydration")],
+             ["AZM", "S", tr("azithromycine active : alternative", "azithromycin active: the alternative")]],
+      contre: [["DOX", "R", tr("doxycycline résistante", "doxycycline resistant")],
+               ["SXT", "R", tr("cotrimoxazole résistant : profil multirésistant fréquent en contexte épidémique",
+                               "co-trimoxazole resistant: a multidrug-resistant phenotype common in outbreaks")]]
     });
-    A.comment = "Vibrio cholerae : la réhydratation est prioritaire ; l'antibiotique (doxycycline de référence, azithromycine en alternative) raccourcit la maladie.";
-    if (isR(r.DOX) && isR(r.SXT)) { A.sev = "high"; A.alerts.push({ lvl: "warn", txt: "Souche multirésistante (doxycycline + cotrimoxazole R) : fréquent en contexte épidémique — s'appuyer sur l'antibiogramme." }); }
+    A.comment = tr("Vibrio cholerae : la réhydratation est prioritaire ; l'antibiotique (doxycycline de référence, azithromycine en alternative) raccourcit la maladie.",
+      "Vibrio cholerae: rehydration comes first; the antibiotic — doxycycline as the reference, azithromycin as the alternative — shortens the illness.");
+    if (isR(r.DOX) && isR(r.SXT)) { A.sev = "high"; A.alerts.push({ lvl: "warn", txt: tr("Souche multirésistante (doxycycline + cotrimoxazole R) : fréquent en contexte épidémique — s'appuyer sur l'antibiogramme.",
+      "A multidrug-resistant isolate (doxycycline and co-trimoxazole both R): common in outbreaks — rely on the susceptibility test.") }); }
   }
   return finalize(A, r);
 }
@@ -4087,6 +4462,9 @@ const MOTEUR = {
   getBP, getDZ, disquePour, zitPour, zitZonePour, enZit, enZitZone,
   horsEucast, depistageSeuil, estCasfm, seuilEcoff, ECOFF, cadrer,
   fixerLangue, langueCourante,
+  // exporté POUR ÊTRE VÉRIFIÉ : le banc s'en sert pour exiger que chaque
+  // phrase de résistance naturelle présente dans ORG sache se traduire.
+  naturelleEn,
   // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
   CONDITIONS, conditionsTechniques,
   // rendu ciblé (HAS 2023)

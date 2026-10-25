@@ -154,42 +154,175 @@ dire("\nUn diamètre sans catégorie explique sa raison dans les deux langues");
    espèce, et on compte celles dont le rendu contient encore du français.
    Soixante sur soixante au départ. Le nombre ne peut descendre qu'en
    traduisant, et il ne peut pas se tromper : c'est le texte rendu. */
-// 60 au départ, le 25 octobre 2026. 51 après les entérobactéries, les
-// staphylocoques et la réserve ECOFF ; 43 après le pneumocoque, les
-// streptocoques, les entérocoques et Pseudomonas ; 26 après Acinetobacter
-// et les seize anaérobies. Il ne doit que DESCENDRE : le baisser
-// est la seule façon de le franchir.
-var PLAFOND_ESPECES = 26;
+/* UN SEUL PROFIL NE PROUVE RIEN, ET CINQ CHAMPS SUR DIX-NEUF NON PLUS.
 
-dire("\nRecensement : quelles espèces rendent encore du français en anglais ?");
+   Première version : UN profil — tout résistant, EUCAST, S/I/R — sur les
+   soixante espèces, et CINQ champs lus (name, mech, comment, rules, alerts).
+   Elle est tombée de 60 à 0. À zéro, elle aurait déclaré la traduction
+   finie. Elle ne l'était pas : un rapport en CA-SFM, une CMI, un prélèvement
+   méningé ou urinaire passent par des machineries entières que ce profil ne
+   visite pas, et l'interprétation porte DIX-NEUF champs — les cinq moments,
+   le commentaire copiable, les posologies, le rendu ciblé, tous affichés et
+   tous lus par un biologiste.
+
+   Corrigé deux fois : SIX profils, et un parcours de TOUT l'objet rendu.
+
+   ET LE COMPTE SE FAIT PAR CHAMP, pas par couple. Compter les couples
+   (espèce, profil) donnait 360 sur 360 dès que « moments » restait français
+   — et un plafond de 360 n'aurait plus rien retenu : on aurait pu laisser
+   repasser « name » en français sans que le nombre bouge. Le plafond est
+   donc posé CHAMP PAR CHAMP ; un champ absent de la table doit rendre zéro,
+   ce qui fait échouer l'apparition d'un champ neuf resté français. */
+var PLAFOND_CHAMPS = {
+  // Les trois machineries de composition qui restent à traduire, au
+  // 25 octobre 2026. Ces nombres ne doivent que DESCENDRE.
+  moments: 1653,              // § 15 : les cinq moments
+  commentaireCopiable: 358,   // commentaireStructure()
+  posologies: 42              // posologie.js
+};
+
+dire("\nRecensement : que reste-t-il de français quand on demande l'anglais ?");
 (function () {
+  /* « PhénoBac » porte un accent et n'est pas du français : le nom du
+     produit reste le même dans les deux langues. Sans ce retrait, douze
+     phrases DÉJÀ TRADUITES étaient comptées comme françaises, et le nombre
+     aurait cessé de suivre le travail — c'est exactement la panne de mesure
+     qui avait fait abandonner le comptage par le texte. */
   var FR = /[àâéèêëîïôùûç]|\b(le|la|les|des|une|un|aux|est|pas|qui|que|pour|sur|dans|avec|sans)\b/;
-  var profil = { PEN: "R", AMX: "R", CTX: "R", FOX: "R", E: "R",
-                 MTZ: "S", SXT: "S", CIP: "S" };
-  var reste = [];
+  function francais(t) { return FR.test(String(t).replace(/PhénoBac/g, "PhenoBac")); }
+
+  var PROFILS = [
+    { nom: "tout R, EUCAST",
+      appel: { mode: "sir", results: { PEN: "R", AMX: "R", CTX: "R", FOX: "R", E: "R",
+                                       MTZ: "S", SXT: "S", CIP: "S" }, ctx: {} } },
+    { nom: "tout S, EUCAST",
+      appel: { mode: "sir", results: { PEN: "S", AMX: "S", CTX: "S", FOX: "S", E: "S",
+                                       MTZ: "S", SXT: "S", CIP: "S" }, ctx: {} } },
+    { nom: "CMI",
+      appel: { mode: "mic", mic: { CIP: "0.5", PEN: "2", CTX: "1", AMX: "8" }, ctx: {} } },
+    { nom: "référentiel CA-SFM",
+      appel: { mode: "sir", results: { PEN: "R", AMX: "R", CTX: "R", FOX: "R", E: "R",
+                                       CIP: "S" }, ctx: { referentiel: "casfm" } } },
+    { nom: "prélèvement méningé",
+      appel: { mode: "mic", mic: { CTX: "1", PEN: "1", MEM: "1" },
+               ctx: { site: "lcr", meninge: true } } },
+    { nom: "prélèvement urinaire",
+      appel: { mode: "sir", results: { AMX: "S", SXT: "S", CIP: "S", NIT: "S", FOS: "S" },
+               ctx: { site: "urine" } } }
+  ];
+
+  var compte = {}, chaines = 0, vus = 0;
+  function marche(x, champ, deja) {
+    if (x === null || x === undefined) return;
+    if (typeof x === "string") {
+      chaines++;
+      if (francais(x)) compte[champ] = (compte[champ] || 0) + 1;
+      return;
+    }
+    if (typeof x !== "object") return;
+    deja = deja || [];
+    if (deja.indexOf(x) >= 0) return;
+    deja.push(x);
+    if (Object.prototype.toString.call(x) === "[object Array]") {
+      for (var i = 0; i < x.length; i++) marche(x[i], champ, deja);
+    } else {
+      for (var k in x) if (Object.prototype.hasOwnProperty.call(x, k)) marche(x[k], champ, deja);
+    }
+  }
+
   Object.keys(E.ORG).forEach(function (id) {
-    var a = E.runInterpretation({ organism: id, lang: "en", mode: "sir",
-                                  results: profil, ctx: {} }).interpretation;
-    var t = [a.name || "", a.mech || "", a.comment || ""]
-      .concat((a.rules || []).map(function (x) { return x.txt; }))
-      .concat((a.alerts || []).map(function (x) { return x.txt; })).join(" || ");
-    if (FR.test(t)) reste.push(id);
+    PROFILS.forEach(function (p) {
+      var appel = { organism: id, lang: "en" };
+      for (var k in p.appel) appel[k] = p.appel[k];
+      var a = E.runInterpretation(appel).interpretation;
+      vus++;
+      Object.keys(a).forEach(function (champ) { marche(a[champ], champ); });
+    });
   });
+
   var n = Object.keys(E.ORG).length;
-  verif(reste.length <= PLAFOND_ESPECES,
-        reste.length + " espèces sur " + n + " rendent encore du français en anglais "
-        + "(plafond " + PLAFOND_ESPECES + ")"
-        + (reste.length > PLAFOND_ESPECES ? " — LA TRADUCTION A RECULÉ" : ""));
-  verif(n >= 60, "… et le recensement a bien parcouru les " + n + " espèces : "
-        + "un recensement vide passerait au vert sans rien avoir regardé");
+  verif(vus === n * PROFILS.length && chaines > 5000,
+        "le recensement a parcouru les " + n + " espèces sous " + PROFILS.length
+        + " profils (" + vus + " couples, " + chaines + " chaînes lues) : un recensement "
+        + "vide passerait au vert sans rien avoir regardé");
+
+  var total = 0, debordent = [];
+  Object.keys(compte).forEach(function (champ) {
+    total += compte[champ];
+    var plafond = PLAFOND_CHAMPS[champ] || 0;
+    if (compte[champ] > plafond) {
+      debordent.push(champ + " : " + compte[champ] + " > " + plafond
+                     + (plafond === 0 ? " (champ qu'on croyait traduit)" : " — A RECULÉ"));
+    }
+  });
+  verif(debordent.length === 0,
+        debordent.length === 0
+          ? total + " chaînes françaises restantes, toutes sous leur plafond ("
+            + Object.keys(compte).sort().map(function (c) {
+                return c + " " + compte[c] + "/" + (PLAFOND_CHAMPS[c] || 0); }).join(", ") + ")"
+          : "la traduction a reculé — " + debordent.join(" ; "));
+
+  var oublies = Object.keys(PLAFOND_CHAMPS).filter(function (c) {
+    return (compte[c] || 0) === 0 && PLAFOND_CHAMPS[c] > 0; });
+  verif(oublies.length === 0,
+        oublies.length === 0
+          ? "… et chaque champ de la table est encore atteint par le recensement"
+          : "plafond devenu inutile — ces champs ne rendent plus de français et leur "
+            + "plafond doit tomber à zéro : " + oublies.join(", "));
+
   E.fixerLangue("fr");
   var frOk = Object.keys(E.ORG).every(function (id) {
-    var a = E.runInterpretation({ organism: id, lang: "fr", mode: "sir",
-                                  results: profil, ctx: {} }).interpretation;
-    return !!a.comment;
+    return PROFILS.every(function (p) {
+      var appel = { organism: id, lang: "fr" };
+      for (var k in p.appel) appel[k] = p.appel[k];
+      return !!E.runInterpretation(appel).interpretation.comment;
+    });
   });
-  verif(frOk, "en français, les " + n + " espèces rendent toujours un commentaire — "
+  verif(frOk, "en français, les " + vus + " couples rendent toujours un commentaire — "
         + "traduire ne doit rien casser de ce qui marchait");
+})();
+
+/* ---------- 9. CHAQUE PHRASE DE RÉSISTANCE NATURELLE SAIT-ELLE SE TRADUIRE ?
+
+   Les 101 valeurs de ORG[...].intrinsic sont des citations du document
+   EUCAST ; le moteur ne les traduit pas une par une mais les COMPOSE
+   (naturelleEn). Une composition ne couvre que ce qu'elle connaît : la
+   phrase d'une règle ajoutée demain ne serait pas traduite, et le rapport
+   anglais la rendrait en français SANS que rien ne le dise — le recensement
+   par espèce ne la verrait que si cette espèce rend l'incohérence, c'est-à-
+   dire seulement si l'on a saisi « S » sur une molécule naturellement
+   résistante.
+
+   Ce contrôle regarde les phrases elles-mêmes, toutes, sans dépendre d'une
+   saisie. naturelleEn() rend null quand elle ne sait pas : c'est ce null qui
+   permet d'échouer ici plutôt que de rendre du français en silence. */
+dire("\nLes phrases de résistance naturelle se traduisent-elles toutes ?");
+(function () {
+  var FR = /[àâéèêëîïôùûç]|\b(le|la|les|des|une|un|aux|est|pas|qui|que|pour|sur|dans|avec|sans|aminosides|naturelle)\b/;
+  var phrases = {}, muettes = [], restees = [];
+  Object.keys(E.ORG).forEach(function (id) {
+    var nat = E.ORG[id].intrinsic || {};
+    Object.keys(nat).forEach(function (k) { phrases[nat[k]] = true; });
+  });
+  var toutes = Object.keys(phrases);
+  toutes.forEach(function (fr) {
+    var en = E.naturelleEn(fr);
+    if (!en) { muettes.push(fr); return; }
+    if (FR.test(en)) restees.push(fr + "  ->  " + en);
+  });
+  verif(toutes.length >= 60,
+        "le contrôle a bien ramassé les " + toutes.length + " phrases distinctes de "
+        + "ORG : un ramassage vide passerait au vert sans rien avoir regardé");
+  verif(muettes.length === 0,
+        muettes.length === 0
+          ? "les " + toutes.length + " phrases savent toutes se traduire"
+          : muettes.length + " phrase(s) que naturelleEn() ne sait pas traduire — "
+            + "elles seraient rendues EN FRANÇAIS dans un rapport anglais : "
+            + muettes.join(" | "));
+  verif(restees.length === 0,
+        restees.length === 0
+          ? "… et aucune traduction ne laisse du français derrière elle"
+          : restees.length + " traduction(s) gardent du français : " + restees.join(" | "));
 })();
 
 E.fixerLangue("fr");
