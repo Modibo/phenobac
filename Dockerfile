@@ -16,7 +16,7 @@ COPY server.js ./
 # l'API tombe au premier appel.
 # Les DONNÉES du moteur autant que le moteur : il les charge par require,
 # et leur absence le fait planter au démarrage, pas à l'usage.
-COPY base-connaissances.js posologie.js rendu-cible.js moteur.js ./
+COPY base-connaissances.js posologie.js rendu-cible.js langue.js moteur.js ./
 COPY netlify ./netlify
 COPY public ./public
 

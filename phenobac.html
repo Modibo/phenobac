@@ -1316,6 +1316,15 @@
     .tabs button{ padding:7px 9px; font-size:11.5px; }
   }
 </style>
+<style>
+.lang-switch{margin-left:.5rem;padding:.25rem .6rem;border:1px solid var(--bord,#cbd5e1);
+  border-radius:999px;background:transparent;font:inherit;font-size:.82rem;cursor:pointer;
+  color:inherit;white-space:nowrap}
+.lang-switch:hover{background:rgba(127,127,127,.12)}
+.partiel{margin:.6rem 0;padding:.6rem .8rem;border-left:3px solid #b45309;
+  background:rgba(180,83,9,.08);font-size:.88rem;border-radius:.3rem}
+.partiel b{display:block;margin-bottom:.2rem}
+</style>
 </head>
 <body>
 
@@ -1326,21 +1335,27 @@
         <span class="pheno-mark brand-mark" aria-hidden="true"></span>
         <span class="logo">Phéno<b>Bac</b></span>
       </button>
-      <span class="sub">Lecture interprétative</span>
+      <span class="sub" data-i18n="marque.sous">Lecture interprétative</span>
     </div>
     <div class="tabs" id="tabs">
-      <button data-view="ident">Identification</button>
-      <button data-view="work" class="on">Interprétation</button>
-      <button data-view="quiz">Entraînement</button>
-      <button data-view="cq">Contrôle qualité</button>
-      <button data-view="surv">Surveillance</button>
-      <button data-view="ref">Référentiels</button>
-      <button data-view="offres">À propos</button>
+      <button data-view="ident" data-i18n="nav.identification">Identification</button>
+      <button data-view="work" class="on" data-i18n="nav.interpretation">Interprétation</button>
+      <button data-view="quiz" data-i18n="nav.entrainement">Entraînement</button>
+      <button data-view="cq" data-i18n="nav.cq">Contrôle qualité</button>
+      <button data-view="surv" data-i18n="nav.surveillance">Surveillance</button>
+      <button data-view="ref" data-i18n="nav.referentiels">Référentiels</button>
+      <button data-view="offres" data-i18n="nav.apropos">À propos</button>
     </div>
     <div class="live-chip" id="liveChip">
       <span class="led" id="liveLed"></span>
-      <span class="lbl" id="liveLbl">En attente</span>
+      <span class="lbl" id="liveLbl" data-i18n="nav.attente">En attente</span>
     </div>
+    <!-- LE CHOIX DE LA LANGUE, dans la barre et non dans un réglage enfoui :
+         un laboratoire anglophone qui ouvre PhénoBac pour la première fois doit
+         pouvoir basculer sans chercher. Le bouton affiche la langue VERS
+         laquelle il mène, ce qui est la seule façon d'être lisible quand on ne
+         comprend pas celle qui est affichée. -->
+    <button class="lang-switch" id="langSwitch" type="button"></button>
     <div class="plan-chip free" id="planChip" style="display:none"></div>
   </div>
 </header>
@@ -1362,13 +1377,13 @@
 
     <div class="intro-foot">
       <div class="intro-foot-txt">
-        <span class="avert"><svg class="avert-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 1.5 21h21L12 3Z"/><path class="avert-bar" d="M12 9.5v5"/><circle class="avert-pt" cx="12" cy="17.4" r="1.05"/></svg>Avertissement</span>
+        <span class="avert"><svg class="avert-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 1.5 21h21L12 3Z"/><path class="avert-bar" d="M12 9.5v5"/><circle class="avert-pt" cx="12" cy="17.4" r="1.05"/></svg data-i18n="avert.titre">Avertissement</span>
         <b>Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.</b>
         PhénoBac propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir
         de résultats que vous avez déjà lus. La validation biologique, les tests de confirmation et
         le référentiel en vigueur restent entièrement de la responsabilité du biologiste.
       </div>
-      <button class="intro-jamais" id="introJamais">Ne plus afficher à l'ouverture</button>
+      <button class="intro-jamais" id="introJamais" data-i18n="avert.masquer">Ne plus afficher à l'ouverture</button>
     </div>
   </div>
 </section>
@@ -1378,28 +1393,28 @@
   <section>
     <!-- Contexte -->
     <div class="card">
-      <div class="card-h"><span class="eyebrow"><span class="num">01</span>Contexte</span></div>
+      <div class="card-h"><span class="eyebrow"><span class="num">01</span data-i18n="bloc.contexte">Contexte</span></div>
       <div class="card-b">
         <div class="field">
-          <label class="flabel" for="species">Espèce identifiée</label>
+          <label class="flabel" for="species" data-i18n="champ.espece">Espèce identifiée</label>
           <div class="selwrap">
             <select id="species" class="species-name"></select>
           </div>
         </div>
         <div class="field">
-          <label class="flabel" for="specimen">Prélèvement</label>
+          <label class="flabel" for="specimen" data-i18n="champ.prelevement">Prélèvement</label>
           <div class="selwrap">
             <!-- Le prélèvement commande désormais une confrontation dans le
                  moteur : en changer doit donc relancer l'interprétation, sans
                  quoi l'avertissement resterait celui du choix précédent. -->
             <select id="specimen" onchange="if(typeof renderInterpret==='function') renderInterpret();">
-              <option>Hémoculture</option>
-              <option>ECBU (urines)</option>
-              <option>Pus / plaie</option>
-              <option>Prélèvement respiratoire</option>
-              <option>LCR</option>
-              <option>Cathéter</option>
-              <option>Autre</option>
+              <option data-i18n="prel.hemoculture">Hémoculture</option>
+              <option data-i18n="prel.ecbu">ECBU (urines)</option>
+              <option data-i18n="prel.pus">Pus / plaie</option>
+              <option data-i18n="prel.respiratoire">Prélèvement respiratoire</option>
+              <option data-i18n="prel.lcr">LCR</option>
+              <option data-i18n="prel.catheter">Cathéter</option>
+              <option data-i18n="prel.autre">Autre</option>
             </select>
           </div>
         </div>
@@ -1421,14 +1436,14 @@
     <!-- Antibiogramme -->
     <div class="card">
       <div class="card-h">
-        <span class="eyebrow"><span class="num">02</span>Antibiogramme</span>
+        <span class="eyebrow"><span class="num">02</span data-i18n="bloc.antibiogramme">Antibiogramme</span>
         <div style="margin-left:auto" class="toolbar">
           <div class="mode-seg" id="modeSeg">
-            <button data-m="diam">Diamètre mm</button>
-            <button data-m="sir">S / I / R</button>
-            <button data-m="mic">CMI mg/L</button>
+            <button data-m="diam" data-i18n="mode.diametre">Diamètre mm</button>
+            <button data-m="sir" data-i18n="mode.sir">S / I / R</button>
+            <button data-m="mic" data-i18n="mode.cmi">CMI mg/L</button>
           </div>
-          <button class="btn" id="reset">Réinitialiser</button>
+          <button class="btn" id="reset" data-i18n="bouton.reinitialiser">Réinitialiser</button>
         </div>
       </div>
       <div class="card-b">
@@ -1436,7 +1451,7 @@
              conditionne les seuils et les règles de lecture interprétative :
              on le choisit avant de saisir, pas après. -->
         <div class="refpick">
-          <span class="lbl">Référentiel</span>
+          <span class="lbl" data-i18n="champ.referentiel">Référentiel</span>
           <div class="refseg" id="refSeg">
             <button data-r="eucast">EUCAST</button>
             <button data-r="casfm">CA-SFM</button>
@@ -1447,10 +1462,10 @@
              d'affichage. Elle se discute avec les cliniciens, et l'interface
              le dit — § 6 : une règle locale est signalée comme telle. -->
         <div class="refpick rc-pick">
-          <span class="lbl">Rendu ciblé</span>
+          <span class="lbl" data-i18n="champ.rendu">Rendu ciblé</span>
           <div class="refseg" id="rcSeg">
-            <button data-rc="non">Complet</button>
-            <button data-rc="oui">Ciblé</button>
+            <button data-rc="non" data-i18n="rendu.complet">Complet</button>
+            <button data-rc="oui" data-i18n="rendu.cible">Ciblé</button>
           </div>
           <span class="hint" id="rcHint"></span>
         </div>
@@ -1499,7 +1514,7 @@
 <div class="surv-wrap" id="refView" style="display:none">
   <div class="card">
     <div class="card-h">
-      <span class="eyebrow"><span class="num">R</span>Règles appliquées</span>
+      <span class="eyebrow"><span class="num">R</span data-i18n="cr.regles">Règles appliquées</span>
       <div style="margin-left:auto" class="toolbar">
         <input class="ref-q" id="refQ" type="search" placeholder="antibiotique, groupe…" aria-label="Filtrer les règles">
         <button class="btn" id="refExport">Exporter (CSV)</button>
@@ -1583,7 +1598,7 @@
 <div class="offres-wrap" id="offresView" style="display:none">
     <div class="offres-hero">
       <div class="pheno-mark offres-mark" aria-hidden="true"></div>
-      <div class="oh-eyebrow">Gratuit, sans compte, sans licence</div>
+      <div class="oh-eyebrow" data-i18n="gratuit.bandeau">Gratuit, sans compte, sans licence</div>
       <h1>Le raisonnement expert, à portée de paillasse.</h1>
       <p>
         PhénoBac est un <b>outil d'aide à l'interprétation et à la formation</b>. Il nomme le
@@ -1630,7 +1645,7 @@
       </section>
 
       <section class="ap-bloc">
-        <h2>Concentrations critiques</h2>
+        <h2 data-i18n="bloc.seuils">Concentrations critiques</h2>
         <p id="apRef">Référentiel employé : —</p>
         <p>
           Deux référentiels sont disponibles, au choix, dans l'encadré « Antibiogramme » :
@@ -1664,7 +1679,7 @@
       </section>
 
       <section class="ap-bloc">
-        <h2>Conception</h2>
+        <h2 data-i18n="bloc.conception">Conception</h2>
         <p>
           Conçu et développé par le <b>Dr. Modibo Mouctar COULIBALY</b>, PharmD, CLMS, PhD,
           <b>Maître de Recherche à l'Hôpital Sominé DOLO de Mopti</b> (Mali), pour les
@@ -1697,12 +1712,12 @@
   <div class="modal" role="dialog" aria-modal="true" aria-label="Pourquoi cette interprétation">
     <div class="modal-top">
       <div class="modal-eyebrow">Resistance Detective</div>
-      <div class="modal-title">Pourquoi cette interprétation&nbsp;?</div>
+      <div class="modal-title" data-i18n="cr.pourquoi">Pourquoi cette interprétation&nbsp;?</div>
       <button class="modal-close" id="detClose" aria-label="Fermer">×</button>
     </div>
     <div class="modal-b" id="detCorps"></div>
     <div class="modal-pied">
-      <button class="btn" id="detCopier">Copier le raisonnement</button>
+      <button class="btn" id="detCopier" data-i18n="cr.copier">Copier le raisonnement</button>
       <span class="det-msg" id="detMsg"></span>
     </div>
   </div>
@@ -1712,7 +1727,7 @@
   <div class="modal" role="dialog" aria-modal="true" aria-label="Verser à la surveillance">
     <div class="modal-top">
       <div class="modal-eyebrow">Surveillance de la résistance</div>
-      <div class="modal-title">Verser cet isolat</div>
+      <div class="modal-title" data-i18n="act.verser">Verser cet isolat</div>
       <button class="modal-close" id="survClose" aria-label="Fermer">×</button>
     </div>
     <div class="modal-b">
@@ -1789,7 +1804,7 @@
       <div class="modal-price" id="modalPrice"></div>
       <div class="modal-code">
         <input id="licenseInput" type="text" placeholder="Collez votre clé de licence" autocomplete="off" spellcheck="false">
-        <button class="modal-activate" id="activateBtn">Activer</button>
+        <button class="modal-activate" id="activateBtn" data-i18n="act.activer">Activer</button>
       </div>
       <div class="modal-err" id="modalErr"></div>
       <div class="modal-hint" id="modalHint"></div>
@@ -1799,8 +1814,8 @@
 
 
 <div class="maj-bar" id="majBar" role="status" aria-live="polite">
-  <span class="maj-txt"><b>Nouvelle version disponible<span id="majVer"></span>.</b> Elle peut contenir des seuils corrigés.</span>
-  <button class="maj-recharger" id="majRecharger">Recharger</button>
+  <span class="maj-txt"><b data-i18n="maj.titre">Nouvelle version disponible<span id="majVer"></span>.</b> Elle peut contenir des seuils corrigés.</span>
+  <button class="maj-recharger" id="majRecharger" data-i18n="act.recharger">Recharger</button>
   <button class="maj-plus-tard" id="majPlusTard" aria-label="Plus tard">&times;</button>
 </div>
 
@@ -1816,6 +1831,7 @@
      tables au moteur. Les deux fichiers sont aussi ceux que sert l'API : un
      seul exemplaire des règles et du raisonnement existe, et c'est lui qui
      permet d'interpréter sans réseau une fois l'application installée. -->
+<script src="langue.js"></script>
 <script src="posologie.js"></script>
 <script src="rendu-cible.js"></script>
 <script src="base-connaissances.js"></script>
@@ -1911,6 +1927,84 @@ const has = (r,k)=> r[k]!==undefined && r[k]!==null && r[k]!=="";
    Une seule source, donc plus rien à faire concorder.
    ============================================================ */
 const _M = self.PhenoBacMoteur;
+
+/* ====================================================================
+   LA LANGUE.
+
+   Le catalogue vit dans langue.js, avec les raisons. Ici, seulement la
+   mécanique : résoudre la langue, remplir les éléments marqués
+   « data-i18n », et basculer.
+
+   L'ANGLAIS EST ENCORE PARTIEL, ET L'INTERFACE LE DIT. Le commentaire
+   interprétatif du moteur — mécanismes, règles expertes, alertes — reste
+   rédigé en français. Une application médicale à moitié traduite qui ne
+   l'annonce pas est pire qu'une application qui ne l'est pas du tout : le
+   lecteur croit avoir tout lu. L'encart d'avertissement n'est donc PAS
+   masquable, et il disparaîtra de lui-même quand il n'aura plus lieu d'être.
+   ==================================================================== */
+const _L = self.PhenoBacLangue;
+const L = (c) => _L.L(c);
+const MEM_LANGUE = "phenobac-langue";
+
+function langueMemorisee() {
+  try { return localStorage.getItem(MEM_LANGUE); } catch (e) { return null; }
+}
+
+function traduire() {
+  document.querySelectorAll("[data-i18n]").forEach(function (e) {
+    const t = L(e.getAttribute("data-i18n"));
+    // Les éléments à enfants (une balise <b> dans le libellé) ne se
+    // remplacent pas au lance-pierre : on ne touche qu'au texte.
+    if (e.children.length === 0) e.textContent = t;
+    else { const n = [...e.childNodes].find(x => x.nodeType === 3 && x.textContent.trim());
+           if (n) n.textContent = t; }
+  });
+  document.documentElement.setAttribute("lang", _L.courante());
+  document.title = L("page.titre");
+  const b = document.getElementById("langSwitch");
+  if (b) { b.textContent = L("langue.basculer"); b.title = L("langue.titre"); }
+  avertirTraductionPartielle();
+}
+
+/* L'encart ne paraît qu'en anglais, et il est posé EN HAUT de
+   l'interprétation — là où le commentaire français va s'afficher. */
+function avertirTraductionPartielle() {
+  let e = document.getElementById("partielAvis");
+  if (!_L.estAnglais()) { if (e) e.remove(); return; }
+  if (!e) {
+    e = document.createElement("div");
+    e.id = "partielAvis"; e.className = "partiel";
+    const hote = document.getElementById("interpOut") || document.getElementById("interp")
+              || document.querySelector("main") || document.body;
+    hote.insertBefore(e, hote.firstChild);
+  }
+  e.innerHTML = "";
+  const t = document.createElement("b"); t.textContent = L("partiel.titre");
+  const p = document.createElement("span"); p.textContent = L("partiel.texte");
+  e.appendChild(t); e.appendChild(p);
+}
+
+function fixerLangue(l) {
+  _L.fixer(l);
+  try { localStorage.setItem(MEM_LANGUE, _L.courante()); } catch (e) {}
+  traduire();
+  // Tout ce qui est rendu par le script doit être refait : les panels, les
+  // aides de seuil, l'interprétation. Sans cela la moitié de l'écran
+  // resterait dans l'ancienne langue, ce qui est le pire des deux états.
+  ["renderAbx", "renderInterpret", "renderCtx", "renderReferentiels"]
+    .forEach(function (f) { if (typeof self[f] === "function") { try { self[f](); } catch (e) {} } });
+}
+
+_L.fixer(_L.resoudre(location.search, langueMemorisee(), navigator.language));
+
+document.addEventListener("DOMContentLoaded", function () {
+  const b = document.getElementById("langSwitch");
+  if (b) b.addEventListener("click", function () {
+    fixerLangue(_L.courante() === "fr" ? "en" : "fr");
+  });
+  traduire();
+});
+
 if (!_M) throw new Error("moteur.js doit être chargé avant le script de la page");
 
 const { BP, BP_MENINGE, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
