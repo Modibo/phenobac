@@ -49,12 +49,26 @@ PLAFOND = {
     # français non traduit sans rien faire tomber.
     # Relevés par le balayage d'états, qui est le seul juste : les premiers
     # chiffres — 411, 671, 37 — venaient d'un comptage faux.
+    # Fichiers JavaScript PURS : le balayage d'états y est juste.
     "moteur.js": 501,
-    "phenobac.html": 618,
-    "rendu-cible.js": 45,
+    "rendu-cible.js": 43,
 }
 
+# Le texte VISIBLE encore en français, morceaux. Mesuré à part des fichiers
+# JavaScript, et par une lecture HTML : voir texte_visible().
+PLAFOND_VISIBLE = 124
+
 ACCENTS = re.compile(r'[àâäéèêëîïôöùûüçœÀÉÈÊÎÔÛÇ]')
+
+# NOMS PROPRES ACCENTUÉS, QUI NE SONT PAS DU FRANÇAIS.
+#
+# « PhénoBac » porte un accent, et une phrase anglaise qui le contient était
+# comptée comme française : le compteur s'alarmait sur le nom du produit, et
+# douze mille caractères de traduction anglaise faisaient MONTER le reliquat.
+# Un compteur qui se trompe dans ce sens-là est pire qu'absent : il décourage
+# précisément le travail qu'il est censé encourager.
+PROPRES = re.compile(r'Phéno\s*Bac|Sominé\s*DOLO|Mopti|Modibo|Coulibaly|'
+                     r'Céfidérocol|Témocilline', re.I)
 MOTS_FR = re.compile(r'\b(le|la|les|des|une|un|aux|est|pas|qui|que|pour|sur|dans|avec)\b')
 
 
@@ -74,6 +88,21 @@ def chaines(src):
     C'est le même défaut que verifier-comptes.py avait eu, à la même cause. On
     emprunte donc le balayage d'états de outils/muter.py plutôt que d'en
     écrire une troisième version."""
+    # UN SCANNER JAVASCRIPT SUR UN FICHIER HTML NE VEUT RIEN DIRE.
+    #
+    # Troisième incarnation du même défaut dans ce fichier, et la plus grave.
+    # Le balayage d'états de muter.py lit du JavaScript : il prend les
+    # guillemets des attributs HTML pour des chaînes, et surtout les
+    # APOSTROPHES FRANÇAISES du texte visible — « l'antibiogramme » — pour des
+    # ouvertures de chaîne qui ne se referment jamais. Trente-sept mille
+    # caractères de page se retrouvaient comptés comme UNE chaîne, et le
+    # plafond de phenobac.html — 618, puis 617 — ne voulait rien dire : il
+    # bougeait de cent quarante au moindre remaniement.
+    #
+    # Dans un fichier HTML, on ne balaye donc que le contenu des <script>,
+    # c'est-à-dire là où vivent les chaînes traduisibles : PRESENTATIONS, la
+    # banque d'entraînement, les messages. Le texte visible, lui, est couvert
+    # par le marquage « data-i18n », que ce même contrôle vérifie par ailleurs.
     spec = importlib.util.spec_from_file_location("muter", os.path.join(ICI, "muter.py"))
     MU = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(MU)
@@ -95,7 +124,72 @@ def chaines(src):
 
 
 def francaises(ch):
-    return [s for s in ch if ACCENTS.search(s) or MOTS_FR.search(s)]
+    nettes = [PROPRES.sub(" ", s) for s in ch]
+    return [s for s, n in zip(ch, nettes) if ACCENTS.search(n) or MOTS_FR.search(n)]
+
+
+def compte_items(corps, nom):
+    """Le nombre d'éléments d'une liste, en comptant les VIRGULES de premier
+    niveau et non les délimiteurs de chaînes.
+
+    Première version : compter les guillemets et diviser par deux. Les étapes
+    sont écrites en gabarits (`…`) et contiennent du HTML avec ses propres
+    guillemets — « <span class="ge-ref"> » —, si bien que le compte explosait
+    et que les deux langues ne pouvaient JAMAIS concorder. Le contrôle criait
+    donc en permanence, ce qui revient à ne rien contrôler : on apprend à
+    ignorer un voyant toujours rouge."""
+    i = corps.find(nom + ": [")
+    if i < 0:
+        return 0
+    i += len(nom) + 3
+    n, prof, items, delim, vide = len(corps), 0, 1, "", True
+    while i < n:
+        c = corps[i]
+        if delim:
+            if c == "\\":
+                i += 2
+                continue
+            if c == delim:
+                delim = ""
+        elif c in "\"'`":
+            delim, vide = c, False
+        elif c in "[({":
+            prof += 1
+        elif c in "])}":
+            if c == "]" and prof == 0:
+                return 0 if vide else items
+            prof -= 1
+        elif c == "," and prof == 0:
+            items += 1
+        i += 1
+    return items
+
+
+def texte_visible(page):
+    """Le texte FRANÇAIS encore visible à l'écran, morceau par morceau.
+
+    ON NE MESURE PAS LA PAGE AVEC UN SCANNER JAVASCRIPT. Deux tentatives s'y
+    sont cassées : les guillemets des attributs HTML, puis les apostrophes
+    françaises du texte — « l'antibiogramme » ouvre une chaîne qui ne se
+    referme jamais —, puis les littéraux d'expression régulière du script. Le
+    compte de phenobac.html a valu successivement 618, 617, 758 et 821 sans
+    qu'une ligne de français change : un nombre qui bouge tout seul ne mesure
+    rien, et un plafond posé dessus ne retient rien.
+
+    On mesure donc ce qui est EXACT et ce qui compte vraiment : les morceaux de
+    texte français que l'utilisateur rencontre à l'écran, hors script, hors
+    style, et hors des éléments déjà marqués « data-i18n » — ceux-là sont
+    traduits. C'est un nombre qui ne peut descendre qu'en traduisant."""
+    sans = re.sub(r"<script\b.*?</script>", " ", page, flags=re.S | re.I)
+    sans = re.sub(r"<style\b.*?</style>", " ", sans, flags=re.S | re.I)
+    sans = re.sub(r"<!--.*?-->", " ", sans, flags=re.S)
+    # Retirer le CONTENU des éléments déjà marqués : ils sont traduits au
+    # chargement, et les compter ferait stagner le nombre quoi qu'on traduise.
+    sans = re.sub(r"<(\w+)[^>]*data-i18n=\"[^\"]+\"[^>]*>.*?</\1>", " ", sans, flags=re.S)
+    sans = re.sub(r"<[^>]+>", "\n", sans)
+    sans = sans.replace("&nbsp;", " ").replace("&amp;", "&").replace("&times;", " ")
+    morceaux = [" ".join(l.split()) for l in sans.splitlines()]
+    return [m for m in morceaux if len(m) > 3]
 
 
 def catalogue():
@@ -162,6 +256,21 @@ def main():
     if inconnues:
         ecarts.append("la page réclame des clés absentes du catalogue : %s — elles "
                       "s'afficheraient entre crochets." % ", ".join(inconnues))
+    # UN ATTRIBUT POSÉ SUR UNE BALISE FERMANTE NE FAIT RIEN, ET NE DIT RIEN.
+    #
+    # Le marquage initial a été fait par un script qui reculait jusqu'au « < »
+    # précédant le texte. Quand ce texte suit une balise fermée —
+    # « <span class="num">01</span>Contexte » — il tombait sur « </span> », et
+    # l'attribut s'y collait. Le navigateur ignore les attributs des balises
+    # fermantes : le HTML s'affiche normalement, et l'élément n'est simplement
+    # JAMAIS traduit. Quatre libellés étaient dans ce cas, dont deux titres
+    # d'encadré et le mot « Avertissement ».
+    fermantes = re.findall(r'</[a-zA-Z]+[^>]*data-i18n="([\w.]+)"[^>]*>', page)
+    if fermantes:
+        ecarts.append("data-i18n posé sur une balise FERMANTE : %s. Le navigateur "
+                      "l'ignore, l'élément n'est jamais traduit, et rien ne le "
+                      "signale." % ", ".join(sorted(set(fermantes))))
+
     for maillon, pourquoi in (
             ('<script src="langue.js">', "le catalogue ne serait pas chargé"),
             ('id="langSwitch"', "il n'y aurait aucun moyen de changer de langue"),
@@ -174,11 +283,92 @@ def main():
         dits.append("%d éléments de la page sont marqués, et toutes leurs clés "
                     "existent." % len(marques))
 
+    # --- LA PRÉSENTATION, VUE PAR VUE ---
+    #
+    # C'est le PREMIER écran. Une vue qui manquerait en anglais afficherait du
+    # français sans prévenir ; une étape qui manquerait ferait un guide en
+    # trois points là où il en faut quatre, et personne ne saurait qu'il en
+    # manque un. On compare donc les deux jeux CLÉ PAR CLÉ, et jusqu'à la
+    # longueur des listes.
+    def jeu(nom):
+        m = re.search(r"var %s = \{(.*?)\n\};" % nom, page, re.S)
+        if not m:
+            return None
+        corps = m.group(1)
+        # LA DERNIÈRE VUE N'ÉTAIT PAS LUE — pour la DEUXIÈME fois dans ce
+        # fichier. Le motif exigeait « } » suivi d'une virgule optionnelle PUIS
+        # d'un saut de ligne ; la dernière vue, elle, est suivie de « \n}; ».
+        # Les deux jeux manquaient donc la même vue, concordaient, et le
+        # contrôle passait au vert sur une présentation incomplète. Un angle
+        # mort en bout de liste est le plus coûteux : c'est là qu'on ajoute.
+        # On repère les ouvertures et on referme par comptage d'accolades.
+        vues = {}
+        for m in re.finditer(r"\n  (\w+): \{", corps):
+            debut = m.end()
+            prof, i, n = 1, debut, len(corps)
+            delim = ""
+            while i < n and prof:
+                c = corps[i]
+                if delim:
+                    if c == "\\":
+                        i += 2
+                        continue
+                    if c == delim:
+                        delim = ""
+                elif c in "\"'`":
+                    delim = c
+                elif c == "{":
+                    prof += 1
+                elif c == "}":
+                    prof -= 1
+                i += 1
+            bloc = corps[debut:i - 1]
+            champs = {}
+            for c in ("eyebrow", "titre", "lead", "cta", "cible", "guideTitre", "astuce"):
+                champs[c] = bool(re.search(r"\b%s:" % c, bloc))
+            for liste in ("reperes", "etapes"):
+                champs[liste] = compte_items(bloc, liste)
+            vues[m.group(1)] = champs
+        return vues
+
+    FR, EN = jeu("PRESENTATIONS"), jeu("PRESENTATIONS_EN")
+    if not FR or not EN:
+        ecarts.append("impossible de lire PRESENTATIONS%s dans la page — la "
+                      "présentation ne serait plus contrôlée du tout."
+                      % ("" if FR else " et PRESENTATIONS_EN"))
+    else:
+        manque = sorted(set(FR) - set(EN))
+        trop = sorted(set(EN) - set(FR))
+        if manque:
+            ecarts.append("la présentation anglaise n'a pas les vues %s : elles "
+                          "s'afficheraient en français, et c'est le PREMIER écran."
+                          % ", ".join(manque))
+        if trop:
+            ecarts.append("la présentation anglaise a des vues que le français n'a "
+                          "pas : %s." % ", ".join(trop))
+        boiteux = []
+        for v in sorted(set(FR) & set(EN)):
+            for c, a in FR[v].items():
+                b = EN[v][c]
+                if a != b:
+                    boiteux.append("%s/%s (fr %s, en %s)" % (v, c, a, b))
+        if boiteux:
+            ecarts.append("la présentation anglaise ne suit pas la française : %s. "
+                          "Un guide en trois points là où il en faut quatre ne dit "
+                          "pas qu'il lui en manque un." % " ; ".join(boiteux))
+        if not (manque or trop or boiteux):
+            dits.append("la présentation a ses %d vues dans les deux langues, avec "
+                        "le même nombre de repères et d'étapes." % len(FR))
+
     # --- LE PLAFOND ---
-    restes, monte = {}, []
-    for f, limite in sorted(PLAFOND.items()):
-        src = open(os.path.join(RACINE, f), encoding="utf-8").read()
-        n = len(francaises(chaines(src)))
+    restes, monte, limites = {}, [], dict(PLAFOND)
+    limites["phenobac.html (texte visible)"] = PLAFOND_VISIBLE
+    for f, limite in sorted(limites.items()):
+        if f.startswith("phenobac.html"):
+            n = len(francaises(texte_visible(page)))
+        else:
+            src = open(os.path.join(RACINE, f), encoding="utf-8").read()
+            n = len(francaises(chaines(src)))
         restes[f] = n
         if n > limite:
             monte.append("%s : %d chaînes françaises, contre %d au plafond — la "
@@ -188,9 +378,9 @@ def main():
                       "du texte non traduit défait le travail aussi vite qu'il se "
                       "fait." % " ; ".join(monte))
     else:
-        gagne = sum(PLAFOND[f] - restes[f] for f in restes)
+        gagne = sum(limites[f] - restes[f] for f in restes)
         dits.append("le français restant ne dépasse aucun plafond (%s)%s."
-                    % (", ".join("%s %d/%d" % (f, restes[f], PLAFOND[f])
+                    % (", ".join("%s %d/%d" % (f, restes[f], limites[f])
                                  for f in sorted(restes)),
                        " — %d chaînes de moins qu'au relevé" % gagne if gagne else ""))
 

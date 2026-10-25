@@ -167,7 +167,11 @@ const C = {
   "gratuit.bandeau":       { fr: "Gratuit, sans compte, sans licence",
                              en: "Free, no account, no licence" },
   "gratuit.accroche":      { fr: "Le raisonnement expert, à portée de paillasse.",
-                             en: "Expert reasoning, within reach of the bench." }
+                             en: "Expert reasoning, within reach of the bench." },
+
+  /* ---------- présentation ---------- */
+  "intro.apropos":         { fr: "À propos de PhénoBac", en: "About PhénoBac" },
+  "intro.seuils":          { fr: "Seuils", en: "Breakpoints" }
 };
 
 const DEFAUT = "fr";

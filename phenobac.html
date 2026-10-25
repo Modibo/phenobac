@@ -1377,7 +1377,7 @@
 
     <div class="intro-foot">
       <div class="intro-foot-txt">
-        <span class="avert"><svg class="avert-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 1.5 21h21L12 3Z"/><path class="avert-bar" d="M12 9.5v5"/><circle class="avert-pt" cx="12" cy="17.4" r="1.05"/></svg data-i18n="avert.titre">Avertissement</span>
+        <span class="avert" data-i18n="avert.titre"><svg class="avert-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 1.5 21h21L12 3Z"/><path class="avert-bar" d="M12 9.5v5"/><circle class="avert-pt" cx="12" cy="17.4" r="1.05"/></svg>Avertissement</span>
         <b>Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.</b>
         PhénoBac propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir
         de résultats que vous avez déjà lus. La validation biologique, les tests de confirmation et
@@ -1393,7 +1393,7 @@
   <section>
     <!-- Contexte -->
     <div class="card">
-      <div class="card-h"><span class="eyebrow"><span class="num">01</span data-i18n="bloc.contexte">Contexte</span></div>
+      <div class="card-h"><span class="eyebrow" data-i18n="bloc.contexte"><span class="num">01</span>Contexte</span></div>
       <div class="card-b">
         <div class="field">
           <label class="flabel" for="species" data-i18n="champ.espece">Espèce identifiée</label>
@@ -1436,7 +1436,7 @@
     <!-- Antibiogramme -->
     <div class="card">
       <div class="card-h">
-        <span class="eyebrow"><span class="num">02</span data-i18n="bloc.antibiogramme">Antibiogramme</span>
+        <span class="eyebrow" data-i18n="bloc.antibiogramme"><span class="num">02</span>Antibiogramme</span>
         <div style="margin-left:auto" class="toolbar">
           <div class="mode-seg" id="modeSeg">
             <button data-m="diam" data-i18n="mode.diametre">Diamètre mm</button>
@@ -1514,7 +1514,7 @@
 <div class="surv-wrap" id="refView" style="display:none">
   <div class="card">
     <div class="card-h">
-      <span class="eyebrow"><span class="num">R</span data-i18n="cr.regles">Règles appliquées</span>
+      <span class="eyebrow" data-i18n="cr.regles"><span class="num">R</span>Règles appliquées</span>
       <div style="margin-left:auto" class="toolbar">
         <input class="ref-q" id="refQ" type="search" placeholder="antibiotique, groupe…" aria-label="Filtrer les règles">
         <button class="btn" id="refExport">Exporter (CSV)</button>
@@ -1693,7 +1693,7 @@
 
 <footer>
   <div class="disclaimer">
-    <span class="avert"><svg class="avert-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 1.5 21h21L12 3Z"/><path class="avert-bar" d="M12 9.5v5"/><circle class="avert-pt" cx="12" cy="17.4" r="1.05"/></svg>Avertissement</span>
+    <span class="avert" data-i18n="avert.titre"><svg class="avert-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 1.5 21h21L12 3Z"/><path class="avert-bar" d="M12 9.5v5"/><circle class="avert-pt" cx="12" cy="17.4" r="1.05"/></svg>Avertissement</span>
     <b style="color:var(--i)">Outil d'aide et de formation — validation biologique requise.</b>
     PhénoBac n'est <b>pas un dispositif médical de diagnostic in vitro</b>. Il propose une interprétation d'orientation fondée sur les phénotypes usuels, à partir de résultats déjà lus, et ne remplace ni le jugement du biologiste, ni les tests de confirmation (synergie, carba NP, biologie moléculaire), ni le référentiel en vigueur. Les concentrations critiques fournies sont <span id="footRef">celles du référentiel EUCAST</span>. Quelques couples germe-antibiotique, pour lesquels <span id="footNom">l'EUCAST</span> ne fixe aucun seuil, y font exception : l'éditeur les signale <b style="color:#7a5207" id="footHors">hors EUCAST</b>. Vérifiez-les et ajustez-les à votre référentiel dans « Concentrations critiques » avant tout rendu.
   </div>
@@ -2697,8 +2697,14 @@ function estCasfm(){ return REF_ACTIF === "casfm"; }
 // version : les deux ne peuvent pas diverger dans l'interface.
 function refDate(r){
   const R = r || referentiel();
-  const M=["janvier","février","mars","avril","mai","juin",
-           "juillet","août","septembre","octobre","novembre","décembre"];
+  // La date de publication du référentiel paraît sur le compte rendu et dans
+  // la présentation. « juin 2026 » au milieu d'une phrase anglaise n'est pas
+  // une coquetterie : c'est le genre de détail qui fait douter du reste.
+  const M = _L.estAnglais()
+    ? ["January","February","March","April","May","June",
+       "July","August","September","October","November","December"]
+    : ["janvier","février","mars","avril","mai","juin",
+       "juillet","août","septembre","octobre","novembre","décembre"];
   const d=new Date(R.publie + "T00:00:00");
   return isNaN(d) ? R.publie : M[d.getMonth()] + " " + d.getFullYear();
 }
@@ -8479,12 +8485,239 @@ var PRESENTATIONS = {
   }
 };
 
+/* LA PRÉSENTATION EN ANGLAIS.
+
+   Même forme que PRESENTATIONS, clé pour clé : outils/verifier-langues.py
+   refuse qu'une vue manque, qu'une étape disparaisse ou qu'un repère reste
+   orphelin. Une présentation traduite à moitié serait pire que pas traduite —
+   c'est le PREMIER écran, et il donne le ton de tout le reste.
+
+   Les termes du référentiel sont ceux de l'EUCAST, pas une traduction
+   littérale : « susceptible, increased exposure », « area of technical
+   uncertainty », « zone diameter ». Les renvois à l'interface citent les
+   libellés ANGLAIS des encadrés, sans quoi le lecteur chercherait sur son
+   écran un intitulé qui n'y est pas. */
+var PRESENTATIONS_EN = {
+
+  ref: {
+    eyebrow: "The rules, open to inspection",
+    titre: "Check a breakpoint without entering an antibiogram.",
+    lead: `The <b>${N_REGLES} rules</b> the engine applies, one per line, exactly as they are
+           written: MIC and zone diameter breakpoints, disk content, area of technical
+           uncertainty, specimen site, and the <b>status</b> — an official committee value, or a
+           local laboratory convention where the table sets none.`,
+    reperes: [`${N_REGLES} rules`, "EUCAST 16.1 and CA-SFM 2026", "Official or convention",
+              "Filter by group", "CSV export"],
+    cta: "Browse the rules",
+    cible: "refView",
+    guideTitre: "What you will find",
+    etapes: [
+      `<b>What is shown is what the engine applies.</b>
+       Nothing is recomposed or summarised: the table <i>is</i> the knowledge base. If a value
+       surprises you, it is the one that was used.`,
+      `<b>The CA-SFM is not a second complete set.</b>
+       It records only its <b>differences</b> from EUCAST — ${N_REGLES_CASFM} rules. Any pair absent from
+       its lines keeps the EUCAST value: that is how its committee publishes it.`,
+      `<b>"Convention" is not "official".</b>
+       A pair marked as a convention is one for which the table sets nothing; the value used is a
+       local laboratory convention, and must be aligned with yours.`,
+      `<b>"No S category" is not a missing value.</b>
+       It is a committee decision: no susceptible category is granted at a standard dosing
+       regimen. The isolate is at best susceptible, increased exposure.`
+    ],
+    astuce: `<b>The three versions are given at the top</b> — document, version and publication
+       date of each table, and the knowledge-base version. They are the ones carried on every
+       report, and they are what allows an old report to be reproduced.`
+  },
+
+  cq: {
+    eyebrow: "Antibiogram quality control",
+    titre: "Are your 19 mm really 19 mm?",
+    lead: `Turning a zone diameter into a category is only worth anything if the diameter is
+           right. A degraded disk lot, agar poured too thick or too dense an inoculum shift
+           <b>every</b> zone together: the categories stay plausible, and they are wrong. The
+           reference strain is the only safeguard.`,
+    reperes: ["95 targets across 7 strains", "CA-SFM 2026, chapter 1.4",
+              "Levey-Jennings chart", "Drift detection", "Dated register, CSV export"],
+    cta: "Open quality control",
+    cible: "cqView",
+    guideTitre: "How to use it",
+    etapes: [
+      `<b>Choose the strain under control.</b>
+       Seven collection strains, with their targets and acceptable limits. The <b>disk content</b>
+       is stated: a control run with a different content proves nothing.`,
+      `<b>Enter your diameters.</b>
+       Each measurement is placed within its limits, and the summary names what falls outside. The
+       patient's strain is not what is at fault: check the disk lot and its storage, the thickness
+       and pH of the agar, the density of the inoculum and the reading time.`,
+      `<b>Record it, with the action taken.</b>
+       The application <b>refuses</b> to record a deviation without an action taken: a deviation
+       observed and not followed up is no better than no control at all.`,
+      `<b>Watch for drift.</b>
+       The control chart shows what a list of numbers hides. Ten measurements on the same side of
+       the target, or seven falling in a row, announce the lot that is weakening <b>weeks
+       before</b> the first out-of-range result.`
+    ],
+    astuce: `<b>The register stays on this computer</b> and would not survive the browser cache
+       being cleared: it is the <b>exported file</b> that constitutes the archive. A change of lot
+       breaks the series — a new lot is a different system, and looking for continuity across it
+       would manufacture imaginary drift.`
+  },
+
+  surv: {
+    eyebrow: "Local resistance surveillance",
+    titre: "What still works, where you are.",
+    lead: `Every antibiogram you add joins a <b>register that stays on this computer</b>. From it
+           the application derives your <b>cumulative antibiogram</b> — the percentage of isolates
+           susceptible to each agent, species by species — and its <b>trend</b> from one year to
+           the next. That is the figure a clinician uses to choose empirical treatment while the
+           result is still pending.`,
+    reperes: ["Local register, nothing sent without you", "Cumulative antibiogram",
+              "Year-on-year trend", "CSV export", "Deferred GLASS submission"],
+    cta: "Open the register",
+    cible: "survView",
+    guideTitre: "What you need to know",
+    etapes: [
+      `<b>The register is filled from the Interpretation tab.</b>
+       The <span class="ge-ref">Add this isolate</span> button, below the commentary. The isolate
+       is recorded <b>even with no network</b>; submission to GLASS follows when the connection
+       returns.`,
+      `<b>A patient counts once.</b>
+       The first isolate per patient and per species in the year. Without that rule, a long-stay
+       inpatient sampled weekly would weigh ten times over — and since repeat isolates are the
+       most resistant, your rates would collapse without any outbreak having occurred.`,
+      `<b>Below 30 isolates, no percentage is given.</b>
+       With eight isolates, a single resistant one moves the rate by twelve points: the figure
+       would say more about chance than about your epidemiology. The count itself is always shown.`,
+      `<b>Export it to circulate it.</b>
+       The CSV carries one line per isolate × agent pair, with the first-isolate and submission
+       flags. That file is the document.`
+    ],
+    astuce: `<b>The register does not leave this computer.</b> It is neither sent nor shared, and
+       it would not survive the browser cache being cleared: <b>the exported file is the
+       archive</b>. Submission to GLASS is a separate, deliberate action.`
+  },
+
+  work: {
+    eyebrow: "Interpretive reading of the antibiogram",
+    titre: "Behind your S, I and R there is a phenotype. PhénoBac names it.",
+    lead: `Enter an antibiogram: the application recognises the <b>resistance mechanism</b> —
+           ESBL, carbapenemase, MRSA, MLS<sub>b</sub>, derepressed AmpC —, flags
+           <b>inconsistencies</b> with the expected intrinsic resistances, and drafts the
+           <b>commentary to attach to the report</b>. You choose the breakpoint table:
+           <b>EUCAST</b> or <b>CA-SFM</b>, which do not always give the same answer.
+           Results are entered as <b>S/I/R</b>, as <b>MIC</b> or in <b>millimetres</b>.
+           Designed in Mopti, for laboratories that interpret without an automated system.`,
+    reperes: [`${N_INTERP} species`, "EUCAST or CA-SFM 2026", "S/I/R, MIC or millimetres",
+              "Phenotypes &amp; consistency alerts",
+              "Free and complete, no account", "Offline, installable on a phone"],
+    cta: "Start an interpretation",
+    cible: "workView",
+    guideTitre: "In four steps",
+    etapes: [
+      `<b>Choose the species and the specimen.</b>
+       Panel <span class="ge-ref">01 Context</span>. Unsure of the species? The
+       <span class="ge-ref">Identification</span> tab takes you there through biochemical
+       characters.`,
+      `<b>Choose the breakpoint table, then enter the results.</b>
+       Panel <span class="ge-ref">02 Antibiogram</span>: <span class="ge-ref">EUCAST</span>
+       or <span class="ge-ref">CA-SFM</span>, then enter
+       <b>S</b>, <b>I</b> or <b>R</b>. Two further modes save you the conversion:
+       <span class="ge-ref">Zone diameter mm</span>, which takes the zones read with callipers —
+       the <b>disk content</b> is then stated under each agent, because the breakpoint holds only
+       for that content —, and <span class="ge-ref">MIC mg/L</span>. <b>Your choice is
+       remembered</b> for next time.`,
+      `<b>Read the phenotype.</b>
+       Panel <span class="ge-ref">03 Interpretation</span>: the mechanism is named, with its risk
+       level. A <b>consistency alert</b> appears if a result contradicts the expected intrinsic
+       resistances, and an <span class="ge-ref">ATU</span> badge if the measurement falls in an
+       area where the category is not reproducible — a single MIC value, or a range of
+       millimetres.`,
+      `<b>Take the commentary.</b>
+       Copy the text drafted for the report, or export it as a PDF with the specimen
+       identification and the validator's name. If interpretive reading has changed a category,
+       the report carries <b>both the category reported and the one that was read</b>.`
+    ],
+    astuce: `<b>In a hurry?</b> The <b>worked examples</b> — E. coli · ESBL,
+       K. pneumoniae · carbapenemase, S. aureus · MRSA… — fill in a complete case in one click.
+       <span class="ge-ref">Clinical breakpoints</span> lets you align the values with your own
+       table: those the committee does not set are marked, as are those the CA-SFM moves.`
+  },
+
+  ident: {
+    eyebrow: "Biochemical identification",
+    titre: "Unsure of the species? Work back from the characters.",
+    lead: `Start from what you can see: the <b>Gram stain</b> and the morphology. PhénoBac then
+           offers the <b>biochemical tests</b> that actually separate the remaining candidates,
+           narrowing with each answer down to a <b>presumptive identification</b> among the
+           ${N_ID} species it covers. No automated system, no commercial strip: the ordinary
+           bench tests are enough.`,
+    reperes: [`${N_ID} species`, "Gram &amp; morphology first", "Ordinary bench tests",
+              "No analyser, no strip", "Offline"],
+    cta: "Start an identification",
+    cible: "identView",
+    guideTitre: "In three steps",
+    etapes: [
+      `<b>State the Gram result and the morphology.</b>
+       Panel <span class="ge-ref">01 Gram stain &amp; morphology</span>: cocci or rods, positive
+       or negative. That is what opens the tree.`,
+      `<b>Answer the tests offered.</b>
+       Panel <span class="ge-ref">02 Biochemical tests</span>: oxidase, catalase, fermentation,
+       urease, indole… Only the tests that still discriminate are asked of you.`,
+      `<b>Read the presumptive identification.</b>
+       Panel <span class="ge-ref">03 Presumptive identification</span>: the compatible species are
+       ranked, and the one you keep carries straight over to
+       <span class="ge-ref">Interpretation</span>, its antimicrobial panel already prepared.`
+    ],
+    astuce: `<b>Presumptive</b> means presumptive. A biochemical profile points the way, it does
+       not settle the matter: confirm by strip or mass spectrometry where you have it, and be wary
+       of variable characters. The <span class="ge-ref">Training</span> tab offers identifications
+       to work through yourself, with the reasoning given.`
+  },
+
+  quiz: {
+    eyebrow: "Guided training",
+    titre: "Practise on cases until the phenotype jumps out at you.",
+    lead: `Four modes: <b>interpretation</b> of an antibiogram, <b>identification</b> of an
+           isolate, <b>mixed</b>, or <b>complete case</b> — from the plate to the commentary.
+           <b>Fifty-five reference cases</b> covering the thirty-seven species, each with its
+           reasoning explained. A session draws <b>twenty</b>. The bank is <b>extensible</b>:
+           write your own, import a colleague's, export them for a teaching session.`,
+    reperes: [`${QUIZ_BANK.length} cases, ${N_INTERP} species`, `Sessions of ${QUIZ_LEN} cases`, "4 practice modes",
+              "Reasoning explained", "Extensible bank"],
+    cta: "Start training",
+    cible: "quizView",
+    guideTitre: "In three steps",
+    etapes: [
+      `<b>Choose the mode.</b>
+       <span class="ge-ref">Interpretation</span>, <span class="ge-ref">Identification</span>,
+       <span class="ge-ref">Mixed</span> or <span class="ge-ref">Complete case</span>. The last
+       runs identification then antibiogram on the same isolate: a session draws ten of them,
+       that is twenty questions, as in the other modes.`,
+      `<b>Answer.</b>
+       A case is put to you as it would be at the bench. Take the time to name the mechanism
+       before looking at the options.`,
+      `<b>Read the explanation.</b>
+       The correct answer is justified: mechanism, rules applied, pitfalls. On a dozen or so
+       cases a <b>second question</b> follows — that is often where EUCAST and CA-SFM part
+       company. That is where the exercise earns its keep, far more than the score.`
+    ],
+    astuce: `<b>To train a team:</b> write your own cases from isolates actually recovered in your
+       laboratory — the engine derives the expected answer —, then export the bank and hand it
+       round. Local epidemiology beats any textbook case.`
+  }
+};
+
 // La présentation suit l'onglet. « À propos » ne l'affiche pas du tout.
 function renderIntro(){
   // setView, donc majAffichageIntro, s'exécute avant cette déclaration lors
   // de l'initialisation : on sort sans bruit, le rendu suivra.
   if(typeof PRESENTATIONS === "undefined" || !PRESENTATIONS) return;
-  const p = PRESENTATIONS[vueCourante];
+  // La présentation suit la langue. Le français reste la source ; l'anglais a
+  // la même forme, clé pour clé, et verifier-langues.py l'exige.
+  const jeu = (_L && _L.estAnglais() && typeof PRESENTATIONS_EN !== "undefined")
+            ? PRESENTATIONS_EN : PRESENTATIONS;
+  const p = jeu[vueCourante];
   const txt = document.getElementById("introTexte");
   const gui = document.getElementById("introGuide");
   if(!p || !txt || !gui) return;
@@ -8492,7 +8725,7 @@ function renderIntro(){
   // Le référentiel appliqué est un repère de l'onglet d'interprétation : il
   // est composé au rendu, pour qu'il suive le sélecteur sans traitement à part.
   const reperes = p.reperes.map(r=>`<span class="intro-fact">${r}</span>`).join("")
-    + (vueCourante === "work" ? `<span class="intro-fact" id="introRef">Seuils ${refLibelle()} — ${refDate()}</span>` : "");
+    + (vueCourante === "work" ? `<span class="intro-fact" id="introRef">${L("intro.seuils")} ${refLibelle()} — ${refDate()}</span>` : "");
 
   txt.innerHTML =
     `<p class="intro-eyebrow">${p.eyebrow}</p>
@@ -8501,7 +8734,7 @@ function renderIntro(){
      <div class="intro-facts">${reperes}</div>
      <div class="intro-actions">
        <button class="intro-cta" id="introStart">${p.cta}</button>
-       <button class="intro-alt" id="introOffres">À propos de PhénoBac</button>
+       <button class="intro-alt" id="introOffres">${L("intro.apropos")}</button>
      </div>`;
 
   gui.innerHTML =
