@@ -3148,6 +3148,31 @@ function horsEucast(groupe, code){
 let _ref = "eucast";
 const estCasfm = () => _ref === "casfm";
 
+/* LE CADRE D'UNE LECTURE : le référentiel actif et l'espèce.
+
+   Ces deux variables commandent TOUTE consultation de seuil — quelle table
+   répond, quelle restriction d'espèce s'applique — et runInterpretation les
+   posait au début de chaque appel, sans qu'on puisse les poser autrement.
+   Les fonctions de consultation (getBP, getDZ, zitPour…) étaient donc
+   inutilisables du dehors avec un autre état que le dernier calculé.
+
+   C'est ce qui a conduit la page à RECOPIER ces douze fonctions pour pouvoir
+   les appeler avec le sien. Et deux copies divergent toujours : le
+   25 octobre 2026, celle de la page rendait « S » une CMI notée « ≥ 0,25 »
+   que le moteur, corrigé la veille, refusait de trancher. L'écran disait
+   sensible, le compte rendu ne disait rien, et c'était l'écran que le
+   biologiste regardait.
+
+   Le cadre s'ouvre donc. La page emprunte les fonctions au lieu de les
+   réécrire, et outils/verifier-tables.py refuse qu'elle en reprenne la
+   logique. */
+function cadrer(ref, organismId) {
+  const r = String(ref || "eucast");
+  _ref = Object.prototype.hasOwnProperty.call(REFERENTIELS, r) ? r : "eucast";
+  _activeId = organismId || null;
+  return _ref;
+}
+
 /* ============================================================
    ZONES D'INCERTITUDE TECHNIQUE (ZIT / ATU) — copie conforme du client.
 
@@ -3549,12 +3574,11 @@ function runInterpretation(input) {
   // hasOwnProperty, et non un simple accès : « toString » ou « constructor »
   // passeraient pour des entrées du registre alors qu'ils viennent du
   // prototype, et le référentiel renvoyé n'aurait plus de sens.
-  const refDemande = String(input.ref || "eucast");
-  _ref = Object.prototype.hasOwnProperty.call(REFERENTIELS, refDemande) ? refDemande : "eucast";
+  cadrer(input.ref, organism);
 
-  // Fixé avant la traduction des mesures, et non plus seulement avant le
-  // calcul : la restriction d'espèce des diamètres CA-SFM en dépend.
-  _activeId = organism;
+  // _activeId est posé par cadrer(), ci-dessus : AVANT la traduction des
+  // mesures, et non seulement avant le calcul — la restriction d'espèce des
+  // diamètres CA-SFM en dépend.
   let results = {};
   _zit = [];
   _sansDisque = [];
@@ -3633,7 +3657,7 @@ const MOTEUR = {
   // traduction d'une mesure en catégorie
   catFromMic, catFromDiam, parseMic, parseDiam,
   getBP, getDZ, disquePour, zitPour, zitZonePour, enZit, enZitZone,
-  horsEucast, depistageSeuil, estCasfm, seuilEcoff, ECOFF,
+  horsEucast, depistageSeuil, estCasfm, seuilEcoff, ECOFF, cadrer,
   // § 9 : conditions de réalisation exigées par espèce, et leur contrôle
   CONDITIONS, conditionsTechniques,
   // rendu ciblé (HAS 2023)

@@ -131,6 +131,55 @@ def main():
         if re.search(r'\b%s\s*:' % champ, inline):
             ecarts.append("phenobac.html porte « %s » : ce champ relève du moteur, et "
                           "les deux copies pourraient diverger" % champ)
+    # ---- 1 bis. LA PAGE NE REFAIT PLUS LE RAISONNEMENT DU MOTEUR ----
+    #
+    # Douze fonctions de consultation des seuils étaient RECOPIÉES dans la
+    # page, parce que celles du moteur demandent le référentiel actif et
+    # l'espèce, que lui seul posait. Trois des douze copies avaient divergé,
+    # et la plus grave rendait un résultat FAUX À L'ÉCRAN :
+    #
+    #   le 24 octobre 2026, catFromMic a été corrigé dans le moteur — « ≥ 0,25 »
+    #   ne dit pas que la CMI VAUT 0,25, elle peut valoir 8, donc on ne conclut
+    #   pas. La copie de la page est restée celle d'avant, et rendait « S ».
+    #   Le compte rendu ne disait rien, l'écran disait sensible, et c'est
+    #   l'écran que le biologiste regarde.
+    #
+    # Le moteur ouvre son cadre (_M.cadrer) ; la page emprunte. Ce contrôle
+    # exige que chacune de ces fonctions, dans la page, soit une DÉLÉGATION —
+    # une ligne qui appelle _M.<même nom> — et rien d'autre. Recoller une
+    # logique ici serait rouvrir la porte.
+    EMPRUNTS = ["parseMic", "parseDiam", "catFromMic", "catFromDiam",
+                "getBP", "getDZ", "disquePour", "depistageSeuil",
+                "zitPour", "zitZonePour", "enZit", "enZitZone"]
+    for nom in EMPRUNTS:
+        m = re.search(r"\nfunction %s\s*\([^)]*\)\s*\{(.*?)\n" % nom, inline, re.S)
+        if not m:
+            ecarts.append("phenobac.html n'a plus de fonction « %s » : les appels de la "
+                          "page resteraient sans réponse." % nom)
+            continue
+        corps = m.group(1)
+        if ("_M.%s(" % nom) not in corps:
+            ecarts.append("phenobac.html redéfinit « %s » au lieu de l'emprunter au moteur "
+                          "(_M.%s). Deux copies d'une règle divergent toujours, et c'est "
+                          "ainsi qu'une CMI « ≥ 0,25 » a été rendue SENSIBLE à l'écran "
+                          "pendant que le compte rendu ne concluait pas." % (nom, nom))
+    # La correspondance espèce -> groupe de seuils était écrite à la main, et
+    # elle a vieilli en silence : 37 espèces contre 60 dans le moteur, dont
+    # six déjà en ligne. Pour celles-là, bpGroup() rendait « undefined », donc
+    # aucune aide de seuil et aucune catégorie à l'écran — alors que
+    # l'interprétation du bas de page, qui passe par le moteur, était juste.
+    if not re.search(r"const BPGROUP = Object\.keys\(_M\.ORG\)", inline):
+        ecarts.append("phenobac.html n'établit plus BPGROUP à partir de _M.ORG : une "
+                      "table écrite à la main vieillit sans bruit, et une espèce "
+                      "oubliée perd TOUTES ses aides de seuil à l'écran sans que rien "
+                      "ne tombe.")
+
+    if "_M.cadrer(" not in inline:
+        ecarts.append("phenobac.html n'appelle plus _M.cadrer : les seuils seraient lus "
+                      "avec le référentiel de la dernière interprétation, ou avec "
+                      "l'EUCAST par défaut — un rendu CA-SFM afficherait des seuils "
+                      "EUCAST.")
+
     if "Object.assign({}, _M.ORG[id]" not in inline:
         ecarts.append("phenobac.html ne construit plus ORG à partir de celui du moteur")
 

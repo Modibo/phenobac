@@ -2652,57 +2652,62 @@ function libelleCat(cat){
    ------------------------------------------------------------ */
 
 
-/* espèce -> groupe de seuils */
-const BPGROUP = {
-  ecoli:"entero", kpneu:"entero", ecloacae:"entero", proteus:"morganella", salmonella:"salmonella",
-  koxytoca:"entero", kaerogenes:"entero", serratia:"serratia", cfreundii:"entero", pvulgaris:"morganella", shigella:"entero",
-  saureus:"staph", efaecalis:"enteroc", efaecium:"enteroc",
-  /* coagulase négative : glycopeptides à 4 mg/L, contre 2 pour S. aureus */
-  sepidermidis:"scn", ssaprophyticus:"scn", slugdunensis:"scn", shaemolyticus:"scn",
-  spyogenes:"strepacg", sagalactiae:"strepb", sviridans:"viridans",
-  pneumocoque:"pneumo", paeru:"pseudo", acineto:"acineto",
-  steno:"steno", burk:"burk",
-  haemophilus:"haemo", nmeningitidis:"nmening", ngonorrhoeae:"ngono", moraxella:"moraxella",
-  listeria:"listeria", coryne:"coryne",
-  bfragilis:"bfragilis", cperfringens:"cperfringens", cdifficile:"cdifficile",
-  campylobacter:"campylo", vibrio:"vibrio"
-};
+/* espèce -> groupe de seuils. DÉRIVÉ DU MOTEUR, et plus RECOPIÉ.
+
+   Cette table était écrite à la main, et elle a vieilli en silence. Au
+   25 octobre 2026 elle connaissait 37 espèces là où le moteur en portait 60,
+   et six des absentes étaient EN LIGNE depuis la veille : Morganella
+   morganii, Providencia, Streptococcus dysgalactiae, Prevotella,
+   Fusobacterium necrophorum et F. nucleatum.
+
+   Pour elles, bpGroup() rendait « undefined ». Conséquence : aucune aide de
+   seuil sous les molécules — « pas de seuil au disque · saisir en CMI » sur
+   TOUTES — et aucune catégorie à l'écran. L'interprétation du bas de page,
+   elle, était juste, parce qu'elle passe par le moteur. Deux chemins, deux
+   réponses, et celui que l'œil suit d'abord était le mauvais.
+
+   Une table dérivée ne peut plus vieillir : ajouter une espèce au moteur
+   l'ajoute ici. outils/verifier-tables.py refuse qu'on la réécrive. */
+const BPGROUP = Object.keys(_M.ORG).reduce(function (m, id) {
+  m[id] = _M.ORG[id].bpGroup;
+  return m;
+}, {});
+
 
 /* Analyse d'une CMI saisie : accepte 2 · 0,5 · ≤0.25 · >8 · <1 */
-function parseMic(str){
-  if(str===undefined||str===null) return null;
-  let s = String(str).trim().replace(",",".").replace(/\s+/g,"");
-  if(!s) return null;
-  let op="=";
-  if(/^(<=|≤)/.test(s)){op="<=";s=s.replace(/^(<=|≤)/,"");}
-  else if(/^(>=|≥)/.test(s)){op=">=";s=s.replace(/^(>=|≥)/,"");}
-  else if(/^>/.test(s)){op=">";s=s.replace(/^>/,"");}
-  else if(/^</.test(s)){op="<";s=s.replace(/^</,"");}
-  const v=parseFloat(s);
-  if(isNaN(v)||v<0) return null;
-  return {op,v};
-}
+/* ====================================================================
+   LES SEUILS SE CONSULTENT PAR LE MOTEUR, PLUS JAMAIS PAR UNE COPIE.
+
+   Ces douze fonctions étaient RECOPIÉES ici, parce que celles du moteur
+   demandent le référentiel actif et l'espèce, que lui seul posait. Douze
+   copies, et trois avaient divergé — dont la plus dangereuse :
+
+     catFromMic. Le 24 octobre 2026, le moteur a été corrigé — « ≥ 0,25 »
+     ne dit pas que la CMI VAUT 0,25, elle peut valoir 8, donc on ne
+     conclut pas. La copie de la page est restée celle d'avant. L'écran
+     rendait donc « sensible » une molécule que le compte rendu laissait
+     sans catégorie. Et c'est l'écran que le biologiste regarde.
+
+     Symétriquement, « ≤ 2 » sous un seuil R > 1 : l'écran rendait « R »,
+     privant le malade d'un antibiotique peut-être actif.
+
+     getBP. La copie n'avait pas la branche des seuils de cystite simple de
+     l'EUCAST, ni la restriction d'espèce. Une ciprofloxacine d'Aerococcus
+     catégorisée au compte rendu restait muette à l'écran.
+
+     depistageSeuil. La copie ne connaissait que la table du CA-SFM : les
+     écrans de l'EUCAST ne paraissaient pas.
+
+   Le moteur ouvre maintenant son cadre (_M.cadrer), et la page EMPRUNTE.
+   Ce qui suit ne porte plus aucune règle : seulement l'état de la page.
+   outils/verifier-tables.py refuse toute ligne de logique ici.
+   ==================================================================== */
+function cadre(){ return _M.cadrer(REF_ACTIF, state.org); }
+
+function parseMic(str){ return _M.parseMic(str); }
 
 /* CMI + seuils -> S / I / R (ou null si non catégorisable) */
-function catFromMic(str,bp){
-  if(!bp) return null;
-  const p=parseMic(str); if(!p) return null;
-  const {op,v}=p, {S,R}=bp;
-  // S null : le référentiel ne prévoit AUCUNE catégorie « sensible » à posologie
-  // standard pour ce couple germe/antibiotique. La souche est au mieux
-  // « sensible à forte posologie » — donc I jusqu'à R, jamais S.
-  if(S===null||S===undefined){
-    if((op===">"||op===">=") && v>=R) return "R";
-    return v>R ? "R" : "I";
-  }
-  // valeurs hors échelle
-  if((op==="<="||op==="<") && v<=S) return "S";
-  if((op===">"||op===">=") && v>=R) return "R";
-  // règle standard sur la valeur
-  if(v<=S) return "S";
-  if(v>R) return "R";
-  return "I";
-}
+function catFromMic(str,bp){ return _M.catFromMic(str,bp); }
 
 /* ------------------------------------------------------------
    Couples germe / antibiotique pour lesquels EUCAST v16.1 ne fixe
@@ -2835,45 +2840,17 @@ const CASFM_PANEL = {
 /* La ZIT applicable à ce couple, ou null.
    Elle se rapporte aux seuils PUBLIÉS : si le biologiste a saisi les siens,
    la valeur du comité ne s'y rapporte plus et on se tait. */
-function zitPour(group, k){
-  if(state.bpOverride && state.bpOverride[group + ":" + k]) return null;
-  // En contexte méningé, la ciprofloxacine relève d'une ligne distincte,
-  // que ni l'EUCAST ni le CA-SFM n'assortissent d'une ZIT.
-  if(k === "CIP" && state.ctx && state.ctx.mening === "Oui") return null;
-  if(estCasfm() && ZIT_CASFM[group] && ZIT_CASFM[group][k] !== undefined) return ZIT_CASFM[group][k];
-  const z = ZIT[group] && ZIT[group][k];
-  return (z === undefined) ? null : z;
-}
+function zitPour(group,k){ cadre(); return _M.zitPour(state.bpOverride,group,k,state.ctx||{}); }
 
 /* Cette CMI tombe-t-elle dans la zone d'incertitude ?
    « > 0,5 » est franchement au-dessus, « < 0,5 » franchement en dessous :
    ni l'un ni l'autre n'est incertain. « ≤ » et « ≥ » ne permettent pas
    d'exclure la valeur, on avertit. */
-function enZit(str, group, k){
-  const z = zitPour(group, k);
-  if(z === null) return false;
-  const p = parseMic(str);
-  if(!p || p.v !== z) return false;
-  return p.op !== ">" && p.op !== "<";
-}
+function enZit(str,group,k){ cadre(); return _M.enZit(str,state.bpOverride,group,k,state.ctx||{}); }
 
 /* seuil courant : saisie de l'utilisateur, sinon seuil méningé si le contexte
    l'indique, sinon seuil par défaut. */
-function getBP(group,k){
-  const o = state.bpOverride[group+":"+k];
-  if(o && o.S!==undefined && o.R!==undefined) return o;   // saisie : toujours prioritaire
-  const c = state.ctx || {};
-  // Le contexte méningé l'emporte sur tout le reste : un LCR n'est pas une urine.
-  if(c.mening==="Oui"){
-    if(estCasfm() && BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return BP_MENINGE_CASFM[group][k];
-    if(BP_MENINGE[group] && BP_MENINGE[group][k]) return BP_MENINGE[group][k];
-  }
-  if(estCasfm()){
-    if(c.urin==="Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]) return BP_CASFM_URIN[group][k];
-    if(BP_CASFM[group] && BP_CASFM[group][k]) return BP_CASFM[group][k];
-  }
-  return (BP[group] && BP[group][k]) || null;
-}
+function getBP(group,k){ cadre(); return _M.getBP(state.bpOverride,group,k,state.ctx||{}); }
 
 /* Contrôle de qualité au disque — souches de référence, CA-SFM 2026,
    chapitre 1.4. Produit par outils/extraire-cq.py.
@@ -3225,85 +3202,17 @@ function dzCasfmDivergent(group, k){
 }
 
 /* Dépistages au disque qui ne rendent qu'un seul côté de la catégorie. */
-function depistageSeuil(group, k){
-  if(estCasfm() && DEPISTAGE_CASFM[group] && DEPISTAGE_CASFM[group][k])
-    return DEPISTAGE_CASFM[group][k];
-  return null;
-}
+function depistageSeuil(group,k){ cadre(); return _M.depistageSeuil(group,k); }
 
-function getDZ(group, k){
-  const o = state.bpOverride[group + ":" + k];
-  if(o && o.S !== undefined && o.R !== undefined) return o;
-  // Le témoin ampicilline est une règle de l'EUCAST. Le CA-SFM donnant à
-  // l'amoxicilline son propre disque, l'emprunt n'a plus lieu d'être.
-  const temoin = !estCasfm() && DZ_TEMOIN[group] && DZ_TEMOIN[group][k];
-  if(temoin) return getDZ(group, temoin);
-  const c = state.ctx || {};
-  if(estCasfm()){
-    if(DEPISTAGE_CASFM[group] && DEPISTAGE_CASFM[group][k]) return null;
-    // Le CA-SFM ne chiffre la céfoxitine que pour E. coli : l'appliquer à
-    // Klebsiella donnerait un chiffre juste au mauvais endroit.
-    const limite = DZ_CASFM_ESPECE[group + ":" + k];
-    if(!limite || limite.indexOf(state.org) !== -1){
-      const d = dzCasfm(group, k);
-      if(d) return d;
-    }
-    if(dzCasfmDivergent(group, k)) return null;
-  }
-  if(c.mening === "Oui"){
-    if(DZ_MENINGE[group] && DZ_MENINGE[group][k]) return DZ_MENINGE[group][k];
-    // Seuil méningé en CMI mais aucun au disque : l'EUCAST l'interdit.
-    // Ne pas retomber sur le seuil ordinaire, trop permissif pour un LCR.
-    if(BP_MENINGE[group] && BP_MENINGE[group][k]) return null;
-  }
-  return (DZ[group] && DZ[group][k]) || null;
-}
+function getDZ(group,k){ cadre(); return _M.getDZ(state.bpOverride,group,k,state.ctx||{}); }
 
 // La charge du disque, en tenant compte du témoin (l'amoxicilline se lit
 // sur le disque d'ampicilline).
-function disquePour(group, k) {
-  // La charge annoncée doit changer avec le référentiel : 20 µg au CA-SFM
-  // pour l'amoxicilline, contre le disque d'ampicilline à 10 µg à l'EUCAST.
-  if (estCasfm() && DISQUE_CASFM[group] && DISQUE_CASFM[group][k])
-    return { charge: DISQUE_CASFM[group][k], temoin: null };
-  const temoin = (DZ_TEMOIN[group] && DZ_TEMOIN[group][k]) || k;
-  const d = DISQUE[group] && DISQUE[group][temoin];
-  return d ? { charge: d, temoin: temoin === k ? null : temoin } : null;
-}
+function disquePour(group,k){ cadre(); return _M.disquePour(group,k); }
 
-function parseDiam(str) {
-  if (str === undefined || str === null) return null;
-  let s = String(str).trim().replace(",", ".").replace(/\s+/g, "").replace(/mm$/i, "");
-  if (!s) return null;
-  let op = "=";
-  if (/^(<=|≤)/.test(s)) { op = "<="; s = s.replace(/^(<=|≤)/, ""); }
-  else if (/^(>=|≥)/.test(s)) { op = ">="; s = s.replace(/^(>=|≥)/, ""); }
-  else if (/^>/.test(s)) { op = ">"; s = s.replace(/^>/, ""); }
-  else if (/^</.test(s)) { op = "<"; s = s.replace(/^</, ""); }
-  let v = parseFloat(s);
-  if (isNaN(v) || v < 0 || v > 60) return null;      // au-delà, ce n'est plus une boîte de 90 mm
-  if (v > 0 && v < 6) return null;                   // impossible : le disque mesure déjà 6 mm
-  if (v === 0) v = 6;                                // « pas de zone » se note 0 ou 6
-  return { op, v };
-}
+function parseDiam(str){ return _M.parseDiam(str); }
 
-function catFromDiam(str, dz) {
-  if (!dz) return null;
-  const p = parseDiam(str); if (!p) return null;
-  const { op, v } = p, { S, R } = dz;
-
-  // Un opérateur ne donne qu'une borne. « ≥ 25 » conclut si 25 suffit déjà
-  // à être sensible ; sinon la mesure peut être n'importe où au-dessus et
-  // l'on ne conclut pas. Mieux vaut ne rien rendre que deviner.
-  if (op === ">=" || op === ">") return (S !== null && S !== undefined && v >= S) ? "S" : null;
-  if (op === "<=" || op === "<")  return (v < R) ? "R" : null;
-
-  // Sens inversé par rapport à la CMI : grand diamètre = sensible.
-  if (S === null || S === undefined) return v < R ? "R" : "I";
-  if (v >= S) return "S";
-  if (v < R) return "R";
-  return "I";
-}
+function catFromDiam(str,dz){ return _M.catFromDiam(str,dz); }
 
 // Pourquoi ce diamètre n'a pas pu être traduit. Un refus sans motif
 // laisserait croire à une panne ; chacun de ces trois cas est au contraire
@@ -3322,22 +3231,9 @@ function raisonSansDisque(group, k, ctx) {
   return "valeur illisible : un diamètre s'écrit en millimètres, entre 6 (pas de zone) et 60";
 }
 
-function zitZonePour(group, k) {
-  if (state.bpOverride && state.bpOverride[group + ":" + k]) return null;  // seuils saisis : la ZIT publiée ne s'y rapporte plus
-  if (state.ctx && state.ctx.mening === "Oui") return null;                // lignes LCR : pas de ZIT publiée
-  if(estCasfm() && ZIT_ZONE_CASFM[group] && ZIT_ZONE_CASFM[group][k])
-    return ZIT_ZONE_CASFM[group][k];
-  const z = ZIT_ZONE[group] && ZIT_ZONE[group][k];
-  return z || null;
-}
+function zitZonePour(group,k){ cadre(); return _M.zitZonePour(state.bpOverride,group,k,state.ctx||{}); }
 
-function enZitZone(str, group, k) {
-  const z = zitZonePour(group, k);
-  if (!z) return false;
-  const p = parseDiam(str);
-  if (!p || p.op !== "=") return false;   // une borne ne situe pas dans l'intervalle
-  return p.v >= z[0] && p.v <= z[1];
-}
+function enZitZone(str,group,k){ cadre(); return _M.enZitZone(str,state.bpOverride,group,k,state.ctx||{}); }
 
 /* Ce seuil s'écarte-t-il de la valeur EUCAST parce que le CA-SFM est actif ?
    Sert uniquement à l'afficher : le biologiste doit voir d'où vient le chiffre. */
@@ -3698,6 +3594,14 @@ function renderAbx(){
 function bpHint(group,k){
   const bp=getBP(group,k);
   if(!bp) return "pas de seuil défini · saisir en S/I/R";
+  // « S ≤ 0 » ÉTAIT UN MENSONGE QUI SE LISAIT COMME UN SEUIL. Quand le
+  // référentiel ne reconnaît AUCUNE catégorie « sensible » à posologie
+  // standard, la base écrit S = null — et fmt(null) rendait 0. Vingt-sept
+  // couples s'affichaient donc « seuil : S ≤ 0 », dont la pénicilline G de
+  // Corynebacterium et la ciprofloxacine d'Acinetobacter. L'aide des
+  // diamètres, elle, disait depuis toujours « pas de catégorie S ».
+  if(bp.S===null||bp.S===undefined)
+    return `aucune catégorie « sensible » · R > ${fmt(bp.R)} · I jusque-là`;
   const s=fmt(bp.S), r=fmt(bp.R);
   const base = (bp.S===bp.R) ? `seuil : S ≤ ${s} · R > ${r}` : `seuils : S ≤ ${s} · R > ${r}`;
   // Annoncer la ZIT avant la saisie : le biologiste sait alors à quelle
@@ -3712,7 +3616,13 @@ function fmt(x){ return (Math.round(x*1000)/1000).toString(); }
    elle, « 23 mm » ne veut rien dire. */
 function dzHint(group,k){
   const seuil=depistageSeuil(group,k);
-  if(seuil) return `dépistage : sensible si ≥ ${seuil} mm · en dessous, déterminer la CMI`;
+  // Même conduite, deux référentiels, deux consignes : le CA-SFM refuse de
+  // conclure « résistant » au disque et demande une CMI ; l'EUCAST autorise
+  // à rendre résistant faute de CMI. Une seule phrase pour les deux
+  // attribuerait à l'un la règle de l'autre.
+  if(seuil) return estCasfm()
+    ? `dépistage : sensible si ≥ ${seuil} mm · en dessous, déterminer la CMI`
+    : `écran : sensible si ≥ ${seuil} mm · en dessous, tester chaque molécule ou la rendre R`;
   const dz=getDZ(group,k);
   if(!dz){
     if(group==="pneumo" && k==="OXA") return `dépistage des β-lactamines · disque 1 µg · négatif si ≥ ${OXA_PNEUMO} mm`;
