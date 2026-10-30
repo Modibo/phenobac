@@ -7015,7 +7015,7 @@ function examenSuite(suite, dernier){
     `<div class="q-feedback exam">
       <div class="q-fb-verdict"><span class="dot" style="background:var(--ink-faint)"></span>${T("Réponse enregistrée", "Answer recorded")}</div>
       <div class="q-fb-comment">${T("La correction de toute l'épreuve est rendue à la fin.", "The marking for the whole test is given at the end.")}</div>
-      <div class="q-actions"><button class="q-next" id="qNext">${dernier?"Terminer l'épreuve":"Question suivante →"}</button></div>
+      <div class="q-actions"><button class="q-next" id="qNext">${dernier?T("Terminer l'épreuve","Finish the test"):T("Question suivante →","Next question →")}</button></div>
     </div>`;
   $("#qNext").onclick = suite;
 }
@@ -7154,7 +7154,7 @@ function answerQuizIdent(selected){
       <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?T("Bonne réponse","Correct"):T("Réponse attendue : ","Expected answer: ")+esc(correct)}</div>
       <div class="q-fb-comment">${T("Identification présumée sur profil biochimique — à confirmer par une méthode de référence (MALDI-TOF).", "A presumptive identification from the biochemical profile — to be confirmed by a reference method (MALDI-TOF).")}</div>
       <div class="q-teach"><b>${T("À retenir", "Key point")}</b>${esc(c.teach)}</div>
-      <div class="q-actions"><button class="q-next" id="qNext">${last?"Voir le résultat":"Cas suivant →"}</button></div>
+      <div class="q-actions"><button class="q-next" id="qNext">${last?T("Voir le résultat","See the result"):T("Cas suivant →","Next case →")}</button></div>
     </div>`;
   $("#qNext").onclick=()=>{ quiz.idx++; quiz.phase=1; renderQuiz(); };
 }
@@ -7362,7 +7362,7 @@ function answerQuiz(selected, isQ2){
   const last = quiz.idx>=quiz.queue.length-1;
   const actionBtn = hasQ2
     ? `<button class="q-next" id="qContinue">Question de rendu →</button>`
-    : `<button class="q-next" id="qNext">${last?"Voir le résultat":"Cas suivant →"}</button>`;
+    : `<button class="q-next" id="qNext">${last?T("Voir le résultat","See the result"):T("Cas suivant →","Next case →")}</button>`;
 
   const detail = isQ2
     ? `<div class="q-fb-text">${esc(c.q2.why)}</div>`
@@ -7496,7 +7496,7 @@ function answerComboInterp(pc, selected){
       <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?T("Bonne réponse","Correct"):T("Réponse attendue : ","Expected answer: ")+esc(correct)}</div>
       <div id="qDetail" class="interp-loading"><span class="spin"></span>Correction…</div>
       <div class="q-teach"><b>${T("À retenir", "Key point")}</b>${esc(pc.teach)}</div>
-      <div class="q-actions"><button class="q-next" id="qNext">${last?"Voir le résultat":"Cas suivant →"}</button></div>
+      <div class="q-actions"><button class="q-next" id="qNext">${last?T("Voir le résultat","See the result"):T("Cas suivant →","Next case →")}</button></div>
     </div>`;
   $("#qNext").onclick=()=>{ quiz.idx++; quiz.phase=1; renderQuiz(); };
   fetchQuizDetail(pc);
@@ -7927,8 +7927,14 @@ function idCandidates(){
 const N_INTERP = Object.keys(ORG).length;
 const N_ID = Object.keys(IDDB).length;
 const N_REGLES = (self.PhenoBacBase.regles || []).length;
+/* LE DELTA CA-SFM, COMPTÉ SUR LE BON CHAMP.
+   « regles » est enObjets(REGLES) : des OBJETS, pas les tableaux bruts.
+   « x[0] » valait donc toujours undefined, le compte toujours zéro, et la
+   page affirmait que le CA-SFM n'enregistre « 0 règles » de différence —
+   alors qu'il en porte 45. Un compteur qui rend zéro ne se signale pas : il
+   se lit comme une information. Trouvé en relisant la page en anglais. */
 const N_REGLES_CASFM = (self.PhenoBacBase.regles || [])
-  .filter(function (x) { return x[0] === "casfm"; }).length;
+  .filter(function (x) { return x.ref === "casfm"; }).length;
 
 function idScore(id){
   const d=IDDB[id]; let match=0, conflict=0; const sup=[], con=[];

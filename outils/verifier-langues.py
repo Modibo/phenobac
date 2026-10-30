@@ -865,6 +865,8 @@ def main():
         '<span class="q-specimen">antibiogramme ci-dessous</span>',
         'c.gram=="pos" ? "Gram positif"',
         '(c.q || "Quel phénotype de résistance reconnaissez-vous ?")',
+        '${last?"Voir le résultat":"Cas suivant →"}',
+        '${dernier?"Terminer l\'épreuve":"Question suivante →"}',
     ]
     revenus = [t for t in NON_RETOUR if t in page]
     if revenus:

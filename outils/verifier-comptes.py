@@ -119,6 +119,44 @@ def main():
                           "une espèce qu'on sait nommer mais pas interpréter laisse le "
                           "biologiste sans rendu." % (iddb, n["org"]))
 
+    # --- 2 bis. UN COMPTE CALCULÉ PEUT RENDRE ZÉRO EN SILENCE ---
+    #
+    # C'est pire qu'un nombre écrit à la main : celui-ci vieillit, celui-là
+    # NAÎT faux et ne vieillit jamais. Le 30 octobre 2026, la page affirmait
+    # que le CA-SFM « n'enregistre que ses différences avec l'EUCAST — 0
+    # règles », alors que la base en porte quarante-cinq. Le filtre lisait
+    # « x[0] », un INDICE, sur « BASE.regles » qui est enObjets(REGLES) : des
+    # objets. « undefined === "casfm" » est faux pour chaque ligne, et le
+    # compte valait zéro pour toutes. Zéro ne se signale pas : il se lit
+    # comme une information.
+    #
+    # On vérifie les DEUX bouts : que la base porte bien des lignes CA-SFM, et
+    # que la page les compte sur le CHAMP et non sur l'indice.
+    base = open(os.path.join(RACINE, "base-connaissances.js"), encoding="utf-8").read()
+    lignes_casfm = len(re.findall(r'^\["casfm",', base, re.M))
+    m = re.search(r'const N_REGLES_CASFM\s*=\s*\(self\.PhenoBacBase\.regles[^;]*?;',
+                  page, re.S)
+    if not m:
+        ecarts.append("N_REGLES_CASFM n'est plus calculé sur la base : la page "
+                      "redeviendrait porteuse d'un nombre à tenir à jour.")
+    elif lignes_casfm == 0:
+        ecarts.append("aucune ligne « casfm » dans base-connaissances.js : soit le delta "
+                      "CA-SFM a disparu, soit l'écriture des lignes a changé et ce "
+                      "contrôle ne les reconnaît plus.")
+    elif "x[0]" in m.group(0) or re.search(r'\[\s*0\s*\]', m.group(0)):
+        ecarts.append("N_REGLES_CASFM compte sur un INDICE (« x[0] ») alors que "
+                      "BASE.regles porte des OBJETS : le compte vaudrait zéro pour "
+                      "chacune des %d lignes CA-SFM, et la page l'afficherait comme une "
+                      "information." % lignes_casfm)
+    elif ".ref" not in m.group(0):
+        ecarts.append("N_REGLES_CASFM ne lit plus le champ « ref » : vérifiez sur quoi il "
+                      "filtre, et que le compte n'est pas devenu zéro — un compte nul "
+                      "s'affiche sans se signaler.")
+    else:
+        dits.append("le delta CA-SFM est compté sur le champ « ref » de la base, et la "
+                    "base en porte %d lignes : la page ne peut plus afficher zéro."
+                    % lignes_casfm)
+
     # --- 3. Les ancres de la page statique sont bien remplies ---
     if 'data-compte=' in page and "el.dataset.compte" not in page:
         ecarts.append("la page porte des ancres data-compte que rien ne remplit : "
