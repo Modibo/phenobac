@@ -280,7 +280,16 @@ const C = {
   "attr.passerPremium":   { fr: "Passer à Premium", en: "Go Premium" },
   "attr.cleLicence":      { fr: "Collez votre clé de licence", en: "Paste your licence key" },
   "attr.aRetenir":        { fr: "Point clé que l'étudiant doit mémoriser.",
-                            en: "The key point the student should remember." }
+                            en: "The key point the student should remember." },
+
+  /* ---------- vague 5 : les modes d'entraînement ----------
+     Ces trois-là n'ont ni accent ni mot-outil français : le compteur de
+     texte visible ne les voyait pas, et ils sont restés français dans une
+     page par ailleurs entièrement traduite. Un mot peut être français sans
+     en porter le moindre signe. */
+  "quiz.mixte":           { fr: "Mixte", en: "Mixed" },
+  "quiz.combo":           { fr: "Cas complet", en: "Full case" },
+  "quiz.examen":          { fr: "Mode examen", en: "Test mode" }
 };
 
 const DEFAUT = "fr";

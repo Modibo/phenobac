@@ -1579,11 +1579,11 @@
     <div class="quiz-modes" id="quizModes">
       <button data-mode="interp" class="on" data-i18n="nav.interpretation">Interprétation</button>
       <button data-mode="ident">Identification</button>
-      <button data-mode="mixte">Mixte</button>
-      <button data-mode="combo">Cas complet</button>
+      <button data-mode="mixte" data-i18n="quiz.mixte">Mixte</button>
+      <button data-mode="combo" data-i18n="quiz.combo">Cas complet</button>
       <span class="quiz-sep" aria-hidden="true"></span>
       <button id="quizExamen" class="exam-btn" aria-pressed="false"
-        data-i18n-attr="title:attr.modeExamen" title="Aucune correction pendant l'épreuve : tout est rendu à la fin.">Mode examen</button>
+        data-i18n-attr="title:attr.modeExamen" title="Aucune correction pendant l'épreuve : tout est rendu à la fin." data-i18n="quiz.examen">Mode examen</button>
     </div>
     <div id="quizHisto"></div>
     <div id="bankManage"></div>
@@ -6429,17 +6429,17 @@ function exportPDF(){
    raisonnement réel du moteur d'interprétation.
    ============================================================ */
 const QUIZ_BANK = [
-  {org:"ecoli", res:{AMX:"S",AMC:"S",FOX:"S",CTX:"S",CAZ:"S",IPM:"S",CIP:"S",GEN:"S"}, ctx:{},
+  {id:"ecoli-1", org:"ecoli", res:{AMX:"S",AMC:"S",FOX:"S",CTX:"S",CAZ:"S",IPM:"S",CIP:"S",GEN:"S"}, ctx:{},
    answer:"Souche sauvage",
    options:["Souche sauvage","Pénicillinase de bas niveau","BLSE","Céphalosporinase (AmpC)"],
    teach:"Aminopénicillines sensibles et aucune C3G touchée : pas de mécanisme acquis."},
 
-  {org:"ecoli", res:{AMX:"R",AMC:"S",FOX:"S",CTX:"S",CAZ:"S",CIP:"S",GEN:"S"}, ctx:{},
+  {id:"ecoli-2", org:"ecoli", res:{AMX:"R",AMC:"S",FOX:"S",CTX:"S",CAZ:"S",CIP:"S",GEN:"S"}, ctx:{},
    answer:"Pénicillinase de bas niveau",
    options:["Souche sauvage","Pénicillinase de bas niveau","BLSE","Céphalosporinase (AmpC)"],
    teach:"Aminopénicilline R restaurée par le clavulanate, C3G intactes : profil très fréquent."},
 
-  {org:"ecoli", res:{AMX:"R",AMC:"R",FOX:"S",CTX:"R",CAZ:"R",FEP:"I",IPM:"S",CIP:"R",GEN:"S"}, ctx:{syn:"Positif"},
+  {id:"ecoli-3", org:"ecoli", res:{AMX:"R",AMC:"R",FOX:"S",CTX:"R",CAZ:"R",FEP:"I",IPM:"S",CIP:"R",GEN:"S"}, ctx:{syn:"Positif"},
    answer:"BLSE",
    options:["Céphalosporinase (AmpC)","BLSE","Carbapénémase","Pénicillinase de bas niveau"],
    teach:"Synergie C3G + clavulanate positive et céfoxitine conservée : signature d'une BLSE.",
@@ -6447,28 +6447,28 @@ const QUIZ_BANK = [
        options:["Sensible","Résistant","Intermédiaire"], answer:"Résistant",
        why:"Harmonisation BLSE : pénicillines, C1G à C3G et aztréonam sont rendus R quel que soit l'in vitro."}},
 
-  {org:"kpneu", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",ETP:"R",IPM:"R",MEM:"I",COL:"S"},
+  {id:"kpneu-1", org:"kpneu", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",ETP:"R",IPM:"R",MEM:"I",COL:"S"},
    ctx:{carba:"Oui — KPC"},
    answer:"Carbapénémase",
    options:["BLSE","Céphalosporinase (AmpC)","Carbapénémase","Souche sauvage"],
    teach:"Sensibilité diminuée aux carbapénèmes : suspicion de carbapénémase, signalement et confirmation."},
 
-  {org:"ecloacae", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",IPM:"S",CIP:"S"}, ctx:{syn:"Négatif"},
+  {id:"ecloacae-1", org:"ecloacae", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",IPM:"S",CIP:"S"}, ctx:{syn:"Négatif"},
    answer:"Céphalosporinase déréprimée (AmpC)",
    options:["BLSE","Céphalosporinase déréprimée (AmpC)","Carbapénémase","Souche sauvage"],
    teach:"Céfoxitine R, pas de synergie clavulanate, céfépime conservé : AmpC hyperproduite."},
 
-  {org:"ecloacae", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"R",IPM:"S"}, ctx:{syn:"Positif"},
+  {id:"ecloacae-2", org:"ecloacae", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"R",IPM:"S"}, ctx:{syn:"Positif"},
    answer:"BLSE surajoutée à l'AmpC",
    options:["AmpC seule","BLSE surajoutée à l'AmpC","Carbapénémase","Souche sauvage"],
    teach:"Synergie clavulanate positive chez un Enterobacter : BLSE en plus de la céphalosporinase naturelle."},
 
-  {org:"saureus", res:{FOX:"S",PEN:"R",E:"S",DA:"S",VA:"S"}, ctx:{},
+  {id:"saureus-1", org:"saureus", res:{FOX:"S",PEN:"R",E:"S",DA:"S",VA:"S"}, ctx:{},
    answer:"SASM producteur de pénicillinase",
    options:["SASM producteur de pénicillinase","SARM","MLSb inductible","VISA"],
    teach:"Céfoxitine S : méticilline active. Pénicilline G R par pénicillinase (blaZ)."},
 
-  {org:"saureus", res:{FOX:"R",PEN:"R",E:"S",DA:"S",GEN:"S",VA:"S"}, ctx:{},
+  {id:"saureus-2", org:"saureus", res:{FOX:"R",PEN:"R",E:"S",DA:"S",GEN:"S",VA:"S"}, ctx:{},
    answer:"SARM",
    options:["SASM","SARM","MLSb constitutif","ERV"],
    teach:"Céfoxitine R (mecA) : résistance à la méticilline.",
@@ -6476,33 +6476,33 @@ const QUIZ_BANK = [
        options:["Selon l'in vitro","Toutes résistantes","Toutes sensibles"], answer:"Toutes résistantes",
        why:"Un SARM impose de rendre toutes les β-lactamines R (hors céphalosporines anti-SARM)."}},
 
-  {org:"saureus", res:{FOX:"S",PEN:"R",E:"R",DA:"S",VA:"S"}, ctx:{dtest:"Positif"},
+  {id:"saureus-3", org:"saureus", res:{FOX:"S",PEN:"R",E:"R",DA:"S",VA:"S"}, ctx:{dtest:"Positif"},
    answer:"MLSb inductible",
    options:["Clindamycine sensible","MLSb inductible","MLSb constitutif","SARM"],
    teach:"Érythromycine R + clindamycine S + D-test positif : la clindamycine est rendue R (résistance inductible)."},
 
-  {org:"efaecium", res:{AMP:"R",VA:"R",TEC:"R",HLG:"R",LZD:"S"}, ctx:{},
+  {id:"efaecium-1", org:"efaecium", res:{AMP:"R",VA:"R",TEC:"R",HLG:"R",LZD:"S"}, ctx:{},
    answer:"ERV (résistance aux glycopeptides)",
    options:["Entérocoque sauvage","HLAR isolé","ERV (résistance aux glycopeptides)","SARM"],
    teach:"Vancomycine R : entérocoque résistant aux glycopeptides. Signalement urgent, risque épidémique."},
 
-  {org:"efaecalis", res:{AMP:"S",VA:"S",TEC:"S",HLG:"R",LZD:"S"}, ctx:{},
+  {id:"efaecalis-1", org:"efaecalis", res:{AMP:"S",VA:"S",TEC:"S",HLG:"R",LZD:"S"}, ctx:{},
    answer:"Haut niveau de résistance aux aminosides (HLAR)",
    options:["Souche sauvage","Haut niveau de résistance aux aminosides (HLAR)","ERV","BLSE"],
    teach:"Gentamicine haut niveau R : perte de la synergie β-lactamine + aminoside."},
 
-  {org:"paeru", res:{TZP:"R",CAZ:"R",FEP:"R",IPM:"R",MEM:"R",CIP:"R",GEN:"R",AMK:"R",COL:"S"}, ctx:{},
+  {id:"paeru-1", org:"paeru", res:{TZP:"R",CAZ:"R",FEP:"R",IPM:"R",MEM:"R",CIP:"R",GEN:"R",AMK:"R",COL:"S"}, ctx:{},
    answer:"Toto-résistant (XDR)",
    options:["Phénotype sauvage","Multirésistant (MDR)","Toto-résistant (XDR)","Carbapénémase isolée"],
    teach:"Seule la colistine reste active : profil toto-résistant (XDR), avis spécialisé indispensable."},
 
-  {org:"acineto", res:{TZP:"R",CAZ:"R",FEP:"R",IPM:"R",MEM:"R",CIP:"S",GEN:"S",AMK:"S",COL:"S"},
+  {id:"acineto-1", org:"acineto", res:{TZP:"R",CAZ:"R",FEP:"R",IPM:"R",MEM:"R",CIP:"S",GEN:"S",AMK:"S",COL:"S"},
    ctx:{carba:"Oui — OXA-23"},
    answer:"Carbapénémase (oxacillinase)",
    options:["Phénotype sauvage","Multirésistant (MDR)","Carbapénémase (oxacillinase)","BLSE"],
    teach:"Résistance aux carbapénèmes chez Acinetobacter : oxacillinase (OXA-23…) le plus souvent."},
 
-  {org:"salmonella", res:{AMX:"S",AMC:"S",CTX:"S",CAZ:"S",CIP:"S",PEF:"R",SXT:"S",AZM:"S"}, ctx:{},
+  {id:"salmonella-1", org:"salmonella", res:{AMX:"S",AMC:"S",CTX:"S",CAZ:"S",CIP:"S",PEF:"R",SXT:"S",AZM:"S"}, ctx:{},
    answer:"Résistance de bas niveau aux fluoroquinolones",
    options:["Phénotype sauvage","Résistance de bas niveau aux fluoroquinolones","BLSE","Résistance haut niveau aux FQ"],
    teach:"Péfloxacine R alors que la ciprofloxacine paraît S : résistance FQ de bas niveau, piège classique.",
@@ -6510,12 +6510,12 @@ const QUIZ_BANK = [
        options:["Oui, ciprofloxacine S","Non, risque d'échec","Oui à forte dose"], answer:"Non, risque d'échec",
        why:"La résistance de bas niveau expose à l'échec clinique : préférer C3G ou azithromycine."}},
 
-  {org:"pneumocoque", res:{OXA:"R",PEN:"I",AMX:"S",CTX:"S",E:"R",DA:"R",VA:"S"}, ctx:{mening:"Non"},
+  {id:"pneumocoque-1", org:"pneumocoque", res:{OXA:"R",PEN:"I",AMX:"S",CTX:"S",E:"R",DA:"R",VA:"S"}, ctx:{mening:"Non"},
    answer:"PSDP (sensibilité diminuée aux β-lactamines)",
    options:["Pneumocoque sensible","PSDP (sensibilité diminuée aux β-lactamines)","SARM","ERV"],
    teach:"Dépistage oxacilline positif et pénicilline « I » : PSDP. Rendre péni/amoxicilline/céfotaxime selon les CMI."},
 
-  {org:"proteus", res:{AMX:"S",AMC:"S",CTX:"S",CAZ:"S",IPM:"I",MEM:"S",ETP:"S"}, ctx:{},
+  {id:"proteus-1", org:"proteus", res:{AMX:"S",AMC:"S",CTX:"S",CAZ:"S",IPM:"I",MEM:"S",ETP:"S"}, ctx:{},
    answer:"Souche sauvage (imipénème naturellement diminué)",
    options:["Carbapénémase","Souche sauvage (imipénème naturellement diminué)","BLSE","AmpC"],
    teach:"Chez Proteus, l'imipénème « I » isolé est naturel : ce n'est PAS une carbapénémase. Se fier au méropénème."},
@@ -6531,33 +6531,33 @@ const QUIZ_BANK = [
 
   /* ---------- Entérobactéries ---------- */
 
-  {org:"koxytoca", res:{AMX:"R",AMC:"R",TZP:"R",FOX:"S",CTX:"S",CAZ:"S",FEP:"S",IPM:"S",CIP:"S",GEN:"S"}, ctx:{syn:"Négatif"},
+  {id:"koxytoca-1", org:"koxytoca", res:{AMX:"R",AMC:"R",TZP:"R",FOX:"S",CTX:"S",CAZ:"S",FEP:"S",IPM:"S",CIP:"S",GEN:"S"}, ctx:{syn:"Négatif"},
    answer:"Souche sauvage",
    options:["Souche sauvage","Pénicillinase de bas niveau","BLSE","Céphalosporinase (AmpC)"],
    teach:"Chez Klebsiella, la résistance aux aminopénicillines est NATURELLE (pénicillinase chromosomique K1) : elle ne signe aucun mécanisme acquis. Les C3G intactes confirment le phénotype sauvage."},
 
-  {org:"kaerogenes", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",IPM:"S",CIP:"S"}, ctx:{syn:"Négatif"},
+  {id:"kaerogenes-1", org:"kaerogenes", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",IPM:"S",CIP:"S"}, ctx:{syn:"Négatif"},
    answer:"Céphalosporinase déréprimée (AmpC hyperproduite)",
    options:["BLSE","Céphalosporinase déréprimée (AmpC hyperproduite)","Carbapénémase","Souche sauvage"],
    teach:"Céfoxitine R, pas de synergie au clavulanate, céfépime conservé : la céphalosporinase chromosomique est déréprimée. Le céfépime, stable vis-à-vis de l'AmpC, reste souvent la seule β-lactamine utilisable."},
 
-  {org:"serratia", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",IPM:"S",GEN:"S"}, ctx:{syn:"Négatif"},
+  {id:"serratia-1", org:"serratia", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",IPM:"S",GEN:"S"}, ctx:{syn:"Négatif"},
    answer:"Céphalosporinase déréprimée (AmpC hyperproduite)",
    options:["Céphalosporinase déréprimée (AmpC hyperproduite)","BLSE","Pénicillinase de bas niveau","Carbapénémase"],
    teach:"Même lecture que chez Enterobacter : Serratia porte une AmpC inductible, et sa dérépression touche les C1G à C3G ainsi que la céfoxitine."},
 
-  {org:"cfreundii", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"S",CAZ:"S",FEP:"S",IPM:"S",CIP:"S"},
+  {id:"cfreundii-1", org:"cfreundii", res:{AMX:"R",AMC:"R",FOX:"R",CTX:"S",CAZ:"S",FEP:"S",IPM:"S",CIP:"S"},
    ctx:{syn:"Négatif"},
    answer:"AmpC à bas niveau (phénotype de base)",
    options:["AmpC à bas niveau (phénotype de base)","Céphalosporinase déréprimée (AmpC hyperproduite)","BLSE","Souche sauvage sans AmpC"],
    teach:"C3G actives in vitro, mais l'AmpC inductible est là : sous traitement par C3G, des mutants déréprimés peuvent être sélectionnés et l'échec survenir en cours de traitement. C'est la raison pour laquelle on évite les C3G seules sur ce groupe."},
 
-  {org:"pvulgaris", res:{AMX:"R",AMC:"S",FOX:"S",CTX:"S",CAZ:"S",IPM:"I",MEM:"S",CIP:"S"}, ctx:{},
+  {id:"pvulgaris-1", org:"pvulgaris", res:{AMX:"R",AMC:"S",FOX:"S",CTX:"S",CAZ:"S",IPM:"I",MEM:"S",CIP:"S"}, ctx:{},
    answer:"Pénicillinase de bas niveau",
    options:["Pénicillinase de bas niveau","Carbapénémase","BLSE","Céphalosporinase déréprimée (AmpC)"],
    teach:"L'imipénème « I » isolé n'est pas une carbapénémase : la sensibilité à l'imipénème est naturellement diminuée chez les Morganellaceae. C'est le méropénème qui fait foi. La résistance à l'amoxicilline, restaurée par le clavulanate, relève ici de la céphalosporinase K1."},
 
-  {org:"salmonella", res:{AMX:"S",AMC:"S",CTX:"S",CIP:"S",PEF:"R",SXT:"S"}, ctx:{},
+  {id:"salmonella-2", org:"salmonella", res:{AMX:"S",AMC:"S",CTX:"S",CIP:"S",PEF:"R",SXT:"S"}, ctx:{},
    answer:"Résistance de bas niveau aux fluoroquinolones",
    options:["Souche sauvage","Résistance de bas niveau aux fluoroquinolones","Résistance de haut niveau aux fluoroquinolones","BLSE"],
    teach:"La ciprofloxacine paraît sensible, mais le dépistage à la péfloxacine est résistant : il existe un premier niveau de résistance (qnr ou mutation de gyrA). Dans une fièvre typhoïde, la fluoroquinolone exposerait à l'échec malgré une CMI basse.",
@@ -6565,7 +6565,7 @@ const QUIZ_BANK = [
        options:["Sensible, comme mesurée","Résistante","Sensible à forte posologie"], answer:"Résistante",
        why:"Le dépistage péfloxacine prime : les fluoroquinolones sont rendues résistantes malgré l'apparence in vitro."}},
 
-  {org:"ecoli", res:{AMX:"R",AMC:"R",FOX:"S",CTX:"R",CAZ:"S",ETP:"R",IPM:"S",MEM:"S",COL:"S"}, ctx:{carba:"Oui — OXA-48"},
+  {id:"ecoli-4", org:"ecoli", res:{AMX:"R",AMC:"R",FOX:"S",CTX:"R",CAZ:"S",ETP:"R",IPM:"S",MEM:"S",COL:"S"}, ctx:{carba:"Oui — OXA-48"},
    answer:"Suspicion de carbapénémase",
    options:["BLSE","Suspicion de carbapénémase","Céphalosporinase déréprimée (AmpC)","Souche sauvage"],
    teach:"Ertapénème R avec imipénème et méropénème apparemment sensibles : profil très évocateur d'une OXA-48, qui hydrolyse peu les carbapénèmes à large spectre. La confirmation est indispensable, et la souche doit être signalée.",
@@ -6573,7 +6573,7 @@ const QUIZ_BANK = [
        options:["Sensible, comme mesuré","Résistant","Sensible à forte posologie"], answer:"Résistant",
        why:"Depuis 2026, le CA-SFM rend les carbapénèmes résistants dès qu'une carbapénémase est confirmée, quelles que soient les CMI et quel que soit le type d'enzyme. L'EUCAST, lui, les rend tels que mesurés avec un commentaire."}},
 
-  {org:"ecoli", res:{AMX:"R",AMC:"I",FOX:"S",CTX:"R",CAZ:"R",FEP:"I",ETP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",TEM:"S"}, ctx:{syn:"Positif"},
+  {id:"ecoli-5", org:"ecoli", res:{AMX:"R",AMC:"I",FOX:"S",CTX:"R",CAZ:"R",FEP:"I",ETP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",TEM:"S"}, ctx:{syn:"Positif"},
    answer:"BLSE",
    options:["BLSE","Céphalosporinase déréprimée (AmpC)","Carbapénémase","Pénicillinase de bas niveau"],
    teach:"Synergie positive et céfoxitine conservée : BLSE. La question du clinicien sera l'alternative aux carbapénèmes — c'est là que la témocilline et la céfoxitine reprennent de l'intérêt.",
@@ -6583,12 +6583,12 @@ const QUIZ_BANK = [
 
   /* ---------- Bacilles à Gram négatif non fermentants ---------- */
 
-  {org:"paeru", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"R",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
+  {id:"paeru-2", org:"paeru", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"R",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
    answer:"Résistance aux carbapénèmes",
    options:["Souche sauvage","Résistance aux carbapénèmes","Carbapénémase confirmée","BLSE"],
    teach:"Imipénème R alors que le méropénème et les autres β-lactamines restent actifs : profil d'imperméabilité par perte de la porine OprD, bien plus fréquent qu'une carbapénémase. Une carbapénémase toucherait l'ensemble des β-lactamines."},
 
-  {org:"paeru", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
+  {id:"paeru-3", org:"paeru", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
    answer:"Pseudomonas aeruginosa sauvage",
    options:["Pseudomonas aeruginosa sauvage","Résistance aux carbapénèmes","Céphalosporinase déréprimée","Toto-résistant (XDR)"],
    teach:"Aucun mécanisme acquis. Attention toutefois au rendu : proposer un carbapénème quand une β-lactamine de spectre plus étroit reste active est un mésusage documenté.",
@@ -6597,22 +6597,22 @@ const QUIZ_BANK = [
        answer:"Le masquer tant qu'une β-lactamine plus étroite reste active",
        why:"Le CA-SFM préconise une règle de masquage pour Pseudomonas : rendre le méropénème quand la pipéracilline-tazobactam ou la ceftazidime sont actives conduit à des prescriptions inappropriées de carbapénème."}},
 
-  {org:"paeru", res:{AMX:"S",TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
+  {id:"paeru-4", org:"paeru", res:{AMX:"S",TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",COL:"S"}, ctx:{},
    answer:"Une incohérence avec les résistances naturelles",
    options:["Un phénotype sauvage sans particularité","Une incohérence avec les résistances naturelles","Une BLSE","Une carbapénémase"],
    teach:"L'amoxicilline est rendue sensible sur un Pseudomonas : impossible. Le genre est naturellement résistant aux aminopénicillines. L'erreur vient de la saisie, de la lecture de la boîte ou de l'identification — pas de la souche. PhénoBac le signale avant le rendu."},
 
-  {org:"acineto", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",SXT:"S",COL:"S"}, ctx:{},
+  {id:"acineto-2", org:"acineto", res:{TZP:"S",CAZ:"S",FEP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S",AMK:"S",SXT:"S",COL:"S"}, ctx:{},
    answer:"Acinetobacter baumannii sauvage",
    options:["Acinetobacter baumannii sauvage","Suspicion de carbapénémase (OXA / métallo-)","Toto-résistant (XDR)","BLSE"],
    teach:"Un Acinetobacter entièrement sensible existe, mais reste minoritaire à l'hôpital. Rappel : le genre est naturellement résistant à l'ertapénème, aux aminopénicillines, au céfotaxime et à la fosfomycine — ne jamais les rendre sensibles."},
 
-  {org:"steno", res:{SXT:"S",LVX:"S",MIN:"S",CAZ:"R",IPM:"R",MEM:"R",GEN:"R",AMK:"R"}, ctx:{},
+  {id:"steno-1", org:"steno", res:{SXT:"S",LVX:"S",MIN:"S",CAZ:"R",IPM:"R",MEM:"R",GEN:"R",AMK:"R"}, ctx:{},
    answer:"Stenotrophomonas maltophilia — multirésistance naturelle",
    options:["Stenotrophomonas maltophilia — multirésistance naturelle","Carbapénémase acquise","Toto-résistant (XDR)","Céphalosporinase déréprimée"],
    teach:"Ce n'est pas une multirésistance acquise : S. maltophilia porte deux β-lactamases chromosomiques, dont une métallo-carbapénémase (L1), et résiste naturellement aux aminosides. Les carbapénèmes ne doivent jamais être rendus sensibles, même s'ils le paraissent. Le cotrimoxazole est la référence."},
 
-  {org:"burk", res:{SXT:"S",CAZ:"S",MEM:"S",MIN:"S",GEN:"R",AMK:"R",COL:"R"}, ctx:{},
+  {id:"burk-1", org:"burk", res:{SXT:"S",CAZ:"S",MEM:"S",MIN:"S",GEN:"R",AMK:"R",COL:"R"}, ctx:{},
    answer:"Burkholderia cepacia — multirésistance naturelle",
    options:["Burkholderia cepacia — multirésistance naturelle","Toto-résistant (XDR)","Carbapénémase acquise","Souche sauvage sans particularité"],
    teach:"Aminosides et polymyxines sont naturellement inactifs : les rendre sensibles serait une faute. Le cotrimoxazole, la ceftazidime et le méropénème restent les options habituelles.",
@@ -6623,22 +6623,22 @@ const QUIZ_BANK = [
 
   /* ---------- Staphylocoques ---------- */
 
-  {org:"saureus", res:{FOX:"R",PEN:"R",E:"R",DA:"R",GEN:"R",SXT:"S",RD:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{},
+  {id:"saureus-4", org:"saureus", res:{FOX:"R",PEN:"R",E:"R",DA:"R",GEN:"R",SXT:"S",RD:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{},
    answer:"SARM",
    options:["SASM producteur de pénicillinase","SARM","MLSb inductible","VISA"],
    teach:"Céfoxitine résistante : la méticillino-résistance est acquise (mecA/mecC) et TOUTES les β-lactamines sont rendues résistantes, y compris celles qui paraîtraient actives. Glycopeptides et linézolide restent les recours."},
 
-  {org:"sepidermidis", res:{FOX:"R",OXA:"R",PEN:"R",E:"R",DA:"R",GEN:"R",SXT:"S",RD:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{},
+  {id:"sepidermidis-1", org:"sepidermidis", res:{FOX:"R",OXA:"R",PEN:"R",E:"R",DA:"R",GEN:"R",SXT:"S",RD:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{},
    answer:"SCN méticillino-résistant",
    options:["SCN méticillino-sensible","SCN méticillino-résistant","SARM","Contaminant sans valeur"],
    teach:"La méticillino-résistance est la règle chez S. epidermidis hospitalier. Sur matériel étranger — cathéter, prothèse — la souche n'est pas un contaminant : elle est le problème, et la β-lactamine est perdue."},
 
-  {org:"shaemolyticus", res:{FOX:"R",OXA:"R",PEN:"R",E:"R",DA:"R",GEN:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{dtest:"Non fait"},
+  {id:"shaemolyticus-1", org:"shaemolyticus", res:{FOX:"R",OXA:"R",PEN:"R",E:"R",DA:"R",GEN:"S",VA:"S",TEC:"S",LZD:"S"}, ctx:{dtest:"Non fait"},
    answer:"SCN méticillino-résistant",
    options:["SCN méticillino-résistant","MLSb inductible","SASM producteur de pénicillinase","Souche sauvage"],
    teach:"Méticillino-résistance, et par ailleurs érythromycine et clindamycine toutes deux résistantes : c'est un MLSb constitutif, sans D-test nécessaire. S. haemolyticus est le staphylocoque à coagulase négative le plus souvent multirésistant."},
 
-  {org:"ssaprophyticus", res:{FOX:"S",OXA:"S",PEN:"S",E:"S",DA:"S",GEN:"S",SXT:"S",VA:"S"}, ctx:{},
+  {id:"ssaprophyticus-1", org:"ssaprophyticus", res:{FOX:"S",OXA:"S",PEN:"S",E:"S",DA:"S",GEN:"S",SXT:"S",VA:"S"}, ctx:{},
    answer:"Staphylococcus saprophyticus — méticillino-sensible",
    options:["Staphylococcus saprophyticus — méticillino-sensible","SCN méticillino-résistant","SASM producteur de pénicillinase","Contaminant urinaire"],
    teach:"Chez la femme jeune, S. saprophyticus est un uropathogène vrai, pas un contaminant. Rappel : il est naturellement résistant à la fosfomycine — un piège, puisque c'est un traitement usuel de la cystite.",
@@ -6649,17 +6649,17 @@ const QUIZ_BANK = [
 
   /* ---------- Streptocoques et entérocoques ---------- */
 
-  {org:"spyogenes", res:{PEN:"S",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
+  {id:"spyogenes-1", org:"spyogenes", res:{PEN:"S",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
    answer:"Streptococcus pyogenes — sensible à la pénicilline",
    options:["Streptococcus pyogenes — sensible à la pénicilline","MLSb constitutif","PSDP","Souche de sensibilité diminuée"],
    teach:"Aucune résistance à la pénicilline n'a jamais été décrite chez S. pyogenes : la pénicilline G reste le traitement de référence. C'est le macrolide, en cas d'allergie, qu'il faut vérifier."},
 
-  {org:"spyogenes", res:{PEN:"S",AMX:"S",CTX:"S",E:"R",DA:"R",VA:"S"}, ctx:{dtest:"Négatif"},
+  {id:"spyogenes-2", org:"spyogenes", res:{PEN:"S",AMX:"S",CTX:"S",E:"R",DA:"R",VA:"S"}, ctx:{dtest:"Négatif"},
    answer:"MLSb constitutif",
    options:["MLSb inductible","MLSb constitutif","Résistance isolée aux macrolides","Souche sauvage"],
    teach:"Érythromycine et clindamycine résistantes d'emblée, D-test négatif : la résistance est constitutive. Les deux familles sont perdues — ce qui compte chez l'allergique à la pénicilline."},
 
-  {org:"sagalactiae", res:{PEN:"S",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
+  {id:"sagalactiae-1", org:"sagalactiae", res:{PEN:"S",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
    answer:"Streptococcus agalactiae — sensible à la pénicilline",
    options:["Streptococcus agalactiae — sensible à la pénicilline","MLSb constitutif","PSDP","Résistance acquise à l'amoxicilline"],
    teach:"Le streptocoque B reste sensible à la pénicilline. L'enjeu du dépistage chez la femme enceinte est le macrolide, à vérifier en cas d'allergie, car la prophylaxie per-partum repose alors sur lui.",
@@ -6668,22 +6668,22 @@ const QUIZ_BANK = [
        answer:"Non : 0,03 mg/L pour l'EUCAST, 0,06 mg/L pour le CA-SFM",
        why:"Le CA-SFM retient 0,06 mg/L pour les groupes A, C et G, car la plupart des automates ne mesurent pas en dessous de cette valeur. Le groupe B est à 0,125 mg/L dans les deux référentiels."}},
 
-  {org:"sviridans", res:{PEN:"I",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
+  {id:"sviridans-1", org:"sviridans", res:{PEN:"I",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S"}, ctx:{},
    answer:"Sensibilité diminuée aux β-lactamines (PLP)",
    options:["Souche sauvage","Sensibilité diminuée aux β-lactamines (PLP)","MLSb constitutif","Carbapénémase"],
    teach:"Chez les streptocoques du groupe viridans, la sensibilité diminuée à la pénicilline vient de protéines de liaison à la pénicilline modifiées, non d'une β-lactamase : le clavulanate n'y change rien. En endocardite, cela modifie le schéma thérapeutique et impose l'association à un aminoside."},
 
-  {org:"pneumocoque", res:{OXA:"R",PEN:"I",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S",LZD:"S"}, ctx:{mening:"Oui"},
+  {id:"pneumocoque-2", org:"pneumocoque", res:{OXA:"R",PEN:"I",AMX:"S",CTX:"S",E:"S",DA:"S",VA:"S",LZD:"S"}, ctx:{mening:"Oui"},
    answer:"PSDP — sensibilité diminuée aux β-lactamines",
    options:["Souche sauvage","PSDP — sensibilité diminuée aux β-lactamines","MLSb constitutif","Résistance acquise aux glycopeptides"],
    teach:"Le disque d'oxacilline ne fait que dépister : c'est la CMI qui catégorise, molécule par molécule. En contexte méningé, les seuils sont plus stricts — la diffusion dans le liquide céphalo-rachidien est mauvaise — et PhénoBac les applique dès que le prélèvement est déclaré LCR."},
 
-  {org:"efaecium", res:{AMP:"R",VA:"S",TEC:"S",HLG:"S",LZD:"S",CIP:"R"}, ctx:{},
+  {id:"efaecium-2", org:"efaecium", res:{AMP:"R",VA:"S",TEC:"S",HLG:"S",LZD:"S",CIP:"R"}, ctx:{},
    answer:"Entérocoque de phénotype sauvage",
    options:["Entérocoque de phénotype sauvage","ERV — résistance aux glycopeptides","Haut niveau de résistance aux aminosides","BLSE"],
    teach:"Chez E. faecium, la résistance à l'ampicilline est la règle et non l'exception — contrairement à E. faecalis, où elle doit alerter. Les glycopeptides restent actifs ici : la souche n'est pas un ERV."},
 
-  {org:"efaecalis", res:{AMP:"S",VA:"S",TEC:"S",HLG:"S",LZD:"S",DAP:"S"}, ctx:{},
+  {id:"efaecalis-2", org:"efaecalis", res:{AMP:"S",VA:"S",TEC:"S",HLG:"S",LZD:"S",DAP:"S"}, ctx:{},
    answer:"Entérocoque de phénotype sauvage",
    options:["Entérocoque de phénotype sauvage","ERV — résistance aux glycopeptides","Haut niveau de résistance aux aminosides","Sensibilité diminuée à la daptomycine"],
    teach:"Phénotype attendu d'E. faecalis : ampicilline active, pas de haut niveau de résistance à la gentamicine, donc synergie β-lactamine + aminoside conservée — ce qui compte en endocardite.",
@@ -6694,17 +6694,17 @@ const QUIZ_BANK = [
 
   /* ---------- Bactéries exigeantes ---------- */
 
-  {org:"haemophilus", res:{AMP:"R",AMX:"R",AMC:"S",CTX:"S",SXT:"S",CAF:"S",CIP:"S",AZM:"S"}, ctx:{blac:"Positif"},
+  {id:"haemophilus-1", org:"haemophilus", res:{AMP:"R",AMX:"R",AMC:"S",CTX:"S",SXT:"S",CAF:"S",CIP:"S",AZM:"S"}, ctx:{blac:"Positif"},
    answer:"BLPAR (β-lactamase +)",
    options:["Souche sauvage","BLPAR (β-lactamase +)","BLNAR (PLP3 modifiée)","BLPACR"],
    teach:"β-lactamase positive, et l'association au clavulanate restaure l'activité : c'est le mécanisme le plus fréquent chez H. influenzae. Amoxicilline-clavulanate et C3G restent actives."},
 
-  {org:"haemophilus", res:{AMP:"R",AMX:"R",AMC:"R",CTX:"S",SXT:"S",CAF:"S",CIP:"S"}, ctx:{blac:"Négatif"},
+  {id:"haemophilus-2", org:"haemophilus", res:{AMP:"R",AMX:"R",AMC:"R",CTX:"S",SXT:"S",CAF:"S",CIP:"S"}, ctx:{blac:"Négatif"},
    answer:"BLNAR (PLP3 modifiée)",
    options:["BLPAR (β-lactamase +)","BLNAR (PLP3 modifiée)","Souche sauvage","Carbapénémase"],
    teach:"Aminopénicillines résistantes SANS β-lactamase : la cible elle-même est modifiée (PLP3). Le clavulanate n'y peut rien, et la sensibilité aux céphalosporines peut être diminuée. Dans une forme invasive, la C3G s'impose après vérification de sa CMI."},
 
-  {org:"nmeningitidis", res:{PEN:"S",AMX:"S",CTX:"S",RD:"S",CIP:"S",CAF:"S"}, ctx:{},
+  {id:"nmeningitidis-1", org:"nmeningitidis", res:{PEN:"S",AMX:"S",CTX:"S",RD:"S",CIP:"S",CAF:"S"}, ctx:{},
    answer:"Neisseria meningitidis — sensible à la pénicilline",
    options:["Neisseria meningitidis — sensible à la pénicilline","Sensibilité diminuée à la pénicilline","Producteur de pénicillinase","Résistance à la rifampicine"],
    teach:"Phénotype attendu. Vérifier aussi la rifampicine et la ciprofloxacine : ce sont elles qui serviront à la prophylaxie des sujets contacts, et leur résistance, bien que rare, existe.",
@@ -6713,29 +6713,29 @@ const QUIZ_BANK = [
        answer:"Rechercher une β-lactamase par test chromogénique",
        why:"Le CA-SFM le recommande — l'EUCAST non. Les méningocoques producteurs de pénicillinase sont rares, mais réémergent : des cas récents sont décrits en France, au Japon et aux États-Unis."}},
 
-  {org:"ngonorrhoeae", res:{PEN:"R",CTX:"S",AZM:"S",CIP:"R"}, ctx:{blac:"Positif"},
+  {id:"ngonorrhoeae-1", org:"ngonorrhoeae", res:{PEN:"R",CTX:"S",AZM:"S",CIP:"R"}, ctx:{blac:"Positif"},
    answer:"PPNG (β-lactamase +)",
    options:["Souche sauvage","PPNG (β-lactamase +)","Résistance à la ceftriaxone","Sensibilité diminuée aux macrolides"],
    teach:"Pénicillinase plasmidique : pénicilline et amoxicilline sont perdues. La ceftriaxone reste le traitement de référence. La résistance associée aux fluoroquinolones est fréquente — elles ne peuvent pas servir en probabiliste."},
 
-  {org:"moraxella", res:{AMX:"R",AMC:"S",CTX:"S",SXT:"S",AZM:"S",CIP:"S"}, ctx:{blac:"Positif"},
+  {id:"moraxella-1", org:"moraxella", res:{AMX:"R",AMC:"S",CTX:"S",SXT:"S",AZM:"S",CIP:"S"}, ctx:{blac:"Positif"},
    answer:"β-lactamase (BRO) +",
    options:["Souche sauvage","β-lactamase (BRO) +","BLNAR","Résistance acquise aux macrolides"],
    teach:"Plus de neuf Moraxella catarrhalis sur dix produisent une β-lactamase BRO. L'amoxicilline seule est donc inutilisable, mais l'association au clavulanate, les céphalosporines et les macrolides restent actifs."},
 
   /* ---------- Bacilles à Gram positif, anaérobies, bactéries courbes ---------- */
 
-  {org:"listeria", res:{AMP:"S",AMX:"S",CTX:"S",GEN:"S",SXT:"S"}, ctx:{},
+  {id:"listeria-1", org:"listeria", res:{AMP:"S",AMX:"S",CTX:"S",GEN:"S",SXT:"S"}, ctx:{},
    answer:"Une incohérence avec les résistances naturelles",
    options:["Un phénotype sauvage sans particularité","Une incohérence avec les résistances naturelles","Une résistance acquise aux céphalosporines","Une sensibilité diminuée à l'amoxicilline"],
    teach:"Le céfotaxime est rendu sensible sur une Listeria : c'est impossible, et c'est le piège classique de la méningite. Les céphalosporines sont naturellement inactives sur ce genre — une méningite listérienne traitée par C3G seule est un échec annoncé. La référence est l'amoxicilline, associée à la gentamicine."},
 
-  {org:"coryne", res:{PEN:"R",AMX:"R",E:"R",GEN:"S",VA:"S",LZD:"S"}, ctx:{},
+  {id:"coryne-1", org:"coryne", res:{PEN:"R",AMX:"R",E:"R",GEN:"S",VA:"S",LZD:"S"}, ctx:{},
    answer:"Corynebacterium multirésistant probable (groupe JK)",
    options:["Contaminant cutané","Corynebacterium multirésistant probable (groupe JK)","Souche sauvage","Diphtérie"],
    teach:"Un Corynebacterium résistant aux β-lactamines et aux macrolides évoque le groupe JK (C. jeikeium), pathogène opportuniste sur matériel et chez le neutropénique — pas un simple contaminant. La vancomycine est constamment active et reste la référence."},
 
-  {org:"bfragilis", res:{PEN:"R",AMC:"S",TZP:"S",IPM:"R",MEM:"R",DA:"R",MTZ:"S"}, ctx:{},
+  {id:"bfragilis-1", org:"bfragilis", res:{PEN:"R",AMC:"S",TZP:"S",IPM:"R",MEM:"R",DA:"R",MTZ:"S"}, ctx:{},
    q:"Que suggère cette sensibilité diminuée aux carbapénèmes ?",
    answer:"Une carbapénémase (cfiA), à confirmer",
    options:["Une carbapénémase (cfiA), à confirmer","Une résistance naturelle du genre",
@@ -6743,7 +6743,7 @@ const QUIZ_BANK = [
             "Une contamination par une entérobactérie"],
    teach:"Sensibilité diminuée aux carbapénèmes chez un B. fragilis : une carbapénémase (gène cfiA) est possible et doit être confirmée. La clindamycine résistante est fréquente dans ce groupe : elle ne peut pas servir en probabiliste. Le métronidazole reste la référence."},
 
-  {org:"campylobacter", res:{AZM:"S",E:"S",CIP:"R",DOX:"S"}, ctx:{},
+  {id:"campylobacter-1", org:"campylobacter", res:{AZM:"S",E:"S",CIP:"R",DOX:"S"}, ctx:{},
    q:"Quel traitement de référence retenez-vous ?",
    answer:"Azithromycine ou érythromycine",
    options:["Azithromycine ou érythromycine","Ciprofloxacine à forte posologie",
@@ -6753,7 +6753,7 @@ const QUIZ_BANK = [
   /* Les cinq dernières espèces de l'application — toutes ont
      désormais au moins un cas. */
 
-  {org:"shigella", res:{AMX:"R",AMC:"R",FOX:"S",CTX:"R",CAZ:"R",CIP:"R",SXT:"R",AZM:"S"}, ctx:{syn:"Positif"},
+  {id:"shigella-1", org:"shigella", res:{AMX:"R",AMC:"R",FOX:"S",CTX:"R",CAZ:"R",CIP:"R",SXT:"R",AZM:"S"}, ctx:{syn:"Positif"},
    answer:"BLSE",
    options:["Pénicillinase de bas niveau","BLSE","Céphalosporinase déréprimée (AmpC)","Souche sauvage"],
    teach:"Contrairement à la plupart des gastro-entérites à Salmonella, la shigellose SE TRAITE : la contagiosité est extrême — une dizaine de bacilles suffisent. Une BLSE avec fluoroquinolone et cotrimoxazole perdus ne laisse ici que l'azithromycine, et impose un signalement.",
@@ -6761,27 +6761,101 @@ const QUIZ_BANK = [
        options:["Sensible, comme mesuré","Résistant"], answer:"Résistant",
        why:"Le CA-SFM est revenu en 2024 à la lecture interprétative des BLSE : pénicillines, C1G à C3G et aztréonam sont rendus résistants quel que soit le résultat in vitro. L'EUCAST, lui, les rend tels que testés."}},
 
-  {org:"slugdunensis", res:{FOX:"S",OXA:"S",PEN:"R",E:"S",DA:"S",GEN:"S",RD:"S",VA:"S"}, ctx:{},
+  {id:"slugdunensis-1", org:"slugdunensis", res:{FOX:"S",OXA:"S",PEN:"R",E:"S",DA:"S",GEN:"S",RD:"S",VA:"S"}, ctx:{},
    answer:"Staphylococcus lugdunensis — pénicillinase",
    options:["Contaminant cutané sans valeur","Staphylococcus lugdunensis — pénicillinase","SCN méticillino-résistant","SARM"],
    teach:"S. lugdunensis est un staphylocoque à coagulase négative, mais il se comporte comme S. aureus : endocardites destructrices, abcès profonds. Isolé d'une hémoculture, il ne doit jamais être écarté comme contaminant. Ici la méticilline reste active — c'est l'oxacilline qui traite, pas le glycopeptide."},
 
-  {org:"cperfringens", res:{PEN:"S",AMX:"S",DA:"S",MTZ:"S"}, ctx:{},
+  {id:"cperfringens-1", org:"cperfringens", res:{PEN:"S",AMX:"S",DA:"S",MTZ:"S"}, ctx:{},
    answer:"Clostridium perfringens — sensible à la pénicilline",
    options:["Clostridium perfringens — sensible à la pénicilline","Résistance acquise aux β-lactamines","Bacteroides fragilis","Souche multirésistante"],
    teach:"Phénotype attendu. Dans une gangrène gazeuse, la pénicilline G ne suffit pas seule : on y associe la clindamycine, non pour son spectre mais pour son effet antitoxine — elle bloque la synthèse de la toxine alpha. Le geste chirurgical reste prioritaire sur l'antibiotique."},
 
-  {org:"cdifficile", res:{VA:"S",MTZ:"S"}, ctx:{},
+  {id:"cdifficile-1", org:"cdifficile", res:{VA:"S",MTZ:"S"}, ctx:{},
    answer:"Clostridioides difficile — pas d'antibiogramme de routine",
    options:["Souche sauvage à traiter selon l'antibiogramme","Clostridioides difficile — pas d'antibiogramme de routine","Résistance acquise au métronidazole","Contaminant de selles"],
    teach:"Le diagnostic repose sur les toxines, la GDH et la PCR — pas sur la culture avec antibiogramme, que le CA-SFM ne recommande pas en France sur des selles. Le traitement est la vancomycine ORALE ou la fidaxomicine, et le premier geste est d'arrêter l'antibiotique inducteur. Attention à l'hygiène : les spores résistent aux solutions hydro-alcooliques, il faut se laver les mains."},
 
-  {org:"vibrio", res:{DOX:"S",AZM:"S",CIP:"S",SXT:"R"}, ctx:{},
+  {id:"vibrio-1", org:"vibrio", res:{DOX:"S",AZM:"S",CIP:"S",SXT:"R"}, ctx:{},
    q:"Quelle molécule reste la référence, malgré ce cotrimoxazole résistant ?",
    answer:"Doxycycline",
    options:["Doxycycline","Cotrimoxazole à forte posologie","Ciprofloxacine","Amoxicilline"],
    teach:"L'antibiotique n'est qu'un adjuvant : c'est la réhydratation qui sauve, et elle ne se discute pas. La doxycycline en dose unique raccourcit la diarrhée et la durée du portage, ce qui compte en situation épidémique. Le cotrimoxazole résistant est banal et sans conséquence sur la prise en charge."}
 ];
+
+/* ---------- LA BANQUE D'ENTRAÎNEMENT EN ANGLAIS ----------
+
+   Indexée par l'IDENTIFIANT du cas, jamais par sa position. Un index se
+   décale en silence : insérer un cas au milieu aurait fait glisser toutes
+   les traductions suivantes d'un cran, et un cas de pneumocoque aurait porté
+   l'explication d'un streptocoque — sans la moindre erreur visible.
+
+   Les champs traduits sont ceux que l'apprenant LIT : la question, la réponse
+   attendue, les propositions, l'explication, et les mêmes pour la seconde
+   question quand il y en a une. Le reste du cas — espèce, résultats,
+   contexte — n'est pas du texte.
+
+   outils/verifier-langues.py vérifie que chaque identifiant a sa traduction,
+   qu'aucune ne manque ni ne traîne, et que le nombre de propositions
+   concorde : une option de moins en anglais, et la bonne réponse ne
+   figurerait plus dans la liste. */
+const QUIZ_BANK_EN = {
+  "ecoli-1": {"answer": "Wild type", "options": ["Wild type", "Low-level penicillinase", "ESBL", "Cephalosporinase (AmpC)"], "teach": "Aminopenicillins susceptible and no third-generation cephalosporin affected: no acquired mechanism."},
+  "ecoli-2": {"answer": "Low-level penicillinase", "options": ["Wild type", "Low-level penicillinase", "ESBL", "Cephalosporinase (AmpC)"], "teach": "Aminopenicillin R restored by clavulanate, third-generation cephalosporins intact: a very common profile."},
+  "ecoli-3": {"q": "Cefotaxime comes back “S” on another test. How do you report it?", "answer": "ESBL", "options": ["Cephalosporinase (AmpC)", "ESBL", "Carbapenemase", "Low-level penicillinase"], "teach": "A positive cephalosporin plus clavulanate synergy with cefoxitin preserved: the signature of an ESBL.", "q2": {"q": "Cefotaxime comes back “S” on another test. How do you report it?", "options": ["Susceptible", "Resistant", "Intermediate"], "answer": "Resistant", "why": "ESBL harmonisation: penicillins, 1st to 3rd generation cephalosporins and aztreonam are reported R whatever the in vitro result."}},
+  "kpneu-1": {"answer": "Carbapenemase", "options": ["ESBL", "Cephalosporinase (AmpC)", "Carbapenemase", "Wild type"], "teach": "Reduced carbapenem susceptibility: a carbapenemase is suspected — notify and confirm."},
+  "ecloacae-1": {"answer": "Derepressed cephalosporinase (AmpC)", "options": ["ESBL", "Derepressed cephalosporinase (AmpC)", "Carbapenemase", "Wild type"], "teach": "Cefoxitin R, no clavulanate synergy, cefepime preserved: AmpC overproduction."},
+  "ecloacae-2": {"answer": "An ESBL on top of the AmpC", "options": ["AmpC alone", "An ESBL on top of the AmpC", "Carbapenemase", "Wild type"], "teach": "A positive clavulanate synergy in an Enterobacter: an ESBL in addition to the natural cephalosporinase."},
+  "saureus-1": {"answer": "MSSA producing a penicillinase", "options": ["MSSA producing a penicillinase", "MRSA", "Inducible MLSb", "VISA"], "teach": "Cefoxitin S: methicillin is active. Benzylpenicillin R through a penicillinase (blaZ)."},
+  "saureus-2": {"q": "How do you report the beta-lactams as a whole?", "answer": "MRSA", "options": ["MSSA", "MRSA", "Constitutive MLSb", "VRE"], "teach": "Cefoxitin R (mecA): methicillin resistance.", "q2": {"q": "How do you report the beta-lactams as a whole?", "options": ["As tested in vitro", "All resistant", "All susceptible"], "answer": "All resistant", "why": "An MRSA requires every beta-lactam to be reported R, the anti-MRSA cephalosporins excepted."}},
+  "saureus-3": {"answer": "Inducible MLSb", "options": ["Clindamycin susceptible", "Inducible MLSb", "Constitutive MLSb", "MRSA"], "teach": "Erythromycin R, clindamycin S and a positive D-test: clindamycin is reported R (inducible resistance)."},
+  "efaecium-1": {"answer": "VRE (glycopeptide resistance)", "options": ["Wild-type enterococcus", "Isolated HLAR", "VRE (glycopeptide resistance)", "MRSA"], "teach": "Vancomycin R: a glycopeptide-resistant enterococcus. Notify urgently — there is an outbreak risk."},
+  "efaecalis-1": {"answer": "High-level aminoglycoside resistance (HLAR)", "options": ["Wild type", "High-level aminoglycoside resistance (HLAR)", "VRE", "ESBL"], "teach": "High-level gentamicin R: the beta-lactam plus aminoglycoside synergy is lost."},
+  "paeru-1": {"answer": "Extensively drug-resistant (XDR)", "options": ["Wild-type phenotype", "Multidrug-resistant (MDR)", "Extensively drug-resistant (XDR)", "An isolated carbapenemase"], "teach": "Colistin alone remains active: an extensively drug-resistant (XDR) profile — specialist advice is essential."},
+  "acineto-1": {"answer": "Carbapenemase (oxacillinase)", "options": ["Wild-type phenotype", "Multidrug-resistant (MDR)", "Carbapenemase (oxacillinase)", "ESBL"], "teach": "Carbapenem resistance in Acinetobacter: most often an oxacillinase (OXA-23 and others)."},
+  "salmonella-1": {"q": "In typhoid fever, would you prescribe a fluoroquinolone?", "answer": "Low-level fluoroquinolone resistance", "options": ["Wild-type phenotype", "Low-level fluoroquinolone resistance", "ESBL", "High-level fluoroquinolone resistance"], "teach": "Pefloxacin R while ciprofloxacin looks S: low-level fluoroquinolone resistance, the classic trap.", "q2": {"q": "In typhoid fever, would you prescribe a fluoroquinolone?", "options": ["Yes, ciprofloxacin is S", "No, there is a risk of failure", "Yes, at high dosage"], "answer": "No, there is a risk of failure", "why": "Low-level resistance exposes the patient to clinical failure: prefer a third-generation cephalosporin or azithromycin."}},
+  "pneumocoque-1": {"answer": "Penicillin-non-susceptible pneumococcus (reduced beta-lactam susceptibility)", "options": ["Penicillin-susceptible pneumococcus", "Penicillin-non-susceptible pneumococcus (reduced beta-lactam susceptibility)", "MRSA", "VRE"], "teach": "Positive oxacillin screen and penicillin “I”: a penicillin-non-susceptible pneumococcus. Report penicillin, amoxicillin and cefotaxime on their MICs."},
+  "proteus-1": {"answer": "Wild type (imipenem naturally reduced)", "options": ["Carbapenemase", "Wild type (imipenem naturally reduced)", "ESBL", "AmpC"], "teach": "In Proteus, an isolated imipenem “I” is natural: it is NOT a carbapenemase. Rely on meropenem."},
+  "koxytoca-1": {"answer": "Wild type", "options": ["Wild type", "Low-level penicillinase", "ESBL", "Cephalosporinase (AmpC)"], "teach": "In Klebsiella, aminopenicillin resistance is INTRINSIC (the chromosomal K1 penicillinase): it marks no acquired mechanism. Intact third-generation cephalosporins confirm the wild-type phenotype."},
+  "kaerogenes-1": {"answer": "Derepressed cephalosporinase (AmpC overproduction)", "options": ["ESBL", "Derepressed cephalosporinase (AmpC overproduction)", "Carbapenemase", "Wild type"], "teach": "Cefoxitin R, no clavulanate synergy, cefepime preserved: the chromosomal cephalosporinase is derepressed. Cefepime, being stable to AmpC, is often the only usable beta-lactam left."},
+  "serratia-1": {"answer": "Derepressed cephalosporinase (AmpC overproduction)", "options": ["Derepressed cephalosporinase (AmpC overproduction)", "ESBL", "Low-level penicillinase", "Carbapenemase"], "teach": "The same reading as in Enterobacter: Serratia carries an inducible AmpC, and its derepression affects the 1st to 3rd generation cephalosporins as well as cefoxitin."},
+  "cfreundii-1": {"answer": "Low-level AmpC (baseline phenotype)", "options": ["Low-level AmpC (baseline phenotype)", "Derepressed cephalosporinase (AmpC overproduction)", "ESBL", "Wild type with no AmpC"], "teach": "Third-generation cephalosporins are active in vitro, but the inducible AmpC is there: under treatment with them, derepressed mutants can be selected and failure can occur during treatment. That is why third-generation cephalosporins are avoided alone in this group."},
+  "pvulgaris-1": {"answer": "Low-level penicillinase", "options": ["Low-level penicillinase", "Carbapenemase", "ESBL", "Derepressed cephalosporinase (AmpC)"], "teach": "An isolated imipenem “I” is not a carbapenemase: imipenem susceptibility is naturally reduced in the Morganellaceae. Meropenem is what counts. The amoxicillin resistance, restored by clavulanate, is due here to the K1 cephalosporinase."},
+  "salmonella-2": {"q": "How do you report ciprofloxacin?", "answer": "Low-level fluoroquinolone resistance", "options": ["Wild type", "Low-level fluoroquinolone resistance", "High-level fluoroquinolone resistance", "ESBL"], "teach": "Ciprofloxacin looks susceptible, but the pefloxacin screen is resistant: a first level of resistance is present (qnr, or a gyrA mutation). In typhoid fever, a fluoroquinolone would risk failure despite a low MIC.", "q2": {"q": "How do you report ciprofloxacin?", "options": ["Susceptible, as measured", "Resistant", "Susceptible, increased exposure"], "answer": "Resistant", "why": "The pefloxacin screen takes precedence: the fluoroquinolones are reported resistant despite the in vitro appearance."}},
+  "ecoli-4": {"q": "The carbapenemase is confirmed as OXA-48. Under the CA-SFM standard, how do you report imipenem, measured susceptible?", "answer": "Suspected carbapenemase", "options": ["ESBL", "Suspected carbapenemase", "Derepressed cephalosporinase (AmpC)", "Wild type"], "teach": "Ertapenem R with imipenem and meropenem apparently susceptible: a profile strongly suggesting OXA-48, which hydrolyses the broad-spectrum carbapenems only weakly. Confirmation is essential, and the isolate must be notified.", "q2": {"q": "The carbapenemase is confirmed as OXA-48. Under the CA-SFM standard, how do you report imipenem, measured susceptible?", "options": ["Susceptible, as measured", "Resistant", "Susceptible, increased exposure"], "answer": "Resistant", "why": "Since 2026, CA-SFM reports the carbapenems resistant as soon as a carbapenemase is confirmed, whatever the MICs and whatever the enzyme. EUCAST, by contrast, reports them as measured, with a comment."}},
+  "ecoli-5": {"q": "In a urinary tract infection with no signs of severity, temocillin is measured at 8 mg/L. Under CA-SFM, which category?", "answer": "ESBL", "options": ["ESBL", "Derepressed cephalosporinase (AmpC)", "Carbapenemase", "Low-level penicillinase"], "teach": "A positive synergy with cefoxitin preserved: an ESBL. The clinician's question will be the alternative to the carbapenems — and that is where temocillin and cefoxitin become interesting again.", "q2": {"q": "In a urinary tract infection with no signs of severity, temocillin is measured at 8 mg/L. Under CA-SFM, which category?", "options": ["Susceptible", "Susceptible, increased exposure", "Resistant"], "answer": "Susceptible", "why": "CA-SFM gives temocillin two breakpoints and allows standard dosing in urine with no signs of severity (S ≤ 8 mg/L). EUCAST shows only one breakpoint, which allows nothing better than “susceptible, increased exposure”."}},
+  "paeru-2": {"answer": "Carbapenem resistance", "options": ["Wild type", "Carbapenem resistance", "Confirmed carbapenemase", "ESBL"], "teach": "Imipenem R while meropenem and the other beta-lactams remain active: a profile of impermeability through loss of the OprD porin, far more common than a carbapenemase. A carbapenemase would affect the beta-lactams as a whole."},
+  "paeru-3": {"q": "Under the CA-SFM standard, what do you do with meropenem on this report?", "answer": "Wild-type Pseudomonas aeruginosa", "options": ["Wild-type Pseudomonas aeruginosa", "Carbapenem resistance", "Derepressed cephalosporinase", "Extensively drug-resistant (XDR)"], "teach": "No acquired mechanism. Take care with the report, though: offering a carbapenem when a narrower-spectrum beta-lactam is still active is documented misuse.", "q2": {"q": "Under the CA-SFM standard, what do you do with meropenem on this report?", "options": ["Report it susceptible", "Suppress it while a narrower beta-lactam remains active", "Report it resistant"], "answer": "Suppress it while a narrower beta-lactam remains active", "why": "CA-SFM recommends a suppression rule for Pseudomonas: reporting meropenem when piperacillin-tazobactam or ceftazidime are active leads to inappropriate carbapenem prescriptions."}},
+  "paeru-4": {"answer": "An inconsistency with the intrinsic resistances", "options": ["A wild-type phenotype with nothing remarkable", "An inconsistency with the intrinsic resistances", "An ESBL", "A carbapenemase"], "teach": "Amoxicillin is reported susceptible in a Pseudomonas: impossible. The genus is intrinsically resistant to the aminopenicillins. The error lies in the data entry, in reading the plate, or in the identification — not in the isolate. PhénoBac flags it before the report goes out."},
+  "acineto-2": {"answer": "Wild-type Acinetobacter baumannii", "options": ["Wild-type Acinetobacter baumannii", "Suspected carbapenemase (OXA or metallo-)", "Extensively drug-resistant (XDR)", "ESBL"], "teach": "A fully susceptible Acinetobacter does exist, but remains a minority in hospital. Remember: the genus is intrinsically resistant to ertapenem, the aminopenicillins, cefotaxime and fosfomycin — never report them susceptible."},
+  "steno-1": {"answer": "Stenotrophomonas maltophilia — intrinsic multidrug resistance", "options": ["Stenotrophomonas maltophilia — intrinsic multidrug resistance", "An acquired carbapenemase", "Extensively drug-resistant (XDR)", "Derepressed cephalosporinase"], "teach": "This is not acquired multidrug resistance: S. maltophilia carries two chromosomal beta-lactamases, one of them a metallo-carbapenemase (L1), and is intrinsically resistant to the aminoglycosides. The carbapenems must never be reported susceptible, even when they look it. Co-trimoxazole is the reference."},
+  "burk-1": {"q": "Under CA-SFM 2026, what is the status of this genus's breakpoints?", "answer": "Burkholderia cepacia — intrinsic multidrug resistance", "options": ["Burkholderia cepacia — intrinsic multidrug resistance", "Extensively drug-resistant (XDR)", "An acquired carbapenemase", "A wild type with nothing remarkable"], "teach": "Aminoglycosides and polymyxins are intrinsically inactive: reporting them susceptible would be an error. Co-trimoxazole, ceftazidime and meropenem remain the usual options.", "q2": {"q": "Under CA-SFM 2026, what is the status of this genus's breakpoints?", "options": ["Unchanged since 2025", "Withdrawn: only broth microdilution is interpreted, against PK/PD values", "Aligned with EUCAST"], "answer": "Withdrawn: only broth microdilution is interpreted, against PK/PD values", "why": "In 2026 CA-SFM withdrew the Burkholderia cepacia chapter and its clinical breakpoints, for lack of correlation between the in vitro data and clinical efficacy. A practical note replaces them."}},
+  "saureus-4": {"answer": "MRSA", "options": ["MSSA producing a penicillinase", "MRSA", "Inducible MLSb", "VISA"], "teach": "Cefoxitin resistant: methicillin resistance is acquired (mecA/mecC) and ALL beta-lactams are reported resistant, including those that would look active. Glycopeptides and linezolid remain the fallbacks."},
+  "sepidermidis-1": {"answer": "Methicillin-resistant coagulase-negative staphylococcus", "options": ["Methicillin-susceptible coagulase-negative staphylococcus", "Methicillin-resistant coagulase-negative staphylococcus", "MRSA", "A contaminant of no significance"], "teach": "Methicillin resistance is the rule in hospital S. epidermidis. On foreign material — a catheter, a prosthesis — the isolate is not a contaminant: it is the problem, and the beta-lactam is lost."},
+  "shaemolyticus-1": {"answer": "Methicillin-resistant coagulase-negative staphylococcus", "options": ["Methicillin-resistant coagulase-negative staphylococcus", "Inducible MLSb", "MSSA producing a penicillinase", "Wild type"], "teach": "Methicillin resistance, and besides that erythromycin and clindamycin both resistant: this is constitutive MLSb, with no D-test needed. S. haemolyticus is the coagulase-negative staphylococcus most often multidrug-resistant."},
+  "ssaprophyticus-1": {"q": "Under CA-SFM, is a negative ampicillin disc screen enough to report amoxicillin susceptible?", "answer": "Staphylococcus saprophyticus — methicillin-susceptible", "options": ["Staphylococcus saprophyticus — methicillin-susceptible", "Methicillin-resistant coagulase-negative staphylococcus", "MSSA producing a penicillinase", "A urinary contaminant"], "teach": "In young women, S. saprophyticus is a true uropathogen, not a contaminant. Remember: it is intrinsically resistant to fosfomycin — a trap, since that is a usual treatment for cystitis.", "q2": {"q": "Under CA-SFM, is a negative ampicillin disc screen enough to report amoxicillin susceptible?", "options": ["Yes, that is what the screen is for", "No: you must also check that the isolate is methicillin-susceptible"], "answer": "No: you must also check that the isolate is methicillin-susceptible", "why": "CA-SFM notes that S. saprophyticus can be methicillin-resistant even when the ampicillin screen is negative. Both checks are needed."}},
+  "spyogenes-1": {"answer": "Streptococcus pyogenes — penicillin-susceptible", "options": ["Streptococcus pyogenes — penicillin-susceptible", "Constitutive MLSb", "Penicillin-non-susceptible pneumococcus", "An isolate with reduced susceptibility"], "teach": "No penicillin resistance has ever been described in S. pyogenes: benzylpenicillin remains the reference treatment. It is the macrolide, for the penicillin-allergic patient, that needs checking."},
+  "spyogenes-2": {"answer": "Constitutive MLSb", "options": ["Inducible MLSb", "Constitutive MLSb", "Isolated macrolide resistance", "Wild type"], "teach": "Erythromycin and clindamycin resistant from the outset, D-test negative: the resistance is constitutive. Both families are lost — which matters in the penicillin-allergic patient."},
+  "sagalactiae-1": {"q": "Do EUCAST and CA-SFM use the same benzylpenicillin breakpoint for group A, C and G streptococci?", "answer": "Streptococcus agalactiae — penicillin-susceptible", "options": ["Streptococcus agalactiae — penicillin-susceptible", "Constitutive MLSb", "Penicillin-non-susceptible pneumococcus", "Acquired amoxicillin resistance"], "teach": "Group B streptococcus remains penicillin-susceptible. What matters in screening a pregnant woman is the macrolide, to be checked in case of allergy, since intrapartum prophylaxis then rests on it.", "q2": {"q": "Do EUCAST and CA-SFM use the same benzylpenicillin breakpoint for group A, C and G streptococci?", "options": ["Yes, 0.03 mg/L for both", "No: 0.03 mg/L for EUCAST, 0.06 mg/L for CA-SFM"], "answer": "No: 0.03 mg/L for EUCAST, 0.06 mg/L for CA-SFM", "why": "CA-SFM uses 0.06 mg/L for groups A, C and G, because most automated systems do not measure below that value. Group B is at 0.125 mg/L in both standards."}},
+  "sviridans-1": {"answer": "Reduced beta-lactam susceptibility (PBP)", "options": ["Wild type", "Reduced beta-lactam susceptibility (PBP)", "Constitutive MLSb", "Carbapenemase"], "teach": "In the viridans group streptococci, reduced penicillin susceptibility comes from altered penicillin-binding proteins, not from a beta-lactamase: clavulanate makes no difference. In endocarditis this changes the regimen and requires an aminoglycoside to be added."},
+  "pneumocoque-2": {"answer": "Penicillin-non-susceptible pneumococcus — reduced beta-lactam susceptibility", "options": ["Wild type", "Penicillin-non-susceptible pneumococcus — reduced beta-lactam susceptibility", "Constitutive MLSb", "Acquired glycopeptide resistance"], "teach": "The oxacillin disc only screens: it is the MIC that categorises, agent by agent. In meningitis the breakpoints are stricter — diffusion into the cerebrospinal fluid is poor — and PhénoBac applies them as soon as the specimen is declared as CSF."},
+  "efaecium-2": {"answer": "An enterococcus with a wild-type phenotype", "options": ["An enterococcus with a wild-type phenotype", "VRE — glycopeptide resistance", "High-level aminoglycoside resistance", "ESBL"], "teach": "In E. faecium, ampicillin resistance is the rule rather than the exception — unlike E. faecalis, where it should raise concern. The glycopeptides remain active here: this is not a VRE."},
+  "efaecalis-2": {"q": "Daptomycin is measured at 4 mg/L. Under CA-SFM, what does PhénoBac flag?", "answer": "An enterococcus with a wild-type phenotype", "options": ["An enterococcus with a wild-type phenotype", "VRE — glycopeptide resistance", "High-level aminoglycoside resistance", "Reduced daptomycin susceptibility"], "teach": "The expected phenotype for E. faecalis: ampicillin active, no high-level gentamicin resistance, so the beta-lactam plus aminoglycoside synergy is preserved — which is what matters in endocarditis.", "q2": {"q": "Daptomycin is measured at 4 mg/L. Under CA-SFM, what does PhénoBac flag?", "options": ["Nothing in particular", "An area of technical uncertainty", "A confirmed resistance"], "answer": "An area of technical uncertainty", "why": "CA-SFM places an area of technical uncertainty at 4 mg/L for daptomycin in enterococci: the 2 mg/L breakpoint cuts partly through the wild-type population. The category is not downgraded automatically — it is for the clinical microbiologist to decide what to do."}},
+  "haemophilus-1": {"answer": "BLPAR (beta-lactamase positive)", "options": ["Wild type", "BLPAR (beta-lactamase positive)", "BLNAR (altered PBP3)", "BLPACR"], "teach": "Beta-lactamase positive, and the clavulanate combination restores activity: this is the commonest mechanism in H. influenzae. Amoxicillin-clavulanate and the third-generation cephalosporins remain active."},
+  "haemophilus-2": {"answer": "BLNAR (altered PBP3)", "options": ["BLPAR (beta-lactamase positive)", "BLNAR (altered PBP3)", "Wild type", "Carbapenemase"], "teach": "Aminopenicillins resistant WITHOUT a beta-lactamase: the target itself is altered (PBP3). Clavulanate can do nothing about it, and cephalosporin susceptibility may be reduced. In invasive disease a third-generation cephalosporin is required, after checking its MIC."},
+  "nmeningitidis-1": {"q": "Under CA-SFM, what must be done before reporting benzylpenicillin susceptible?", "answer": "Neisseria meningitidis — penicillin-susceptible", "options": ["Neisseria meningitidis — penicillin-susceptible", "Reduced penicillin susceptibility", "A penicillinase producer", "Rifampicin resistance"], "teach": "The expected phenotype. Check rifampicin and ciprofloxacin too: those are what will be used for prophylaxis of close contacts, and resistance to them, though rare, does occur.", "q2": {"q": "Under CA-SFM, what must be done before reporting benzylpenicillin susceptible?", "options": ["Nothing further", "Look for a beta-lactamase with a chromogenic test"], "answer": "Look for a beta-lactamase with a chromogenic test", "why": "CA-SFM recommends it — EUCAST does not. Penicillinase-producing meningococci are rare but re-emerging: recent cases are described in France, Japan and the United States."}},
+  "ngonorrhoeae-1": {"answer": "PPNG (beta-lactamase positive)", "options": ["Wild type", "PPNG (beta-lactamase positive)", "Ceftriaxone resistance", "Reduced macrolide susceptibility"], "teach": "A plasmid-borne penicillinase: penicillin and amoxicillin are lost. Ceftriaxone remains the reference treatment. Associated fluoroquinolone resistance is common — they cannot be used empirically."},
+  "moraxella-1": {"answer": "BRO beta-lactamase positive", "options": ["Wild type", "BRO beta-lactamase positive", "BLNAR", "Acquired macrolide resistance"], "teach": "More than nine Moraxella catarrhalis in ten produce a BRO beta-lactamase. Amoxicillin alone is therefore unusable, but the clavulanate combination, the cephalosporins and the macrolides remain active."},
+  "listeria-1": {"answer": "An inconsistency with the intrinsic resistances", "options": ["A wild-type phenotype with nothing remarkable", "An inconsistency with the intrinsic resistances", "Acquired cephalosporin resistance", "Reduced amoxicillin susceptibility"], "teach": "Cefotaxime is reported susceptible in a Listeria: that is impossible, and it is the classic trap in meningitis. The cephalosporins are intrinsically inactive against this genus — listerial meningitis treated with a third-generation cephalosporin alone is a failure waiting to happen. The reference is amoxicillin, with gentamicin added."},
+  "coryne-1": {"answer": "Probably multidrug-resistant Corynebacterium (group JK)", "options": ["A skin contaminant", "Probably multidrug-resistant Corynebacterium (group JK)", "Wild type", "Diphtheria"], "teach": "A Corynebacterium resistant to the beta-lactams and the macrolides suggests group JK (C. jeikeium), an opportunist on foreign material and in the neutropenic patient — not a mere contaminant. Vancomycin is always active and remains the reference."},
+  "bfragilis-1": {"q": "What does this reduced carbapenem susceptibility suggest?", "answer": "A carbapenemase (cfiA), to be confirmed", "options": ["A carbapenemase (cfiA), to be confirmed", "An intrinsic resistance of the genus", "A reading error: B. fragilis is always susceptible to the carbapenems", "Contamination by an enterobacterium"], "teach": "Reduced carbapenem susceptibility in a B. fragilis: a carbapenemase (the cfiA gene) is possible and must be confirmed. Clindamycin resistance is common in this group: it cannot be used empirically. Metronidazole remains the reference."},
+  "campylobacter-1": {"q": "Which reference treatment do you choose?", "answer": "Azithromycin or erythromycin", "options": ["Azithromycin or erythromycin", "High-dose ciprofloxacin", "Doxycycline first line", "Amoxicillin-clavulanate"], "teach": "Fluoroquinolone resistance has become commonplace in Campylobacter: they can no longer be used empirically. Azithromycin or erythromycin is the reference treatment, when treatment is indicated at all — most campylobacter infections resolve on their own."},
+  "shigella-1": {"q": "Under the CA-SFM standard, how do you report cefotaxime if another test found it susceptible?", "answer": "ESBL", "options": ["Low-level penicillinase", "ESBL", "Derepressed cephalosporinase (AmpC)", "Wild type"], "teach": "Unlike most Salmonella gastroenteritis, shigellosis IS treated: it is extremely contagious — a dozen bacilli are enough. An ESBL with the fluoroquinolone and co-trimoxazole lost leaves only azithromycin here, and calls for notification.", "q2": {"q": "Under the CA-SFM standard, how do you report cefotaxime if another test found it susceptible?", "options": ["Susceptible, as measured", "Resistant"], "answer": "Resistant", "why": "In 2024 CA-SFM returned to interpretive reading of ESBLs: penicillins, 1st to 3rd generation cephalosporins and aztreonam are reported resistant whatever the in vitro result. EUCAST reports them as tested."}},
+  "slugdunensis-1": {"answer": "Staphylococcus lugdunensis — penicillinase", "options": ["A skin contaminant of no significance", "Staphylococcus lugdunensis — penicillinase", "Methicillin-resistant coagulase-negative staphylococcus", "MRSA"], "teach": "S. lugdunensis is a coagulase-negative staphylococcus, but it behaves like S. aureus: destructive endocarditis, deep abscesses. Isolated from a blood culture, it must never be dismissed as a contaminant. Here methicillin remains active — it is oxacillin that treats, not the glycopeptide."},
+  "cperfringens-1": {"answer": "Clostridium perfringens — penicillin-susceptible", "options": ["Clostridium perfringens — penicillin-susceptible", "Acquired beta-lactam resistance", "Bacteroides fragilis", "A multidrug-resistant isolate"], "teach": "The expected phenotype. In gas gangrene, benzylpenicillin alone is not enough: clindamycin is added, not for its spectrum but for its antitoxin effect — it blocks alpha-toxin synthesis. Surgery still takes priority over the antibiotic."},
+  "cdifficile-1": {"answer": "Clostridioides difficile — no routine susceptibility testing", "options": ["A wild type to be treated on the susceptibility test", "Clostridioides difficile — no routine susceptibility testing", "Acquired metronidazole resistance", "A stool contaminant"], "teach": "Diagnosis rests on the toxins, GDH and PCR — not on culture with a susceptibility test, which CA-SFM does not recommend on stool in France. Treatment is ORAL vancomycin or fidaxomicin, and the first step is to stop the inducing antibiotic. Mind the hygiene: the spores resist alcohol-based hand rubs, so hands must be washed."},
+  "vibrio-1": {"q": "Which agent remains the reference, despite this resistant co-trimoxazole?", "answer": "Doxycycline", "options": ["Doxycycline", "High-dose co-trimoxazole", "Ciprofloxacin", "Amoxicillin"], "teach": "The antibiotic is only adjunctive: it is rehydration that saves, and that is not open to debate. A single dose of doxycycline shortens the diarrhoea and the duration of carriage, which matters in an outbreak. A resistant co-trimoxazole is commonplace and makes no difference to management."},
+};
 
 /* ============================================================
    NIVEAUX D'ENTRAÎNEMENT — § 14
@@ -6939,8 +7013,8 @@ function examenMarquer(donnee){
 function examenSuite(suite, dernier){
   $("#qFeedback").innerHTML =
     `<div class="q-feedback exam">
-      <div class="q-fb-verdict"><span class="dot" style="background:var(--ink-faint)"></span>Réponse enregistrée</div>
-      <div class="q-fb-comment">La correction de toute l'épreuve est rendue à la fin.</div>
+      <div class="q-fb-verdict"><span class="dot" style="background:var(--ink-faint)"></span>${T("Réponse enregistrée", "Answer recorded")}</div>
+      <div class="q-fb-comment">${T("La correction de toute l'épreuve est rendue à la fin.", "The marking for the whole test is given at the end.")}</div>
       <div class="q-actions"><button class="q-next" id="qNext">${dernier?"Terminer l'épreuve":"Question suivante →"}</button></div>
     </div>`;
   $("#qNext").onclick = suite;
@@ -6966,7 +7040,21 @@ const QUIZ_LEN_COMBO = QUIZ_LEN / 2;
 function loadCustom(){ try{ const s=localStorage.getItem("phenobac_cases"); return s?JSON.parse(s):[]; }catch(e){ return []; } }
 function saveCustom(){ try{ localStorage.setItem("phenobac_cases", JSON.stringify(customCases)); }catch(e){} }
 let customCases = loadCustom();
-function allCases(){ return QUIZ_BANK.concat(customCases); }
+/* TOUS LES CAS PASSENT PAR ICI, et c'est pourquoi la traduction s'y fait.
+   Les cas sont lus dans une douzaine d'endroits — renderQuiz, answerQuiz,
+   comboPool, l'historique, le résultat — et traduire à chacun aurait laissé
+   passer celui qu'on oublie. Les cas personnalisés, écrits par le
+   laboratoire, ne sont pas traduits : ce sont ses mots. */
+function casEnLangue(c){
+  if (!_L.estAnglais()) return c;
+  const t = c.id && QUIZ_BANK_EN[c.id];
+  if (!t) return c;
+  const o = Object.assign({}, c);
+  ["q", "answer", "options", "teach"].forEach(function (k) { if (t[k]) o[k] = t[k]; });
+  if (c.q2 && t.q2) o.q2 = Object.assign({}, c.q2, t.q2);
+  return o;
+}
+function allCases(){ return QUIZ_BANK.concat(customCases).map(casEnLangue); }
 
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 
@@ -7027,15 +7115,19 @@ function makeIdentCase(id){
   const options = shuffle([id, ...distractors]).map(x=>ORG[x].label);
   const keyTests = disc.slice(0,3).map(([k,v])=>`${ID_LABELS[k]||k} ${v==="+"?"+":"−"}`);
   return { kind:"ident", id, gram:d.gram, shape:d.shape, tests, options, answer:org.label,
-    teach: keyTests.length ? `Points discriminants : ${keyTests.join(", ")}.` : `Profil biochimique caractéristique.` };
+    teach: keyTests.length
+      ? T("Points discriminants : ", "Discriminating tests: ") + keyTests.join(", ") + "."
+      : T("Profil biochimique caractéristique.", "A characteristic biochemical profile.") };
 }
 
 function renderIdentCase(c){
-  const gramTxt = c.gram==="pos" ? "Gram positif" : "Gram négatif";
-  const shapeTxt = {bacilli:"bacilles", coccobacilli:"coccobacilles", cocci:(c.gram==="neg"?"cocci (diplocoques)":"cocci")}[c.shape] || c.shape;
+  const gramTxt = c.gram==="pos" ? T("Gram positif", "Gram positive") : T("Gram négatif", "Gram negative");
+  const shapeTxt = {bacilli: T("bacilles", "rods"),
+                    coccobacilli: T("coccobacilles", "coccobacilli"),
+                    cocci: (c.gram==="neg" ? T("cocci (diplocoques)", "cocci (diplococci)") : T("cocci", "cocci"))}[c.shape] || c.shape;
   const rows = c.tests.map(([k,v])=>`<div class="q-abx-row"><span class="qn">${esc(ID_LABELS[k]||k)}</span><span class="q-cat ${v==="+"?"pos":"neg"}">${v==="+"?"+":"−"}</span></div>`).join("");
   return `<div class="q-case">
-      <div class="q-case-h"><span class="q-species">Souche à identifier</span><span class="q-specimen">${gramTxt} · ${shapeTxt}</span></div>
+      <div class="q-case-h"><span class="q-species">${T("Souche à identifier", "Isolate to identify")}</span><span class="q-specimen">${gramTxt} · ${shapeTxt}</span></div>
       <div class="q-abx">${rows}</div>
     </div>`;
 }
@@ -7059,9 +7151,9 @@ function answerQuizIdent(selected){
   const last = quiz.idx>=quiz.queue.length-1;
   $("#qFeedback").innerHTML =
     `<div class="q-feedback ${good?"ok":"no"}">
-      <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?"Bonne réponse":"Réponse attendue : "+esc(correct)}</div>
-      <div class="q-fb-comment">Identification présumée sur profil biochimique — à confirmer par une méthode de référence (MALDI-TOF).</div>
-      <div class="q-teach"><b>À retenir</b>${esc(c.teach)}</div>
+      <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?T("Bonne réponse","Correct"):T("Réponse attendue : ","Expected answer: ")+esc(correct)}</div>
+      <div class="q-fb-comment">${T("Identification présumée sur profil biochimique — à confirmer par une méthode de référence (MALDI-TOF).", "A presumptive identification from the biochemical profile — to be confirmed by a reference method (MALDI-TOF).")}</div>
+      <div class="q-teach"><b>${T("À retenir", "Key point")}</b>${esc(c.teach)}</div>
       <div class="q-actions"><button class="q-next" id="qNext">${last?"Voir le résultat":"Cas suivant →"}</button></div>
     </div>`;
   $("#qNext").onclick=()=>{ quiz.idx++; quiz.phase=1; renderQuiz(); };
@@ -7070,13 +7162,28 @@ function answerQuizIdent(selected){
 /* Libellés courts des tests complémentaires, pour la carte d'entraînement.
    La question posée dans l'onglet Interprétation est trop longue pour une
    pastille ; elle sert de repli quand la clé n'est pas listée ici. */
-const CTX_LIBELLE = {
+const CTX_LIBELLE_FR = {
   syn:    "Synergie C3G + ac. clavulanique",
   dtest:  "D-test (érythromycine → clindamycine)",
   blac:   "β-lactamase (nitrocéfine)",
   carba:  "Confirmation de carbapénémase",
   hlg:    "Gentamicine haut niveau"
 };
+const CTX_LIBELLE_EN = {
+  syn:    "3GC + clavulanic acid synergy",
+  dtest:  "D-test (erythromycin \u2192 clindamycin)",
+  blac:   "Beta-lactamase (nitrocefin)",
+  carba:  "Carbapenemase confirmation",
+  hlg:    "High-level gentamicin"
+};
+/* Même modèle que ID_LABELS : « CTX_LIBELLE[k] » continue de marcher, et rend
+   la langue courante. */
+const CTX_LIBELLE = new Proxy({}, {
+  get: function (_, k) {
+    return (_L.estAnglais() ? CTX_LIBELLE_EN[k] : CTX_LIBELLE_FR[k]) || CTX_LIBELLE_FR[k];
+  },
+  has: function (_, k) { return k in CTX_LIBELLE_FR; }
+});
 
 /* Ce que le stagiaire doit avoir sous les yeux pour raisonner.
 
@@ -7097,9 +7204,12 @@ function ctxBadges(org,c){
   Object.keys(c||{}).forEach(k=>{
     const v = c[k];
     if(v===undefined || v===null || v==="") return;
-    if(k==="mening"){ out.push(v==="Oui" ? "Prélèvement : LCR" : "Hors contexte méningé"); return; }
-    if(k==="urin"){ out.push(v==="Oui" ? "Infection urinaire sans signe de gravité"
-                                       : "Hors infection urinaire simple"); return; }
+    if(k==="mening"){ out.push(v==="Oui" ? T("Prélèvement : LCR", "Specimen: CSF")
+                                         : T("Hors contexte méningé", "Not meningitis")); return; }
+    if(k==="urin"){ out.push(v==="Oui" ? T("Infection urinaire sans signe de gravité",
+                                           "Urinary tract infection with no signs of severity")
+                                       : T("Hors infection urinaire simple",
+                                           "Not an uncomplicated urinary tract infection")); return; }
     let nom = CTX_LIBELLE[k];
     if(!nom){
       const q = ((org && org.ctx) || []).find(x=>x.id===k);
@@ -7108,9 +7218,15 @@ function ctxBadges(org,c){
     // Ne mettre en minuscules qu'un mot simple : « Oui — KPC » et
     // « Oui — OXA-48 » perdraient leur sigle, qui est justement ce que le
     // biologiste reconnaît.
-    const brut = String(v);
+    // Les valeurs de contexte sont des CLÉS françaises (« Oui », « Non »,
+    // « Positif », « Négatif ») : le moteur les compare telles quelles. On
+    // traduit donc à l'affichage, sans toucher à la donnée.
+    const VAL_EN = { "Oui": "Yes", "Non": "No", "Positif": "Positive",
+                     "Négatif": "Negative", "Non fait": "Not done" };
+    let brut = String(v);
+    if (_L.estAnglais() && VAL_EN[brut]) brut = VAL_EN[brut];
     const val = /^[A-ZÀ-Ý][a-zà-ÿ\s]*$/.test(brut) ? brut.toLowerCase() : brut;
-    out.push(nom + " : " + val);
+    out.push(nom + T(" : ", ": ") + val);
   });
   return out;
 }
@@ -7126,7 +7242,7 @@ function renderCaseCard(c){
   return `<div class="q-case">
       <div class="q-case-h">
         <span class="q-species">${esc(org.label)}</span>
-        <span class="q-specimen">antibiogramme ci-dessous</span>
+        <span class="q-specimen">${T("antibiogramme ci-dessous", "susceptibility test below")}</span>
       </div>
       ${badges?`<div class="q-badges">${badges}</div>`:""}
       <div class="q-abx">${abx}</div>
@@ -7142,7 +7258,7 @@ function renderQuiz(){
   /* Pendant une épreuve, le score courant trahirait chaque réponse : il
      suffirait de le regarder changer. On n'affiche que l'avancement. */
   stats.innerHTML = quiz.examen
-    ? `Cas <b>${quiz.idx+1}</b> / ${quiz.queue.length} &nbsp;·&nbsp; <b>Épreuve</b>`
+    ? `Cas <b>${quiz.idx+1}</b> / ${quiz.queue.length} &nbsp;·&nbsp; <b>${T("Épreuve", "Test")}</b>`
     : `Cas <b>${quiz.idx+1}</b> / ${quiz.queue.length} &nbsp;·&nbsp; Score <b>${quiz.score}</b>`;
   bar.style.width = (quiz.idx/quiz.queue.length*100)+"%";
 
@@ -7150,7 +7266,7 @@ function renderQuiz(){
     const opts=shuffleStable(c.options,c);
     const marks="ABCD";
     let html=renderIdentCase(c);
-    html+=`<div class="q-question">Quelle espèce identifiez-vous ?</div><div class="q-options">`;
+    html+=`<div class="q-question">${T("Quelle espèce identifiez-vous ?", "Which species do you identify?")}</div><div class="q-options">`;
     opts.forEach((o,i)=>{ html+=`<button class="q-opt" data-opt="${esc(o)}"><span class="mk">${marks[i]}</span><span>${esc(o)}</span></button>`; });
     html+=`</div><div id="qFeedback"></div>`;
     body.innerHTML=html;
@@ -7163,7 +7279,7 @@ function renderQuiz(){
     if(quiz.phase===1){
       const ic=c.ident, opts=shuffleStable(ic.options,ic);
       let html=renderIdentCase(ic);
-      html+=`<div class="q-question">Étape 1 · identification — Quelle espèce reconnaissez-vous ?</div><div class="q-options">`;
+      html+=`<div class="q-question">${T("Étape 1 · identification — Quelle espèce reconnaissez-vous ?", "Step 1 · identification — which species do you recognise?")}</div><div class="q-options">`;
       opts.forEach((o,i)=>{ html+=`<button class="q-opt" data-opt="${esc(o)}"><span class="mk">${marks[i]}</span><span>${esc(o)}</span></button>`; });
       html+=`</div><div id="qFeedback"></div>`;
       body.innerHTML=html;
@@ -7171,7 +7287,7 @@ function renderQuiz(){
     } else {
       const pc=c.interp, opts=shuffleStable(pc.options,pc);
       let html=renderCaseCard(pc);
-      html+=`<div class="q-question">Étape 2 · antibiogramme — Quel phénotype reconnaissez-vous ?</div><div class="q-options">`;
+      html+=`<div class="q-question">${T("Étape 2 · antibiogramme — Quel phénotype reconnaissez-vous ?", "Step 2 · susceptibility test — which phenotype do you recognise?")}</div><div class="q-options">`;
       opts.forEach((o,i)=>{ html+=`<button class="q-opt" data-opt="${esc(o)}"><span class="mk">${marks[i]}</span><span>${esc(o)}</span></button>`; });
       html+=`</div><div id="qFeedback"></div>`;
       body.innerHTML=html;
@@ -7182,7 +7298,8 @@ function renderQuiz(){
 
   const isQ2 = quiz.phase===2 && c.q2;
   const question = isQ2 ? c.q2.q
-    : (c.q || "Quel phénotype de résistance reconnaissez-vous ?");
+    : (c.q || T("Quel phénotype de résistance reconnaissez-vous ?",
+                "Which resistance phenotype do you recognise?"));
   const opts = isQ2 ? c.q2.options : shuffleStable(c.options, c);
   const marks="ABCD";
 
@@ -7216,7 +7333,8 @@ function answerQuiz(selected, isQ2){
     const encoreQ2 = c.q2 && !isQ2;
     return examenPas(
       { titre:titre,
-        question: isQ2 ? c.q2.q : (c.q || "Quel phénotype de résistance reconnaissez-vous ?"),
+        question: isQ2 ? c.q2.q : (c.q || T("Quel phénotype de résistance reconnaissez-vous ?",
+                                            "Which resistance phenotype do you recognise?")),
         donnee:selected, attendue:correct, bonne:good,
         teach: isQ2 ? c.q2.why : c.teach,
         /* Le détail du raisonnement se demande à la correction, cas par cas :
@@ -7252,9 +7370,9 @@ function answerQuiz(selected, isQ2){
 
   $("#qFeedback").innerHTML =
     `<div class="q-feedback ${good?"ok":"no"}">
-      <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?"Bonne réponse":"Réponse attendue : "+esc(correct)}</div>
+      <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?T("Bonne réponse","Correct"):T("Réponse attendue : ","Expected answer: ")+esc(correct)}</div>
       ${detail}
-      <div class="q-teach"><b>À retenir</b>${esc(c.teach)}</div>
+      <div class="q-teach"><b>${T("À retenir", "Key point")}</b>${esc(c.teach)}</div>
       <div class="q-actions">${actionBtn}</div>
     </div>`;
 
@@ -7275,7 +7393,7 @@ async function fetchQuizDetail(c, cible){
     const el=$(ou); if(!el) return;
     el.className="";
     if(res.locked){
-      el.innerHTML=`<div class="q-fb-comment">Détail du raisonnement réservé à Premium — la bonne réponse et le point clé restent visibles.</div>`;
+      el.innerHTML=`<div class="q-fb-comment">${T("Détail du raisonnement réservé à Premium — la bonne réponse et le point clé restent visibles.", "The detailed reasoning is reserved for Premium — the correct answer and the key point stay visible.")}</div>`;
       return;
     }
     const A=res.interpretation;
@@ -7284,7 +7402,7 @@ async function fetchQuizDetail(c, cible){
     if(keyAlerts.length) html+=`<ul class="q-fb-alerts">`+keyAlerts.map(a=>`<li>${esc(a.txt)}</li>`).join("")+`</ul>`;
     el.innerHTML=html;
   }catch(e){
-    const el=$(ou); if(el){ el.className=""; el.innerHTML=`<div class="q-fb-comment">Correction détaillée indisponible hors connexion.</div>`; }
+    const el=$(ou); if(el){ el.className=""; el.innerHTML=`<div class="q-fb-comment">${T("Correction détaillée indisponible hors connexion.", "Detailed marking is unavailable offline.")}</div>`; }
   }
 }
 
@@ -7309,9 +7427,9 @@ function renderCorrection(){
         <span class="corr-v">${e.bonne?"juste":"manquée"}</span>
       </div>
       <div class="corr-q">${esc(e.question)}</div>
-      <div class="corr-l"><span>Votre réponse</span><b>${esc(e.donnee)}</b></div>
-      ${e.bonne ? "" : `<div class="corr-l"><span>Réponse attendue</span><b>${esc(e.attendue)}</b></div>`}
-      ${e.teach ? `<div class="q-teach"><b>À retenir</b>${esc(e.teach)}</div>` : ""}
+      <div class="corr-l"><span>${T("Votre réponse", "Your answer")}</span><b>${esc(e.donnee)}</b></div>
+      ${e.bonne ? "" : `<div class="corr-l"><span>${T("Réponse attendue", "Expected answer")}</span><b>${esc(e.attendue)}</b></div>`}
+      ${e.teach ? `<div class="q-teach"><b>${T("À retenir", "Key point")}</b>${esc(e.teach)}</div>` : ""}
       ${e.cas ? `<div class="corr-pq"><button class="q-restart" data-pq="${i}">Pourquoi ?</button><div id="corrD${i}"></div></div>` : ""}
     </div>`;
   });
@@ -7344,10 +7462,10 @@ function answerComboIdent(selected){
   if(good) quiz.score++;
   $("#qFeedback").innerHTML =
     `<div class="q-feedback ${good?"ok":"no"}">
-      <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?"Bonne réponse":"Réponse attendue : "+esc(correct)}</div>
-      <div class="q-fb-comment">Identification présumée — à confirmer par MALDI-TOF. On enchaîne sur son antibiogramme.</div>
-      <div class="q-teach"><b>À retenir</b>${esc(ic.teach)}</div>
-      <div class="q-actions"><button class="q-next" id="qContinue">Passer à l'antibiogramme →</button></div>
+      <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?T("Bonne réponse","Correct"):T("Réponse attendue : ","Expected answer: ")+esc(correct)}</div>
+      <div class="q-fb-comment">${T("Identification présumée — à confirmer par MALDI-TOF. On enchaîne sur son antibiogramme.", "A presumptive identification — to be confirmed by MALDI-TOF. We move on to its susceptibility test.")}</div>
+      <div class="q-teach"><b>${T("À retenir", "Key point")}</b>${esc(ic.teach)}</div>
+      <div class="q-actions"><button class="q-next" id="qContinue">${T("Passer à l'antibiogramme →", "On to the susceptibility test →")}</button></div>
     </div>`;
   $("#qContinue").onclick=()=>{ quiz.phase=2; renderQuiz(); };
 }
@@ -7369,9 +7487,9 @@ function answerComboInterp(pc, selected){
   const last = quiz.idx>=quiz.queue.length-1;
   $("#qFeedback").innerHTML =
     `<div class="q-feedback ${good?"ok":"no"}">
-      <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?"Bonne réponse":"Réponse attendue : "+esc(correct)}</div>
+      <div class="q-fb-verdict"><span class="dot" style="background:${good?"var(--s)":"var(--r)"}"></span>${good?T("Bonne réponse","Correct"):T("Réponse attendue : ","Expected answer: ")+esc(correct)}</div>
       <div id="qDetail" class="interp-loading"><span class="spin"></span>Correction…</div>
-      <div class="q-teach"><b>À retenir</b>${esc(pc.teach)}</div>
+      <div class="q-teach"><b>${T("À retenir", "Key point")}</b>${esc(pc.teach)}</div>
       <div class="q-actions"><button class="q-next" id="qNext">${last?"Voir le résultat":"Cas suivant →"}</button></div>
     </div>`;
   $("#qNext").onclick=()=>{ quiz.idx++; quiz.phase=1; renderQuiz(); };
@@ -7403,7 +7521,7 @@ function renderQuizResult(){
       <div class="msg">${msg}</div>
       <div class="q-actions" style="justify-content:center">
         <button class="q-next" id="qRestart">${quiz.examen?"Nouvelle épreuve":"Nouvelle série"}</button>
-        <button class="q-restart" id="qToWork">Aller à l'interprétation</button>
+        <button class="q-restart" id="qToWork">${T("Aller à l'interprétation", "Go to interpretation")}</button>
       </div>
       ${quiz.examen ? renderCorrection() : ""}
     </div>`;
@@ -7433,9 +7551,9 @@ function renderBankManager(){
   if(!isPremium()){
     host.innerHTML=`
       <details class="bank" id="bankPanel">
-        <summary><span class="caret">▸</span><span>Gérer la banque — <span style="color:var(--gold-deep)">Premium 🔒</span></span></summary>
+        <summary><span class="caret">▸</span><span>${T("Gérer la banque", "Manage the bank")} — <span style="color:var(--gold-deep)">Premium 🔒</span></span></summary>
         <div class="bank-body">
-          <div class="modal-lead" style="margin-top:12px">Créez vos propres cas, importez et exportez des banques pour vos étudiants avec PhénoBac Premium. En version gratuite, vous vous entraînez sur les cas intégrés.</div>
+          <div class="modal-lead" style="margin-top:12px">${T("Créez vos propres cas, importez et exportez des banques pour vos étudiants avec PhénoBac Premium. En version gratuite, vous vous entraînez sur les cas intégrés.", "Create your own cases, and import and export banks for your students with PhénoBac Premium. In the free version you practise on the built-in cases.")}</div>
           <button class="bank-add" id="bankUpgrade">Passer à Premium</button>
         </div>
       </details>`;
@@ -7447,20 +7565,20 @@ function renderBankManager(){
     <details class="bank" id="bankPanel">
       <summary><span class="caret">▸</span><span id="bankSummary"></span></summary>
       <div class="bank-body">
-        <div class="bank-sub">Créer un cas</div>
+        <div class="bank-sub">${T("Créer un cas", "Create a case")}</div>
         <div class="bank-form">
           <div class="field">
-            <label class="flabel" for="bankSp">Espèce</label>
+            <label class="flabel" for="bankSp">${T("Espèce", "Species")}</label>
             <div class="selwrap"><select id="bankSp" class="species-name"></select></div>
           </div>
           <div class="field">
-            <label class="flabel">Antibiogramme <span style="color:var(--ink-faint);font-weight:400">(laisser vide = non testé)</span></label>
+            <label class="flabel">Antibiogramme <span style="color:var(--ink-faint);font-weight:400">${T("(laisser vide = non testé)", "(leave blank = not tested)")}</span></label>
             <div class="bank-abx" id="bankAbx"></div>
           </div>
           <div id="bankCtx"></div>
           <div class="bank-suggest">
-            <button class="io-btn" id="bankSuggest">✨ Déduire la réponse depuis l'antibiogramme</button>
-            <div class="bank-suggest-hint">Le moteur propose le phénotype et l'explication ; vous pouvez les ajuster avant d'ajouter.</div>
+            <button class="io-btn" id="bankSuggest">✨ ${T("Déduire la réponse depuis l'antibiogramme", "Infer the answer from the susceptibility test")}</button>
+            <div class="bank-suggest-hint">${T("Le moteur propose le phénotype et l'explication ; vous pouvez les ajuster avant d'ajouter.", "The engine proposes the phenotype and the explanation; you can adjust them before adding.")}</div>
           </div>
           <datalist id="phenoList">
             <option value="Souche sauvage"></option>
@@ -7480,11 +7598,11 @@ function renderBankManager(){
             <option value="Multirésistance naturelle"></option>
           </datalist>
           <div class="field">
-            <label class="flabel" for="bankAns">Bonne réponse — phénotype attendu</label>
+            <label class="flabel" for="bankAns">${T("Bonne réponse — phénotype attendu", "Correct answer — the expected phenotype")}</label>
             <input class="txt" id="bankAns" type="text" list="phenoList" placeholder="ex. BLSE" style="cursor:text">
           </div>
           <div class="field">
-            <label class="flabel">Distracteurs <span style="color:var(--ink-faint);font-weight:400">(1 à 3 mauvaises réponses)</span></label>
+            <label class="flabel">Distracteurs <span style="color:var(--ink-faint);font-weight:400">${T("(1 à 3 mauvaises réponses)", "(1 to 3 wrong answers)")}</span></label>
             <div class="bank-dist">
               <input class="txt" id="bankD0" type="text" list="phenoList" placeholder="Distracteur 1" style="cursor:text">
               <input class="txt" id="bankD1" type="text" list="phenoList" placeholder="Distracteur 2 (optionnel)" style="cursor:text">
@@ -7492,17 +7610,17 @@ function renderBankManager(){
             </div>
           </div>
           <div class="field">
-            <label class="flabel" for="bankTeach">À retenir — explication pédagogique</label>
+            <label class="flabel" for="bankTeach">${T("À retenir — explication pédagogique", "Key point — the teaching explanation")}</label>
             <textarea class="txt" id="bankTeach" data-i18n-attr="placeholder:attr.aRetenir" placeholder="Point clé que l'étudiant doit mémoriser."></textarea>
           </div>
           <div class="bank-actions">
-            <button class="bank-add" id="bankAdd">Ajouter à la banque</button>
-            <button class="q-restart" id="bankClear">Vider le formulaire</button>
+            <button class="bank-add" id="bankAdd">${T("Ajouter à la banque", "Add to the bank")}</button>
+            <button class="q-restart" id="bankClear">${T("Vider le formulaire", "Clear the form")}</button>
           </div>
           <div id="bankMsg"></div>
         </div>
 
-        <div class="bank-sub">Partager la banque</div>
+        <div class="bank-sub">${T("Partager la banque", "Share the bank")}</div>
         <div class="bank-io">
           <button class="io-btn" id="bankExport">⭳ Exporter mes cas (JSON)</button>
           <label class="io-btn" style="cursor:pointer">⭱ Importer un fichier
@@ -7510,7 +7628,7 @@ function renderBankManager(){
           </label>
         </div>
 
-        <div class="bank-sub">Mes cas personnalisés (<span id="bankNb">0</span>)</div>
+        <div class="bank-sub">${T("Mes cas personnalisés", "My custom cases")} (<span id="bankNb">0</span>)</div>
         <div class="bank-list" id="bankList"></div>
       </div>
     </details>`;
@@ -7635,7 +7753,7 @@ function addBankCase(){
 
 function renderBankList(){
   const list=$("#bankList"); if(!list) return;
-  if(customCases.length===0){ list.innerHTML=`<div class="bank-empty">Aucun cas personnalisé pour l'instant.</div>`; return; }
+  if(customCases.length===0){ list.innerHTML=`<div class="bank-empty">${T("Aucun cas personnalisé pour l'instant.", "No custom cases yet.")}</div>`; return; }
   list.innerHTML="";
   customCases.forEach(c=>{
     const org=ORG[c.org];
@@ -7750,7 +7868,35 @@ const ID_TESTS_POS = [
   ["optochine","Sensibilité à l'optochine"],["bilesol","Solubilité biliaire"],
   ["arabinose","Arabinose"],["sorbitol","Sorbitol"]
 ];
-const ID_LABELS = Object.fromEntries([...ID_TESTS_NEG, ...ID_TESTS_POS]);
+const ID_LABELS_FR = Object.fromEntries([...ID_TESTS_NEG, ...ID_TESTS_POS]);
+
+/* Les noms des tests biochimiques, en anglais. La CLÉ reste la même — c'est
+   elle qui indexe IDDB — et seul le libellé change. */
+const ID_LABELS_EN = {
+  oxidase: "Oxidase", glucose: "Glucose fermentation", lactose: "Lactose (ONPG)",
+  indole: "Indole", citrate: "Citrate (Simmons)", urease: "Urease", h2s: "H\u2082S (TSI)",
+  motility: "Motility", vp: "Voges-Proskauer (VP)", ldc: "Lysine decarboxylase (LDC)",
+  odc: "Ornithine decarboxylase (ODC)", pad: "Phenylalanine deaminase (PAD)",
+  dnase: "DNase", maltose: "Maltose utilisation", facteurXV: "X + V factor requirement",
+  pyocyanine: "Pigment (pyocyanin)", growth42: "Growth at 42 \u00B0C",
+  catalase: "Catalase", coagulase: "Coagulase", novobiocine: "Novobiocin susceptibility",
+  betahem: "Beta-haemolysis", bacitracine: "Bacitracin susceptibility", camp: "CAMP test",
+  bileesc: "Bile-esculin", nacl65: "Growth in 6.5% NaCl", pyr: "PYR",
+  optochine: "Optochin susceptibility", bilesol: "Bile solubility",
+  arabinose: "Arabinose", sorbitol: "Sorbitol"
+};
+/* Un objet lu comme une table : « ID_LABELS[k] » continue de marcher partout,
+   et rend le libellé de la langue courante. Le remplacer par une FONCTION
+   aurait demandé de retoucher chacun des appels, et celui qu'on oublie
+   serait resté français sans rien dire. */
+const ID_LABELS = new Proxy({}, {
+  get: function (_, k) {
+    return (_L.estAnglais() ? ID_LABELS_EN[k] : ID_LABELS_FR[k]) || ID_LABELS_FR[k];
+  },
+  has: function (_, k) { return k in ID_LABELS_FR; },
+  ownKeys: function () { return Object.keys(ID_LABELS_FR); },
+  getOwnPropertyDescriptor: function () { return { enumerable: true, configurable: true }; }
+});
 let idState = { gram:null, shape:null, tests:{} };
 
 function idCandidates(){
@@ -7840,13 +7986,13 @@ function renderIdent(){
   const shapes = idState.gram==="pos" ? [["cocci","Cocci"],["bacilli","Bacilles"]] : [["bacilli","Bacilles"],["coccobacilli","Coccobacilles"],["cocci","Cocci (diplocoques)"]];
   let g = `<div class="id-choice">
     <button class="c ${idState.gram==='pos'?'on':''}" data-g="pos">Gram positif</button>
-    <button class="c ${idState.gram==='neg'?'on':''}" data-g="neg">Gram négatif</button></div>`;
+    <button class="c ${idState.gram==='neg'?'on':''}" data-g="neg">${T("Gram négatif", "Gram negative")}</button></div>`;
   if(idState.gram){
     g += `<div class="id-choice" style="margin-top:8px">`+
       shapes.map(s=>`<button class="c ${idState.shape===s[0]?'on':''}" data-shape="${s[0]}">${s[1]}</button>`).join("")+
-      `</div><div class="id-sub">Morphologie (facultatif — affine la liste).</div>`;
+      `</div><div class="id-sub">${T("Morphologie (facultatif — affine la liste).", "Morphology (optional — narrows the list).")}</div>`;
   } else {
-    g += `<div class="id-sub">Commencez par la coloration de Gram.</div>`;
+    g += `<div class="id-sub">${T("Commencez par la coloration de Gram.", "Start with the Gram stain.")}</div>`;
   }
   $("#idGram").innerHTML=g;
   $("#idGram").querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{
@@ -7895,9 +8041,9 @@ function renderIdent(){
         const v = idState.tests[k];
         return esc(ID_LABELS[k] || k) + " " + (v === "+" ? "+" : "−");
       });
-      html += `<div class="id-accord"><b>Concorde sur</b> ${accords.join(", ")}</div>`;
+      html += `<div class="id-accord"><b>${T("Concorde sur", "Matches on")}</b> ${accords.join(", ")}</div>`;
     }
-    if(i===0) html += `<button class="id-use" data-id="${r.id}">Utiliser pour l'antibiogramme →</button>`;
+    if(i===0) html += `<button class="id-use" data-id="${r.id}">${T("Utiliser pour l'antibiogramme →", "Use for the susceptibility test →")}</button>`;
     html += `</div>`;
   });
   /* § 4.A, points 4 et 6. Deux candidats au même score ne se départagent pas
@@ -7916,7 +8062,7 @@ function renderIdent(){
   }
 
   if(separateurs.length){
-    html += `<div class="id-separe"><b>Tests à faire pour trancher</b>`;
+    html += `<div class="id-separe"><b>${T("Tests à faire pour trancher", "Tests to do to settle it")}</b>`;
     separateurs.forEach(s=>{
       const dit = l => l.map(id => ORG[id].label).join(", ");
       html += `<div class="id-sep-l"><span class="id-sep-n">${esc(s.libelle)}</span>
@@ -7924,12 +8070,12 @@ function renderIdent(){
     });
     html += `</div>`;
   } else if(tete.length >= 2 && exaequo.length >= 2){
-    html += `<div class="id-separe"><b>Aucun test disponible ne les sépare.</b>
+    html += `<div class="id-separe"><b>${T("Aucun test disponible ne les sépare.", "No available test separates them.")}</b>
       Les caractères de cette application ne suffisent pas ici : il faut une galerie complète
       ou une spectrométrie de masse.</div>`;
   }
 
-  html += `<div class="id-note">Identification <b>présumée</b>, fondée sur les tests saisis. À confirmer par une méthode de référence (galerie complète, spectrométrie MALDI-TOF) avant validation clinique.</div>`;
+  html += `<div class="id-note">${T('Identification <b>présumée</b>, fondée sur les tests saisis. À confirmer par une méthode de référence (galerie complète, spectrométrie MALDI-TOF) avant validation clinique.', 'A <b>presumptive</b> identification, based on the tests entered. To be confirmed by a reference method (a full gallery, MALDI-TOF mass spectrometry) before clinical validation.')}</div>`;
   $("#idResults").innerHTML=html;
   const ub=$("#idResults").querySelector(".id-use");
   if(ub) ub.onclick=()=>useForAntibiogram(ub.dataset.id);

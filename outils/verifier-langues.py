@@ -861,6 +861,10 @@ def main():
         'id="copyBtn">Copier<',
         '<span class="cr-m-x">Validation biologique requise.</span>',
         '+ "pas un dispositif médical de diagnostic in vitro. Validation biologique requise.");',
+        '${good?"Bonne réponse":"Réponse attendue : "',
+        '<span class="q-specimen">antibiogramme ci-dessous</span>',
+        'c.gram=="pos" ? "Gram positif"',
+        '(c.q || "Quel phénotype de résistance reconnaissez-vous ?")',
     ]
     revenus = [t for t in NON_RETOUR if t in page]
     if revenus:
@@ -913,6 +917,112 @@ def main():
         dits.append("les infobulles, libellés d'accessibilité et textes d'invite "
                     "suivent la langue (%d balises marquées ; les autres passent par "
                     "T())." % marques_attr)
+
+    # --- LA BANQUE D'ENTRAÎNEMENT ---
+    #
+    # 55 cas, chacun avec sa question, sa réponse attendue, ses propositions
+    # et son explication — c'est le module le plus bavard de l'application, et
+    # celui qu'un formateur anglophone lit en entier.
+    #
+    # La traduction est indexée par l'IDENTIFIANT du cas, pas par sa position :
+    # un index aurait glissé au premier cas inséré au milieu, et un cas de
+    # pneumocoque aurait porté l'explication d'un streptocoque SANS ERREUR
+    # VISIBLE. C'est la raison d'être de id:"…".
+    #
+    # LE NOMBRE DE PROPOSITIONS DOIT CONCORDER. Une option de moins en
+    # anglais, et la bonne réponse peut ne plus figurer dans la liste : le cas
+    # devient insoluble, et c'est l'apprenant qui se croit en faute.
+    ib = page.find("const QUIZ_BANK = [")
+    if ib < 0:
+        ecarts.append("la banque d'entraînement a disparu de phenobac.html, ou son nom "
+                      "a changé : ce contrôle ne vérifie plus rien.")
+    else:
+        bank = page[ib:page.index("\n];", ib)]
+        ids = re.findall(r'id:"([^"]+)"', bank)
+        if len(ids) < 40:
+            ecarts.append("%d cas seulement relevés dans la banque (au moins 40 "
+                          "attendus) : la lecture a échoué et ce contrôle passerait au "
+                          "vert sans rien confronter." % len(ids))
+        elif len(ids) != len(set(ids)):
+            doubles = sorted(set(k for k in ids if ids.count(k) > 1))
+            ecarts.append("identifiants de cas en double : %s. Deux cas partageant une "
+                          "clé reçoivent la même traduction, et l'un des deux dit autre "
+                          "chose que ce qu'il montre." % ", ".join(doubles))
+        else:
+            ie = page.find("const QUIZ_BANK_EN = {")
+            if ie < 0:
+                ecarts.append("la banque d'entraînement n'a plus de traduction "
+                              "(QUIZ_BANK_EN) : les 55 cas se liraient en français dans "
+                              "une séance en anglais.")
+            else:
+                banken = page[ie:page.index("\n};", ie)]
+                traduits = set(re.findall(r'^  "([^"]+)":', banken, re.M))
+                sans = [k for k in ids if k not in traduits]
+                orphelines = sorted(traduits - set(ids))
+                if sans:
+                    ecarts.append("%d cas sans traduction : %s. Ils se liraient en "
+                                  "français au milieu d'une séance en anglais."
+                                  % (len(sans), ", ".join(sans[:8])))
+                if orphelines:
+                    ecarts.append("traduction(s) orpheline(s) dans QUIZ_BANK_EN : %s — le "
+                                  "cas correspondant a été retiré ou renommé, et la clé "
+                                  "ne sert plus rien." % ", ".join(orphelines[:8]))
+                if not sans and not orphelines:
+                    # le nombre de propositions, cas par cas
+                    def _objet(src, debut):
+                        """Le corps de l'objet qui commence au premier « { » après
+                        « debut », accolades comptées. Un motif « \\{(.*?)\\} » se
+                        serait arrêté à l'accolade de l'objet q2 imbriqué, et le
+                        nombre de propositions aurait été lu dans le vide — ce
+                        qu'annonçait un « -1 » pour les cinquante-cinq cas."""
+                        j = src.index("{", debut)
+                        prof, k = 0, j
+                        while k < len(src):
+                            if src[k] == "{":
+                                prof += 1
+                            elif src[k] == "}":
+                                prof -= 1
+                                if prof == 0:
+                                    return src[j:k + 1]
+                            k += 1
+                        return ""
+
+                    def _nb_options(corps):
+                        m = re.search(r'"?options"?\s*:\s*\[', corps)
+                        if not m:
+                            return -1
+                        liste = _liste(corps, m.end() - 1)
+                        return len(re.findall(r'"(?:[^"\\]|\\.)*"', liste))
+
+                    def _liste(src, debut):
+                        prof, k = 0, debut
+                        while k < len(src):
+                            if src[k] == "[":
+                                prof += 1
+                            elif src[k] == "]":
+                                prof -= 1
+                                if prof == 0:
+                                    return src[debut:k + 1]
+                            k += 1
+                        return ""
+
+                    boiteux = []
+                    for cle in ids:
+                        pa = bank.find('id:"%s"' % cle)
+                        pb = banken.find('"%s":' % cle)
+                        a = _nb_options(_objet(bank, bank.rfind("{", 0, pa))) if pa >= 0 else -1
+                        b = _nb_options(_objet(banken, pb)) if pb >= 0 else -1
+                        if a != b or a < 2:
+                            boiteux.append("%s (%d contre %d)" % (cle, a, b))
+                    if boiteux:
+                        ecarts.append("le nombre de propositions diffère entre les deux "
+                                      "langues : %s. La bonne réponse peut ne plus "
+                                      "figurer dans la liste, et c'est l'apprenant qui "
+                                      "se croira en faute." % ", ".join(boiteux[:6]))
+                    else:
+                        dits.append("les %d cas de la banque d'entraînement ont leur "
+                                    "traduction, indexée par identifiant, avec le même "
+                                    "nombre de propositions." % len(ids))
 
     if ecarts:
         print("LE BILINGUISME EST ABÎMÉ :")

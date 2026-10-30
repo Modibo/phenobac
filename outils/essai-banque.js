@@ -25,7 +25,7 @@
    À lancer depuis la racine du dépôt.
    ============================================================ */
 
-var E, QUIZ_BANK, LIBELLES, CTX_LIBELLE, OK = 0, KO = 0;
+var E, QUIZ_BANK, QUIZ_BANK_EN, LIBELLES, CTX_LIBELLE, CTX_LIBELLE_EN, OK = 0, KO = 0;
 
 function dire(s) { (typeof console === "object" ? console.log : print)(s); }
 
@@ -66,11 +66,35 @@ function lire(chemin) {
   }
   QUIZ_BANK = (new Function("return " + page.slice(j, fin + 1)))();
 
-  // Libellés des tests complémentaires : la carte les affiche en pastilles.
-  // Sans eux, une clé de contexte s'afficherait sous son nom de code.
-  var L = page.indexOf("const CTX_LIBELLE = {");
-  CTX_LIBELLE = (new Function("return " + page.slice(page.indexOf("{", L),
-                              page.indexOf("};", L) + 1)))();
+  // La banque en anglais, extraite de la même façon. Ce banc est le seul à
+  // EXÉCUTER les deux tables : verifier-langues.py les confronte comme du
+  // texte, et ne verrait pas une table qui ne s'analyse plus.
+  var ie = page.indexOf("const QUIZ_BANK_EN = {");
+  if (ie < 0) throw new Error("QUIZ_BANK_EN introuvable dans phenobac.html");
+  var je = page.indexOf("{", ie), profe = 0, fine = -1;
+  for (var ke = je; ke < page.length; ke++) {
+    if (page[ke] === "{") profe++;
+    else if (page[ke] === "}") { profe--; if (profe === 0) { fine = ke; break; } }
+  }
+  QUIZ_BANK_EN = (new Function("return " + page.slice(je, fine + 1)))();
+
+  /* Libellés des tests complémentaires : la carte les affiche en pastilles.
+     Sans eux, une clé de contexte s'afficherait sous son nom de code.
+
+     LA TABLE S'APPELLE DÉSORMAIS CTX_LIBELLE_FR, et « CTX_LIBELLE » est un
+     Proxy qui choisit la langue. Ce banc cherchait « const CTX_LIBELLE = { »
+     et ne le trouvait plus : indexOf rendait -1, le découpage repartait du
+     PREMIER « { » du fichier — une règle CSS — et le banc tombait sur
+     « Unexpected token '--' ». Un extracteur qui part de -1 ne se trompe pas
+     à moitié : il lit n'importe quoi. */
+  var bornes = function (nom) {
+    var a = page.indexOf("const " + nom + " = {");
+    if (a < 0) throw new Error(nom + " introuvable dans phenobac.html");
+    return (new Function("return " + page.slice(page.indexOf("{", a),
+                         page.indexOf("};", a) + 1)))();
+  };
+  CTX_LIBELLE = bornes("CTX_LIBELLE_FR");
+  CTX_LIBELLE_EN = bornes("CTX_LIBELLE_EN");
 
   // Libellés d'espèce : la carte du quiz les affiche AU-DESSUS de la question.
   var o = page.indexOf("const ORG = {");
@@ -278,6 +302,81 @@ dire("\nLes arguments correspondent-ils à l'antibiogramme ?");
   Object.keys(declarees).forEach(function (org) {
     dire("  sans grille, et le dit : " + org + " — " + declarees[org] + ".");
   });
+})();
+
+/* ---------- LES DEUX LANGUES, EXÉCUTÉES ----------
+
+   verifier-langues.py confronte les deux banques comme du TEXTE : il compte
+   les identifiants et les propositions. Ce qu'il ne peut pas voir, c'est une
+   table qui ne s'analyse plus — c'est exactement ce qui est arrivé à
+   langue.js, resté au vert partout alors qu'aucun navigateur ne l'aurait
+   exécuté. Ici les deux banques sont ÉVALUÉES, puis confrontées sur ce qui
+   compte pour l'apprenant.
+
+   LE CONTRÔLE QUI COMPTE LE PLUS : la bonne réponse doit figurer parmi les
+   propositions. Une traduction qui reformule la réponse sans reformuler
+   l'option correspondante rend le cas insoluble — et l'apprenant se croit
+   en faute. */
+// Ce banc compte lui-même ses OK et ses KO, sans fonction d'assertion.
+function verif(ok, txt) { ok ? OK++ : KO++; dire((ok ? "  ok   " : "  ÉCHEC") + "  " + txt); }
+
+dire("\nLa banque dit-elle la même chose dans les deux langues ?");
+(function () {
+  var ids = QUIZ_BANK.map(function (c) { return c.id; }).filter(Boolean);
+  verif(ids.length === QUIZ_BANK.length,
+        "les " + QUIZ_BANK.length + " cas portent un identifiant : sans lui, la "
+        + "traduction s'indexerait sur la position et glisserait au premier cas inséré");
+
+  var sansTrad = ids.filter(function (k) { return !QUIZ_BANK_EN[k]; });
+  verif(sansTrad.length === 0,
+        sansTrad.length === 0
+          ? "les " + ids.length + " cas ont leur traduction anglaise"
+          : sansTrad.length + " cas sans traduction : " + sansTrad.join(", "));
+
+  var orphelines = Object.keys(QUIZ_BANK_EN).filter(function (k) { return ids.indexOf(k) < 0; });
+  verif(orphelines.length === 0,
+        orphelines.length === 0
+          ? "… et aucune traduction ne survit à son cas"
+          : "traduction(s) orpheline(s) : " + orphelines.join(", "));
+
+  var horsListe = [], compte = [], vides = [];
+  QUIZ_BANK.forEach(function (c) {
+    var t = QUIZ_BANK_EN[c.id];
+    if (!t) return;
+    if (t.options && c.options && t.options.length !== c.options.length) {
+      compte.push(c.id + " (" + c.options.length + " contre " + t.options.length + ")");
+    }
+    if (t.answer && t.options && t.options.indexOf(t.answer) < 0) {
+      horsListe.push(c.id + " : « " + t.answer + " »");
+    }
+    if (c.q2 && t.q2 && t.q2.answer && t.q2.options && t.q2.options.indexOf(t.q2.answer) < 0) {
+      horsListe.push(c.id + " (q2) : « " + t.q2.answer + " »");
+    }
+    ["answer", "teach"].forEach(function (champ) {
+      if (t[champ] !== undefined && !String(t[champ]).trim()) vides.push(c.id + "." + champ);
+    });
+  });
+  verif(compte.length === 0,
+        compte.length === 0
+          ? "chaque cas a le même nombre de propositions dans les deux langues"
+          : "nombre de propositions différent : " + compte.join(", "));
+  verif(horsListe.length === 0,
+        horsListe.length === 0
+          ? "… et la bonne réponse anglaise figure toujours PARMI les propositions "
+            + "anglaises — sans quoi le cas serait insoluble et l'apprenant se croirait "
+            + "en faute"
+          : "la bonne réponse ne figure pas dans les propositions : " + horsListe.join(" ; "));
+  verif(vides.length === 0,
+        vides.length === 0 ? "aucun champ traduit n'est vide" : "champ(s) vide(s) : " + vides.join(", "));
+
+  // Les libellés de contexte : les mêmes clés de part et d'autre, sinon une
+  // pastille s'afficherait sous son nom de code en anglais.
+  var ctxManquants = Object.keys(CTX_LIBELLE).filter(function (k) { return !CTX_LIBELLE_EN[k]; });
+  verif(ctxManquants.length === 0,
+        ctxManquants.length === 0
+          ? "les " + Object.keys(CTX_LIBELLE).length + " libellés de contexte ont leur anglais"
+          : "libellé(s) de contexte sans anglais : " + ctxManquants.join(", ")
+            + " — la pastille s'afficherait sous son nom de code");
 })();
 
 dire("\n" + QUIZ_BANK.length + " cas dans la banque — " + exacts + " sur le titre du phénotype, "
