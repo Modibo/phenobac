@@ -867,6 +867,7 @@ def main():
         '(c.q || "Quel phénotype de résistance reconnaissez-vous ?")',
         '${last?"Voir le résultat":"Cas suivant →"}',
         '${dernier?"Terminer l\'épreuve":"Question suivante →"}',
+        'id="qContinue">Question de rendu →<',
     ]
     revenus = [t for t in NON_RETOUR if t in page]
     if revenus:
@@ -1025,6 +1026,148 @@ def main():
                         dits.append("les %d cas de la banque d'entraînement ont leur "
                                     "traduction, indexée par identifiant, avec le même "
                                     "nombre de propositions." % len(ids))
+
+    # --- LE TEXTE QUE LE SCRIPT ENGENDRE ---
+    #
+    # texte_visible() écarte les <script>, et à bon droit : trois balayages
+    # d'états s'y sont cassés. Mais le script ÉCRIT du texte visible, et c'est
+    # là que vivaient le compte rendu imprimé, le registre de contrôle de
+    # qualité, l'antibiogramme cumulatif, les éditeurs de seuils et tous les
+    # états vides. Soixante-dix-huit libellés y sont restés français dans une
+    # page par ailleurs entièrement traduite, et seule une relecture au
+    # navigateur les a montrés.
+    #
+    # On lit ici les libellés de GABARIT — « >texte< » dans un littéral de
+    # template — en écartant ce qui est déjà jumelé : les appels T(), les
+    # présentations et la banque d'entraînement, qui ont leurs tables
+    # anglaises. Ce n'est pas un balayage d'états : on ne cherche pas à
+    # comprendre le JavaScript, seulement à retrouver du texte entre deux
+    # chevrons.
+    #
+    # DEUX PIÈGES, LES DEUX RENCONTRÉS :
+    #   · n'écarter que le PREMIER littéral d'un T() laisse passer les appels
+    #     dont l'argument est une concaténation — on compte les parenthèses ;
+    #   · exclure le saut de ligne du motif rend aveugle aux libellés sur
+    #     plusieurs lignes, et il y en avait treize. Un outil qui ne voit pas
+    #     la moitié de la matière ne mesure pas : il rassure.
+    def _blanc(t):
+        return re.sub(r"[^\n]", " ", t)
+
+    def _sans_bloc(src, debut, ouvrant="{", fermant="}"):
+        i2 = src.find(debut)
+        if i2 < 0:
+            return src
+        j = src.index(ouvrant, i2)
+        prof, k = 0, j
+        while k < len(src):
+            if src[k] == ouvrant:
+                prof += 1
+            elif src[k] == fermant:
+                prof -= 1
+                if prof == 0:
+                    break
+            k += 1
+        return src[:i2] + _blanc(src[i2:k + 1]) + src[k + 1:]
+
+    _T_vus = [0]
+
+    def _sans_T(src):
+        out, i2 = [], 0
+        while True:
+            j = src.find("T(", i2)
+            if j < 0:
+                out.append(src[i2:])
+                break
+            if j > 0 and (src[j - 1].isalnum() or src[j - 1] in "_$."):
+                out.append(src[i2:j + 2])
+                i2 = j + 2
+                continue
+            out.append(src[i2:j + 2])
+            prof, k, chaine = 1, j + 2, None
+            while k < len(src) and prof:
+                c = src[k]
+                if chaine:
+                    if c == "\\":
+                        k += 2
+                        continue
+                    if c == chaine:
+                        chaine = None
+                elif c in "\"'`":
+                    chaine = c
+                elif c == "(":
+                    prof += 1
+                elif c == ")":
+                    prof -= 1
+                k += 1
+            out.append(_blanc(src[j + 2:k]))
+            _T_vus[0] += 1
+            i2 = k
+        return "".join(out)
+
+    jumele = page
+    for nom in ("var PRESENTATIONS = {", "var PRESENTATIONS_EN = {",
+                "const QUIZ_BANK_EN = {"):
+        jumele = _sans_bloc(jumele, nom)
+    jumele = _sans_bloc(jumele, "const QUIZ_BANK = [", "[", "]")
+    jumele = _sans_T(jumele)
+
+    engendres, lus = [], 0
+    for sc in re.finditer(r"<script\b[^>]*>(.*?)</script>", jumele, re.S):
+        src = sc.group(1)
+        if len(src.strip()) < 500:
+            continue
+        src = re.sub(r"/\*.*?\*/", lambda m: _blanc(m.group(0)), src, flags=re.S)
+        src = re.sub(r"(?m)^(\s*)//.*$", lambda m: _blanc(m.group(0)), src)
+        for m in re.finditer(r'>([^<>${}`"]{3,}?)<', src, re.S):
+            x = " ".join(m.group(1).split())
+            if len(x) < 4:
+                continue
+            lus += 1
+            u = x.replace("PhénoBac", "PhenoBac")
+            if PROPRES.search(x):
+                continue
+            if ACCENTS.search(u) or MOTS_FR.search(u):
+                engendres.append(x[:70])
+    # LE GARDE-FOU NE PEUT PAS PORTER SUR LE NOMBRE DE LIBELLÉS RESTANTS :
+    # traduire les FAIT DISPARAÎTRE du balayage, puisqu'ils passent dans un
+    # T() qu'on écarte. Un plancher posé là serait franchi par le succès.
+    # Ce qui doit rester grand, c'est le nombre d'appels T() RECONNUS : si
+    # l'écriture changeait — un autre nom, une autre forme — le découpage
+    # n'écarterait plus rien, et le contrôle crierait sur chaque phrase
+    # française jumelée. Il le dirait alors, au lieu de passer au vert.
+    # ET LES AFFECTATIONS DIRECTES, qui ne passent par aucun chevron.
+    #
+    # « bEnr.textContent = "Enregistrer ce contrôle" » n'a pas de « >texte< » :
+    # le balayage de gabarits ne le voyait pas, et six libellés du registre de
+    # contrôle de qualité sont restés français — « Enregistrer ce contrôle »,
+    # « Exporter le registre (CSV) », « Imprimer le registre (PDF) », les deux
+    # bilans de mesure, et le relevé. Trouvés au navigateur, une fois de plus.
+    #
+    # On lit donc aussi ce qu'on écrit DANS une propriété de texte.
+    for m in re.finditer(r'\.(?:textContent|innerHTML|placeholder|title)\s*=\s*'
+                         r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', jumele):
+        x = " ".join(m.group(1)[1:-1].split())
+        if len(x) < 4 or PROPRES.search(x):
+            continue
+        lus += 1
+        u = x.replace("PhénoBac", "PhenoBac")
+        if ACCENTS.search(u) or MOTS_FR.search(u):
+            engendres.append(x[:70])
+
+    if _T_vus[0] < 200:
+        ecarts.append("seulement %d appels T() reconnus dans la page : l'écriture de la "
+                      "fonction de traduction a changé et ce contrôle ne sait plus ce qui "
+                      "est déjà jumelé. Il ne mesure plus rien de fiable." % _T_vus[0])
+    elif engendres:
+        ecarts.append("%d libellé(s) engendré(s) par le script restent en français : %s. "
+                      "texte_visible() ne les atteint pas — ils ne se voient qu'en les "
+                      "cherchant ici, ou au navigateur."
+                      % (len(engendres), " ; ".join("« %s »" % x for x in engendres[:5])))
+    else:
+        dits.append("les libellés que le script engendre sont tous jumelés — %d appels T() "
+                    "reconnus, et aucun des %d libellés de gabarit restants n'est français : "
+                    "le compte rendu imprimé, le registre de contrôle de qualité et "
+                    "l'antibiogramme cumulatif suivent la langue." % (_T_vus[0], lus))
 
     if ecarts:
         print("LE BILINGUISME EST ABÎMÉ :")

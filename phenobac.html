@@ -1459,7 +1459,7 @@
              d'affichage. Elle se discute avec les cliniciens, et l'interface
              le dit — § 6 : une règle locale est signalée comme telle. -->
         <div class="refpick rc-pick">
-          <span class="lbl" data-i18n="champ.rendu">Rendu ciblé</span>
+          <span class="lbl" data-i18n="champ.rendu">${T("Rendu ciblé", "Targeted reporting")}</span>
           <div class="refseg" id="rcSeg">
             <button data-rc="non" data-i18n="rendu.complet">Complet</button>
             <button data-rc="oui" data-i18n="rendu.cible">Ciblé</button>
@@ -1970,10 +1970,29 @@ function traduire() {
     });
   });
 
-  // Les éléments que le script REMPLIT ne se marquent pas : on les refait.
-  // Sans cela, la ligne du référentiel de la page « À propos » gardait la
-  // langue du premier affichage.
-  if (typeof renderOffres === "function") { try { renderOffres(); } catch (e) {} }
+  /* LES VUES QUE LE SCRIPT BÂTIT NE SE MARQUENT PAS : ON LES REFAIT.
+
+     data-i18n et data-i18n-html agissent sur le DOM tel qu'il est. Une vue
+     composée par le script — le registre de contrôle de qualité, la
+     surveillance, la table des règles, l'entraînement, la page « À propos » —
+     garde donc la langue de son PREMIER affichage, et le texte traduit dans
+     le gabarit ne paraît jamais.
+
+     C'est ce qui a fait croire, au navigateur, que le bloc d'accueil du
+     contrôle qualité n'était pas traduit : il l'était, mais le DOM datait
+     d'avant le changement de langue. Deux heures perdues à chercher dans le
+     gabarit un défaut qui était dans le cycle de vie.
+
+     On rejoue donc les composeurs, chacun protégé : une vue qui échoue ne
+     doit pas empêcher les autres de suivre la langue. */
+  [ "renderOffres", "renderAll", "renderIntro", "renderCQ", "renderReferentiels",
+    "renderSurveillanceLocale", "renderSurvParService", "renderNiveaux",
+    "renderBankManager", "renderPresets", "renderIdent", "renderRefToggle",
+    "renderRenduCible", "majRefFooter"
+  ].forEach(function (nom) {
+    const f = self[nom];
+    if (typeof f === "function") { try { f(); } catch (e) {} }
+  });
   document.documentElement.setAttribute("lang", _L.courante());
   document.title = L("page.titre");
   const b = document.getElementById("langSwitch");
@@ -3570,36 +3589,42 @@ function currentOrg(){ return ORG[state.org]; }
 
 /* --- exemples de démonstration --- */
 const PRESETS = [
-  {name:"E. coli · BLSE", org:"ecoli",
+  {name:"E. coli · BLSE", nameEn:"E. coli · ESBL", org:"ecoli",
    res:{AMX:"R",AMC:"R",TZP:"R",FOX:"S",CTX:"R",CAZ:"R",FEP:"I",ETP:"S",IPM:"S",MEM:"S",CIP:"R",GEN:"S",AMK:"S",SXT:"R"},
    ctx:{syn:"Positif"}},
-  {name:"K. pneumoniae · carbapénémase", org:"kpneu",
+  {name:"K. pneumoniae · carbapénémase", nameEn:"K. pneumoniae · carbapenemase", org:"kpneu",
    res:{AMX:"R",AMC:"R",TZP:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"R",ETP:"R",IPM:"R",MEM:"I",CIP:"R",GEN:"R",AMK:"S",COL:"S"},
    ctx:{}},
-  {name:"S. aureus · SARM + MLSb", org:"saureus",
+  {name:"S. aureus · SARM + MLSb", nameEn:"S. aureus · MRSA + MLSb", org:"saureus",
    res:{FOX:"R",PEN:"R",E:"R",DA:"S",GEN:"S",SXT:"S",RD:"S",VA:"S",TEC:"S",LZD:"S"},
    ctx:{dtest:"Positif"}},
-  {name:"E. faecium · ERV", org:"efaecium",
+  {name:"E. faecium · ERV", nameEn:"E. faecium · VRE", org:"efaecium",
    res:{AMP:"R",VA:"R",TEC:"R",HLG:"R",LZD:"S"},ctx:{}},
-  {name:"E. cloacae · AmpC déréprimée", org:"ecloacae",
+  {name:"E. cloacae · AmpC déréprimée", nameEn:"E. cloacae · derepressed AmpC", org:"ecloacae",
    res:{AMX:"R",AMC:"R",FOX:"R",CTX:"R",CAZ:"R",FEP:"S",ETP:"S",IPM:"S",MEM:"S",CIP:"S",GEN:"S"},ctx:{}},
-  {name:"Salmonella · FQ bas niveau", org:"salmonella",
+  {name:"Salmonella · FQ bas niveau", nameEn:"Salmonella · low-level FQ resistance", org:"salmonella",
    res:{AMX:"S",AMC:"S",CTX:"S",CAZ:"S",IPM:"S",MEM:"S",CIP:"S",PEF:"R",SXT:"S",AZM:"S"},ctx:{}},
-  {name:"Pneumocoque · PSDP", org:"pneumocoque",
+  {name:"Pneumocoque · PSDP", nameEn:"Pneumococcus · penicillin-non-susceptible", org:"pneumocoque",
    res:{OXA:"R",PEN:"I",AMX:"S",CTX:"S",E:"R",DA:"R",LVX:"S",SXT:"R",VA:"S",LZD:"S"},ctx:{mening:"Non"}},
-  {name:"A. baumannii · XDR", org:"acineto",
+  {name:"A. baumannii · XDR", nameEn:"A. baumannii · XDR", org:"acineto",
    res:{TZP:"R",CAZ:"R",FEP:"R",IPM:"R",MEM:"R",CIP:"R",GEN:"R",AMK:"R",SXT:"R",COL:"S"},ctx:{}}
 ];
-(function fillPresets(){
+/* Nommée et rejouable : traduire() la rappelle, sans quoi les huit exemples
+   gardaient la langue du premier affichage. */
+function renderPresets(){
   const wrap=$("#presets");
+  if(!wrap) return;
+  wrap.innerHTML = "";
   PRESETS.forEach(p=>{
-    const b=document.createElement("button"); b.className="preset"; b.textContent=p.name;
+    const b=document.createElement("button"); b.className="preset";
+    b.textContent = (_L.estAnglais() && p.nameEn) ? p.nameEn : p.name;
     b.onclick=()=>{ state.org=p.org; state.mode="sir"; state.results={...p.res};
       state.mic={}; state.diam={}; state.ctx={...p.ctx};
       speciesSel.value=p.org; renderAll(); };
     wrap.appendChild(b);
   });
-})();
+}
+renderPresets();
 
 /* --- rendu du panel antibiogramme --- */
 /* ------------------------------------------------------------
@@ -3799,15 +3824,21 @@ function renderCQ(){
 
   const s = CQ[CQ_ETAT.souche] || CQ.ecoli25922;
   body.innerHTML =
-    `<div class="bp-note">Avant de rendre des diamètres, vérifiez que la manipulation est juste.
+    `<div class="bp-note">` + T(
+    `Avant de rendre des diamètres, vérifiez que la manipulation est juste.
      Un lot de disques altéré, une gélose trop épaisse ou un inoculum trop dense déplacent
      <b>toutes</b> les zones ensemble : les catégories restent plausibles, et elles sont fausses.
      Cibles et limites : <b>CA-SFM 2026</b>, chapitre 1.4. Les charges de disque y sont identiques
-     à celles du tableau de l'EUCAST.</div>`;
+     à celles du tableau de l'EUCAST.`,
+    `Before reporting zone diameters, check that the technique is right.
+     A degraded disc lot, agar poured too thick or too dense an inoculum shift
+     <b>every</b> zone together: the categories stay plausible, and they are wrong.
+     Targets and limits: <b>CA-SFM 2026</b>, chapter 1.4. The disc contents there are the same as
+     in the EUCAST table.`) + `</div>`;
 
   const ch = document.createElement("div"); ch.className = "surv-ch";
   ch.style.margin = "0 0 12px";
-  ch.innerHTML = `<span>Souche contrôlée</span>`;
+  ch.innerHTML = `<span>${T("Souche contrôlée", "Strain under control")}</span>`;
   const sel = document.createElement("select");
   Object.keys(CQ).forEach(k=>{
     const o = document.createElement("option");
@@ -3869,18 +3900,30 @@ function renderCQ(){
     });
     bilan.className = "cq-bilan" + (hors ? " hors" : (ok ? " ok" : ""));
     if(!ok && !hors){
-      bilan.textContent = "Relevez les diamètres obtenus sur la souche de référence : "
-        + "chacun sera situé dans ses limites acceptables.";
+      bilan.textContent = T("Relevez les diamètres obtenus sur la souche de référence : "
+        + "chacun sera situé dans ses limites acceptables.",
+          "Enter the diameters obtained on the reference strain: each one will be placed within "
+        + "its acceptable limits.");
     } else if(hors){
-      bilan.innerHTML = `<b>${hors} mesure${hors>1?"s":""} hors limites</b> — ${esc(nomsHors.join(", "))}. `
-        + `Ce n'est pas la souche du malade qui est en cause : vérifiez le lot et la conservation des `
-        + `disques, l'épaisseur et le pH de la gélose, la densité de l'inoculum et le délai de lecture. `
-        + `Tant que le contrôle n'est pas rentré dans ses limites, les antibiogrammes du jour ne `
-        + `devraient pas être rendus.`;
+      bilan.innerHTML = (_L.estAnglais()
+        ? `<b>${hors} measurement${hors>1?"s":""} outside the limits</b> — ${esc(nomsHors.join(", "))}. `
+        : `<b>${hors} mesure${hors>1?"s":""} hors limites</b> — ${esc(nomsHors.join(", "))}. `)
+        + T(`Ce n'est pas la souche du malade qui est en cause : vérifiez le lot et la conservation des `
+          + `disques, l'épaisseur et le pH de la gélose, la densité de l'inoculum et le délai de lecture. `
+          + `Tant que le contrôle n'est pas rentré dans ses limites, les antibiogrammes du jour ne `
+          + `devraient pas être rendus.`,
+            `The patient's isolate is not what is at fault: check the disc lot and its storage, the `
+          + `thickness and pH of the agar, the density of the inoculum and the reading time. `
+          + `Until the control is back within its limits, the day's antibiograms should not be `
+          + `reported.`);
     } else {
-      bilan.innerHTML = `<b>${ok} mesure${ok>1?"s":""} dans les limites</b>, aucune hors limites. `
-        + `La technique est sous contrôle pour ces molécules. Reportez le résultat dans votre `
-        + `registre de contrôle de qualité.`;
+      bilan.innerHTML = (_L.estAnglais()
+        ? `<b>${ok} measurement${ok>1?"s":""} within the limits</b>, none outside. `
+        : `<b>${ok} mesure${ok>1?"s":""} dans les limites</b>, aucune hors limites. `)
+        + T(`La technique est sous contrôle pour ces molécules. Reportez le résultat dans votre `
+          + `registre de contrôle de qualité.`,
+            `The technique is under control for these agents. Record the result in your `
+          + `quality-control register.`);
     }
   };
 
@@ -3915,23 +3958,25 @@ function renderCQ(){
   // constaté et un écart traité. Elle n'apparaît que si elle a lieu d'être.
   const conduite = document.createElement("div"); conduite.className = "surv-ch";
   conduite.style.margin = "10px 0 0";
-  conduite.innerHTML = `<span>Conduite tenue (exigée si une mesure sort des limites)</span>`;
+  conduite.innerHTML = `<span>${T("Conduite tenue (exigée si une mesure sort des limites)",
+    "Action taken (required when a measurement falls outside the limits)")}</span>`;
   const ta = document.createElement("textarea");
   ta.id = "cq-action"; ta.rows = 2;
-  ta.placeholder = "Lot de disques écarté, contrôle repris le lendemain avec le lot n°…";
+  ta.placeholder = T("Lot de disques écarté, contrôle repris le lendemain avec le lot n°…",
+    "Disc lot set aside, control run repeated the next day with lot no.…");
   ta.value = CQ_ETAT.action || "";
   ta.oninput = ()=>{ CQ_ETAT.action = ta.value; };
   conduite.appendChild(ta); body.appendChild(conduite);
 
   const barre = document.createElement("div"); barre.className = "cq-barre";
   const bEnr = document.createElement("button"); bEnr.className = "bp-reset";
-  bEnr.textContent = "Enregistrer ce contrôle"; bEnr.onclick = cqEnregistrer;
+  bEnr.textContent = T("Enregistrer ce contrôle", "Record this control run"); bEnr.onclick = cqEnregistrer;
   const bExp = document.createElement("button"); bExp.className = "bp-reset";
-  bExp.textContent = "Exporter le registre (CSV)"; bExp.onclick = cqExporter;
+  bExp.textContent = T("Exporter le registre (CSV)", "Export the register (CSV)"); bExp.onclick = cqExporter;
   // Le CSV sert à relire et à recalculer ; il ne se signe pas. Le document
   // imprimé est celui qu'on archive et qu'on présente.
   const bImp = document.createElement("button"); bImp.className = "bp-reset";
-  bImp.textContent = "Imprimer le registre (PDF)"; bImp.onclick = cqImprimer;
+  bImp.textContent = T("Imprimer le registre (PDF)", "Print the register (PDF)"); bImp.onclick = cqImprimer;
   barre.appendChild(bEnr); barre.appendChild(bExp); barre.appendChild(bImp);
   body.appendChild(barre);
 
@@ -3952,10 +3997,12 @@ function cqSuivi(s){
   const bloc = document.createElement("div"); bloc.className = "cq-suivi";
   const reg = cqRegistre().filter(e=>e.souche === CQ_ETAT.souche);
   if(reg.length < 2){
-    bloc.innerHTML = `<div class="cq-suivi-t">Suivi dans le temps</div>
-      <div class="bp-note" style="margin:0">Une carte de contrôle demande au moins deux contrôles
-      sur la même souche. ${reg.length ? "Il y en a un." : "Il n'y en a pas encore."} Les dérives,
-      elles, se cherchent sur dix mesures : c'est le prix d'une alerte qui ne se trompe pas.</div>`;
+    bloc.innerHTML = `<div class="cq-suivi-t">${T("Suivi dans le temps", "Tracking over time")}</div>
+      <div class="bp-note" style="margin:0">${T(`Une carte de contrôle demande au moins deux contrôles
+      sur la même souche.`, `A control chart needs at least two runs on the same strain.`)}
+      ${reg.length ? T("Il y en a un.", "There is one.") : T("Il n'y en a pas encore.", "There are none yet.")}
+      ${T(`Les dérives, elles, se cherchent sur dix mesures : c'est le prix d'une alerte qui ne se trompe pas.`,
+          `Drift, for its part, is sought over ten measurements: that is the price of an alert that does not cry wolf.`)}</div>`;
     return bloc;
   }
 
@@ -3978,8 +4025,9 @@ function cqSuivi(s){
   const codes = Object.keys(s.abx).filter(k=>cqSerie(CQ_ETAT.souche, k).length >= 2);
   codes.sort((a,b)=>nomAbx(a).localeCompare(nomAbx(b)));
   if(!codes.length){
-    h += `<div class="bp-note" style="margin-top:10px">Aucun antibiotique n'a encore deux mesures :
-      les cartes apparaîtront d'elles-mêmes.</div>`;
+    h += `<div class="bp-note" style="margin-top:10px">${T(`Aucun antibiotique n'a encore deux mesures :
+      les cartes apparaîtront d'elles-mêmes.`,
+      `No antibiotic has two measurements yet: the charts will appear on their own.`)}</div>`;
   }
   codes.forEach(k=>{
     const serie = cqSerie(CQ_ETAT.souche, k);
@@ -4001,9 +4049,12 @@ function cqHistorique(){
   const reg = cqRegistre();
   const bloc = document.createElement("div"); bloc.className = "cq-histo";
   if(!reg.length){
-    bloc.innerHTML = `<div class="bp-note" style="margin:14px 0 0">Aucun contrôle enregistré pour l'instant.
+    bloc.innerHTML = `<div class="bp-note" style="margin:14px 0 0">${T(`Aucun contrôle enregistré pour l'instant.
       Le registre reste dans ce navigateur : il n'est envoyé nulle part, mais il ne survivrait pas
-      à un vidage du cache ni à un changement de poste. <b>C'est le fichier exporté qui fait registre.</b></div>`;
+      à un vidage du cache ni à un changement de poste. <b>C'est le fichier exporté qui fait registre.</b>`,
+      `No control run recorded yet. The register stays in this browser: it is sent nowhere, but it
+      would not survive a cleared cache or a change of computer. <b>It is the exported file that
+      constitutes the register.</b>`)}</div>`;
     return bloc;
   }
   const horsTotal = reg.reduce((n,e)=>n + e.lignes.filter(l=>l.verdict==="hors").length, 0);
@@ -4027,7 +4078,7 @@ function cqHistorique(){
       + `</div>`
       + (e.action ? `<div class="cq-ligne-a">Conduite tenue : ${esc(e.action)}</div>` : "")
       + (e.valide
-          ? `<div class="cq-ligne-v">Validé par <b>${esc(e.valide.par)}</b> le ${esc(dateFr(e.valide.quand))}</div>`
+          ? `<div class="cq-ligne-v">${T("Validé par ", "Validated by ")}<b>${esc(e.valide.par)}</b>${T(" le ", " on ")}${esc(dateFr(e.valide.quand))}</div>`
           : "")
       // Les deux gestes de la ligne voyagent ensemble : positionnés chacun de
       // son côté, leur écart dépendait de la largeur du texte des boutons, et
@@ -4272,67 +4323,83 @@ function cqConstruireRegistre(){
         lu par ${esc(e.operateur||"non renseigné")}
       </div>
       <table class="rp-table">
-        <thead><tr><th>Antibiotique</th><th>Charge</th><th>Mesuré</th><th>Cible (limites)</th><th>Verdict</th></tr></thead>
+        <thead><tr><th>${T("Antibiotique", "Antibiotic")}</th><th>${T("Charge", "Content")}</th><th>${T("Mesuré", "Measured")}</th><th>${T("Cible (limites)", "Target (limits)")}</th><th>${T("Verdict", "Verdict")}</th></tr></thead>
         <tbody>${lignes}</tbody>
       </table>
       ${e.action ? `<div class="cqr-action"><b>Conduite tenue</b> ${esc(e.action)}</div>` : ""}
       <div class="cqr-valid">${e.valide
-        ? `Relu et déclaré clos par <b>${esc(e.valide.par)}</b>, le ${esc(dateFr(e.valide.quand))}.`
-        : `<i>Contrôle non validé à la date d'édition.</i>`}</div>
+        ? `${T("Relu et déclaré clos par ", "Reviewed and declared closed by ")}<b>${esc(e.valide.par)}</b>${T(", le ", ", on ")}${esc(dateFr(e.valide.quand))}.`
+        : `<i>${T("Contrôle non validé à la date d'édition.", "Control run not validated at the date of issue.")}</i>`}</div>
     </div>`;
   }).join("");
 
   document.getElementById("report").innerHTML = "";   // un seul document à la fois
   document.getElementById("cqReport").innerHTML = `
     <div class="rp-head">
-      <div class="rp-brand">Phéno<b>Bac</b><span>Registre de contrôle de qualité de l'antibiogramme</span></div>
-      <div class="rp-date">Édité le ${esc(now.toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}))}
-        à ${esc(now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}))}</div>
+      <div class="rp-brand">Phéno<b>Bac</b><span>${T("Registre de contrôle de qualité de l'antibiogramme",
+        "Antibiogram quality-control register")}</span></div>
+      <div class="rp-date">${T("Édité le ", "Issued on ")}${esc(now.toLocaleDateString(_L.estAnglais()?"en-GB":"fr-FR",{day:"2-digit",month:"long",year:"numeric"}))}
+        ${T("à ", "at ")}${esc(now.toLocaleTimeString(_L.estAnglais()?"en-GB":"fr-FR",{hour:"2-digit",minute:"2-digit"}))}</div>
     </div>
 
     <table class="rp-meta">
-      <tr><th>Laboratoire</th><td>${esc(ent.labo) || "…………………………………………"}</td>
-          <th>Période couverte</th><td>${esc(periode)}</td></tr>
-      <tr><th>Contrôles</th><td>${reg.length}, dont ${valides} validé${valides>1?"s":""}</td>
-          <th>Mesures</th><td>${mesures}, dont ${horsTotal} hors limites — conformité ${conf} %</td></tr>
+      <tr><th>${T("Laboratoire", "Laboratory")}</th><td>${esc(ent.labo) || "…………………………………………"}</td>
+          <th>${T("Période couverte", "Period covered")}</th><td>${esc(periode)}</td></tr>
+      <tr><th>${T("Contrôles", "Control runs")}</th><td>${reg.length}${_L.estAnglais()
+            ? `, ${valides} validated`
+            : `, dont ${valides} validé${valides>1?"s":""}`}</td>
+          <th>${T("Mesures", "Measurements")}</th><td>${mesures}${_L.estAnglais()
+            ? `, ${horsTotal} outside the limits — ${conf} % conformity`
+            : `, dont ${horsTotal} hors limites — conformité ${conf} %`}</td></tr>
     </table>
 
-    <div class="rp-sect-t">Synthèse par couple souche × antibiotique</div>
+    <div class="rp-sect-t">${T("Synthèse par couple souche × antibiotique", "Summary by strain × antibiotic pair")}</div>
     <table class="rp-table">
-      <thead><tr><th>Souche de référence</th><th>Antibiotique</th><th>n</th><th>Hors</th>
-        <th>Conformité</th><th>Dérive</th></tr></thead>
+      <thead><tr><th>${T("Souche de référence", "Reference strain")}</th><th>${T("Antibiotique", "Antibiotic")}</th><th>n</th><th>${T("Hors", "Out")}</th>
+        <th>${T("Conformité", "Conformity")}</th><th>${T("Dérive", "Drift")}</th></tr></thead>
       <tbody>${ligneSynth || `<tr><td colspan="6">—</td></tr>`}</tbody>
     </table>
     <div class="rp-legende">
-      <b>Lecture de la dérive.</b> Une mesure peut rester dans ses limites et dériver quand même.
+      ${T(`<b>Lecture de la dérive.</b> Une mesure peut rester dans ses limites et dériver quand même.
       « Décalage » signale dix mesures consécutives du même côté de la cible, « tendance » sept
       mesures qui montent ou qui descendent sans interruption. Ces deux règles ne supposent aucune
       distribution ; les règles en multiples d'écart-type ne sont pas reprises. Un changement de lot
-      de disques coupe la série : un lot nouveau est un autre système.
+      de disques coupe la série : un lot nouveau est un autre système.`,
+        `<b>Reading the drift.</b> A measurement can stay within its limits and still drift. A
+      "shift" flags ten consecutive measurements on the same side of the target, a "trend" seven
+      measurements rising or falling without interruption. Neither rule assumes any distribution;
+      the rules based on multiples of the standard deviation are not used. A change of disc lot
+      breaks the series: a new lot is a different system.`)}
     </div>
 
-    <div class="rp-sect-t">Détail des contrôles</div>
+    <div class="rp-sect-t">${T("Détail des contrôles", "Control runs in detail")}</div>
     ${detail}
 
-    <div class="rp-sect-t">Validation du registre</div>
+    <div class="rp-sect-t">${T("Validation du registre", "Validation of the register")}</div>
     <div class="rp-sign">
       <div class="rp-sig-line">
-        <span class="rp-sig-lab">Biologiste responsable</span>
+        <span class="rp-sig-lab">${T("Biologiste responsable", "Responsible clinical microbiologist")}</span>
         <span class="rp-sig-val">${esc(ent.valideur) || "…………………………………………"}</span>
       </div>
       <div class="rp-sig-line">
-        <span class="rp-sig-lab">Date / signature</span>
+        <span class="rp-sig-lab">${T("Date / signature", "Date / signature")}</span>
         <span class="rp-sig-val">…………………………………………</span>
       </div>
     </div>
 
     <div class="rp-foot">
-      Cibles et limites : <b>CA-SFM 2026, chapitre 1.4</b>. Les charges de disque y sont identiques
-      à celles du tableau EUCAST.
-      <br><b>Portée des mentions de validation.</b> Une mention « relu et déclaré clos » consigne
+      ${T(`Cibles et limites : <b>CA-SFM 2026, chapitre 1.4</b>. Les charges de disque y sont identiques
+      à celles du tableau EUCAST.`,
+        `Targets and limits: <b>CA-SFM 2026, chapter 1.4</b>. The disc contents there are the same as
+      in the EUCAST table.`)}
+      <br>${T(`<b>Portée des mentions de validation.</b> Une mention « relu et déclaré clos » consigne
       une déclaration saisie sur ce poste. Ce n'est pas une signature électronique : elle ne garantit
       ni l'identité du déclarant ni l'intégrité du fichier. C'est le présent document, imprimé et
-      signé, qui fait registre.
+      signé, qui fait registre.`,
+        `<b>What a validation note means.</b> A note saying "reviewed and declared closed" records a
+      declaration entered on this computer. It is not an electronic signature: it guarantees neither
+      the identity of the declarant nor the integrity of the file. It is this document, printed and
+      signed, that constitutes the register.`)}
       <br>PhénoBac ${esc(PHENOBAC_VERSION)} · ${T("base de connaissances", "knowledge base")} ${esc(baseVersion())}.
     </div>`;
   return true;
@@ -4368,27 +4435,42 @@ function renderDiamNote(){
   const prev=document.querySelector(".diam-note"); if(prev) prev.remove();
   const g=bpGroup();
   const det=document.createElement("details"); det.className="bp-editor diam-note";
-  det.innerHTML=`<summary><span class="caret">▸</span>Diamètres critiques (mm) — méthode des disques</summary>`;
+  det.innerHTML=`<summary><span class="caret">▸</span>${T("Diamètres critiques (mm) — méthode des disques", "Zone diameter breakpoints (mm) — disc method")}</summary>`;
   const body=document.createElement("div"); body.className="bp-body";
   const casfm = estCasfm()
-    ? ` <b>Vous travaillez en CA-SFM</b> : PhénoBac ne reprend que ses différences de CMI, pas ses diamètres. Les couples où le CA-SFM déplace le seuil ne sont pas catégorisés au disque — ils sont signalés et renvoient à la CMI.`
+    ? T(` <b>Vous travaillez en CA-SFM</b> : PhénoBac ne reprend que ses différences de CMI, pas ses diamètres. Les couples où le CA-SFM déplace le seuil ne sont pas catégorisés au disque — ils sont signalés et renvoient à la CMI.`,
+        ` <b>You are working under CA-SFM</b>: PhénoBac copies only its MIC differences, not its zone diameters. Pairs where CA-SFM moves the breakpoint are not categorised from the disc — they are flagged and referred to the MIC.`)
     : "";
   body.innerHTML =
-    `<div class="bp-note">Seuils de l'<b>EUCAST v16.1</b>, méthode des disques sur Mueller-Hinton. ` +
-    `Le sens est <b>inversé</b> par rapport aux CMI : une <b>grande</b> zone est sensible. ` +
-    `La <b>charge du disque</b> fait partie du seuil — elle est rappelée sous chaque molécule, et une charge différente rend le seuil inapplicable. ` +
-    `Une zone se mesure bord à bord, boîte retournée sur fond sombre, à 16–20 h de culture ; « pas de zone » se note <b>6</b> (le diamètre du disque) ou <b>0</b>. ` +
-    `Un couple sans seuil au disque n'est pas un oubli de PhénoBac : l'EUCAST ne reconnaît pas la méthode pour lui — c'est le cas de la colistine, et de la vancomycine sur staphylocoque.${casfm}</div>`;
+    `<div class="bp-note">` + T(
+      `Seuils de l'<b>EUCAST v16.1</b>, méthode des disques sur Mueller-Hinton. `
+    + `Le sens est <b>inversé</b> par rapport aux CMI : une <b>grande</b> zone est sensible. `
+    + `La <b>charge du disque</b> fait partie du seuil — elle est rappelée sous chaque molécule, et une charge différente rend le seuil inapplicable. `
+    + `Une zone se mesure bord à bord, boîte retournée sur fond sombre, à 16–20 h de culture ; « pas de zone » se note <b>6</b> (le diamètre du disque) ou <b>0</b>. `
+    + `Un couple sans seuil au disque n'est pas un oubli de PhénoBac : l'EUCAST ne reconnaît pas la méthode pour lui — c'est le cas de la colistine, et de la vancomycine sur staphylocoque.`,
+      `<b>EUCAST v16.1</b> breakpoints, disc method on Mueller-Hinton. `
+    + `The sense is <b>reversed</b> compared with MICs: a <b>large</b> zone is susceptible. `
+    + `The <b>disc content</b> is part of the breakpoint — it is recalled under each agent, and a different content makes the breakpoint inapplicable. `
+    + `A zone is measured edge to edge, the plate inverted over a dark background, after 16–20 h of growth; "no zone" is recorded as <b>6</b> (the disc diameter) or <b>0</b>. `
+    + `A pair with no disc breakpoint is not an omission by PhénoBac: EUCAST does not recognise the method for it — that is the case for colistin, and for vancomycin in staphylococci.`)
+    + `${casfm}</div>`;
   if(estCasfm() && DEPISTAGE_CASFM[g]){
     const codes=Object.keys(DEPISTAGE_CASFM[g]).map(k=>nomAbx(k)).join(", ");
-    body.innerHTML += `<div class="bp-note">Le CA-SFM ne voit ici qu'un <b>dépistage</b> : ${esc(codes)} au disque ne sert qu'à reconnaître les souches sensibles. En dessous du seuil, il faut une CMI — la résistance aux β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème technique.</div>`;
+    body.innerHTML += `<div class="bp-note">` + T(
+      `Le CA-SFM ne voit ici qu'un <b>dépistage</b> : ${esc(codes)} au disque ne sert qu'à reconnaître les souches sensibles. En dessous du seuil, il faut une CMI — la résistance aux β-lactamines est exceptionnelle dans ce groupe, et un petit diamètre est d'abord un problème technique.`,
+      `CA-SFM treats this as a <b>screening test</b> only: ${esc(codes)} on a disc serves only to recognise susceptible isolates. Below the breakpoint an MIC is required — beta-lactam resistance is exceptional in this group, and a small zone is first of all a technical problem.`) + `</div>`;
   }
-  body.innerHTML += `<div class="bp-note" style="margin-top:12px">Avant de rendre des diamètres,
-    contrôlez votre technique sur une souche de référence : onglet
+  body.innerHTML += `<div class="bp-note" style="margin-top:12px">` + T(
+    `Avant de rendre des diamètres, contrôlez votre technique sur une souche de référence : onglet
     <b>Contrôle qualité</b>. Un lot de disques altéré déplace toutes les zones ensemble, et les
-    catégories restent plausibles.</div>`;
+    catégories restent plausibles.`,
+    `Before reporting zone diameters, check your technique on a reference strain: the
+    <b>Quality control</b> tab. A degraded disc lot shifts every zone together, and the categories
+    stay plausible.`) + `</div>`;
   if(g==="pneumo"){
-    body.innerHTML += `<div class="bp-note">Pneumocoque : les β-lactamines ne se lisent pas au disque. Renseignez l'<b>oxacilline 1 µg</b> — zone ≥ ${OXA_PNEUMO} mm, l'EUCAST permet de rendre sensibles la pénicilline G, l'amoxicilline et le céfotaxime sans autre test ; zone &lt; ${OXA_PNEUMO} mm, une CMI de pénicilline G est nécessaire. Un dépistage positif n'est pas une résistance.</div>`;
+    body.innerHTML += `<div class="bp-note">` + T(
+      `Pneumocoque : les β-lactamines ne se lisent pas au disque. Renseignez l'<b>oxacilline 1 µg</b> — zone ≥ ${OXA_PNEUMO} mm, l'EUCAST permet de rendre sensibles la pénicilline G, l'amoxicilline et le céfotaxime sans autre test ; zone &lt; ${OXA_PNEUMO} mm, une CMI de pénicilline G est nécessaire. Un dépistage positif n'est pas une résistance.`,
+      `Pneumococcus: the beta-lactams are not read from a disc. Enter the <b>1 µg oxacillin</b> zone — at ≥ ${OXA_PNEUMO} mm, EUCAST allows benzylpenicillin, amoxicillin and cefotaxime to be reported susceptible with no further test; below ${OXA_PNEUMO} mm, a benzylpenicillin MIC is required. A positive screen is not a resistance.`) + `</div>`;
   }
   det.appendChild(body);
   abxGrid.parentNode.insertBefore(det, abxGrid.nextSibling);
@@ -4403,9 +4485,11 @@ function renderBpEditor(){
 
   const det=document.createElement("details"); det.className="bp-editor";
   if(wasOpen) det.setAttribute("open","");
-  det.innerHTML=`<summary><span class="caret">▸</span>Concentrations critiques (mg/L) — référentiel</summary>`;
+  det.innerHTML=`<summary><span class="caret">▸</span>${T("Concentrations critiques (mg/L) — référentiel", "Breakpoints (mg/L) — standard")}</summary>`;
   const body=document.createElement("div"); body.className="bp-body";
-  body.innerHTML=`<div class="bp-note">Référentiel appliqué : <b>${refLibelle()}</b>, publié en ${refDate()}. Les seuils marqués <span class="bp-conv">${libelleHors()}</span> sont des conventions de laboratoire : le référentiel n'en fixe pas. Ceux marqués <span class="bp-ecart">CA-SFM</span> s'écartent volontairement de l'EUCAST. Ajustez tout cela au vôtre avant rendu ; la catégorie se recalcule aussitôt.</div>`;
+  body.innerHTML = `<div class="bp-note">` + T(
+    `Référentiel appliqué : <b>${refLibelle()}</b>, publié en ${refDate()}. Les seuils marqués <span class="bp-conv">${libelleHors()}</span> sont des conventions de laboratoire : le référentiel n'en fixe pas. Ceux marqués <span class="bp-ecart">CA-SFM</span> s'écartent volontairement de l'EUCAST. Ajustez tout cela au vôtre avant rendu ; la catégorie se recalcule aussitôt.`,
+    `Standard applied: <b>${refLibelle()}</b>, published in ${refDate()}. Breakpoints marked <span class="bp-conv">${libelleHors()}</span> are laboratory conventions: the standard sets none. Those marked <span class="bp-ecart">CA-SFM</span> depart from EUCAST deliberately. Adjust all of this to your own before reporting; the category is recomputed at once.`) + `</div>`;
 
   const seen=new Set();
   panelComplet(org).forEach(grp=>grp.abx.forEach(k=>{
@@ -4442,7 +4526,7 @@ function renderBpEditor(){
   }));
 
   const reset=document.createElement("button"); reset.className="bp-reset";
-  reset.textContent="Rétablir les valeurs par défaut";
+  reset.textContent=T("Rétablir les valeurs par défaut", "Restore the default values");
   reset.onclick=()=>{
     Object.keys(state.bpOverride).forEach(key=>{ if(key.startsWith(g+":")) delete state.bpOverride[key]; });
     recomputeFromMic(); renderAbx(); renderInterpret();
@@ -4576,15 +4660,26 @@ function renderConditions(){
       <span>Conditions de réalisation${remplis ? ` — ${remplis} renseignée${remplis>1?"s":""}` : ""}</span>
     </summary>`;
   const corps = document.createElement("div"); corps.className = "cond-body";
-  corps.innerHTML = `<div class="cond-note">Ce que vous déclarez ici est confronté à ce que le
-      référentiel exige <b>pour cette espèce</b>. Rien n'est deviné, et <b>un champ laissé vide ne
-      déclenche rien</b> : PhénoBac ne vous reprochera jamais une condition que vous n'avez pas
-      renseignée.${diam ? "" : " En CMI et en S/I/R, seule la pureté de la culture est demandée : "
-      + "le reste ne concerne que la méthode des disques."}
-      <br><span class="cond-src">Exigences tirées de : EUCAST <i>disk diffusion method</i> v13.0
+  corps.innerHTML = `<div class="cond-note">` + T(
+      `Ce que vous déclarez ici est confronté à ce que le référentiel exige <b>pour cette
+      espèce</b>. Rien n'est deviné, et <b>un champ laissé vide ne déclenche rien</b> : PhénoBac ne
+      vous reprochera jamais une condition que vous n'avez pas renseignée.`,
+      `What you declare here is checked against what the standard requires <b>for this species</b>.
+      Nothing is guessed, and <b>a field left blank triggers nothing</b>: PhénoBac will never hold
+      against you a condition you did not record.`)
+    + (diam ? "" : T(" En CMI et en S/I/R, seule la pureté de la culture est demandée : "
+      + "le reste ne concerne que la méthode des disques.",
+        " With MICs and with S/I/R, only the purity of the culture is asked: the rest concerns the "
+      + "disc method alone."))
+    + `<br><span class="cond-src">` + T(
+      `Exigences tirées de : EUCAST <i>disk diffusion method</i> v13.0
       (janvier 2025), tables 1 et 3 et annexe A ; EUCAST <i>anaérobies</i> v3.0 (juin 2026) ;
       EUCAST <i>Clinical Breakpoint Tables</i> v16.1 (24 juin 2026). Une espèce que ces documents
-      ne couvrent pas n'est confrontée à rien.</span></div>`;
+      ne couvrent pas n'est confrontée à rien.`,
+      `Requirements taken from: EUCAST <i>disk diffusion method</i> v13.0 (January 2025), tables 1
+      and 3 and appendix A; EUCAST <i>anaerobes</i> v3.0 (June 2026); EUCAST <i>Clinical Breakpoint
+      Tables</i> v16.1 (24 June 2026). A species those documents do not cover is checked against
+      nothing.`) + `</span></div>`;
 
   champs.forEach(c=>{
     const box = document.createElement("div"); box.className = "ctx-q";
@@ -4678,11 +4773,16 @@ function renderRenduCible(){
     b.classList.toggle("on", (b.dataset.rc === "oui") === actif));
   const h = $("#rcHint");
   if(h) h.innerHTML = actif
-    ? `<b style="color:var(--i-deep,#8a5b00)">Règle locale du laboratoire</b> — une partie des
+    ? T(`<b style="color:var(--i-deep,#8a5b00)">Règle locale du laboratoire</b> — une partie des
        antibiotiques testés n'est pas rendue (HAS 2023, ECBU à entérobactéries, femme ≥ 12 ans).
-       Rien n'est effacé, et une résistance est toujours rendue.`
-    : `Tous les antibiotiques testés sont rendus. Le rendu ciblé épargne les molécules critiques —
-       c'est une décision à prendre avec les cliniciens, pas un réglage d'affichage.`;
+       Rien n'est effacé, et une résistance est toujours rendue.`,
+        `<b style="color:var(--i-deep,#8a5b00)">A local laboratory rule</b> — some of the
+       antibiotics tested are not reported (HAS 2023, urine cultures with Enterobacterales, women
+       aged 12 and over). Nothing is erased, and a resistance is always reported.`)
+    : T(`Tous les antibiotiques testés sont rendus. Le rendu ciblé épargne les molécules critiques —
+       c'est une décision à prendre avec les cliniciens, pas un réglage d'affichage.`,
+        `Every antibiotic tested is reported. Targeted reporting spares the critical agents — it is
+       a decision to take with the clinicians, not a display setting.`);
 }
 
 function renderCtx(){
@@ -4794,7 +4894,7 @@ const DET_ETAPES = [
 function detEtape(i, corps, pivot){
   return `<div class="det-et${pivot?" pivot":""}">
       <div class="det-t">${i+1}. ${esc(DET_ETAPES[i])}</div>
-      <div class="det-c">${corps || '<span class="det-vide">rien à signaler</span>'}</div>
+      <div class="det-c">${corps || '<span class="det-vide">${T("rien à signaler", "nothing to report")}</span>'}</div>
     </div>`;
 }
 
@@ -4861,7 +4961,7 @@ function renderDetective(A){
   h += detEtape(2, intr.length
       ? intr.map(k => `<div class="det-ligne"><span class="dn">${esc(nomAbx(k))}</span>`
           + `<span class="dm">${esc(org.intrinsic[k])}</span></div>`).join("")
-      : `<span class="det-vide">Aucune résistance naturelle attendue sur ce panel.</span>`, false);
+      : `<span class="det-vide">${T("Aucune résistance naturelle attendue sur ce panel.", "No intrinsic resistance is expected on this panel.")}</span>`, false);
 
   // 4. cohérences
   const NIVN = { stop:"Interprétation impossible", crit:"Alerte majeure", warn:"À vérifier", info:"Information" };
@@ -4888,7 +4988,7 @@ function renderDetective(A){
   // 7. l'interprétation
   let concl = `<div class="det-concl">${esc(A.comment||"—")}</div>`;
   if((A.rendu||[]).length){
-    concl += `<div style="margin-top:9px">Catégories modifiées par la lecture interprétative :</div>`
+    concl += `<div style="margin-top:9px">${T("Catégories modifiées par la lecture interprétative :", "Categories changed by interpretive reading:")}</div>`
       + A.rendu.map(x => `<div class="det-ligne"><span class="dn">${esc(nomAbx(x.abx))}</span>`
           + `<span class="dm">lu ${esc(lettreCat(x.brut))}, rendu R — ${esc(x.motif)}</span></div>`).join("");
   }
@@ -5080,7 +5180,7 @@ function renderInterpretView(A){
      l'exige aussi — « l'antibiogramme complet reste disponible sur demande ». */
   const rcib = A.renduCible;
   if(rcib && rcib.applique){
-    html += `<div class="sect"><div class="sect-t">Rendu ciblé appliqué</div>`;
+    html += `<div class="sect"><div class="sect-t">${T("Rendu ciblé appliqué", "Targeted reporting applied")}</div>`;
     html += `<div class="rc-dit">${esc(rcib.titre)} — ${esc(RC_COLONNE_DIT[rcib.colonne] || rcib.colonne)}.
       ${rcib.masquees.length
         ? `<b>${rcib.masquees.length}</b> molécule${rcib.masquees.length>1?"s":""} testée${rcib.masquees.length>1?"s":""}
@@ -5108,17 +5208,17 @@ function renderInterpretView(A){
         ${cite ? `<span class="rc-cit">« ${esc(j.texte)} »</span>` : ""}</div>`;
     });
     if(rcib.plancher){
-      html += `<div class="rc-plan"><b>⚠ Masquage levé</b> — ${esc(rcib.plancher)}
+      html += `<div class="rc-plan"><b>${T("⚠ Masquage levé", "⚠ Suppression lifted")}</b> — ${esc(rcib.plancher)}
         Ce plancher est propre à PhénoBac : la recommandation suppose un appel au
         laboratoire que la feuille imprimée n'a pas.</div>`;
     }
     (rcib.horsPortee||[]).forEach(h=>{
-      html += `<div class="rc-hp"><b>Règle appliquée à moitié</b> — ${esc(h)}</div>`;
+      html += `<div class="rc-hp"><b>${T("Règle appliquée à moitié", "Rule applied only halfway")}</b> — ${esc(h)}</div>`;
     });
     /* § 2.1.4 — le document ne dit pas seulement quoi rendre, il dit quoi
        ÉCRIRE à côté. Ces phrases partent au compte rendu. */
     if((rcib.commentaires||[]).length){
-      html += `<div class="rc-com"><div class="rc-com-t">À faire figurer sur le compte rendu (§ 2.1.4)</div>`;
+      html += `<div class="rc-com"><div class="rc-com-t">${T("À faire figurer sur le compte rendu (§ 2.1.4)", "To appear on the report (§ 2.1.4)")}</div>`;
       rcib.commentaires.forEach(c=>{
         html += `<div class="rc-c"><i>${c.appel ? "("+esc(c.appel)+")" : "—"}</i><span>${esc(c.texte)}</span></div>`;
       });
@@ -5126,12 +5226,12 @@ function renderInterpretView(A){
     }
     html += `<div class="rc-src">Règle locale du laboratoire, fondée sur : ${esc(rcib.source||"")}</div></div>`;
   } else if(rcib && !rcib.applique && renduCibleActif()){
-    html += `<div class="sect"><div class="sect-t">Rendu ciblé</div>
+    html += `<div class="sect"><div class="sect-t">${T("Rendu ciblé", "Targeted reporting")}</div>
       <div class="rc-dit">Non appliqué : ${esc(rcib.motif)}. L'antibiogramme est rendu en entier.</div></div>`;
   }
 
   if(A.rules && A.rules.length){
-    html+=`<div class="sect"><div class="sect-t">Règles expertes appliquées</div>`;
+    html+=`<div class="sect"><div class="sect-t">${T("Règles expertes appliquées", "Expert rules applied")}</div>`;
     A.rules.forEach(rl=>{ html+=`<div class="rule"><span class="rk">${esc(rl.k)}</span><span>${esc(rl.txt)}</span></div>`; });
     html+=`</div>`;
   }
@@ -5202,10 +5302,11 @@ function renderInterpretView(A){
   $("#detCopier").onclick = ()=>{
     const txt = detectiveTexte(state.lastA || {});
     copierTexte(txt)
-      .then(()=> { $("#detMsg").textContent = "Raisonnement copié."; })
+      .then(()=> { $("#detMsg").textContent = T("Raisonnement copié.", "Reasoning copied."); })
       // Si la copie échoue, le dire : croire qu'on a copié et coller du vide
       // est pire que de devoir sélectionner soi-même.
-      .catch(()=> { $("#detMsg").textContent = "Copie refusée par le navigateur — sélectionnez le texte à la main."; });
+      .catch(()=> { $("#detMsg").textContent = T("Copie refusée par le navigateur — sélectionnez le texte à la main.",
+      "The browser refused the copy — select the text by hand."); });
   };
 })();
 
@@ -5214,7 +5315,7 @@ let _reqSeq = 0;
 let _remoteTimer = null;
 
 function scheduleRemote(){
-  interpretEl.innerHTML=`<div class="interp-loading"><span class="spin"></span>Interprétation en cours…</div>`;
+  interpretEl.innerHTML=`<div class="interp-loading"><span class="spin"></span>${T("Interprétation en cours…", "Interpreting…")}</div>`;
   clearTimeout(_remoteTimer);
   // 300 ms ménageaient le réseau ; le calcul étant désormais local et
   // instantané, ce délai n'a plus qu'à absorber la frappe.
@@ -5308,10 +5409,13 @@ async function renderInterpretRemote(){
       // à tous (FREE_SPECIES = null). Si elle s'allumait, ce serait une erreur
       // de configuration du serveur — pas un défaut de l'utilisateur, et
       // sûrement pas une licence à acheter.
-      interpretEl.innerHTML=`<div class="interp-note"><b>Le serveur a refusé l'interprétation.</b>
-        PhénoBac est gratuit et sans licence : ce refus vient d'une erreur de configuration du
+      interpretEl.innerHTML=`<div class="interp-note"><b>${T("Le serveur a refusé l'interprétation.", "The server refused the interpretation.")}</b>
+        ${T(`PhénoBac est gratuit et sans licence : ce refus vient d'une erreur de configuration du
         serveur, pas de vous. L'application interprète de toute façon sur votre poste —
-        rechargez la page pour en retrouver le moteur.</div>`;
+        rechargez la page pour en retrouver le moteur.`,
+          `PhénoBac is free and needs no licence: this refusal comes from a server misconfiguration,
+        not from you. The application interprets on your own computer in any case — reload the page
+        to get its engine back.`)}</div>`;
       // Même remarque : rien de tout cela n'est payant. On n'ouvre donc plus
       // de modale d'achat pour un refus qui ne vient pas de l'utilisateur.
       return;
@@ -5340,13 +5444,13 @@ async function renderInterpretRemote(){
        l'application. */
     if(!(e && e.reseau)){
       try{ console.error("PhénoBac — défaut interne pendant l'interprétation :", e); }catch(_){}
-      interpretEl.innerHTML=`<div class="interp-note"><b>Défaut interne de l'application.</b> `
+      interpretEl.innerHTML=`<div class="interp-note"><b>${T("Défaut interne de l'application.", "An internal fault in the application.")}</b> `
         + `L'interprétation n'a pas abouti pour une raison qui ne vient pas du réseau. `
         + `Signalez-le : ${esc(String(e && e.message || e))}</div>`;
       return;
     }
     const detail = (e && e.message) ? ` <span style="opacity:.7">(${esc(String(e.message))})</span>` : "";
-    interpretEl.innerHTML=`<div class="interp-note"><b>Interprétation indisponible.</b> `
+    interpretEl.innerHTML=`<div class="interp-note"><b>${T("Interprétation indisponible.", "Interpretation unavailable.")}</b> `
       + `Le moteur d'interprétation est sur le serveur : une connexion est nécessaire. `
       + `Vérifiez votre réseau et réessayez.${detail}</div>`;
   }
@@ -5501,7 +5605,8 @@ async function verserSurveillance(){
   const labo = $("#survLabo").value.trim();
   if(!labo){
     avis.className = "surv-avis ko";
-    avis.textContent = "Le code du laboratoire est nécessaire : sans lui, la donnée n'est rattachable à aucun site.";
+    avis.textContent = T("Le code du laboratoire est nécessaire : sans lui, la donnée n'est rattachable à aucun site.",
+      "The laboratory code is required: without it, the data cannot be attached to any site.");
     $("#survLabo").focus(); return;
   }
   survMemoire("labo", labo);
@@ -5560,7 +5665,7 @@ async function verserSurveillance(){
       : "Serveur injoignable, et le navigateur a refusé d'enregistrer localement. Notez l'isolat autrement.";
     $("#survPatient").value = "";
   }
-  bouton.disabled = false; bouton.textContent = "Verser à la surveillance";
+  bouton.disabled = false; bouton.textContent = T("Verser à la surveillance", "Submit to surveillance");
 }
 
 /* ============================================================
@@ -5594,12 +5699,12 @@ function refRegles(){
 function refSeuilTexte(r){
   const u = r.meth === "cmi" ? " mg/L" : " mm";
   if(r.S === undefined && r.R === undefined){
-    if(r.temoin) return "se lit sur le disque de " + (nomAbx(r.temoin));
-    if(r.dep !== undefined) return "dépistage : sensible si ≥ " + r.dep + " mm";
+    if(r.temoin) return T("se lit sur le disque de ", "read from the disc of ") + (nomAbx(r.temoin));
+    if(r.dep !== undefined) return T("dépistage : sensible si ≥ ", "screening: susceptible if ≥ ") + r.dep + " mm";
     return "—";
   }
   // « null » en S n'est pas une valeur manquante : c'est un refus du comité.
-  const s = (r.S === null) ? "pas de catégorie S"
+  const s = (r.S === null) ? T("pas de catégorie S", "no S category")
           : (r.meth === "cmi" ? "S ≤ " + fmt(r.S) : "S ≥ " + r.S);
   const rr = (r.meth === "cmi" ? "R > " + fmt(r.R) : "R < " + r.R);
   return s + " · " + rr + u;
@@ -5607,12 +5712,12 @@ function refSeuilTexte(r){
 
 function renderReferentiels(){
   const B = self.PhenoBacBase;
-  if(!B){ $("#refTable").innerHTML = `<div class="placeholder">Base de règles non chargée.</div>`; return; }
+  if(!B){ $("#refTable").innerHTML = `<div class="placeholder">${T("Base de règles non chargée.", "The rule base is not loaded.")}</div>`; return; }
 
   /* --- filtres --- */
   const groupes = [...new Set(B.regles.map(r=>r.groupe))].sort();
   let f = `<div class="ref-seg">` +
-    [["", "Les deux référentiels"], ["eucast", "EUCAST"], ["casfm", "CA-SFM"]]
+    [["", T("Les deux référentiels", "Both standards")], ["eucast", "EUCAST"], ["casfm", "CA-SFM"]]
       .map(([v,l])=>`<button data-rf="${v}" class="${REF_VUE.ref===v?"on":""}">${l}</button>`).join("")
     + `</div>`;
   f += `<select id="refGroupe" aria-label="${T("Groupe bactérien", "Bacterial group")}"><option value="">${T("Tous les groupes", "All groups")}</option>`
@@ -5628,27 +5733,30 @@ function renderReferentiels(){
   const src = B.SOURCES;
   $("#refSource").innerHTML = `<div class="bp-note">`
     + Object.keys(src).map(k=>`<b>${esc(src[k].nom)} ${esc(src[k].version)}</b> — ${esc(src[k].document)},
-        publié le ${esc(src[k].publie)}`).join("<br>")
-    + `<br>Base de connaissances <b>${esc(B.BASE_VERSION)}</b>, ${B.regles.length} règles.
-       Le CA-SFM n'est pas un second jeu complet : tout couple absent de ses lignes garde sa valeur EUCAST.</div>`;
+        ${T("publié le ", "published on ")}${esc(src[k].publie)}`).join("<br>")
+    + `<br>${T("Base de connaissances ", "Knowledge base ")}<b>${esc(B.BASE_VERSION)}</b>, ${B.regles.length}${T(" règles.", " rules.")}
+       ${T(`Le CA-SFM n'est pas un second jeu complet : tout couple absent de ses lignes garde sa valeur EUCAST.`,
+            `The CA-SFM is not a second complete set: any pair absent from its lines keeps the EUCAST value.`)}</div>`;
 
   /* --- le tableau --- */
   const rr = refRegles();
-  if(!rr.length){ $("#refTable").innerHTML = `<div class="placeholder">Aucune règle ne correspond.</div>`; return; }
-  let h = `<div class="ref-compte">${rr.length} règle${rr.length>1?"s":""} affichée${rr.length>1?"s":""}</div>`;
+  if(!rr.length){ $("#refTable").innerHTML = `<div class="placeholder">${T("Aucune règle ne correspond.", "No rule matches.")}</div>`; return; }
+  let h = `<div class="ref-compte">${_L.estAnglais()
+      ? `${rr.length} rule${rr.length>1?"s":""} shown`
+      : `${rr.length} règle${rr.length>1?"s":""} affichée${rr.length>1?"s":""}`}</div>`;
   h += `<div class="tbl-cumul"><table><thead><tr>
-      <th>Groupe</th><th>Antibiotique</th><th>Méthode</th><th>Site</th>
-      <th>Seuils</th><th>Charge</th><th>ZIT</th><th>Statut</th></tr></thead><tbody>`;
+      <th>${T("Groupe", "Group")}</th><th>${T("Antibiotique", "Antibiotic")}</th><th>${T("Méthode", "Method")}</th><th>${T("Site", "Site")}</th>
+      <th>${T("Seuils", "Breakpoints")}</th><th>${T("Charge", "Content")}</th><th>${T("ZIT", "ATU")}</th><th>${T("Statut", "Status")}</th></tr></thead><tbody>`;
   rr.forEach(r=>{
     const zit = r.zit === undefined ? "—"
       : (Array.isArray(r.zit) ? (r.zit[0]===r.zit[1] ? r.zit[0]+" mm" : r.zit[0]+"–"+r.zit[1]+" mm")
                               : fmt(r.zit)+" mg/L");
-    const statut = r.conv ? `<span class="bp-conv">convention</span>`
-                 : r.espece ? `<span class="bp-ecart">${esc(r.espece.join(", "))} seulement</span>`
-                 : `<span class="ref-off">officiel</span>`;
+    const statut = r.conv ? `<span class="bp-conv">${T("convention", "convention")}</span>`
+                 : r.espece ? `<span class="bp-ecart">${esc(r.espece.join(", "))}${T(" seulement", " only")}</span>`
+                 : `<span class="ref-off">${T("officiel", "official")}</span>`;
     h += `<tr><td>${esc(r.groupe)}</td><td>${esc(nomAbx(r.abx))}
         <span class="rc">${esc(r.abx)}</span></td>
-        <td>${r.meth === "cmi" ? "CMI" : "disque"}</td>
+        <td>${r.meth === "cmi" ? T("CMI", "MIC") : T("disque", "disc")}</td>
         <td>${r.site === "standard" ? "—" : esc(r.site)}</td>
         <td>${esc(refSeuilTexte(r))}</td>
         <td>${r.charge ? esc(r.charge === "1 unit" ? "1 UI" : r.charge + " µg") : "—"}</td>
@@ -5660,6 +5768,10 @@ function renderReferentiels(){
 function refExporter(){
   const rr = refRegles();
   if(!rr.length) return;
+  /* LES EN-TÊTES DU CSV NE SUIVENT PAS LA LANGUE, ET C'EST VOULU : un fichier
+     relu dans un tableur se compare d'une année sur l'autre, et des colonnes
+     qui changent de nom selon la langue de l'exportateur casseraient les
+     classeurs et les scripts de ceux qui s'en servent. */
   const col = ["Referentiel","Groupe","Antibiotique","Code","Methode","Site","S","R","Charge","ZIT","Statut"];
   const ech = v => { const s = String(v===undefined||v===null?"":v);
     return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
@@ -5770,21 +5882,28 @@ function renderSurveillanceLocale(){
   /* --- résumé --- */
   let h;
   if(!reg.length){
-    h = `<div class="bp-note">Aucun isolat au registre. Chaque antibiogramme versé depuis
+    h = `<div class="bp-note">${T(`Aucun isolat au registre. Chaque antibiogramme versé depuis
       l'onglet <b>Interprétation</b> — bouton « Verser à la surveillance » — vient s'y ajouter,
       <b>même sans réseau</b>. Le registre reste sur ce poste : il n'est envoyé nulle part tant
-      que vous ne le transmettez pas.</div>`;
+      que vous ne le transmettez pas.`,
+        `No isolate in the register yet. Every antibiogram submitted from the
+      <b>Interpretation</b> tab — the "Submit this isolate to surveillance" button — joins it,
+      <b>even with no network</b>. The register stays on this computer: it is sent nowhere until
+      you send it.`)}</div>`;
   } else {
     h = `<div class="surv-chiffres">
       <div class="sc"><b>${reg.length}</b><span>isolat${reg.length>1?"s":""} enregistré${reg.length>1?"s":""}</span></div>
-      <div class="sc"><b>${dedup.length}</b><span>après déduplication</span></div>
+      <div class="sc"><b>${dedup.length}</b><span>${T("après déduplication", "after deduplication")}</span></div>
       <div class="sc"><b>${Object.keys(survCumulatif(reg)).length}</b><span>espèce${Object.keys(survCumulatif(reg)).length>1?"s":""}</span></div>
       <div class="sc ${attente?"att":""}"><b>${attente}</b><span>en attente de transmission</span></div>
     </div>
-    <div class="bp-note">Période couverte : du <b>${esc(dates[0]||"—")}</b> au <b>${esc(dates[dates.length-1]||"—")}</b>.
-      La déduplication retient le <b>premier isolat par patient et par espèce</b> sur l'année — sans elle,
+    <div class="bp-note">${T("Période couverte : du ", "Period covered: from ")}<b>${esc(dates[0]||"—")}</b>${T(" au ", " to ")}<b>${esc(dates[dates.length-1]||"—")}</b>.
+      ${T(`La déduplication retient le <b>premier isolat par patient et par espèce</b> sur l'année — sans elle,
       un patient prélevé chaque semaine pèserait dix fois et ferait chuter les taux sans qu'aucune
-      épidémie n'ait eu lieu.</div>`;
+      épidémie n'ait eu lieu.`,
+        `Deduplication keeps the <b>first isolate per patient and per species</b> over the year —
+      without it, a patient sampled every week would weigh ten times over and would drag the rates
+      down with no outbreak having taken place.`)}</div>`;
   }
   $("#survResume").innerHTML = h;
 
@@ -5792,7 +5911,7 @@ function renderSurveillanceLocale(){
   const cum = survCumulatif(reg);
   const especes = Object.keys(cum).sort((a,b)=>cum[b].n - cum[a].n);
   if(!especes.length){
-    $("#survCumul").innerHTML = `<div class="placeholder">Les taux de sensibilité apparaîtront ici dès les premiers isolats versés.</div>`;
+    $("#survCumul").innerHTML = `<div class="placeholder">${T("Les taux de sensibilité apparaîtront ici dès les premiers isolats versés.", "Susceptibility rates will appear here as soon as the first isolates are added.")}</div>`;
   } else {
     let c = "";
     especes.forEach(id=>{
@@ -5802,9 +5921,9 @@ function renderSurveillanceLocale(){
             <span class="surv-n">${e.n} isolat${e.n>1?"s":""}</span>
             ${assez ? "" : `<span class="surv-faible">effectif insuffisant — taux non rendus</span>`}</div>`;
       const codes = Object.keys(e.abx).sort((x,y)=>(nomAbx(x)).localeCompare(nomAbx(y)));
-      if(!codes.length){ c += `<div class="det-vide">Aucun antibiotique renseigné.</div></div>`; return; }
+      if(!codes.length){ c += `<div class="det-vide">${T("Aucun antibiotique renseigné.", "No antibiotic recorded.")}</div></div>`; return; }
       c += `<div class="tbl-cumul"><table><thead><tr>
-          <th>Antibiotique</th><th>Testés</th><th>S</th><th>I</th><th>R</th><th>% sensibles</th>
+          <th>Antibiotique</th><th>${T("Testés", "Tested")}</th><th>S</th><th>I</th><th>R</th><th>% sensibles</th>
         </tr></thead><tbody>`;
       codes.forEach(k=>{
         const a = e.abx[k];
@@ -5823,8 +5942,9 @@ function renderSurveillanceLocale(){
   const per = survParPeriode(reg);
   const avecPlusieurs = Object.keys(per).filter(id=>Object.keys(per[id]).length > 1);
   if(!avecPlusieurs.length){
-    $("#survTendance").innerHTML = `<div class="placeholder">Une évolution demande au moins deux années de recul.
-      ${reg.length ? "Le registre n'en couvre qu'une pour l'instant." : ""}</div>`;
+    $("#survTendance").innerHTML = `<div class="placeholder">${T("Une évolution demande au moins deux années de recul.",
+      "A trend needs at least two years of data.")}
+      ${reg.length ? T("Le registre n'en couvre qu'une pour l'instant.", "The register covers only one so far.") : ""}</div>`;
   } else {
     let c = "";
     avecPlusieurs.forEach(id=>{
@@ -5845,8 +5965,10 @@ function renderSurveillanceLocale(){
       c += `</tbody></table></div></div>`;
     });
     $("#survTendance").innerHTML = c
-      + `<div class="bp-note">Les effectifs sont donnés entre parenthèses : passer de 80 % à 40 %
-         n'a pas le même sens sur cinq souches et sur cinquante.</div>`;
+      + `<div class="bp-note">${T(`Les effectifs sont donnés entre parenthèses : passer de 80 % à 40 %
+         n'a pas le même sens sur cinq souches et sur cinquante.`,
+          `The denominators are given in brackets: going from 80 % to 40 % does not mean the same
+         thing on five isolates as on fifty.`)}</div>`;
   }
 }
 
@@ -5889,7 +6011,8 @@ async function survTransmettreEnAttente(){
   const bouton = $("#survTransmettre");
   const reg = survRegistre();
   const attente = reg.filter(i=>!i.transmis);
-  if(!attente.length){ bouton.textContent = "Rien en attente"; setTimeout(()=>{bouton.textContent="Transmettre les isolats en attente";},1800); return; }
+  if(!attente.length){ bouton.textContent = T("Rien en attente", "Nothing pending");
+    setTimeout(()=>{bouton.textContent=T("Transmettre les isolats en attente", "Send the pending isolates");},1800); return; }
   bouton.disabled = true;
   let partis = 0, echecs = 0;
   for(const i of attente){
@@ -5901,7 +6024,7 @@ async function survTransmettreEnAttente(){
     }catch(e){ echecs++; break; }   // réseau coupé : inutile d'insister
   }
   bouton.disabled = false;
-  bouton.textContent = "Transmettre les isolats en attente";
+  bouton.textContent = T("Transmettre les isolats en attente", "Send the pending isolates");
   renderSurveillanceLocale();
   const r = $("#survResume");
   if(r) r.insertAdjacentHTML("afterbegin",
@@ -5926,16 +6049,23 @@ function renderSurvParService(){
   const noms = Object.keys(par).sort((a,b)=> par[b].n - par[a].n);
 
   if(!noms.length){
-    hote.innerHTML = `<div class="placeholder">Renseignez le <b>service demandeur</b> au moment de
+    hote.innerHTML = `<div class="placeholder">${T(`Renseignez le <b>service demandeur</b> au moment de
       verser un antibiogramme : les taux par service apparaîtront ici. C'est la ventilation qui
-      sert à prescrire — la résistance en réanimation n'est pas celle de la consultation externe.</div>`;
+      sert à prescrire — la résistance en réanimation n'est pas celle de la consultation externe.`,
+        `Record the <b>requesting ward</b> when you submit an antibiogram: the rates by ward will
+      appear here. It is that breakdown a clinician prescribes from — resistance in intensive care
+      is not resistance in the outpatient clinic.`)}</div>`;
     return;
   }
 
-  let h = `<div class="bp-note">Un taux global sert à publier, un taux par service sert à
+  let h = `<div class="bp-note">${T(`Un taux global sert à publier, un taux par service sert à
     prescrire. Le CLSI M39 demande <b>${SURV_MIN} isolats</b> au moins pour qu'un taux soit
     publiable ; les services en dessous sont montrés — les taire priverait d'une information qui
-    existe — mais marqués, et chaque pourcentage porte son effectif.</div>`;
+    existe — mais marqués, et chaque pourcentage porte son effectif.`,
+      `An overall rate is for publishing, a rate by ward is for prescribing. CLSI M39 asks for at
+    least <b>${SURV_MIN} isolates</b> before a rate can be published; wards below that are shown —
+    withholding them would deny information that exists — but marked, and every percentage carries
+    its denominator.`)}</div>`;
 
   noms.forEach(nom=>{
     const s = par[nom];
@@ -5944,12 +6074,12 @@ function renderSurvParService(){
       .slice(0,3).map(id=>survNomEspece(id) + " (" + s.especes[id] + ")").join(", ");
     h += `<div class="surv-esp"><div class="surv-esp-t">${esc(nom)}
         <span class="surv-n">${s.n} isolat${s.n>1?"s":""}</span>
-        ${assez ? "" : `<span class="surv-faible">sous le seuil M39 — à lire avec prudence</span>`}</div>`;
+        ${assez ? "" : `<span class="surv-faible">${T("sous le seuil M39 — à lire avec prudence", "below the M39 floor — to be read with caution")}</span>`}</div>`;
     if(especes) h += `<div class="det-vide" style="margin:2px 0 8px">Principales espèces : ${esc(especes)}.</div>`;
     const codes = Object.keys(s.abx).sort((x,y)=>(nomAbx(x)).localeCompare(nomAbx(y)));
-    if(!codes.length){ h += `<div class="det-vide">Aucun antibiotique renseigné.</div></div>`; return; }
+    if(!codes.length){ h += `<div class="det-vide">${T("Aucun antibiotique renseigné.", "No antibiotic recorded.")}</div></div>`; return; }
     h += `<div class="tbl-cumul"><table><thead><tr>
-        <th>Antibiotique</th><th>Testés</th><th>Sensibles</th><th>% sensibles</th>
+        <th>Antibiotique</th><th>${T("Testés", "Tested")}</th><th>Sensibles</th><th>% sensibles</th>
       </tr></thead><tbody>`;
     codes.forEach(k=>{
       const a = s.abx[k];
@@ -5981,7 +6111,7 @@ function survConstruireRapport(){
     let s = `<div class="cqr-bloc"><div class="cqr-bloc-h"><b>${esc(titre)}</b>
       <span class="cqr-etat ${assez?"ok":"hors"}">${n} isolat${n>1?"s":""}${assez?"":" — sous le seuil M39"}</span></div>`;
     if(sous) s += `<div class="cqr-bloc-m">${esc(sous)}</div>`;
-    s += `<table class="rp-table"><thead><tr><th>Antibiotique</th><th>Testés</th>
+    s += `<table class="rp-table"><thead><tr><th>Antibiotique</th><th>${T("Testés", "Tested")}</th>
       <th>Sensibles</th><th>% sensibles</th></tr></thead><tbody>`;
     codes.forEach(k=>{
       const a = abx[k];
@@ -6002,43 +6132,54 @@ function survConstruireRapport(){
     const s = par[nom];
     const esp = Object.keys(s.especes).sort((a,b)=>s.especes[b]-s.especes[a])
       .slice(0,3).map(id=>survNomEspece(id) + " (" + s.especes[id] + ")").join(", ");
-    return tableau(nom, s.n, s.abx, s.n >= SURV_MIN, esp ? "Principales espèces : " + esp + "." : "");
+    return tableau(nom, s.n, s.abx, s.n >= SURV_MIN,
+                   esp ? T("Principales espèces : ", "Main species: ") + esp + "." : "");
   }).join("");
 
   document.getElementById("report").innerHTML = "";
   document.getElementById("cqReport").innerHTML = `
     <div class="rp-head">
-      <div class="rp-brand">Phéno<b>Bac</b><span>Antibiogramme cumulatif — surveillance locale</span></div>
-      <div class="rp-date">Édité le ${esc(now.toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}))}</div>
+      <div class="rp-brand">Phéno<b>Bac</b><span>${T("Antibiogramme cumulatif — surveillance locale", "Cumulative antibiogram — local surveillance")}</span></div>
+      <div class="rp-date">${T("Édité le ", "Issued on ")}${esc(now.toLocaleDateString(_L.estAnglais()?"en-GB":"fr-FR",{day:"2-digit",month:"long",year:"numeric"}))}</div>
     </div>
     <table class="rp-meta">
-      <tr><th>Laboratoire</th><td>${esc(labo) || "…………………………………………"}</td>
-          <th>Période couverte</th><td>${esc(dates[0]||"—")} au ${esc(dates[dates.length-1]||"—")}</td></tr>
-      <tr><th>Isolats</th><td>${reg.length} enregistrés, ${dedup.length} après déduplication</td>
-          <th>Référentiel</th><td>${esc(refLibelle())}</td></tr>
+      <tr><th>${T("Laboratoire", "Laboratory")}</th><td>${esc(labo) || "…………………………………………"}</td>
+          <th>${T("Période couverte", "Period covered")}</th><td>${esc(dates[0]||"—")}${T(" au ", " to ")}${esc(dates[dates.length-1]||"—")}</td></tr>
+      <tr><th>${T("Isolats", "Isolates")}</th><td>${reg.length}${T(" enregistrés, ", " recorded, ")}${dedup.length}${T(" après déduplication", " after deduplication")}</td>
+          <th>${T("Référentiel", "Standard")}</th><td>${esc(refLibelle())}</td></tr>
     </table>
     <div class="rp-legende">
-      <b>Comment lire ces taux.</b> La déduplication retient le <b>premier isolat par patient et
+      ${T(`<b>Comment lire ces taux.</b> La déduplication retient le <b>premier isolat par patient et
       par espèce</b> sur l'année (CLSI M39) : sans elle, un patient prélevé chaque semaine pèserait
       dix fois et ferait chuter les taux sans qu'aucune épidémie n'ait eu lieu. Le CLSI demande au
       moins ${SURV_MIN} isolats pour qu'un taux soit publiable ; les séries en dessous sont portées
       ici — les taire priverait d'une information qui existe — mais marquées. Chaque pourcentage
-      est accompagné de son effectif : un pourcentage sans dénominateur est un mensonge poli.
+      est accompagné de son effectif : un pourcentage sans dénominateur est un mensonge poli.`,
+        `<b>How to read these rates.</b> Deduplication keeps the <b>first isolate per patient and per
+      species</b> over the year (CLSI M39): without it, a patient sampled every week would weigh ten
+      times over and would drag the rates down with no outbreak having taken place. CLSI asks for at
+      least ${SURV_MIN} isolates before a rate can be published; series below that are shown here —
+      withholding them would deny information that exists — but marked. Every percentage comes with
+      its denominator: a percentage without one is a polite lie.`)}
     </div>
-    ${parEspece ? `<div class="rp-sect-t">Par espèce</div>${parEspece}` : ""}
-    ${parService ? `<div class="rp-sect-t">Par service demandeur</div>${parService}` : ""}
+    ${parEspece ? `<div class="rp-sect-t">${T("Par espèce", "By species")}</div>${parEspece}` : ""}
+    ${parService ? `<div class="rp-sect-t">${T("Par service demandeur", "By requesting ward")}</div>${parService}` : ""}
     <div class="rp-sign">
-      <div class="rp-sig-line"><span class="rp-sig-lab">Biologiste responsable</span>
+      <div class="rp-sig-line"><span class="rp-sig-lab">${T("Biologiste responsable", "Responsible clinical microbiologist")}</span>
         <span class="rp-sig-val">…………………………………………</span></div>
-      <div class="rp-sig-line"><span class="rp-sig-lab">Date / signature</span>
+      <div class="rp-sig-line"><span class="rp-sig-lab">${T("Date / signature", "Date / signature")}</span>
         <span class="rp-sig-val">…………………………………………</span></div>
     </div>
     <div class="rp-foot">
-      <b class="rp-avert">&#9888; Avertissement</b>
-      Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.
+      <b class="rp-avert">&#9888; ${T("Avertissement", "Warning")}</b>
+      ${T(`Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.
       Ces taux décrivent les souches isolées par ce laboratoire ; ils orientent une
       antibiothérapie probabiliste, ils ne la prescrivent pas. Un antibiogramme cumulatif
-      ne remplace pas l'antibiogramme du malade.
+      ne remplace pas l'antibiogramme du malade.`,
+        `A tool for guidance and training — not an in vitro diagnostic medical device.
+      These rates describe the isolates this laboratory has recovered; they guide empirical
+      treatment, they do not prescribe it. A cumulative antibiogram does not replace the
+      patient's own antibiogram.`)}
       <br>PhénoBac ${esc(PHENOBAC_VERSION)} · ${esc(refLibelle())} · base ${esc(baseVersion())}.
     </div>`;
   return true;
@@ -6047,7 +6188,7 @@ function survConstruireRapport(){
 function survImprimer(){
   if(!survConstruireRapport()){
     const e = $("#survAvis");
-    if(e){ e.textContent = "Registre vide : rien à imprimer."; e.className = "surv-avis hors"; }
+    if(e){ e.textContent = T("Registre vide : rien à imprimer.", "The register is empty: nothing to print."); e.className = "surv-avis hors"; }
     return;
   }
   window.print();
@@ -6259,7 +6400,7 @@ function buildReport(A){
       </tr>`;
     });
   });
-  if(!rows) rows=`<tr><td colspan="5" style="color:#777">Aucun résultat saisi.</td></tr>`;
+  if(!rows) rows=`<tr><td colspan="5" style="color:#777">${T("Aucun résultat saisi.", "No result entered.")}</td></tr>`;
 
   // Lecture interprétative : le compte-rendu porte le résultat rendu ET le
   // résultat brut. Un clinicien doit pouvoir voir que la catégorie a été
@@ -6300,39 +6441,46 @@ function buildReport(A){
      laisserait croire que les molécules n'ont pas été testées — et le
      clinicien ne saurait pas qu'il peut en demander davantage. */
   const rcLigne = (rcR && rcR.applique)
-    ? `<div class="rp-sect-t">Rendu ciblé</div>
-       <div class="rp-legende"><b>Antibiogramme ciblé</b>
+    ? `<div class="rp-sect-t">${T("Rendu ciblé", "Targeted reporting")}</div>
+       <div class="rp-legende"><b>${T("Antibiogramme ciblé", "Targeted antibiogram")}</b>
        ${esc(rcR.titre)} — ${esc(RC_COLONNE_DIT[rcR.colonne] || rcR.colonne)}.
        ${rcR.masquees.length
-          ? `${rcR.masquees.length} molécule${rcR.masquees.length>1?"s":""} testée${rcR.masquees.length>1?"s":""}
-             n'${rcR.masquees.length>1?"ont":"a"} pas été rendue${rcR.masquees.length>1?"s":""} :
-             ${esc(rcR.masquees.map(k=>nomAbx(k)).join(", "))}.`
-          : `Dans ce profil, toutes les molécules testées figurent sur la feuille.`}
+          ? (_L.estAnglais()
+              ? `${rcR.masquees.length} agent${rcR.masquees.length>1?"s":""} tested ${rcR.masquees.length>1?"were":"was"}
+                 not reported: ${esc(rcR.masquees.map(k=>nomAbx(k)).join(", "))}.`
+              : `${rcR.masquees.length} molécule${rcR.masquees.length>1?"s":""} testée${rcR.masquees.length>1?"s":""}
+                 n'${rcR.masquees.length>1?"ont":"a"} pas été rendue${rcR.masquees.length>1?"s":""} :
+                 ${esc(rcR.masquees.map(k=>nomAbx(k)).join(", "))}.`)
+          : T("Dans ce profil, toutes les molécules testées figurent sur la feuille.",
+              "In this profile, every agent tested appears on the sheet.")}
        ${(rcR.commentaires||[]).some(c=>/complet reste disponible/.test(c.texte))
-          ? "" : `<b>L'antibiogramme complet reste disponible sur demande auprès du laboratoire.</b>`}
-       ${rcR.plancher ? `<br><b>Masquage levé :</b> ${esc(rcR.plancher)}` : ""}
-       Règle locale du laboratoire, fondée sur : ${esc(rcR.source||"")}.
+          ? "" : `<b>${T("L'antibiogramme complet reste disponible sur demande auprès du laboratoire.",
+                           "The full antibiogram remains available from the laboratory on request.")}</b>`}
+       ${rcR.plancher ? `<br><b>${T("Masquage levé :", "Suppression lifted:")}</b> ${esc(rcR.plancher)}` : ""}
+       ${T("Règle locale du laboratoire, fondée sur : ", "A local laboratory rule, based on: ")}${esc(rcR.source||"")}.
        ${(rcR.commentaires||[]).length
           ? `<ul class="rp-com">` + rcR.commentaires.map(c=>`<li>${esc(c.texte)}</li>`).join("") + `</ul>`
           : ""}</div>`
     : "";
 
   const sevLbl = sevLibelle(A.sev);
-  const modeLbl = state.mode==="mic"  ? "CMI (mg/L) → catégorisation automatique"
-                : state.mode==="diam" ? "Diamètres (mm), méthode des disques → catégorisation automatique"
-                : "Catégoriel (S / I / R)";
+  const modeLbl = state.mode==="mic"  ? T("CMI (mg/L) → catégorisation automatique",
+                                          "MIC (mg/L) → automatic categorisation")
+                : state.mode==="diam" ? T("Diamètres (mm), méthode des disques → catégorisation automatique",
+                                          "Zone diameters (mm), disc method → automatic categorisation")
+                : T("Catégoriel (S / I / R)", "Categorical (S / I / R)");
 
   document.getElementById("report").innerHTML = `
     <div class="rp-head">
-      <div class="rp-brand">Phéno<b>Bac</b><span>Compte-rendu d'interprétation d'antibiogramme</span></div>
-      <div class="rp-date">Édité le ${dateStr}</div>
+      <div class="rp-brand">Phéno<b>Bac</b><span>${T("Compte-rendu d'interprétation d'antibiogramme", "Antibiogram interpretation report")}</span></div>
+      <div class="rp-date">${T("Édité le ", "Issued on ")}${dateStr}</div>
     </div>
 
     <table class="rp-meta">
-      <tr><th>Espèce identifiée</th><td class="${org.italic?'ital':''}">${esc(org.label)}</td>
-          <th>Prélèvement</th><td>${esc($("#specimen").value)}</td></tr>
-      <tr><th>Identification</th><td>${esc(state.meta.idEch)||"—"}</td>
-          <th>Mode de saisie</th><td>${modeLbl}</td></tr>
+      <tr><th>${T("Espèce identifiée", "Species identified")}</th><td class="${org.italic?'ital':''}">${esc(org.label)}</td>
+          <th>${T("Prélèvement", "Specimen")}</th><td>${esc($("#specimen").value)}</td></tr>
+      <tr><th>${T("Identification", "Identification")}</th><td>${esc(state.meta.idEch)||"—"}</td>
+          <th>${T("Mode de saisie", "Entry mode")}</th><td>${modeLbl}</td></tr>
     </table>
 
     <div class="rp-verdict rp-${A.sev}">
@@ -6341,75 +6489,92 @@ function buildReport(A){
           (!A.confirmation && A.aConfirmerPar) ? `<span class="rp-prov rp-prov-x">${esc(PROV_CONFIRM)}</span>` : ""}</div>
       <div class="rp-vname">${esc(A.name)}</div>
       <div class="rp-vmech">${esc(A.mech)}</div>
-      ${A.confirmation?`<div class="rp-vconf">Confirmé par : ${esc(A.confirmation)}.</div>`:""}
-      ${!A.confirmation && A.aConfirmerPar?`<div class="rp-vconf">Hypothèse non confirmée. Pour trancher : ${esc(A.aConfirmerPar)}.</div>`:""}
+      ${A.confirmation?`<div class="rp-vconf">${T("Confirmé par : ", "Confirmed by: ")}${esc(A.confirmation)}.</div>`:""}
+      ${!A.confirmation && A.aConfirmerPar?`<div class="rp-vconf">${T("Hypothèse non confirmée. Pour trancher : ", "Hypothesis not confirmed. To settle it: ")}${esc(A.aConfirmerPar)}.</div>`:""}
     </div>
 
-    <div class="rp-sect-t">Antibiogramme</div>
+    <div class="rp-sect-t">${T("Antibiogramme", "Antibiogram")}</div>
     <div class="rp-legende">
-      <b>Provenance des données.</b>
-      <span class="rp-prov rp-prov-m">${esc(PROV_MESURE)}</span> donnée de paillasse — diamètre, CMI,
-      ou catégorie relevée directement ; PhénoBac ne la produit pas.
-      <span class="rp-prov rp-prov-c">${esc(PROV_CALCUL)}</span> catégorie obtenue en appliquant la
-      concentration critique du référentiel à la valeur mesurée.
-      <span class="rp-prov rp-prov-i">${esc(PROV_INTERP)}</span> catégorie modifiée par la lecture
-      interprétative, ou phénotype déduit du profil — un raisonnement, pas une mesure.
-      <span class="rp-prov rp-prov-x">${esc(PROV_CONFIRM)}</span> ce qui ne tient pas seul : zone
-      d'incertitude technique, seuil conventionnel, ou hypothèse qu'aucun test n'a tranchée.
+      <b>${T("Provenance des données.", "Where each value comes from.")}</b>
+      <span class="rp-prov rp-prov-m">${esc(PROV_MESURE)}</span> ${T(`donnée de paillasse — diamètre, CMI,
+      ou catégorie relevée directement ; PhénoBac ne la produit pas.`,
+        `a bench value — a zone diameter, an MIC, or a category read directly; PhénoBac does not
+      produce it.`)}
+      <span class="rp-prov rp-prov-c">${esc(PROV_CALCUL)}</span> ${T(`catégorie obtenue en appliquant la
+      concentration critique du référentiel à la valeur mesurée.`,
+        `a category obtained by applying the standard's breakpoint to the measured value.`)}
+      <span class="rp-prov rp-prov-i">${esc(PROV_INTERP)}</span> ${T(`catégorie modifiée par la lecture
+      interprétative, ou phénotype déduit du profil — un raisonnement, pas une mesure.`,
+        `a category changed by interpretive reading, or a phenotype inferred from the profile — a
+      line of reasoning, not a measurement.`)}
+      <span class="rp-prov rp-prov-x">${esc(PROV_CONFIRM)}</span> ${T(`ce qui ne tient pas seul : zone
+      d'incertitude technique, seuil conventionnel, ou hypothèse qu'aucun test n'a tranchée.`,
+        `what does not stand on its own: an area of technical uncertainty, a conventional breakpoint,
+      or a hypothesis no test has settled.`)}
     </div>
     <table class="rp-table">
-      <thead><tr><th>Antibiotique</th><th>${esc(enteteMesure())}</th><th>Cat.</th>
-        <th>Interprétation</th><th>Provenance</th></tr></thead>
+      <thead><tr><th>${T("Antibiotique", "Antibiotic")}</th><th>${esc(enteteMesure())}</th><th>${T("Cat.", "Cat.")}</th>
+        <th>${T("Interprétation", "Interpretation")}</th><th>${T("Provenance", "Source")}</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
 
     ${rows.indexOf("rp-poso") !== -1 ? `<div class="rp-legende rp-poso-note">
-      <b>Posologies.</b> Chaque schéma est celui pour lequel la concentration
+      ${T(`<b>Posologies.</b> Chaque schéma est celui pour lequel la concentration
       critique a été établie, repris mot pour mot du référentiel.
       <b>Seuil établi pour ce schéma : l'adaptation au malade — poids, fonction
       rénale, âge, grossesse — relève du prescripteur.</b> PhénoBac n'est pas un
       outil de prescription : il ne choisit pas entre deux molécules et ne
-      propose aucune durée de traitement.</div>` : ""}
+      propose aucune durée de traitement.`,
+        `<b>Dosages.</b> Each regimen is the one for which the breakpoint was
+      established, quoted word for word from the standard.
+      <b>The breakpoint was set for this regimen: adapting it to the patient —
+      weight, renal function, age, pregnancy — is the prescriber's business.</b>
+      PhénoBac is not a prescribing tool: it does not choose between two agents
+      and proposes no duration of treatment.`)}</div>` : ""}
     ${rcLigne}
-    ${condLigne ? `<div class="rp-sect-t">Conditions de réalisation déclarées</div>
+    ${condLigne ? `<div class="rp-sect-t">${T("Conditions de réalisation déclarées", "Declared testing conditions")}</div>
       <div class="rp-cond">${condLigne}</div>` : ""}
-    ${lect?`<div class="rp-sect-t">Lecture interprétative — catégories modifiées</div><ul class="rp-list">${lect}</ul>`:""}
-    ${alerts?`<div class="rp-sect-t">Alertes et cohérence</div><ul class="rp-list">${alerts}</ul>`:""}
-    ${rules?`<div class="rp-sect-t">Règles expertes appliquées</div><ul class="rp-list">${rules}</ul>`:""}
+    ${lect?`<div class="rp-sect-t">${T("Lecture interprétative — catégories modifiées", "Interpretive reading — categories changed")}</div><ul class="rp-list">${lect}</ul>`:""}
+    ${alerts?`<div class="rp-sect-t">${T("Alertes et cohérence", "Alerts and consistency")}</div><ul class="rp-list">${alerts}</ul>`:""}
+    ${rules?`<div class="rp-sect-t">${T("Règles expertes appliquées", "Expert rules applied")}</div><ul class="rp-list">${rules}</ul>`:""}
 
-    <div class="rp-sect-t">Commentaire d'interprétation
+    <div class="rp-sect-t">${T("Commentaire d'interprétation", "Interpretation comment")}
       <span class="rp-prov rp-prov-i">${esc(PROV_INTERP)}</span></div>
     <div class="rp-comment">${esc(A.commentaireCopiable || A.comment)}</div>
 
     <div class="rp-sign">
       <div class="rp-sig-line">
-        <span class="rp-sig-lab">Validation biologique</span>
+        <span class="rp-sig-lab">${T("Validation biologique", "Biological validation")}</span>
         <span class="rp-sig-val">${esc(state.meta.valideur)||"…………………………………………"}</span>
       </div>
       <div class="rp-sig-line">
-        <span class="rp-sig-lab">Date / signature</span>
+        <span class="rp-sig-lab">${T("Date / signature", "Date / signature")}</span>
         <span class="rp-sig-val">…………………………………………</span>
       </div>
     </div>
 
     <div class="rp-foot">
-      <b class="rp-avert">&#9888; Avertissement</b>
-      Interprétation d'orientation produite par PhénoBac, outil d'aide et de formation —
+      <b class="rp-avert">&#9888; ${T("Avertissement", "Warning")}</b>
+      ${T(`Interprétation d'orientation produite par PhénoBac, outil d'aide et de formation —
       pas un dispositif médical de diagnostic in vitro.
-      Ce document ne remplace pas la validation biologique ni les tests de confirmation.
-      <br><b>Pour reproduire ce rendu :</b> PhénoBac ${esc(PHENOBAC_VERSION)} ·
+      Ce document ne remplace pas la validation biologique ni les tests de confirmation.`,
+        `An orienting interpretation produced by PhénoBac, a tool for guidance and training —
+      not an in vitro diagnostic medical device.
+      This document does not replace biological validation or the confirmatory tests.`)}
+      <br><b>${T("Pour reproduire ce rendu :", "To reproduce this report:")}</b> PhénoBac ${esc(PHENOBAC_VERSION)} ·
       ${esc(refLibelle())}, publié le ${esc(refPublie())} ·
       ${T("base de connaissances", "knowledge base")} ${esc(baseVersion())}.
-      Les concentrations critiques sont paramétrables et doivent être vérifiées sur le référentiel en vigueur.
+      ${T("Les concentrations critiques sont paramétrables et doivent être vérifiées sur le référentiel en vigueur.",
+          "The breakpoints are editable and must be checked against the standard in force.")}
     </div>`;
 }
 
 /* L'en-tête de la colonne de mesure annonçait « CMI » quel que soit le mode :
    en saisie de diamètres, elle surmontait des millimètres. */
 function enteteMesure(){
-  return state.mode==="mic"  ? "CMI (mg/L)"
-       : state.mode==="diam" ? "Diamètre (mm)"
-       : "Mesure";
+  return state.mode==="mic"  ? T("CMI (mg/L)", "MIC (mg/L)")
+       : state.mode==="diam" ? T("Diamètre (mm)", "Zone diameter (mm)")
+       : T("Mesure", "Measurement");
 }
 
 function exportPDF(){
@@ -6884,14 +7049,36 @@ const QUIZ_BANK_EN = {
                « CMI requises »
    ============================================================ */
 const NIVEAUX = ["debutant", "technicien", "biologiste", "expert"];
-const NIVEAU_NOM = { debutant:"Débutant", technicien:"Technicien",
-                     biologiste:"Biologiste", expert:"Expert" };
-const NIVEAU_DIT = {
+/* Les quatre niveaux : la CLÉ sert au tri et à l'historique, le libellé
+   s'affiche. Même modèle que le niveau de confiance et la gravité. */
+const NIVEAU_NOM_FR = { debutant:"Débutant", technicien:"Technicien",
+                        biologiste:"Biologiste", expert:"Expert" };
+const NIVEAU_NOM_EN = { debutant:"Beginner", technicien:"Technician",
+                        biologiste:"Microbiologist", expert:"Expert" };
+const NIVEAU_NOM = new Proxy({}, {
+  get: function (_, k) {
+    return (_L.estAnglais() ? NIVEAU_NOM_EN[k] : NIVEAU_NOM_FR[k]) || NIVEAU_NOM_FR[k];
+  },
+  has: function (_, k) { return k in NIVEAU_NOM_FR; }
+});
+const NIVEAU_DIT_FR = {
   debutant:   "Un seul élément porte la réponse.",
   technicien: "Un test complémentaire tranche : encore faut-il le lire.",
   biologiste: "Deux mécanismes se ressemblent : il faut les séparer.",
   expert:     "Le référentiel entre en jeu, ou la bonne réponse est de ne pas conclure."
 };
+const NIVEAU_DIT_EN = {
+  debutant:   "A single finding carries the answer.",
+  technicien: "A complementary test settles it — provided you read it.",
+  biologiste: "Two mechanisms look alike: they have to be separated.",
+  expert:     "The standard comes into play, or the right answer is not to conclude."
+};
+const NIVEAU_DIT = new Proxy({}, {
+  get: function (_, k) {
+    return (_L.estAnglais() ? NIVEAU_DIT_EN[k] : NIVEAU_DIT_FR[k]) || NIVEAU_DIT_FR[k];
+  },
+  has: function (_, k) { return k in NIVEAU_DIT_FR; }
+});
 
 function niveauDuCas(c){
   if(c.niveau) return c.niveau;                       // un cas peut imposer le sien
@@ -7361,7 +7548,7 @@ function answerQuiz(selected, isQ2){
   const hasQ2 = c.q2 && !isQ2;
   const last = quiz.idx>=quiz.queue.length-1;
   const actionBtn = hasQ2
-    ? `<button class="q-next" id="qContinue">Question de rendu →</button>`
+    ? `<button class="q-next" id="qContinue">${T("Question de rendu →", "Reporting question →")}</button>`
     : `<button class="q-next" id="qNext">${last?T("Voir le résultat","See the result"):T("Cas suivant →","Next case →")}</button>`;
 
   const detail = isQ2
@@ -7423,8 +7610,10 @@ function renderCorrection(){
   if(!r.length) return "";
   const rates = r.filter(x=>!x.bonne).length;
   let h = `<div class="corr">
-    <div class="corr-h">Correction détaillée
-      <span>${r.length} question${r.length>1?"s":""} · ${rates} manquée${rates>1?"s":""}</span></div>`;
+    <div class="corr-h">${T("Correction détaillée", "Detailed marking")}
+      <span>${_L.estAnglais()
+        ? `${r.length} question${r.length>1?"s":""} · ${rates} missed`
+        : `${r.length} question${r.length>1?"s":""} · ${rates} manquée${rates>1?"s":""}`}</span></div>`;
   r.forEach((e,i)=>{
     h += `<div class="corr-c ${e.bonne?"ok":"no"}">
       <div class="corr-t">
@@ -7560,7 +7749,7 @@ function renderBankManager(){
         <summary><span class="caret">▸</span><span>${T("Gérer la banque", "Manage the bank")} — <span style="color:var(--gold-deep)">Premium 🔒</span></span></summary>
         <div class="bank-body">
           <div class="modal-lead" style="margin-top:12px">${T("Créez vos propres cas, importez et exportez des banques pour vos étudiants avec PhénoBac Premium. En version gratuite, vous vous entraînez sur les cas intégrés.", "Create your own cases, and import and export banks for your students with PhénoBac Premium. In the free version you practise on the built-in cases.")}</div>
-          <button class="bank-add" id="bankUpgrade">Passer à Premium</button>
+          <button class="bank-add" id="bankUpgrade">${T("Passer à Premium", "Go Premium")}</button>
         </div>
       </details>`;
     const up=$("#bankUpgrade"); if(up) up.onclick=()=>openUpgrade("La banque d'entraînement est gratuite comme le reste. Si ce message s'affiche, signalez-le : c'est un défaut.");
@@ -7629,7 +7818,7 @@ function renderBankManager(){
         <div class="bank-sub">${T("Partager la banque", "Share the bank")}</div>
         <div class="bank-io">
           <button class="io-btn" id="bankExport">⭳ Exporter mes cas (JSON)</button>
-          <label class="io-btn" style="cursor:pointer">⭱ Importer un fichier
+          <label class="io-btn" style="cursor:pointer">⭱ ${T("Importer un fichier", "Import a file")}
             <input type="file" id="bankImport" accept="application/json,.json" hidden>
           </label>
         </div>
@@ -8083,8 +8272,10 @@ function renderIdent(){
     html += `</div>`;
   } else if(tete.length >= 2 && exaequo.length >= 2){
     html += `<div class="id-separe"><b>${T("Aucun test disponible ne les sépare.", "No available test separates them.")}</b>
-      Les caractères de cette application ne suffisent pas ici : il faut une galerie complète
-      ou une spectrométrie de masse.</div>`;
+      ${T(`Les caractères de cette application ne suffisent pas ici : il faut une galerie complète
+      ou une spectrométrie de masse.`,
+        `The characters this application carries are not enough here: a full gallery or mass
+      spectrometry is needed.`)}</div>`;
   }
 
   html += `<div class="id-note">${T('Identification <b>présumée</b>, fondée sur les tests saisis. À confirmer par une méthode de référence (galerie complète, spectrométrie MALDI-TOF) avant validation clinique.', 'A <b>presumptive</b> identification, based on the tests entered. To be confirmed by a reference method (a full gallery, MALDI-TOF mass spectrometry) before clinical validation.')}</div>`;
@@ -8145,7 +8336,7 @@ renderRenduCible();
 function renderNiveaux(){
   const el = $("#quizNiveaux"); if(!el) return;
   const p = quizProgres();
-  let h = `<button data-niv="" class="${quiz.niveau?"":"on"}">Tous les cas
+  let h = `<button data-niv="" class="${quiz.niveau?"":"on"}">${T("Tous les cas", "All cases")}
       <span>${allCases().length}</span></button>`;
   NIVEAUX.forEach(n=>{
     const nb = casDuNiveau(n).length, e = p[n];
@@ -8172,7 +8363,7 @@ function renderQuizHisto(){
     const d = new Date(e.quand);
     const quand = isNaN(d) ? String(e.quand).slice(0,10)
       : d.toLocaleDateString("fr-FR") + " " + d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"});
-    const niv = e.niveau ? (NIVEAU_NOM[e.niveau] || e.niveau) : "Tous les cas";
+    const niv = e.niveau ? (NIVEAU_NOM[e.niveau] || e.niveau) : T("Tous les cas", "All cases");
     return `<div class="qh-l">
         <span class="qh-d">${esc(quand)}</span>
         <span class="qh-q">${esc(MODE_NOM[e.mode] || e.mode)} · ${esc(niv)}${e.examen?`<span class="qh-ex">examen</span>`:""}</span>
@@ -8214,7 +8405,7 @@ function quizExporterHisto(){
   const corps = h.map(e=>[
     e.quand, String(e.quand).slice(0,10),
     MODE_NOM[e.mode] || e.mode,
-    e.niveau ? (NIVEAU_NOM[e.niveau] || e.niveau) : "tous",
+    e.niveau ? (NIVEAU_NOM[e.niveau] || e.niveau) : T("tous", "all"),
     e.examen ? "oui" : "non",
     e.score, e.total, e.total ? Math.round(e.score/e.total*100) : ""
   ].map(ech).join(";"));
@@ -8310,11 +8501,11 @@ function closeUpgrade(){ $("#upgradeModal").classList.remove("open"); }
 
 async function activate(){
   const key=($("#licenseInput").value||"").trim();
-  if(!key){ $("#modalErr").textContent="Saisissez votre clé de licence."; return; }
+  if(!key){ $("#modalErr").textContent=T("Saisissez votre clé de licence.", "Enter your licence key."); return; }
 
   const btn=$("#activateBtn");
   btn.disabled=true;
-  $("#modalErr").textContent="Vérification…";
+  $("#modalErr").textContent=T("Vérification…", "Checking…");
   try{
     const r = await fetch(LICENSE_FN, {
       method:"POST", headers:{"Content-Type":"application/json"},
@@ -8336,7 +8527,8 @@ async function activate(){
         "Clé non valide. Vérifiez la saisie.";
     }
   }catch(e){
-    $("#modalErr").textContent="Vérification impossible : une connexion est requise pour activer.";
+    $("#modalErr").textContent=T("Vérification impossible : une connexion est requise pour activer.",
+      "Cannot check: a connection is required to activate.");
   }finally{
     btn.disabled=false;
   }
@@ -8392,10 +8584,20 @@ modeSeg.querySelectorAll("button").forEach(b=>{
 
 /* --- référentiel appliqué --- */
 const refSeg = $("#refSeg"), refHintEl = $("#refHint");
-const REF_HINT = {
+const REF_HINT_FR = {
   eucast: "Seuils et règles de lecture de l'EUCAST, tels que publiés.",
   casfm:  "EUCAST plus les différences françaises du CA-SFM 2026 : seuils déplacés et lecture interprétative des BLSE et carbapénémases."
 };
+const REF_HINT_EN = {
+  eucast: "EUCAST breakpoints and reading rules, exactly as published.",
+  casfm:  "EUCAST plus the French differences of CA-SFM 2026: breakpoints moved, and interpretive reading of ESBLs and carbapenemases."
+};
+const REF_HINT = new Proxy({}, {
+  get: function (_, k) {
+    return (_L.estAnglais() ? REF_HINT_EN[k] : REF_HINT_FR[k]) || REF_HINT_FR[k];
+  },
+  has: function (_, k) { return k in REF_HINT_FR; }
+});
 function renderRefToggle(){
   if(!refSeg) return;
   refSeg.querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.r===REF_ACTIF));
@@ -8568,7 +8770,7 @@ var PRESENTATIONS = {
     etapes: [
       `<b>Le registre se remplit depuis l'onglet Interprétation.</b>
        Bouton <span class="ge-ref">Verser à la surveillance</span> sous le commentaire. L'isolat est
-       enregistré <b>même sans réseau</b> ; la transmission à GLASS suit quand la connexion revient.`,
+       enregistré <b>${T("même sans réseau", "even with no network")}</b> ; la transmission à GLASS suit quand la connexion revient.`,
       `<b>Un patient ne compte qu'une fois.</b>
        Le premier isolat par patient et par espèce sur l'année. Sans cette règle, un malade
        hospitalisé longtemps et prélevé chaque semaine pèserait dix fois — et ses souches répétées
@@ -8981,7 +9183,8 @@ function majMentionsReferentiel(){
   // Le repère de l'accueil est composé par renderIntro, avec le reste.
   if(typeof renderIntro === "function") renderIntro();
   const foot = $("#footRef");
-  if(foot) foot.textContent = "celles du référentiel " + refLibelle() + ", publié en " + refDate();
+  if(foot) foot.textContent = T("celles du référentiel ", "those of the ") + refLibelle()
+    + T(", publié en ", " standard, published in ") + refDate();
   const hors = $("#footHors");
   if(hors) hors.textContent = libelleHors();
   // « l'EUCAST » / « le CA-SFM » : l'article se lit dans la phrase du pied
