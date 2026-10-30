@@ -21,6 +21,8 @@
 //   ctx {...},                      // tests complémentaires, site, et § 9 :
 //                                   // conditions de réalisation déclarées
 //   ref: "eucast" | "casfm",        // référentiel appliqué ; défaut eucast
+//   lang: "fr" | "en",              // langue du rendu ; défaut fr, JAMAIS héritée
+//                                   // de la requête précédente (voir plus bas)
 //   renduCible: true | false        // politique du laboratoire : rendre une
 //                                   // partie seulement des antibiotiques testés
 //                                   // (HAS 2023). Défaut false — sans décision,
@@ -101,7 +103,13 @@ exports.handler = async (event) => {
   }
 
   // 2. calcul (gratuit : ouvert ; premium : compte payant non révoqué)
-  const out = runInterpretation(body);
+  /* LA LANGUE EST POSÉE À CHAQUE REQUÊTE, ET SON DÉFAUT EST EXPLICITE.
+     Le moteur garde sa langue dans un état de module. Sur un conteneur tiède
+     — le cas normal — une requête sans « lang » aurait hérité de la langue
+     de l'appelante PRÉCÉDENTE : un laboratoire francophone pouvait recevoir
+     un compte rendu en anglais parce qu'un autre venait d'en demander un.
+     On ne laisse donc jamais la langue non dite. */
+  const out = runInterpretation(Object.assign({}, body, { lang: body.lang === "en" ? "en" : "fr" }));
   if (out.error) return { statusCode: 400, headers: CORS, body: JSON.stringify({ valid: true, error: out.error }) };
 
   return {

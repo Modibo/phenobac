@@ -228,6 +228,45 @@ def main():
     if not oublies and not modes_oublies:
         dits.append("le contrat écrit en tête de la porte décrit la requête réellement envoyée.")
 
+    # --- LA LANGUE DOIT VOYAGER AVEC CHAQUE DEMANDE ---
+    #
+    # La porte HTTP exécute SA PROPRE copie de moteur.js, dans son propre
+    # module. La langue du moteur est un état de module : la porte ne sait
+    # rien de celle de la page.
+    #
+    # Deux défauts, trouvés en production le 30 octobre 2026 :
+    #   1. la correction du quiz passait par la porte SANS « lang », et
+    #      s'affichait en français au milieu d'une séance en anglais ;
+    #   2. sur un conteneur tiède — le cas normal — une requête sans « lang »
+    #      aurait hérité de la langue de l'appelante PRÉCÉDENTE. Un
+    #      laboratoire francophone pouvait recevoir un compte rendu en
+    #      anglais parce qu'un autre venait d'en demander un.
+    #
+    # On exige donc que CHAQUE appel à interpretRemote porte « lang », et que
+    # la porte ne laisse jamais la langue non dite.
+    appels = re.findall(r"interpretRemote\(\s*\{(.*?)\}\s*\)", page, re.S)
+    sansLangue = [a for a in appels if "lang" not in a]
+    if not appels:
+        ecarts.append("aucun appel à interpretRemote({...}) relevé dans la page : "
+                      "l'écriture de l'appel a changé et ce contrôle ne voit plus rien.")
+    elif sansLangue:
+        ecarts.append("%d des %d appels à la porte ne portent pas « lang » : la porte "
+                      "exécute sa propre copie du moteur et répondrait dans la langue "
+                      "de la requête précédente. Premier fautif : « %s »."
+                      % (len(sansLangue), len(appels),
+                         " ".join(sansLangue[0].split())[:90]))
+    else:
+        dits.append("les %d appels à la porte portent tous « lang » : la réponse ne peut "
+                    "pas hériter de la langue d'un autre laboratoire." % len(appels))
+
+    if 'lang: body.lang === "en" ? "en" : "fr"' not in porte:
+        ecarts.append("la porte ne pose plus explicitement la langue du moteur. Le "
+                      "moteur la garde dans un état de module : sur un conteneur tiède, "
+                      "une requête sans « lang » rendrait la langue de la précédente.")
+    else:
+        dits.append("la porte pose la langue à chaque requête, avec un défaut explicite — "
+                    "jamais celle héritée de l'appel précédent.")
+
     if ecarts:
         print("LE RACCORD NE TIENT PLUS :")
         for e in ecarts:

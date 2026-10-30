@@ -5286,9 +5286,9 @@ async function renderInterpretRemote(){
     const ctxEnvoi = Object.assign({}, state.ctx,
       { prelevement: $("#specimen") ? $("#specimen").value : "" });
     const envoi =
-      state.mode==="mic"  ? { organism:state.org, mode:"mic",  mic:state.mic,   bpOverride:state.bpOverride, ctx:ctxEnvoi, ref:REF_ACTIF, renduCible:renduCibleActif() } :
-      state.mode==="diam" ? { organism:state.org, mode:"diam", diam:state.diam, bpOverride:state.bpOverride, ctx:ctxEnvoi, ref:REF_ACTIF, renduCible:renduCibleActif() } :
-                            { organism:state.org, mode:"sir",  results:state.results, ctx:ctxEnvoi, ref:REF_ACTIF, renduCible:renduCibleActif() };
+      state.mode==="mic"  ? { organism:state.org, mode:"mic",  mic:state.mic,   bpOverride:state.bpOverride, ctx:ctxEnvoi, lang:_L.courante(), ref:REF_ACTIF, renduCible:renduCibleActif() } :
+      state.mode==="diam" ? { organism:state.org, mode:"diam", diam:state.diam, bpOverride:state.bpOverride, ctx:ctxEnvoi, lang:_L.courante(), ref:REF_ACTIF, renduCible:renduCibleActif() } :
+                            { organism:state.org, mode:"sir",  results:state.results, ctx:ctxEnvoi, lang:_L.courante(), ref:REF_ACTIF, renduCible:renduCibleActif() };
     const moteur = (typeof self !== "undefined") && self.PhenoBacMoteur;
     let res;
     if(moteur && moteur.runInterpretation){
@@ -7389,7 +7389,13 @@ function answerQuiz(selected, isQ2){
 async function fetchQuizDetail(c, cible){
   const ou = cible || "#qDetail";
   try{
-    const res = await interpretRemote({ organism:c.org, mode:"sir", results:c.res, ctx:c.ctx });
+    /* LA LANGUE VOYAGE AVEC LA DEMANDE. Sans elle, la porte HTTP exécute sa
+       propre copie du moteur, qui démarre en français : la correction du quiz
+       s'affichait en français au milieu d'une séance en anglais. Le moteur
+       porte sa langue dans un état de module — ce qui, sur un serveur tiède,
+       la ferait aussi hériter du français de l'appelant précédent. */
+    const res = await interpretRemote({ organism:c.org, mode:"sir", results:c.res,
+                                        ctx:c.ctx, lang:_L.courante() });
     const el=$(ou); if(!el) return;
     el.className="";
     if(res.locked){
@@ -7718,7 +7724,7 @@ async function suggestBankAnswer(){
   if(nRes<1) return bankMsg("Saisissez d'abord au moins un résultat d'antibiogramme.", false);
   bankMsg("Analyse de l'antibiogramme…", true);
   try{
-    const res=await interpretRemote({ organism:bankForm.org, mode:"sir", results:bankForm.res, ctx:bankForm.ctx });
+    const res=await interpretRemote({ organism:bankForm.org, mode:"sir", results:bankForm.res, ctx:bankForm.ctx, lang:_L.courante() });
     if(res.locked){ bankMsg("Déduction réservée à Premium (licence requise).", false); return; }
     const A=res.interpretation;
     if(!A||!A.name){ bankMsg("Le moteur n'a pas pu déduire de phénotype pour cette saisie.", false); return; }
