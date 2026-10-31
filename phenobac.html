@@ -1997,26 +1997,27 @@ function traduire() {
   document.title = L("page.titre");
   const b = document.getElementById("langSwitch");
   if (b) { b.textContent = L("langue.basculer"); b.title = L("langue.titre"); }
-  avertirTraductionPartielle();
 }
 
-/* L'encart ne paraît qu'en anglais, et il est posé EN HAUT de
-   l'interprétation — là où le commentaire français va s'afficher. */
-function avertirTraductionPartielle() {
-  let e = document.getElementById("partielAvis");
-  if (!_L.estAnglais()) { if (e) e.remove(); return; }
-  if (!e) {
-    e = document.createElement("div");
-    e.id = "partielAvis"; e.className = "partiel";
-    const hote = document.getElementById("interpOut") || document.getElementById("interp")
-              || document.querySelector("main") || document.body;
-    hote.insertBefore(e, hote.firstChild);
-  }
-  e.innerHTML = "";
-  const t = document.createElement("b"); t.textContent = L("partiel.titre");
-  const p = document.createElement("span"); p.textContent = L("partiel.texte");
-  e.appendChild(t); e.appendChild(p);
-}
+/* L'ENCART « TRADUCTION PARTIELLE » A ÉTÉ RETIRÉ, POUR DEUX RAISONS.
+
+   Il disait « Interface en anglais, commentaire en français ». Ce n'est plus
+   vrai : le moteur rend tout en anglais — mécanismes, règles expertes,
+   alertes, les cinq moments et le commentaire du compte rendu. Un
+   avertissement qui ne correspond plus à ce que fait l'application est pire
+   qu'absent : il fait douter du reste.
+
+   Et il CASSAIT LA DISPOSITION. Il se posait dans le premier hôte trouvé
+   parmi « #interpOut », « #interp », puis « main ». Les deux premiers
+   n'existent pas : il atterrissait donc en PREMIER ENFANT de « main », qui
+   est une grille à deux colonnes. L'encart prenait la première cellule, et
+   la saisie des antibiotiques basculait à droite — en anglais seulement.
+   Signalé par l'utilisateur le 31 octobre 2026, et mesuré : en anglais,
+   « main » portait un enfant de plus.
+
+   Rien n'insère plus d'élément comme enfant direct de « main » ;
+   outils/verifier-langues.py l'interdit. */
+
 
 function fixerLangue(l) {
   _L.fixer(l);

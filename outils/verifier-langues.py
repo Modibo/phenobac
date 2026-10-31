@@ -555,8 +555,7 @@ def main():
              "l'onglet du navigateur garderait son titre français, et le compteur de "
              "texte visible — qui retire le <title> en comptant sur cette ligne — "
              "cesserait de voir l'oubli"),
-            ("avertirTraductionPartielle", "l'utilisateur anglophone ne serait pas "
-             "averti que le commentaire clinique est encore en français")):
+            ("function traduire()", "les éléments marqués ne seraient jamais remplis")):
         if maillon not in page:
             ecarts.append("phenobac.html n'a plus « %s » : %s." % (maillon, pourquoi))
     if marques and not inconnues:
@@ -1197,6 +1196,40 @@ def main():
         dits.append("le bouton de langue nomme une action — « %s » en français, « %s » en "
                     "anglais : il ne peut pas se lire comme la langue en cours."
                     % (bascule.get("fr", ""), bascule.get("en", "")))
+
+    # --- RIEN NE S'INSÈRE COMME ENFANT DIRECT DE « main » ---
+    #
+    # « main » est une GRILLE à deux colonnes. Un élément inséré en premier
+    # enfant y prend la première cellule, et tout le reste glisse d'une
+    # place : sur ordinateur, la saisie des antibiotiques basculait à droite.
+    #
+    # C'est arrivé, et seulement en anglais. L'encart « traduction
+    # partielle » cherchait son hôte parmi « #interpOut », « #interp », puis
+    # « main ». Les deux premiers n'existent pas — l'encart atterrissait donc
+    # dans la grille. Mesuré : en anglais, « main » portait un enfant de
+    # plus. L'utilisateur l'a vu avant ce contrôle, et aucun contrôle de
+    # langue ne pouvait l'attraper : les textes étaient justes, c'est la
+    # DISPOSITION qui changeait de langue.
+    #
+    # Une chaîne de replis qui finit sur « main » est un piège : les deux
+    # premiers maillons peuvent disparaître sans bruit, et le troisième
+    # casse la page.
+    fautifs = []
+    for m in re.finditer(r'(\w+)\s*=\s*document\.getElementById\([^)]*\)\s*\|\|[^;]*'
+                         r'document\.querySelector\(\s*["\']main["\']\s*\)', page, re.S):
+        fautifs.append(m.group(1))
+    for m in re.finditer(r'document\.querySelector\(\s*["\']main["\']\s*\)\s*\.\s*'
+                         r'(?:insertBefore|append|appendChild|prepend)', page):
+        fautifs.append("main." + m.group(0).rsplit(".", 1)[1])
+    if fautifs:
+        ecarts.append("un élément est inséré dans « main », qui est une grille : %s. "
+                      "Il prendrait la première cellule et décalerait toute la colonne — "
+                      "c'est ainsi que la saisie des antibiotiques est passée à droite, "
+                      "en anglais seulement. Donnez-lui un conteneur à lui."
+                      % ", ".join(sorted(set(fautifs))))
+    else:
+        dits.append("rien ne s'insère comme enfant direct de « main » : la disposition ne "
+                    "peut pas changer avec la langue.")
 
     if ecarts:
         print("LE BILINGUISME EST ABÎMÉ :")

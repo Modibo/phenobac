@@ -53,12 +53,6 @@ const C = {
   "langue.titre":          { fr: "Afficher PhénoBac en anglais",
                              en: "Show PhénoBac in French" },
 
-  /* ---------- l'avertissement d'anglais partiel ---------- */
-  "partiel.titre":         { fr: "Interface en anglais, commentaire en français",
-                             en: "Interface in English, commentary in French" },
-  "partiel.texte":         { fr: "L'interface, les catégories et les titres du compte rendu sont en anglais. Le commentaire interprétatif — mécanisme de résistance, règles expertes, alertes — est encore rédigé en français. Il est traduit par vagues ; rien n'est masqué entre-temps.",
-                             en: "The interface, the categories and the report headings are in English. The interpretive commentary — resistance mechanism, expert rules, alerts — is still written in French. It is being translated in waves; nothing is hidden in the meantime." },
-
   /* ---------- navigation ---------- */
   "nav.identification":    { fr: "Identification", en: "Identification", meme: true },
   "nav.interpretation":    { fr: "Interprétation", en: "Interpretation" },
