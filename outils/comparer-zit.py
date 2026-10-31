@@ -147,29 +147,70 @@ def code_fr(agent):
 #     PhénoBac ; il est donc nommé ici et rattaché à RIEN, ce qui n'est pas
 #     la même chose que ne pas le nommer.
 CHAPITRES = [
-    # (motif cherché dans le titre, groupes PhénoBac) — LE PLUS PRÉCIS D'ABORD.
-    ('Streptococcus pneumoniae',          ['pneumo']),
-    ('Streptocoques des groupes',         ['strepacg', 'strepb']),
-    ('Autres streptocoques',              ['viridans']),
-    # Nommé pour n'être pas confondu avec Corynebacterium spp., qui est le
-    # « coryne » de PhénoBac et vit dans un autre chapitre.
-    ('Corynebacterium diphtheriae',       []),
-    ('Corynebacterium',                   ['coryne']),
-    ('Enterobacterales', ['entero', 'salmonella', 'morganella', 'serratia']),
-    ('Pseudomonas',                       ['pseudo']),
-    ('Acinetobacter',                     ['acineto']),
-    ('Stenotrophomonas',                  ['steno']),
-    ('Burkholderia',                      ['burk']),
-    ('Staphylococcus',                    ['staph', 'scn']),
-    ('Enterococcus',                      ['enteroc']),
-    ('Haemophilus',                       ['haemo']),
-    ('Neisseria gonorrhoeae',             ['ngono']),
-    ('Neisseria meningitidis',            ['nmening']),
-    ('Moraxella',                         ['moraxella']),
-    ('Listeria',                          ['listeria']),
-    ('Campylobacter',                     ['campylo']),
-    ('Vibrio',                            ['vibrio']),
+    # (motif cherché dans le titre, groupes PhénoBac, CE QUE LE CHAPITRE
+    #  COUVRE — ou pourquoi il ne va nulle part). LE PLUS PRÉCIS D'ABORD.
+    #
+    # LA TROISIÈME COLONNE N'EST PAS UN COMMENTAIRE : c'est la seule chose
+    # qui rende le rattachement RELISIBLE. Tant qu'il tenait dans une
+    # sous-chaîne, personne ne pouvait voir que « Burkholderia » accrochait
+    # le chapitre de la mélioïdose au Burkholderia cepacia de PhénoBac, ni
+    # que « Streptococcus » accrochait le pneumocoque aux streptocoques A/C/G.
+    # Chaque ligne doit dire quelle espèce du communiqué va sur quelle espèce
+    # de PhénoBac, et verifier_chapitres() refuse une ligne muette.
+    ('Streptococcus pneumoniae', ['pneumo'],
+     "S. pneumoniae -> le pneumocoque de PhénoBac. NE PAS laisser « Streptococcus » "
+     "attraper ce titre : c'est le défaut du 2026-10-31."),
+    ('Streptocoques des groupes', ['strepacg', 'strepb'],
+     "groupes A, B, C, G -> S. pyogenes, S. dysgalactiae et S. agalactiae."),
+    ('Autres streptocoques', ['viridans'],
+     "le groupe viridans et apparentés -> « viridans »."),
+    ('Corynebacterium diphtheriae', [],
+     "le complexe diphtheriae (C. diphtheriae, C. ulcerans, C. pseudotuberculosis) "
+     "n'a PAS de groupe dans PhénoBac. La page le dit elle-même : « pour les autres "
+     "corynébactéries, utiliser le chapitre Corynebacterium spp. »"),
+    ('Corynebacterium', ['coryne'],
+     "Corynebacterium spp. -> « coryne »."),
+    ('Burkholderia pseudomallei', [],
+     "la mélioïdose, pathogène du groupe de risque 3. PhénoBac porte "
+     "Burkholderia cepacia, que ce communiqué NE TRAITE PAS : ses valeurs "
+     "EUCAST restent les bonnes, et quatre faux écarts sortaient d'ici."),
+    ('Enterobacterales', ['entero', 'salmonella', 'morganella', 'serratia'],
+     "une table pour la famille ; PhénoBac la découpe en quatre groupes."),
+    ('Pseudomonas', ['pseudo'],
+     "Pseudomonas spp. -> P. aeruginosa."),
+    ('Acinetobacter', ['acineto'],
+     "Acinetobacter spp. -> A. baumannii."),
+    ('Stenotrophomonas', ['steno'],
+     "S. maltophilia, de part et d'autre."),
+    ('Staphylococcus', ['staph', 'scn'],
+     "une table pour le genre ; les lignes qui nomment S. aureus ou les "
+     "coagulase-négative sont triées par groupes_vises()."),
+    ('Enterococcus', ['enteroc'],
+     "E. faecalis et E. faecium."),
+    ('Haemophilus', ['haemo'],
+     "Haemophilus spp. -> H. influenzae."),
+    ('Neisseria gonorrhoeae', ['ngono'], "exact de part et d'autre."),
+    ('Neisseria meningitidis', ['nmening'], "exact de part et d'autre."),
+    ('Moraxella', ['moraxella'], "M. catarrhalis, exact."),
+    ('Listeria', ['listeria'], "L. monocytogenes, exact."),
+    ('Campylobacter', ['campylo'], "Campylobacter spp. -> C. jejuni."),
+    ('Vibrio', ['vibrio'], "Vibrio spp. -> V. cholerae."),
 ]
+
+
+def verifier_chapitres():
+    """Une ligne muette est une ligne qu'on ne peut pas relire. Lève."""
+    for ligne in CHAPITRES:
+        if len(ligne) != 3 or not str(ligne[2]).strip():
+            raise SystemExit(
+                "CHAPITRES : la ligne %r ne dit pas ce qu'elle couvre. "
+                "C'est précisément ce silence qui a envoyé le pneumocoque chez "
+                "les streptocoques A/C/G et la mélioïdose chez B. cepacia."
+                % (ligne[0] if ligne else ligne,))
+    return len(CHAPITRES)
+
+
+verifier_chapitres()
 
 
 def chapitre_de(titre):
@@ -180,7 +221,7 @@ def chapitre_de(titre):
     Helicobacter… Ce qui serait un échec, c'est que l'appelant garde le
     chapitre précédent en recevant None."""
     t = (titre or '').lower()
-    for motif, _g in CHAPITRES:
+    for motif, _g, _quoi in CHAPITRES:
         if motif.lower() in t:
             return motif
     return None
@@ -188,7 +229,7 @@ def chapitre_de(titre):
 
 # L'ancien nom, conservé parce que trois outils l'appellent — mais construit à
 # partir de la liste ordonnée, pour qu'il n'existe qu'UNE table.
-CHAPITRE_GROUPES = dict(CHAPITRES)
+CHAPITRE_GROUPES = {m: g for m, g, _quoi in CHAPITRES}
 
 NOMBRE = re.compile(r'^\d+(?:[,.]\d+)?$')
 

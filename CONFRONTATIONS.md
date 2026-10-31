@@ -964,21 +964,81 @@ le banc sur « aucun couple n'est attendu pour strepacg ».
 du plus précis au plus général, et le complexe *diphtheriae* y est **nommé et
 rattaché à rien** — ce qui n'est pas la même chose que ne pas le nommer.
 
+#### Et *Burkholderia pseudomallei* n'est pas *Burkholderia cepacia*
+
+Trouvé dans la foulée, en relisant les dix écarts restants page par page. Le
+chapitre p67–68 du communiqué est celui de la **mélioïdose**, pathogène du
+groupe de risque 3. Le groupe `burk` de PhénoBac porte ***Burkholderia
+cepacia***, opportuniste de la mucoviscidose. Deux organismes sans rapport,
+deux tables sans rapport — et le motif « Burkholderia » les confondait.
+
+Quatre « écarts » en sortaient : ceftazidime, imipénème, méropénème,
+cotrimoxazole. Le communiqué **ne traite pas** *B. cepacia* ; PhénoBac garde
+donc ses valeurs EUCAST, et elle a raison. Même forme exactement que le
+complexe *diphtheriae* : un nom de genre partagé, deux espèces différentes.
+
+#### La correction de fond, seconde couche : une ligne de la table doit se relire
+
+`CHAPITRES` porte maintenant une **troisième colonne** — ce que le chapitre
+couvre, ou pourquoi il ne va nulle part — et `verifier_chapitres()` refuse une
+ligne muette. Ce n'est pas un commentaire : tant que le rattachement tenait
+dans une sous-chaîne, personne ne pouvait voir que « Burkholderia » accrochait
+la mélioïdose à *B. cepacia*, ni que « Streptococcus » accrochait le
+pneumocoque aux streptocoques A/C/G. Dix-neuf chapitres, chacun avec sa phrase.
+
 #### Le bilan refait
 
 | | avant | après |
 |---|---|---|
-| couples confrontés | 279 | 271 |
+| couples confrontés | 279 | 264 |
 | d'accord | 228 | 250 |
-| **écarts candidats** | **27** | **14** |
+| **écarts candidats** | **27** | **10** |
 | écarts à une autre valeur | 2 | 0 |
 | couples à plusieurs lignes | 8 | 9 |
 | dépendant de la voie | 6 | 6 |
 
-Les treize écarts disparus étaient **cinq** lectures du mauvais chapitre
-*Corynebacterium* et **huit** du chapitre du pneumocoque. Les deux « écarts à
-une autre valeur » étaient de la même famille. Un nouveau est apparu, lu cette
-fois dans le bon chapitre : *viridans* / pénicilline G, p95.
+Les dix-sept écarts disparus étaient **cinq** lectures du mauvais chapitre
+*Corynebacterium*, **huit** du chapitre du pneumocoque et **quatre** de celui
+de la mélioïdose. Les deux « écarts à une autre valeur » étaient de la même
+famille. Un nouveau est apparu, lu cette fois dans le bon chapitre :
+*viridans* / pénicilline G, p95.
+
+> **Dix-neuf des vingt-neuf « écarts » annoncés au biologiste n'en étaient
+> pas.** Une liste d'écarts qu'on lui présente doit être une liste d'écarts :
+> le coût de dix-neuf faux candidats n'est pas le temps perdu, c'est la
+> confiance dans les dix vrais.
+
+#### Les dix, relus page par page le 2026-10-31
+
+Chacun a été confronté au texte positionné de sa page, hors de l'outil qui
+l'avait produit.
+
+| groupe | molécule | page | CA-SFM | PhénoBac (EUCAST) | forme |
+|---|---|---|---|---|---|
+| *Acinetobacter* | ceftazidime | 63 | `0,001` / R > 8 | S ≤ 8 · R > 8 | refus de S |
+| *Acinetobacter* | céfépime | 63 | `0,001` / R > 8 | S ≤ 8 · R > 8 | refus de S |
+| *Acinetobacter* | pipé.-tazobactam | 62 | `0,001` / R > 16 | S ≤ 16 · R > 16 | refus de S |
+| *Stenotrophomonas* | lévofloxacine | 66 | `0,001` / R > 1 | S ≤ 1 · R > 2 | refus de S |
+| *Pseudomonas* | lévofloxacine | 60 | `0,001` / R > 0,5 | pas de S · R > 2 | R déplacé |
+| *S. aureus* | ciprofloxacine | 74 | `0,001` / R > 1 | pas de S · R > 2 | R déplacé |
+| SCN | ciprofloxacine | 74 | `0,001` / R > 1 | pas de S · R > 2 | R déplacé |
+| *Listeria* | linézolide | 100 | S ≤ 2 · R > 2 | S ≤ 2 · R > 4 | zone I supprimée |
+| viridans | pénicilline G | 95 | S ≤ 0,25 · R > 0,25 | S ≤ 0,25 · R > 1 | zone I supprimée |
+| *Serratia* | cotrimoxazole | 54 | S ≤ 0,5 · R > 0,5 | **pas de S** · R > 2 | le CA-SFM **accorde** |
+
+`0,001` est la convention du document — note 13 — pour « ne jamais rendre
+sensible ». Les deux comités l'emploient.
+
+Le *Serratia* mérite un mot : la page 54 porte **deux** lignes de
+cotrimoxazole, « (infections urinaires sans signes de gravité) » 2 / 2 et
+« (autres infections) » 0,5 / 0,5. C'est la seconde qui vaut au site
+ordinaire. `entero`, `morganella` et `salmonella` portent déjà 0,5 / 0,5 ;
+seul `serratia` porte la valeur EUCAST propre à ce genre. Le CA-SFM est donc
+ici **plus permissif** que l'EUCAST — le seul des dix dans ce sens.
+
+Non comptée parmi les dix, et c'est voulu : p72, pénicilline G des
+staphylocoques, la colonne S porte le mot « Note ». Ce n'est pas un refus
+chiffrable, et l'outil a eu raison de ne pas deviner.
 
 ### La fosfomycine, reprise le 2026-10-31 : ce n'est pas un écart CA-SFM
 
