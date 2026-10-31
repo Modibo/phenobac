@@ -137,6 +137,16 @@ jobs:
       - name: La note « selon la voie » ne décide d'aucune catégorie
         run: node outils/essai-voies.js
 
+      # L'EUCAST publie UNE table pour les entérobactéries ; PhénoBac en porte
+      # quatre groupes, pour pouvoir exprimer ce que le document sépare. Ce
+      # découpage a un danger, et un seul : une correction portée dans un
+      # groupe et oubliée dans ses frères. C'est arrivé à la fosfomycine, et
+      # pendant six jours l'application s'est contredite d'un genre à l'autre
+      # sans que rien ne tombe au rouge. Ce contrôle n'a besoin d'aucun
+      # document : il compare la base à elle-même.
+      - name: Une restriction posée sur un genre l'est sur toute sa fratrie
+        run: python3 outils/verifier-fratries.py
+
       # Masquer un résultat est un acte grave : le défaut qu'on redoute n'est
       # pas qu'une molécule de trop s'affiche, c'est qu'une molécule ACTIVE
       # disparaisse de la feuille du clinicien. Le banc éprouve donc d'abord

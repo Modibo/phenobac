@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.20";
+const BASE_VERSION = "2026.21";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -973,7 +973,36 @@ const REGLES = [
    ne réclame aujourd'hui.
 
    Trouvé le 25 octobre 2026 par le balayage inverse de comparer-eucast.py,
-   et porté sur décision du biologiste. */
+   et porté sur décision du biologiste.
+
+   ET LES TROIS GROUPES FRÈRES, OUBLIÉS CE JOUR-LÀ, CORRIGÉS LE 31 OCTOBRE.
+
+   PhénoBac porte QUATRE groupes de seuils pour cette unique table de
+   l'EUCAST — entero, morganella, salmonella, serratia — parce que le
+   document sépare les genres sur d'autres molécules. La correction du 25
+   octobre n'avait touché que le premier. Les trois autres gardaient
+
+     ["eucast","morganella","FOS","cmi","standard",8,8,…]
+     ["eucast","salmonella","FOS","cmi","standard",8,8,…]
+     ["eucast","serratia","FOS","cmi","standard",8,8,…]
+
+   et rendaient donc « R » à 16 mg/L hors urine pour Proteus mirabilis,
+   P. vulgaris, Morganella morganii, Providencia, Salmonella et Serratia —
+   là où E. coli et Klebsiella, pour la même molécule, la même famille, le
+   même site et le même document, ne recevaient AUCUNE catégorie. Six jours
+   durant, l'application s'est contredite d'un genre à l'autre.
+
+   Les trois lignes sont retirées. E. coli vit dans « entero » : la ligne
+   urinaire restreinte qui s'y trouve le couvre, et les autres genres n'ont
+   plus rien — ce que le document dit. Leur donner la restriction ["ecoli"]
+   aurait fabriqué des lignes mortes : aucune Salmonella n'est un E. coli.
+
+   outils/verifier-fratries.py surveille désormais cette classe de défaut
+   SANS AUCUN DOCUMENT : il compare la base à elle-même et signale un couple
+   dont la PORTÉE — site, restriction d'espèce — diffère d'un groupe frère à
+   l'autre. Les valeurs ont le droit de différer, c'est l'objet du découpage ;
+   une portée est une décision, et une décision prise pour un genre se prend
+   rarement pour lui seul. */
 ["eucast","entero","FOS","cmi","urinaire",8,8,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli"]],
 ["eucast","entero","FOS","disque","urinaire",24,24,"200",undefined,undefined,undefined,undefined,undefined,["ecoli"]],
 ["eucast","entero","FOX","cmi","standard",8,8,undefined,undefined,undefined,undefined,true,["ecoli"],undefined],
@@ -1096,7 +1125,6 @@ const REGLES = [
 ["eucast","morganella","FDC","disque","standard",23,23,"30",[21,23],undefined,undefined,undefined,undefined,undefined],
 ["eucast","morganella","FEP","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","morganella","FEP","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","morganella","FOS","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","morganella","FOX","cmi","standard",8,8,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","morganella","GEN","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","morganella","GEN","disque","standard",17,17,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
@@ -1202,7 +1230,6 @@ const REGLES = [
 ["eucast","salmonella","FDC","disque","standard",23,23,"30",[21,23],undefined,undefined,undefined,undefined,undefined],
 ["eucast","salmonella","FEP","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","salmonella","FEP","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","salmonella","FOS","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","salmonella","FOX","cmi","standard",8,8,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","salmonella","GEN","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","salmonella","GEN","disque","standard",17,17,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
@@ -1282,7 +1309,6 @@ const REGLES = [
 ["eucast","serratia","FDC","disque","standard",23,23,"30",[21,23],undefined,undefined,undefined,undefined,undefined],
 ["eucast","serratia","FEP","cmi","standard",1,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","serratia","FEP","disque","standard",27,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","serratia","FOS","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","serratia","FOX","cmi","standard",8,8,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","serratia","GEN","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","serratia","GEN","disque","standard",17,17,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],

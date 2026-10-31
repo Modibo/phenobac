@@ -22,14 +22,15 @@ fosfomycine a été remise à la lettre du document dans le groupe « entero » 
 la ligne du site ordinaire a été retirée, remplacée par une ligne urinaire
 restreinte à E. coli, parce que l'EUCAST renvoie à une NOTE pour la
 fosfomycine iv des autres entérobactéries et des autres indications. Les trois
-groupes frères ont gardé leur ligne « standard 8/8 ». Six jours plus tard,
-PhénoBac rendait encore, pour une CMI de 16 mg/L hors urine :
+groupes frères ont gardé leur ligne « standard 8/8 ». Six jours durant,
+PhénoBac a rendu, pour une CMI de 16 mg/L hors urine :
 
     Escherichia coli, Klebsiella…  aucune catégorie   (le document refuse)
     Proteus, Morganella, Providencia, Salmonella, Serratia   R
 
 Même molécule, même famille, même site, même document, réponses opposées selon
-le genre. Aucun contrôle ne le voyait : verifier-couverture-eucast.py confronte
+le genre. Corrigé le 31 octobre 2026 sur décision du biologiste, les trois
+lignes frères retirées. Aucun contrôle ne le voyait : verifier-couverture-eucast.py confronte
 le classeur table par table, et les entérobactéries ne figurent pas dans sa
 liste — il regarde les vingt-deux tables difficiles, pas celle-là.
 
@@ -50,12 +51,6 @@ l'urine », « ce seuil ne vaut que pour E. coli » — et qu'une décision pris
 pour un genre d'une famille se prend rarement pour lui seul.
 
 Il ne corrige rien. Changer un seuil est une décision de biologiste.
-
-HORS INTÉGRATION CONTINUE : il rend 1 aujourd'hui, sur la fosfomycine des
-entérobactéries — une QUESTION posée au biologiste, pas un défaut du code.
-L'y brancher maintenant arrêterait toute livraison sur une décision qui n'est
-pas la mienne à prendre. Il y entre le jour où cette question est tranchée, et
-c'est la dernière étape de la correction, pas une option.
 
     python3 outils/verifier-fratries.py
 """
@@ -121,10 +116,28 @@ def regles():
               % (len(colonnes), ", ".join(absentes) or "aucun"))
         sys.exit(2)
     out = []
+    # LES COMMENTAIRES NE SONT PAS DES DONNÉES, et ce lecteur l'a appris de la
+    # pire façon : le commentaire écrit pour EXPLIQUER le retrait des trois
+    # lignes de fosfomycine en citait les trois lignes, indentées. Le lecteur
+    # les a relues comme des règles, et le contrôle a continué de signaler un
+    # défaut qui venait d'être corrigé. Un documentaliste pris pour un témoin.
+    dans_bloc = False
     for l in s.splitlines():
-        l = l.strip()
+        nu = l.strip()
+        if dans_bloc:
+            if "*/" in nu:
+                dans_bloc = False
+            continue
+        if nu.startswith("/*") and "*/" not in nu:
+            dans_bloc = True
+            continue
+        if nu.startswith("//") or nu.startswith("/*"):
+            continue
+        # Une règle commence EN DÉBUT DE LIGNE. Tout ce qui est indenté dans ce
+        # fichier est de la prose ou une table annexe.
         if not (l.startswith('["eucast"') or l.startswith('["casfm"')):
             continue
+        l = nu
         ch = re.findall(r'\[[^\[\]]*\]|"[^"]*"|null|undefined|true|false|[-\d.]+',
                         l.split("//")[0].rstrip(",").strip()[1:-1])
         o = {}
@@ -151,6 +164,19 @@ def main():
         print("seules %d règles ont été lues dans base-connaissances.js : le "
               "lecteur s'est cassé, et un contrôle qui ne lit rien ne trouve "
               "rien." % len(lignes))
+        return 2
+
+    # CHAQUE GROUPE DÉCLARÉ DOIT EXISTER DANS LA BASE. Un groupe renommé, ou
+    # un lecteur qui ne ramasse plus rien, laisserait ce contrôle « au vert »
+    # en n'ayant comparé personne — le plus silencieux des échecs, et celui
+    # que ce fichier existe précisément pour empêcher ailleurs.
+    presents = set(r["groupe"] for r in lignes)
+    vides = [g for gs in FRATRIES.values() for g in gs if g not in presents]
+    if vides:
+        print("ces groupes sont déclarés dans FRATRIES et absents de la base : %s. "
+              "Le contrôle s'arrête : comparer une fratrie amputée reviendrait à "
+              "ne rien comparer en annonçant que tout va bien."
+              % ", ".join(sorted(vides)))
         return 2
 
     ecarts, suspendus, dits = [], [], []

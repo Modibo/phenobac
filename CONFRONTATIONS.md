@@ -27,8 +27,19 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : 3c9ffd93c20ed09d8ab86e18191e15e13722b2a6fbc61c9e6ea74d6167de9839
-- **date** : 2026-10-25
+- **empreinte** : 39bb978582383749a51dc09be7c2a8cf99e161f9fa36150e1f4cb57efafc652e
+- **date** : 2026-10-25, empreinte reprise le 2026-10-31
+- **pourquoi l'empreinte a bougé sans nouvelle confrontation** : le
+  2026-10-31, trois lignes ont été **retirées** de BP —
+  `morganella/salmonella/serratia · FOS · cmi · standard 8-8`. Aucune
+  valeur n'a été ajoutée ni modifiée. Le retrait applique à trois groupes
+  frères la lecture déjà consignée ici le 2026-10-25 — « Fosfomycin iv,
+  other Enterobacterales : **Note** » — portée ce jour-là dans le seul
+  groupe `entero`. Le classeur n'a pas été rouvert : il n'est pas
+  téléchargeable (403) et la ligne qui fonde le retrait est celle qui est
+  écrite plus bas, dans « LE MANQUE : la fosfomycine au disque ». Une
+  prochaine confrontation complète reste due dès que le classeur est en
+  main — c'est une dette, pas un acquis.
 - **résultat** : **512** seuils confrontés — **512 identiques, 0 différent**,
   91 non comparés. Dans l'autre sens : aucune molécule du panel n'est privée
   du seuil que le document lui donne, et **plus aucun couple hors panel** —
@@ -489,8 +500,18 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 6297b5b2adea995bad71ce5e04c60884307d8536b3009931badfd8135e276285
-- **date** : 2026-10-25
+- **empreinte** : 49702c4f2256e896d9996fa5e7cf5b323872d474dea2afee643d6509f4b13be5
+- **date** : 2026-10-25, empreinte reprise le 2026-10-31
+- **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
+  raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et
+  une PORTÉE à rappeler : la liste `TABLES` de cet outil ne contient que
+  les **vingt-deux tables difficiles** (anaérobies, *Pasteurella*,
+  *Aeromonas*, *Achromobacter*, *Kingella*, *Aerococcus*,
+  *Corynebacterium*). **Les entérobactéries n'y figurent pas** : son
+  « 0 manque, 0 excédent » n'a jamais parlé des lignes retirées, et ne
+  parle pas davantage de celles qui restent. C'est ce trou qui a laissé
+  la fosfomycine se contredire six jours durant, et c'est pourquoi
+  `outils/verifier-fratries.py` existe.
 - **résultat** : 22 tables du classeur relues, **409 règles attendues** — **0 manque,
   0 excédent, 0 écart**, CMI **et** disque.
 
@@ -961,8 +982,31 @@ puisque *E. coli* vit dans `entero` : le contrôle passe à **54/54**, et les
 six espèces rendent « aucune catégorie » pour la fosfomycine, dans l'urine
 comme hors de l'urine. *E. coli* garde sa catégorie urinaire.
 
-**La base a été restaurée. Aucun seuil n'a été modifié : la décision revient
-au biologiste.**
+#### Appliqué le 2026-10-31, sur décision du biologiste
+
+Les trois lignes sont **retirées**. Les six espèces rendent désormais « aucune
+catégorie » pour la fosfomycine, dans l'urine comme hors de l'urine, et
+*E. coli* garde sa catégorie urinaire. C'est le même message que celui que
+*E. coli* et *Klebsiella* recevaient déjà hors urine : l'application ne se
+contredit plus d'un genre à l'autre.
+
+Leur donner la restriction `["ecoli"]` au lieu de les retirer aurait fabriqué
+des lignes mortes — aucune *Salmonella* n'est un *E. coli* — et le contrôle
+l'aurait d'ailleurs refusé : il a été essayé, et il crie encore.
+
+`verifier-fratries.py` passe à **54/54** et **entre dans la chaîne**. Base
+`2026.21`, service worker `v87`.
+
+> Deux fois de suite, le lecteur de ce contrôle a lu de travers sans le dire.
+> `"([a-z]+)"` ne ramasse pas `"S"` ni `"R"` — deux colonnes perdues. Puis,
+> une fois le défaut corrigé, le **commentaire** écrit pour expliquer le
+> retrait citait les trois lignes retirées, indentées : le lecteur les a
+> relues comme des règles et a continué de signaler un défaut qui venait
+> d'être réparé. Un documentaliste pris pour un témoin. Il saute désormais
+> les blocs de commentaire, n'accepte une règle qu'en début de ligne, et
+> s'arrête si l'un des groupes qu'il déclare est absent de la base — car un
+> contrôle qui ne compare personne et annonce que tout va bien est le plus
+> silencieux des échecs, celui-là même qu'il existe pour empêcher ailleurs.
 
 ### Le défaut propre à la façon dont PhénoBac porte le CA-SFM
 
