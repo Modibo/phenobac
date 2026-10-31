@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.21";
+const BASE_VERSION = "2026.22";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -73,13 +73,81 @@ const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "z
    et outils/verifier-comptes.py existe pour cela. Le compte se lit sur
    REGLES.length. */
 const REGLES = [
+/* LES DIX ÉCARTS DU CA-SFM, PORTÉS LE 2026-10-31 SUR DÉCISION DU BIOLOGISTE.
+
+   outils/comparer-casfm.py confronte le communiqué complet aux seuils de
+   PhénoBac. Dix couples où le comité français dit autre chose que l'EUCAST et
+   que le delta ne portait pas : le laboratoire choisissait « CA-SFM »,
+   croyait travailler avec, et recevait la valeur EUCAST — en silence, sous le
+   nom du comité.
+
+   Les dix ont été relus un à un sur le texte positionné de leur page, HORS de
+   l'outil qui les avait produits. Cette relecture a écarté dix-neuf faux
+   candidats sur vingt-neuf, tous dus à des chapitres mal rattachés : le
+   pneumocoque pris pour les streptocoques A/C/G, la mélioïdose pour
+   Burkholderia cepacia, le complexe diphtheriae pour Corynebacterium spp.
+
+   « S: null » n'est pas une valeur manquante : c'est le refus du comité
+   d'accorder une catégorie « sensible ». Le document l'écrit « 0,001 »
+   (note 13), et les deux comités emploient cette convention.
+
+     refus de la catégorie S, que l'EUCAST accorde
+       acineto  CAZ  p63     null / 8      (EUCAST 8 / 8)
+       acineto  FEP  p63     null / 8      (EUCAST 8 / 8)
+       acineto  TZP  p62     null / 16     (EUCAST 16 / 16)
+       steno    LVX  p66     null / 1      (EUCAST 1 / 2)
+     seuil R déplacé, les deux refusant déjà la catégorie S
+       pseudo   LVX  p60     null / 0,5    (EUCAST null / 2)
+       staph    CIP  p74     null / 1      (EUCAST null / 2)
+       scn      CIP  p74     null / 1      (EUCAST null / 2)
+     zone intermédiaire supprimée
+       listeria LZD  p100    2 / 2         (EUCAST 2 / 4)
+       viridans PEN  p95     0,25 / 0,25   (EUCAST 0,25 / 1)
+     et un seul dans l'autre sens — le CA-SFM ACCORDE ce que l'EUCAST refuse
+       serratia SXT  p54     0,5 / 0,5     (EUCAST null / 2)
+
+   LA PAGE 54 PORTE DEUX LIGNES DE COTRIMOXAZOLE, et c'est la seconde qui vaut
+   ici : « (infections urinaires sans signes de gravité) » 2 / 2, puis
+   « (autres infections) » 0,5 / 0,5. entero, morganella et salmonella
+   portaient déjà 0,5 / 0,5 ; seul serratia gardait la valeur EUCAST propre à
+   ce genre.
+
+   QUATRE DIAMÈTRES VIENNENT AVEC, ET CE N'EST PAS UN AJOUT GRATUIT. Porter la
+   CMI seule aurait fait se contredire les deux méthodes À L'INTÉRIEUR du même
+   référentiel : sur une Serratia, la CMI aurait permis « sensible » que le
+   disque refusait ; chez les viridans, la CMI aurait supprimé une zone
+   intermédiaire que le disque gardait ; sur les staphylocoques, la frontière
+   R tombait à un diamètre différent. Ils sont lus sur les MÊMES lignes du
+   document que les CMI ci-dessus :
+
+       scn      CIP  p74   disque 5 µg          null / 24   (EUCAST null / 22)
+       serratia SXT  p54   disque 1,25-23,75    15 / 15     (EUCAST null / 15)
+       staph    CIP  p74   disque 5 µg          null / 21   (EUCAST null / 17)
+       viridans PEN  p95   disque 1 unité       21 / 21     (EUCAST 21 / 12)
+
+   Les diamètres d'Acinetobacter (CAZ, FEP, TZP) étaient DÉJÀ dans le delta
+   depuis le 25 octobre : c'est la CMI qui manquait. Le disque disait donc
+   « aucune catégorie S » pendant que la CMI rendait « sensible », dans le
+   même référentiel et sur la même souche. Le delta était à moitié porté.
+
+   DEUX LIGNES DU DOCUMENT N'ONT PAS ÉTÉ PORTÉES, ET C'EST ÉCRIT :
+     — pseudo LVX au disque : le CA-SFM renvoie à une note et demande la CMI.
+       PhénoBac garde le diamètre EUCAST, et le document lui-même dirige vers
+       la méthode que l'on vient de corriger ;
+     — listeria LZD au disque : le CA-SFM publie 25 / 25 (10 µg), l'EUCAST
+       rien. L'ajouter donnerait à PhénoBac une lecture au disque qu'elle n'a
+       pas — c'est une capacité nouvelle, pas la correction d'un écart, et
+       elle demande sa propre décision. */
+["casfm","acineto","CAZ","cmi","standard",null,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","CAZ","disque","standard",null,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","acineto","FEP","cmi","standard",null,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","FEP","disque","standard",null,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","MIN","disque","standard",null,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","SXT","disque","standard",16,14,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","SXT","disque","urinaire",14,14,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","acineto","TZP","cmi","standard",null,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","acineto","TZP","disque","standard",null,21,"100-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","bfragilis","MXF","disque","standard",21,21,"5",[18,20],undefined,undefined,undefined,undefined,undefined],
 ["casfm","coryne","SXT","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -92,6 +160,7 @@ const REGLES = [
 ["casfm","entero","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","enteroc","DAP","cmi","standard",undefined,undefined,undefined,4,undefined,undefined,undefined,undefined,undefined],
+["casfm","listeria","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -116,24 +185,34 @@ const REGLES = [
    Trouvé par outils/comparer-casfm.py le 25 octobre 2026, vérifié dans le
    document, porté sur décision du biologiste. */
 ["casfm","pseudo","COL","cmi","standard",2,2,undefined,4,undefined,undefined,undefined,undefined,undefined],
+["casfm","pseudo","LVX","cmi","standard",null,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","scn","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","scn","CIP","disque","standard",null,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","disque","standard",24,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","disque","urinaire",19,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","SXT","disque","standard",15,15,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","CIP","disque","standard",null,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","disque","standard",24,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","disque","urinaire",19,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","VA","cmi","standard",1,1,undefined,2,undefined,undefined,undefined,undefined,undefined],
+["casfm","steno","LVX","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","steno","MIN","disque","standard",null,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","strepacg","PEN","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","strepacg","PEN","disque","standard",undefined,undefined,undefined,undefined,undefined,23,undefined,undefined,undefined],
+["casfm","viridans","PEN","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","viridans","PEN","disque","standard",21,21,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","acineto","AMK","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","acineto","AMK","disque","standard",19,19,"30",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","acineto","CAZ","cmi","standard",8,8,undefined,undefined,undefined,undefined,true,true,undefined],

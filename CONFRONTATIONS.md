@@ -649,13 +649,21 @@ ensemble, jamais l'un sans l'autre.
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM
-- **empreinte** : 95c8f7ef64ad4671cfa20c206cc3b966e42ca388cc0743b295b4a38ec20ff9a3
-- **date** : 2026-10-25
-- **résultat** : **À RELIRE.** 279 couples confrontés, 228 où les deux comités
-  disent la même chose, **27 écarts candidats** dont **un vérifié dans le
-  document et corrigé** (la colistine de *Pseudomonas*), **zéro nom que
-  l'outil ne sait pas lire**, 14 couples en attente d'une décision de modèle
-  (8 à plusieurs lignes, 6 dépendant de la voie d'administration).
+- **empreinte** : 4b1aa01db3ad3d242c231d408ccc965f38617a6c38971762f88f77d1c81417d5
+- **date** : 2026-10-31, le communiqué sous les yeux
+- **résultat** : **264 couples confrontés, 250 où les deux comités disent la
+  même chose, ZÉRO écart restant.** Les 14 derniers ont été portés ce jour
+  dans le delta — 10 concentrations critiques et 4 diamètres, relus un à un
+  sur le texte positionné de leur page. Zéro nom que l'outil ne sait pas lire.
+  Restent, hors comparaison et par décision de modèle : 9 couples à plusieurs
+  lignes, 6 dépendant de la voie d'administration, 1 colonne S portant le mot
+  « Note » (p72, pénicilline G des staphylocoques), et 49 lignes d'autres
+  sites (cystite, LCR, dépistage) qui n'ont pas encore eu leur passe.
+- **portée** : le passage de 279 à 264 couples n'est pas une perte de
+  couverture, c'est la fin d'un mélange. Trois chapitres étaient mal
+  rattachés — le pneumocoque aux streptocoques A/C/G, la mélioïdose à
+  *Burkholderia cepacia*, le complexe *diphtheriae* à *Corynebacterium* spp. —
+  et les couples qui en sortaient n'auraient jamais dû être comparés.
 
 ### Les seize noms illisibles : un défaut de lecture, pas seize molécules
 
