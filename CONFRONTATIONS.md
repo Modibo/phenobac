@@ -630,9 +630,64 @@ ensemble, jamais l'un sans l'autre.
 - **tables** : BP_CASFM
 - **empreinte** : 95c8f7ef64ad4671cfa20c206cc3b966e42ca388cc0743b295b4a38ec20ff9a3
 - **date** : 2026-10-25
-- **résultat** : **PREMIÈRE PASSE, À RELIRE.** 295 couples confrontés, 167 où
-  les deux comités disent la même chose, **46 écarts candidats** dont **un
-  vérifié dans le document et corrigé** (la colistine de *Pseudomonas*), 16 noms que l'outil ne sait pas lire.
+- **résultat** : **PREMIÈRE PASSE, À RELIRE.** 308 couples confrontés, 245 où
+  les deux comités disent la même chose, **52 écarts candidats** dont **un
+  vérifié dans le document et corrigé** (la colistine de *Pseudomonas*),
+  **zéro nom que l'outil ne sait pas lire**.
+
+### Les seize noms illisibles : un défaut de lecture, pas seize molécules
+
+La première passe laissait **seize noms non lus**, et leurs lignes n'étaient
+donc confrontées à rien — un silence qui ne se distinguait pas d'un accord.
+Ce n'étaient pas seize molécules inconnues : c'était **quatre défauts de
+lecture**, trouvés en regardant le document page par page.
+
+1. **La fenêtre de recollation balayait toute la largeur.** Un nom coupé se
+   recolle sur la ligne suivante, à condition qu'elle ne porte pas de
+   valeurs. Le test allait de la colonne S jusqu'à ZIT+30, et attrapait la
+   **charge du disque** (x≈330), qui appartient à la même ligne continuée :
+
+   ```
+   y=366  Triméthoprime-               S≤ 2  R> 2   1,25-
+   y=354  sulfaméthoxazole (infections              23,75
+   ```
+
+   « 23,75 » est la fin de « 1,25-23,75 µg ». L'outil y voyait une nouvelle
+   ligne de seuils et refusait de recoller. Le test porte désormais sur les
+   seules colonnes S et R.
+
+2. **Les notes de bas de page coupaient la recollation.** Le communiqué les
+   intercale dans la marge droite (x≈491), ENTRE un nom et sa fin. Une ligne
+   vide dans la colonne du nom n'est ni une suite ni une nouvelle ligne :
+   c'est du texte de marge. On l'enjambe.
+
+3. **Le budget se comptait en lignes brutes.** Plafonné à trois lignes, il
+   était mangé par les marges et les numéros de page, alors qu'une indication
+   de site s'étale jusqu'à trois lignes de texte. Il se compte maintenant en
+   lignes **utiles**.
+
+4. **Les colonnes voisines laissaient des miettes** dans la fenêtre du nom :
+   « Amoxicilline-acide **,2** clavulanique », « Imipénème-relebactam **4** ».
+   Un fragment sans aucune lettre n'appartient pas à un nom.
+
+   > Et la première version de ce filtre a fabriqué le défaut qu'elle devait
+   > réduire : elle rangeait « ) » parmi les miettes, et mangeait la
+   > parenthèse fermante de « Amoxicilline iv (méningites et endocardites **)** ».
+   > Le nom restait tronqué pour toujours. Une parenthèse nue n'est pas du
+   > bruit : elle ferme une indication.
+
+Restaient **trois graphies** absentes du vocabulaire, et la table les
+connaissait déjà **sous leur orthographe anglaise** : « meropenemvaborbactam »
+et « imipenemrelebactam » y figuraient, mais le CA-SFM écrit
+« Méropénème-vaborbactam » — un « e » de plus à la normalisation. Cinq lignes
+étaient déclarées illisibles alors que la réponse était écrite deux lignes
+plus haut. Les trois sont hors panel, et « None » est une réponse.
+
+**Ce que cela change au fond :** six écarts candidats de plus (46 → 52), six
+lignes du CA-SFM qui n'étaient confrontées à rien — dont le **cotrimoxazole
+de cinq espèces** : *Listeria*, les entérobactéries, *Acinetobacter*,
+*Stenotrophomonas* et *Staphylococcus*. Pour celles-là, un laboratoire sous
+CA-SFM recevait la valeur EUCAST sans que rien ne le dise.
 
 ### Le défaut propre à la façon dont PhénoBac porte le CA-SFM
 

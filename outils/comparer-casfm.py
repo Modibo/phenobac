@@ -133,9 +133,41 @@ def lignes_casfm(chemin):
         # seuil méningé se compare au seuil ordinaire ; pire,
         # « Triméthoprime- » se lit « triméthoprime » au lieu de
         # « triméthoprime-sulfaméthoxazole ».
+        # UN FRAGMENT PUREMENT CHIFFRÉ N'EST PAS UN MORCEAU DE NOM.
+        #
+        # Les colonnes voisines débordent dans la fenêtre du nom, et y
+        # laissent des miettes : « Amoxicilline-acide ,2 clavulanique* »,
+        # « Imipénème-relebactam 4 », « sulfaméthoxazole (autres 55 ». Le nom
+        # recollé devenait alors introuvable dans le vocabulaire, et l'outil
+        # le déclarait illisible — alors qu'il l'avait lu, à une miette près.
+        #
+        # On ne retire que ce qui ne peut PAS appartenir à un nom de molécule :
+        # chiffres, virgules, points, astérisques et parenthèses d'appel de
+        # note, seuls. Aucune lettre n'est touchée, donc aucun nom n'est
+        # deviné — la règle du § 26 tient.
+        # UNE PARENTHÈSE SEULE N'EST PAS UNE MIETTE : elle FERME une indication.
+        #
+        # La première version de ce filtre rangeait « ) » parmi les miettes,
+        # et mangeait donc la parenthèse fermante de :
+        #
+        #   i=25  Amoxicilline iv (méningites  et   S≤ 0,5  R> 0,5
+        #   i=26  endocardites                 )
+        #
+        # Le nom restait « … (méningites et endocardites » — tronqué pour
+        # toujours, et déclaré illisible. Un filtre à bruit qui emporte de la
+        # ponctuation structurante fabrique le défaut qu'il devait réduire.
+        #
+        # La règle : est une miette ce qui ne porte AUCUNE lettre, sauf une
+        # parenthèse nue. « (4) » part — c'est un appel de note ; « ) » reste.
+        MIETTE = re.compile(r'^[\d.,;*†‡()\s-]+$')
+
+        def miette(t):
+            return t not in ("(", ")") and bool(MIETTE.match(t))
+
         def nom_colonne(fr, xs):
             return ' '.join(s.strip() for x, s in fr
-                            if 0 <= x < xs - 14 and s.strip()).strip()
+                            if 0 <= x < xs - 14 and s.strip()
+                            and not miette(s.strip())).strip()
 
         for i, (y, fr) in enumerate(lg):
             amont = [e for e in entetes if e[0] > y]
@@ -157,15 +189,73 @@ def lignes_casfm(chemin):
             hors_echelle = bool(s_) and nb(s_[0]) is None and s_[0].strip('()') in ('0.001', '0,001')
             # La suite du nom, s'il est coupé : la ligne d'après, pourvu
             # qu'elle ne porte elle-même aucune valeur.
-            k = i + 1
-            while (AF.tronque(agent) or not AF.code(agent)[1]) and k < len(lg) and k <= i + 3:
+            # LE BUDGET DE RECOLLATION SE COMPTE EN LIGNES UTILES.
+            #
+            # Il était plafonné à trois lignes BRUTES après le nom. Les notes
+            # de marge et les numéros de page les mangeaient :
+            #
+            #   i=26  sulfaméthoxazole  (infections
+            #   i=27                         « (bandelettes à gradient… » (marge)
+            #   i=28  urinaires sans signes de
+            #   i=29  …  gravité)
+            #
+            # La parenthèse ne se fermait jamais, « tronque » restait vrai, et
+            # la ligne passait pour illisible — alors qu'il ne manquait qu'un
+            # mot. Une indication de site s'étale jusqu'à trois lignes de
+            # texte ; on compte donc ce qu'on AJOUTE, et le survol des marges
+            # ne coûte rien. Ce qui arrête toujours : une ligne qui porte des
+            # valeurs S ou R.
+            k, recolles = i + 1, 0
+            while (AF.tronque(agent) or not AF.code(agent)[1]) and k < len(lg) \
+                    and recolles < 4 and k <= i + 10:
                 suite_fr = lg[k][1]
-                a_des_valeurs = [v for v in fenetre(xs - 9, xz + 30, suite_fr)
+                # « LA LIGNE SUIVANTE PORTE DES VALEURS » SE JUGE SUR LES
+                # COLONNES S ET R, PAS SUR TOUTE LA LARGEUR.
+                #
+                # La fenêtre allait de la colonne S jusqu'à ZIT+30, soit de
+                # x≈200 à x≈490. Elle attrapait donc la CHARGE DU DISQUE, qui
+                # vit à x≈330 et qui appartient à la même ligne continuée :
+                #
+                #   y=366  Triméthoprime-            S≤ 2  R> 2   1,25-
+                #   y=354  sulfaméthoxazole (infections       23,75
+                #
+                # « 23,75 » est la fin de « 1,25-23,75 µg ». L'outil y voyait
+                # une nouvelle ligne de seuils, refusait de recoller, et
+                # rendait « Triméthoprime- » illisible — pour cinq espèces,
+                # dont Listeria, Acinetobacter et Stenotrophomonas. Le
+                # cotrimoxazole du CA-SFM n'était donc confronté à rien.
+                a_des_valeurs = [v for v in fenetre(xs - 9, xr + 12, suite_fr)
                                  if NOMBRE.match(v)]
                 suite = nom_colonne(suite_fr, xs)
-                if a_des_valeurs or not suite:
+                # UNE LIGNE VIDE DANS LA COLONNE DU NOM N'EST PAS UN MUR.
+                #
+                # Le communiqué intercale ses NOTES DE BAS DE PAGE dans la
+                # marge droite, à x≈491, entre un nom coupé et sa fin :
+                #
+                #   i=24  Triméthoprime-                S≤2  R>2  1,25-
+                #   i=25                                     « liquide uniquement). Les autres… »
+                #   i=26  sulfaméthoxazole (infections              23,75
+                #
+                # La ligne 25 ne porte rien dans la colonne du nom, et rien
+                # dans les colonnes S et R : ce n'est ni une suite ni une
+                # nouvelle ligne de seuils, c'est du texte de marge. L'outil
+                # s'y arrêtait, et « Triméthoprime- » restait illisible pour
+                # cinq espèces — Listeria, Enterobacterales, Acinetobacter,
+                # Stenotrophomonas, Staphylococcus. Le cotrimoxazole du
+                # CA-SFM n'était donc confronté à rien, sans que le silence
+                # se distingue d'un accord.
+                #
+                # On l'enjambe. Ce qui arrête toujours la recollation, c'est
+                # une ligne qui porte des VALEURS : celle-là est une autre
+                # ligne de seuils, et recoller par-dessus mélangerait deux
+                # molécules.
+                if a_des_valeurs:
                     break
+                if not suite:
+                    k += 1
+                    continue
                 agent = (agent + " " + suite).strip()
+                recolles += 1
                 k += 1
             out.append((chapitre, agent, nb(s_[0]) if s_ else None,
                         nb(r_[0]) if r_ else None, num, hors_echelle))

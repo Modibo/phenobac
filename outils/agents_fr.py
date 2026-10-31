@@ -52,6 +52,21 @@ TABLE = [
     ("ceftazidimeavibactam", None),
     ("meropenemvaborbactam", None),
     ("imipenemrelebactam", None),
+    # LES MÊMES, DANS LEUR ORTHOGRAPHE FRANÇAISE.
+    #
+    # Les deux entrées ci-dessus avaient été écrites depuis l'anglais, où le
+    # carbapénème s'écrit « meropenem » et « imipenem ». Le communiqué du
+    # CA-SFM écrit « Méropénème-vaborbactam » et « Imipénème-relebactam »,
+    # qui se normalisent en « meropeneme… » et « imipeneme… » — un « e » de
+    # plus, et la table ne reconnaissait plus rien. Cinq lignes du
+    # communiqué étaient donc déclarées illisibles alors que la réponse
+    # était déjà écrite deux lignes plus haut.
+    #
+    # Toutes trois sont HORS PANEL : PhénoBac ne teste pas ces associations
+    # récentes. « None » est donc une réponse, pas une lacune.
+    ("meropenemevaborbactam", None),
+    ("imipenemerelebactam", None),
+    ("cefepimeenmetazobactam", None),
     ("benzylpenicilline", "PEN"),
     ("penicillineg", "PEN"),
     ("amoxicilline", "AMX"),
