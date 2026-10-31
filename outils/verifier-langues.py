@@ -1169,6 +1169,35 @@ def main():
                     "le compte rendu imprimé, le registre de contrôle de qualité et "
                     "l'antibiogramme cumulatif suivent la langue." % (_T_vus[0], lus))
 
+    # --- LE BOUTON DE LANGUE DOIT NOMMER UNE ACTION, PAS UNE LANGUE ---
+    #
+    # Il portait « English » en français et « Français » en anglais : la
+    # langue VERS LAQUELLE on bascule. C'est l'usage le plus répandu, et il
+    # est ambigu — un lecteur sur deux y lit la langue EN COURS. Le
+    # 31 octobre 2026, l'utilisateur l'a signalé dans ces termes : « le
+    # français affiche les textes en anglais et l'anglais affiche les textes
+    # en français ». Les textes, eux, étaient justes.
+    #
+    # Un libellé qui se lit dans les deux sens vaut un défaut : on exige un
+    # VERBE, qui ne se lit que dans un.
+    bascule = C.get("langue.basculer") or {}
+    VERBES = ("switch", "passer", "show", "afficher", "voir", "lire", "view")
+    nus = [l for l in ("fr", "en")
+           if bascule.get(l) and not any(v in bascule[l].lower() for v in VERBES)]
+    if not bascule:
+        ecarts.append("le catalogue n'a plus de clé « langue.basculer » : le bouton de "
+                      "langue n'aurait plus de libellé.")
+    elif nus:
+        ecarts.append("le bouton de langue nomme une LANGUE au lieu d'une action (%s). "
+                      "« Français » affiché pendant que la page est en anglais se lit "
+                      "comme la langue en cours : c'est exactement ce qui a été signalé "
+                      "comme une inversion des textes, alors que les textes étaient "
+                      "justes." % ", ".join("%s : « %s »" % (l, bascule[l]) for l in nus))
+    else:
+        dits.append("le bouton de langue nomme une action — « %s » en français, « %s » en "
+                    "anglais : il ne peut pas se lire comme la langue en cours."
+                    % (bascule.get("fr", ""), bascule.get("en", "")))
+
     if ecarts:
         print("LE BILINGUISME EST ABÎMÉ :")
         for e in ecarts:

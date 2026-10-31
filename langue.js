@@ -43,8 +43,15 @@
 const C = {
   /* ---------- la langue elle-même ---------- */
   "langue.nom":            { fr: "Français", en: "English" },
-  "langue.basculer":       { fr: "English", en: "Français" },
-  "langue.titre":          { fr: "Switch to English", en: "Passer en français" },
+  /* UN BOUTON QUI NOMME UNE LANGUE EST AMBIGU, et l'ambiguïté a été
+     signalée : « le français affiche les textes en anglais ». Le bouton
+     portait « Français » pendant que la page était en anglais — il nommait
+     la langue VERS LAQUELLE on basculait, et un lecteur sur deux y lit la
+     langue EN COURS. On le formule donc comme une ACTION, qui ne peut se
+     lire que dans un sens. */
+  "langue.basculer":       { fr: "Switch to English", en: "Passer en français" },
+  "langue.titre":          { fr: "Afficher PhénoBac en anglais",
+                             en: "Show PhénoBac in French" },
 
   /* ---------- l'avertissement d'anglais partiel ---------- */
   "partiel.titre":         { fr: "Interface en anglais, commentaire en français",
@@ -289,7 +296,9 @@ const C = {
      en porter le moindre signe. */
   "quiz.mixte":           { fr: "Mixte", en: "Mixed" },
   "quiz.combo":           { fr: "Cas complet", en: "Full case" },
-  "quiz.examen":          { fr: "Mode examen", en: "Test mode" }
+  "quiz.examen":          { fr: "Mode examen", en: "Test mode" },
+  "act.exportCsv":        { fr: "Exporter (CSV)", en: "Export (CSV)" },
+  "act.imprimerPdf":      { fr: "Imprimer (PDF)", en: "Print (PDF)" }
 };
 
 const DEFAUT = "fr";
