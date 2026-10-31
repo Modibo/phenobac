@@ -358,8 +358,30 @@ def main():
             print("    %s" % t)
         print("")
 
+    # DES LIGNES QUI RESSEMBLENT À UN SEUIL CLINIQUE ET N'EN SONT PAS.
+    #
+    # Le tableau du communiqué met dans la même colonne « S ≤ » ce qui sert à
+    # catégoriser et ce qui ne sert qu'à DÉPISTER. Rien dans la ligne ne les
+    # distingue ; c'est le document « Différences principales entre le CA-SFM
+    # et l'EUCAST » qui le dit, et cet outil ne le lit pas.
+    #
+    # Le 2026-10-31, « viridans / pénicilline G 0,25-0,25 » (p95) a été porté
+    # comme seuil clinique, puis retiré : la page 13 du document des
+    # différences précise que le CA-SFM « ne conserve que le seuil à
+    # 0,25 mg/L À SEULE VISÉE DE DÉPISTAGE ». Porté, il rendait « R » un
+    # viridans à 0,5 mg/L que l'EUCAST catégorise « I ».
+    #
+    # Chaque entrée porte sa source. Ce n'est pas une liste pour faire taire
+    # l'outil : c'est la part du CA-SFM qui vit dans l'autre document.
+    DEPISTAGE_SEULEMENT = {
+        ("viridans", "PEN"):
+            "document des différences CA-SFM/EUCAST 2026, p13 : « le CA-SFM ne "
+            "conserve que le seuil à 0,25 mg/L à seule visée de dépistage »",
+    }
+
     perdus, perimes, divergents, muets, identiques = [], [], [], [], 0
     aveugles, multiples, voies = [], {}, {}
+    depistage_seul = set()
 
     # UNE LIGNE QUI NOMME UNE ESPÈCE LA RETIRE À LA LIGNE GÉNÉRALE.
     #
@@ -539,6 +561,9 @@ def main():
             continue
         for g in vises(chapitre, agent, code, groupes):
             vus.add((g, code))
+            if (g, code) in DEPISTAGE_SEULEMENT:
+                depistage_seul.add((g, code))
+                continue
             e = (EUCAST.get(g) or {}).get(code)
             porte = (CASFM.get(g) or {}).get(code)
             if e is None:
@@ -701,6 +726,12 @@ def main():
         print("page. Vérifier les deux documents avant de retirer quoi que ce soit.")
         for o in orphelines:
             print("  " + o)
+    if depistage_seul:
+        print("\n=== LIGNES DU TABLEAU QUI NE SONT QUE DU DÉPISTAGE (%d) ===" % len(depistage_seul))
+        print("Elles ressemblent à un seuil clinique et n'en sont pas. Le tableau")
+        print("ne les distingue pas ; le document des différences, si.")
+        for g, k in sorted(depistage_seul):
+            print("  %-10s %-5s : %s" % (g, k, DEPISTAGE_SEULEMENT[(g, k)]))
     print("\n=== bilan ===")
     print("  couples confrontés          : %d" % len(vus))
     print("  CA-SFM et EUCAST d'accord   : %d" % identiques)
@@ -714,6 +745,8 @@ def main():
     print("  site urinaire et méningé : %d d'accord, %d écarts, %d couples absents"
           % (sum(sites_ok.values()), len(set(sites_ecarts)), len(set(sites_sans))))
     print("  dépistage et endocardite, non traités ici : %d" % autres_sites)
+    print("  lignes qui ne sont que du dépistage : %d (déclarées, avec leur source)"
+          % len(depistage_seul))
     print("\nAucun fichier n'a été modifié. Toute correction doit être validée")
     print("par un biologiste avant d'être portée dans le code.")
     return 1 if (perdus or divergents or perimes or muets) else 0

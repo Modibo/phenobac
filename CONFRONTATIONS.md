@@ -649,8 +649,8 @@ ensemble, jamais l'un sans l'autre.
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM
-- **empreinte** : 42f8bb2a312933ae382ceaa2f21e546e68d960018b1c4822ba99995a9c7e53f4
-- **date** : 2026-10-31, le communiqué sous les yeux (quatrième passe)
+- **empreinte** : 81eafcee070e2fa4e07446016e4d7b73bba056e3f449d70f31ccf519945a39fa
+- **date** : 2026-10-31, le communiqué ET le document des différences sous les yeux
 - **portée du registre élargie le même jour** : l'empreinte ne couvrait que
   `BP_CASFM`. La passe des autres sites ayant rendu `BP_CASFM_URIN` et
   `BP_MENINGE_CASFM` comparables, quatorze lignes urinaires ont pu être
@@ -679,6 +679,69 @@ ensemble, jamais l'un sans l'autre.
   sous-tableau « *Salmonella* spp. » — les sous-titres ne sont pas encore
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
   pénicilline G), et 20 lignes de dépistage ou d'endocardite.
+
+## Le second document du CA-SFM, lu le 2026-10-31
+
+`CASFM2026EUCAST.pdf` — « Différences principales entre le CA-SFM et
+l'EUCAST », 18 pages, sha256 `7c033caa9195ea2e…`, téléchargé avec l'accord du
+biologiste depuis
+`sfm-microbiologie.org/wp-content/uploads/2026/09/CASFM2026EUCAST.pdf`.
+
+**C'est le texte qui explique ce que les tableaux ne disent pas.** Deux
+lectures d'aujourd'hui en dépendaient, et elles tombent en sens inverse l'une
+de l'autre.
+
+### `ngono GEN 16-16` : la ligne est JUSTE
+
+Retirée le soir au motif que la page 108 du communiqué ne cite 16 mg/L que
+dans une note — un ECOFF. `essai-referentiel.js` est tombé en citant « p. 14 »,
+et la page 14 dit :
+
+> « Le CA-SFM propose un seuil à 16 mg/L, **basé sur l'ECOFF**, permettant de
+> séparer les souches sauvages des souches non sauvages. La justification est
+> basée sur […] d'être en adéquation avec les recommandations thérapeutiques
+> françaises, qui positionnent la gentamicine comme alternative […] »
+
+Le comité **adopte** l'ECOFF comme seuil, délibérément, parce que l'EUCAST
+marque la molécule « – » (impropre au traitement) et que les recommandations
+françaises en font une alternative. La ligne est remise, et la divergence est
+exactement ce que le delta existe pour porter.
+
+### `viridans PEN 0,25-0,25` : la ligne est FAUSSE
+
+Portée le matin, parmi les dix. La page 95 du communiqué la présente comme
+toutes les autres. La page 13 du document des différences dit :
+
+> « Pour la pénicilline G, le CA-SFM ne conserve que le seuil à 0,25 mg/L
+> **à seule visée de dépistage**. »
+
+Ce n'était pas une concentration critique clinique. Portée, elle rendait
+**« R » un viridans à 0,5 mg/L que l'EUCAST catégorise « I »**. Les deux
+lignes, CMI et disque, sont retirées, et le couple est déclaré dans
+`comparer-casfm.py` avec sa source — pas pour faire taire l'outil, mais parce
+que cette part du CA-SFM vit dans l'autre document.
+
+> **Un chiffre dans une colonne « S ≤ » ne dit pas à quoi il sert.** Là le
+> comité adopte un ECOFF comme seuil clinique, ici il garde un seuil pour le
+> seul dépistage — et le tableau ne distingue pas les deux cas. Les deux
+> textes se lisent ensemble ou pas du tout.
+
+### Ce que ce document confirme par ailleurs
+
+- **p10, *Burkholderia cepacia* complex** : « Le chapitre et les précédents
+  breakpoints cliniques **ont été supprimés** », remplacés par une fiche
+  pratique en Annexe 3 ; et « l'EUCAST, de son côté, **n'a jamais proposé de
+  breakpoints cliniques** ». L'absence de chapitre *B. cepacia* dans le
+  communiqué n'est donc pas un oubli, et les dix valeurs `burk` de PhénoBac
+  portent déjà le drapeau `conv` — convention de laboratoire assumée, que
+  l'interface annonce. Rien à corriger, et maintenant on sait pourquoi.
+
+**Pages encore à exploiter** : p4 aminopénicillines & Enterobacterales, p5
+céfidérocol, p6 cotrimoxazole (l'EUCAST a abaissé ses seuils en 2026), p7
+témocilline, p8–9 règles d'interprétation et dépistage des carbapénémases,
+p11 amikacine/kanamycine des staphylocoques, p12 daptomycine des
+entérocoques, p15 amoxicilline de *Moraxella*, p16–17 anaérobies, p18
+breakpoints adaptés du CLSI.
 
 ### Les six décisions portées le 2026-10-31
 

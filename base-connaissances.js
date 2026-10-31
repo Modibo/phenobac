@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.25";
+const BASE_VERSION = "2026.26";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -87,12 +87,26 @@ const REGLES = [
    communiqué : c'est celle du document « Différences principales entre le
    CA-SFM et l'EUCAST », un second document que ce poste n'a pas.
 
-   La ligne est donc remise. Le sens inverse ne lit QUE le communiqué
-   complet ; il ne peut pas voir ce qui est écrit dans le document des
-   différences, et une valeur qu'il ne retrouve pas n'est pas pour autant
-   sans source. La question reste ouverte et elle est écrite ici plutôt que
-   tranchée : le communiqué dit « ECOFF », le banc dit « seuil CA-SFM, page
-   14 du document des différences ». Il faut ce document pour choisir.
+   La ligne a donc été remise, puis le document des différences a été lu —
+   le même jour, page 14. IL TRANCHE, ET DANS L'AUTRE SENS :
+
+     « Le CA-SFM propose un seuil à 16 mg/L, BASÉ SUR L'ECOFF, permettant de
+       séparer les souches sauvages des souches non sauvages. La
+       justification est basée sur […] d'être en adéquation avec les
+       recommandations thérapeutiques françaises, qui positionnent la
+       gentamicine comme alternative en […] ceftriaxone. »
+
+   Le comité ADOPTE l'ECOFF comme seuil, délibérément, en le disant, et
+   parce que les recommandations françaises font de la gentamicine une
+   alternative thérapeutique — l'EUCAST, lui, marque la molécule « – »,
+   impropre au traitement. La ligne est donc juste, et ce n'est pas un
+   ECOFF égaré : c'est une divergence assumée entre les deux comités, qui
+   est exactement ce que le delta existe pour porter.
+
+   Mon raisonnement était faux, et il l'était sur un seul document. Le
+   balayage en sens inverse de comparer-casfm.py ne lit QUE le communiqué
+   complet : une valeur qu'il ne retrouve pas n'est pas pour autant sans
+   source, et il le dit désormais lui-même dans son rapport.
 
    Un banc qui tombe en citant sa source vaut mieux qu'une suppression qui
    paraît propre. */
@@ -163,7 +177,37 @@ const REGLES = [
        staph    CIP  p74     null / 1      (EUCAST null / 2)
        scn      CIP  p74     null / 1      (EUCAST null / 2)
      zone intermédiaire supprimée
-       viridans PEN  p95     0,25 / 0,25   (EUCAST 0,25 / 1)
+       (viridans PEN a été porté puis RETIRÉ — voir ci-dessous)
+
+   VIRIDANS / PÉNICILLINE G : PORTÉ LE MATIN, RETIRÉ LE SOIR.
+
+   La page 95 du communiqué donne « Pénicilline G … 0,25 / 0,25 », et la
+   ligne ressemble à toutes les autres. Le document « Différences
+   principales entre le CA-SFM et l'EUCAST », page 13, dit ce que le tableau
+   ne dit pas :
+
+     « Pour la pénicilline G, le CA-SFM ne conserve que le seuil à
+       0,25 mg/L À SEULE VISÉE DE DÉPISTAGE. »
+
+   Et la note de la page 95 le confirme : « La pénicilline G peut être
+   utilisée pour le dépistage des souches de sensibilité diminuée aux
+   β-lactamines. »
+
+   Ce n'est donc pas une concentration critique clinique, et l'avoir portée
+   comme telle rendait « R » un viridans à 0,5 mg/L que l'EUCAST catégorise
+   « I ». Les deux lignes — CMI et disque — sont retirées.
+
+   RESTE UNE QUESTION DE MODÈLE, et elle est écrite plutôt que tranchée :
+   le CA-SFM ne conservant AUCUN seuil clinique de pénicilline G pour les
+   autres streptocoques, PhénoBac retombe sur celui de l'EUCAST. Dire « le
+   comité refuse d'en donner un » demanderait un marqueur que la table BP
+   n'a pas en CMI — le côté disque, lui, l'a (dzCasfmDivergent).
+
+   LEÇON, ET C'EST LA MÊME QUE POUR « ngono GEN » LE MÊME JOUR, EN MIROIR :
+   un chiffre dans une colonne « S ≤ » ne dit pas à quoi il sert. Là, le
+   comité adopte un ECOFF comme seuil clinique ; ici, il garde un seuil pour
+   le seul dépistage. Le tableau ne distingue pas les deux ; le document des
+   différences, si. Les deux textes se lisent ensemble ou pas du tout.
 
    NEUF, ET NON DIX : « listeria LZD 2 / 2 » a été porté le matin du
    2026-10-31 puis RETIRÉ le même jour. La page 100 n'est pas celle de
@@ -312,8 +356,6 @@ const REGLES = [
 ["casfm","strepacg","NIT","disque","urinaire",15,15,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","strepacg","PEN","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","strepacg","PEN","disque","standard",undefined,undefined,undefined,undefined,undefined,23,undefined,undefined,undefined],
-["casfm","viridans","PEN","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["casfm","viridans","PEN","disque","standard",21,21,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","acineto","AMK","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","acineto","AMK","disque","standard",19,19,"30",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","acineto","CAZ","cmi","standard",8,8,undefined,undefined,undefined,undefined,true,true,undefined],
