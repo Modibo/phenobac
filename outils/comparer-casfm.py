@@ -688,10 +688,17 @@ def main():
                                      " ou ".join("S<=%s R>%s (p%d)" % (dit(a), dit(b), p)
                                                  for a, b, p in sorted(vals, key=str))))
     if orphelines:
-        print("\n=== LE DELTA PORTE CE QUE LE DOCUMENT NE DIT PAS (%d) ===" % len(orphelines))
+        print("\n=== LE DELTA PORTE CE QUE CE DOCUMENT NE DIT PAS (%d) ===" % len(orphelines))
         print("Une valeur portée que le communiqué ne dit nulle part s'applique")
         print("pourtant avec l'autorité du comité. C'est le sens que personne")
         print("ne regardait, et il a attrapé une faute commise le jour même.")
+        print("")
+        print("MAIS CE N'EST PAS LE SEUL DOCUMENT DU CA-SFM. « Différences")
+        print("principales entre le CA-SFM et l'EUCAST » est un second texte,")
+        print("que cet outil ne lit pas. Une ligne signalée ici peut y avoir sa")
+        print("source : c'est arrivé le 2026-10-31 à « ngono GEN 16-16 », retirée")
+        print("puis remise quand essai-referentiel.js est tombé en citant sa")
+        print("page. Vérifier les deux documents avant de retirer quoi que ce soit.")
         for o in orphelines:
             print("  " + o)
     print("\n=== bilan ===")

@@ -4356,9 +4356,20 @@ function getDZ(dzOverride, group, k, ctx) {
   }
   if (c.mening === "Oui") {
     // Si le couple a un seuil méningé en CMI mais aucun au disque, c'est
-    // que l'EUCAST l'interdit : ne pas retomber sur le seuil ordinaire.
+    // que le référentiel l'interdit : ne pas retomber sur le seuil ordinaire.
+    //
+    // LA MÊME RÈGLE VAUT POUR LE CA-SFM, et elle n'y était pas. Le 31
+    // octobre 2026, le méropénème d'Haemophilus en LCR a reçu son seuil
+    // méningé CA-SFM (0,25 / 0,25) ; sans cette ligne, le DISQUE aurait
+    // continué de rendre le diamètre ordinaire — 20 mm — et une souche à
+    // 21 mm serait sortie « sensible » au disque pendant que la CMI la
+    // disait résistante, dans la même méningite et sous le même
+    // référentiel. Le CA-SFM ne donne aucun diamètre méningé : il renvoie
+    // à une note et demande la CMI. L'absence est une consigne, pas un
+    // oubli à combler avec la valeur d'à côté.
     if (DZ_MENINGE[group] && DZ_MENINGE[group][k]) return DZ_MENINGE[group][k];
     if (BP_MENINGE[group] && BP_MENINGE[group][k]) return null;
+    if (estCasfm() && BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return null;
   }
   // Cystite simple : l'EUCAST chiffre quelques molécules POUR CETTE
   // INDICATION SEULEMENT, et parfois pour quelques espèces seulement — la

@@ -649,8 +649,8 @@ ensemble, jamais l'un sans l'autre.
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM
-- **empreinte** : 68b414585e136806323169b549e62da7241d495403ed1f94450eb2e4732e1c27
-- **date** : 2026-10-31, le communiqué sous les yeux (seconde passe, le soir)
+- **empreinte** : 49005415d15d649b2c8ed1bfe80d526fc34daa2eb1c1345595d51e4207d94ed5
+- **date** : 2026-10-31, le communiqué sous les yeux (troisième passe)
 - **résultat** : **271 couples confrontés, 259 où les deux comités disent la
   même chose.** 13 écarts portés dans le delta ce jour (9 concentrations
   critiques + 4 diamètres ; un dixième, « listeria LZD », a été porté puis
@@ -674,6 +674,70 @@ ensemble, jamais l'un sans l'autre.
   sous-tableau « *Salmonella* spp. » — les sous-titres ne sont pas encore
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
   pénicilline G), et 20 lignes de dépistage ou d'endocardite.
+
+### Les six décisions portées le 2026-10-31
+
+Sur décision du biologiste, après relecture page par page. **Seize lignes
+ajoutées**, CMI et diamètre ensemble à chaque fois que le document en donne
+un — porter la CMI seule ferait se contredire les deux méthodes dans le même
+référentiel, ce que la journée a déjà montré deux fois.
+
+| site | groupe | molécule | page | CA-SFM porté | PhénoBac appliquait |
+|---|---|---|---|---|---|
+| LCR | *Haemophilus* | méropénème | 106 | 0,25 / 0,25 | 2 / 2 |
+| LCR | pneumocoque | amoxicilline | 85 | 0,5 / 0,5 | 0,06 / 0,06 |
+| ordinaire | *S. aureus* | oxacilline | 72 | 2 / 2 | 0,25 / 0,25 |
+| ordinaire | SCN | vancomycine | 75 | 2 / 2 | 4 / 4 |
+| cystite | entéro. ×4 | amox.-clav. | 48 | 32 / 32 · disque 16 / 16 | 8 / 8 · disque 19 / 19 |
+| cystite | *salmonella*, *serratia* | témocilline | 48 | 8 / 16 · disque 20 / 17 | aucun seuil |
+
+**Le méropénème d'*Haemophilus* a demandé une correction du moteur.** Le CA-SFM
+ne donne AUCUN diamètre méningé — il renvoie à une note et demande la CMI.
+`getDZ()` avait déjà la bonne règle (« un couple à CMI méningée mais sans
+diamètre méningé ne retombe pas sur le diamètre ordinaire »), mais elle ne
+regardait que la table EUCAST. Sans l'étendre, une souche à 21 mm serait
+sortie « sensible » au disque pendant que la CMI la disait résistante, dans
+la même méningite et sous le même référentiel.
+
+#### « ngono GEN » : retirée, puis REMISE
+
+Le balayage en sens inverse l'avait signalée, et à juste titre au vu du seul
+communiqué : sa page 108 ne cite « CMI ≤ 16 mg/L » que dans une **note**, pour
+séparer les souches sauvages de celles ayant acquis un mécanisme — la
+définition d'un **ECOFF**, et un ECOFF employé comme seuil clinique est une
+faute.
+
+Elle a donc été retirée. `outils/essai-referentiel.js` est tombé au rouge **en
+citant sa source** : « p. 14 — gentamicine / *N. gonorrhoeae* : l'EUCAST écarte
+la molécule ». Cette page 14 n'est pas celle du communiqué : c'est celle du
+document **« Différences principales entre le CA-SFM et l'EUCAST »**, un second
+texte que ce poste n'a pas.
+
+La ligne est remise, et la question reste ouverte. Le sens inverse ne lit que
+le communiqué complet ; une valeur qu'il ne retrouve pas n'est pas pour autant
+sans source, et il le dit désormais dans son propre rapport.
+
+> Un banc qui tombe en citant sa source vaut mieux qu'une suppression qui
+> paraît propre. C'est la seule des six décisions qui n'a pas pu être
+> exécutée, et elle demande le second document.
+
+#### Ce qui reste, et c'est nommé
+
+**Huit couples que le communiqué chiffre et que PhénoBac n'a pas**, tous de la
+même forme : *le CA-SFM donne la molécule à tout le chapitre, l'EUCAST la
+restreint à certaines espèces, et PhénoBac suit l'EUCAST.*
+
+| molécule | groupes | restriction EUCAST que PhénoBac applique |
+|---|---|---|
+| nitrofurantoïne | *morganella*, *salmonella*, *serratia*, *staph*, *strepacg* | *E. coli* chez les entérobactéries, *S. saprophyticus* chez les SCN, *E. faecalis* chez les entérocoques |
+| triméthoprime | *morganella*, *salmonella*, *serratia* | *E. coli*, *K. pneumoniae*, *K. oxytoca* |
+
+Elles n'ont pas été portées, et la raison n'est pas la prudence seule :
+***Proteus* et *Morganella* sont naturellement résistants à la
+nitrofurantoïne.** Porter 64 / 64 sur `morganella` parce que la ligne du
+communiqué ne restreint rien rendrait « sensible » une espèce qui ne l'est
+jamais. Lever une restriction d'espèce est une décision de modèle à part
+entière, et elle vaut pour les huit d'un coup.
 
 ### La passe des autres sites, faite le 2026-10-31
 

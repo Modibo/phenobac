@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.23";
+const BASE_VERSION = "2026.24";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -73,7 +73,31 @@ const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "z
    et outils/verifier-comptes.py existe pour cela. Le compte se lit sur
    REGLES.length. */
 const REGLES = [
-/* LES DIX ÉCARTS DU CA-SFM, PORTÉS LE 2026-10-31 SUR DÉCISION DU BIOLOGISTE.
+/* « casfm / ngono / GEN 16-16 » : RETIRÉE PUIS REMISE, LE 2026-10-31.
+
+   Le balayage en sens inverse de comparer-casfm.py l'a signalée — le
+   communiqué complet ne chiffre nulle part la gentamicine du gonocoque, et
+   sa page 108 ne cite « CMI ≤ 16 mg/L » que dans une NOTE, pour séparer les
+   souches sauvages de celles ayant acquis un mécanisme. C'est la définition
+   d'un ECOFF, et un ECOFF employé comme seuil clinique est une faute.
+
+   Elle a donc été retirée, et outils/essai-referentiel.js est tombé au
+   rouge en citant sa source : « p. 14 — gentamicine / N. gonorrhoeae :
+   l'EUCAST écarte la molécule ». Cette page 14 n'est PAS celle du
+   communiqué : c'est celle du document « Différences principales entre le
+   CA-SFM et l'EUCAST », un second document que ce poste n'a pas.
+
+   La ligne est donc remise. Le sens inverse ne lit QUE le communiqué
+   complet ; il ne peut pas voir ce qui est écrit dans le document des
+   différences, et une valeur qu'il ne retrouve pas n'est pas pour autant
+   sans source. La question reste ouverte et elle est écrite ici plutôt que
+   tranchée : le communiqué dit « ECOFF », le banc dit « seuil CA-SFM, page
+   14 du document des différences ». Il faut ce document pour choisir.
+
+   Un banc qui tombe en citant sa source vaut mieux qu'une suppression qui
+   paraît propre. */
+
+/* LES NEUF ÉCARTS DU CA-SFM, PORTÉS LE 2026-10-31 SUR DÉCISION DU BIOLOGISTE.
 
    outils/comparer-casfm.py confronte le communiqué complet aux seuils de
    PhénoBac. Dix couples où le comité français dit autre chose que l'EUCAST et
@@ -163,6 +187,8 @@ const REGLES = [
 ["casfm","coryne","SXT","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","coryne","SXT","disque","standard",19,16,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","cperfringens","MXF","disque","standard",21,21,"5",[18,20],undefined,undefined,undefined,undefined,undefined],
+["casfm","entero","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","entero","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","FOX","disque","standard",18,18,"30",undefined,undefined,undefined,undefined,undefined,["ecoli"]],
 ["casfm","entero","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -170,6 +196,9 @@ const REGLES = [
 ["casfm","entero","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","enteroc","DAP","cmi","standard",undefined,undefined,undefined,4,undefined,undefined,undefined,undefined,undefined],
+["casfm","haemo","MEM","cmi","meninge",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","morganella","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","morganella","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -193,24 +222,35 @@ const REGLES = [
    laboratoire croit travailler en CA-SFM et reçoit l'EUCAST, en silence.
    Trouvé par outils/comparer-casfm.py le 25 octobre 2026, vérifié dans le
    document, porté sur décision du biologiste. */
+["casfm","pneumo","AMX","cmi","meninge",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pseudo","COL","cmi","standard",2,2,undefined,4,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pseudo","LVX","cmi","standard",null,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","disque","standard",null,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","disque","standard",24,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","disque","urinaire",19,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","scn","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","disque","standard",15,15,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","disque","standard",null,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","disque","standard",24,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
