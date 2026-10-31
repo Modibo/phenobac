@@ -409,6 +409,20 @@
   .poso-m{font-size:10.5px;color:var(--ink-faint);white-space:nowrap}
   .poso-src{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);margin-top:9px}
   @media(max-width:620px){ .poso-l{grid-template-columns:1fr} }
+  /* Les seuils que le CA-SFM sépare par la voie. Mêmes gabarits que les
+     posologies — même nature d'information : ce sur quoi le seuil repose, et
+     non la catégorie elle-même. */
+  .voie-dit{font-size:12px;line-height:1.55;color:var(--ink-faint);margin-bottom:9px}
+  .voie-dit b{color:var(--ink-soft)}
+  .voie-l{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr) auto;gap:3px 12px;
+          padding:7px 0;border-top:1px solid var(--line-faint,#eee);align-items:baseline}
+  .voie-l:first-of-type{border-top:none}
+  .voie-n{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap}
+  .voie-c{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-faint);margin-left:6px}
+  .voie-s{font-family:'IBM Plex Mono';font-size:12px;line-height:1.5;color:var(--ink-soft)}
+  .voie-v{font-size:10.5px;color:var(--ink-faint);white-space:nowrap}
+  .voie-src{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);margin-top:9px}
+  @media(max-width:620px){ .voie-l{grid-template-columns:1fr} }
 
   .nat-dit{font-size:12px;line-height:1.55;color:var(--ink-faint);margin-bottom:9px}
   .nat-l{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr) auto;gap:3px 12px;
@@ -1048,6 +1062,7 @@
     .rp-poso-i{color:#8a5a00}
     .rp-poso-i b{color:#8a5a00}
     .rp-poso-note{margin-top:6px}
+    .rp-voie{font-size:8pt;color:#555;margin-top:2px;line-height:1.35}
 
     .rp-comment{border:1px solid #999;background:#f6f6f4;padding:10px 12px;font-size:10pt;
       line-height:1.6;color:#111;break-inside:avoid}
@@ -1787,6 +1802,7 @@
      permet d'interpréter sans réseau une fois l'application installée. -->
 <script src="langue.js"></script>
 <script src="posologie.js"></script>
+<script src="voies.js"></script>
 <script src="rendu-cible.js"></script>
 <script src="base-connaissances.js"></script>
 <script src="moteur.js"></script>
@@ -5175,6 +5191,33 @@ function renderInterpretView(A){
     html += `<div class="poso-src">${esc(_M.POSOLOGIE_VERSION || "")}</div></div>`;
   }
 
+  /* LES SEUILS QUE LE CA-SFM SÉPARE PAR LA VOIE D'ADMINISTRATION.
+     Montrés, jamais appliqués : la catégorie affichée au-dessus ne tient pas
+     compte de la voie, et la note le dit elle-même. C'est la décision du
+     biologiste du 2026-10-31 ; outils/essai-voies.js vérifie qu'aucune
+     catégorie ne bouge quand ce bloc paraît. */
+  const voies = A.voies || {};
+  const codesVoies = Object.keys(voies).filter(k => ABX[k]);
+  if(codesVoies.length){
+    const v0 = voies[codesVoies[0]];
+    html += `<div class="sect"><div class="sect-t">${T("Seuils qui dépendent de la voie d'administration",
+      "Breakpoints that depend on the route of administration")}</div>`;
+    html += `<div class="voie-dit">${esc(v0.dit)}</div>`;
+    codesVoies.sort((x,y)=>nomAbx(x).localeCompare(nomAbx(y))).forEach(k=>{
+      voies[k].voies.forEach(v=>{
+        html += `<div class="voie-l">
+          <span class="voie-n">${esc(nomAbx(k))}<span class="voie-c">${esc(state.results[k]||"")}</span></span>
+          <span class="voie-s">${esc(v.dit)}</span>
+          <span class="voie-v">${esc(v.libelle)}</span>
+        </div>`;
+      });
+    });
+    const pages = codesVoies.reduce((acc,k)=>acc.concat(voies[k].pages||[]),[])
+                            .filter((p,i,t)=>t.indexOf(p)===i).sort((a,b)=>a-b);
+    html += `<div class="voie-src">${esc(v0.source || "")}${pages.length
+      ? " · " + T("page", "page") + " " + pages.join(", ") : ""}</div></div>`;
+  }
+
   /* ---------- Rendu ciblé (HAS 2023) ----------
      Ce qui est masqué doit se VOIR : un compte rendu amputé sans mention
      laisserait croire que les molécules n'ont pas été testées. Le document
@@ -6392,11 +6435,22 @@ function buildReport(A){
       const posoLigne = posoTxt
         ? `<div class="rp-poso${cle==="I"?" rp-poso-i":""}">${cle==="I"?"<b>Forte posologie : </b>":"Schéma du seuil : "}${posoTxt}</div>`
         : "";
+      /* LE SEUIL QUI DÉPEND DE LA VOIE, sur la feuille et non seulement à
+         l'écran. Le biologiste le voyait, le prescripteur non — or c'est LUI
+         qui connaît la voie, et donc le seul à pouvoir lire celui des deux
+         qui s'applique. La ligne ne remplace aucune catégorie : elle dit que
+         la catégorie a été rendue sans la voie. */
+      const voieR = (!masquee && (A.voies||{})[k]) || null;
+      const voieLigne = voieR
+        ? `<div class="rp-voie">${T("Selon la voie", "By route")} : ${voieR.voies.map(v =>
+             esc(v.libelle) + " " + esc(v.dit)).join(" · ")} — ${T("catégorie rendue sans tenir compte de la voie.",
+             "category reported without regard to the route.")}</div>`
+        : "";
       rows+=`<tr>
         <td>${esc(nomAbx(k))} <span class="rc">${esc(ABX[k].code)}</span></td>
         <td class="mic">${mesure?esc(mesure)+unite:"—"}</td>
         <td class="cat cat-${classeCat(cle)}">${cle?esc(lettreCat(cle)):"—"}</td>
-        <td class="catf">${catFull}${posoLigne}</td>
+        <td class="catf">${catFull}${posoLigne}${voieLigne}</td>
         <td class="prov">${pastillesProv(prov)}</td>
       </tr>`;
     });

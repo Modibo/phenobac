@@ -260,6 +260,21 @@ const BASE = (typeof module !== "undefined" && module.exports)
 const POSO = (typeof module !== "undefined" && module.exports)
   ? require("./posologie")
   : (racine.PhenoBacPosologie || { POSOLOGIE: {}, POSOLOGIE_VERSION: null });
+
+/* Les seuils que le CA-SFM sépare par la VOIE d'administration. Fichier de
+   données séparé, pour la même raison que les deux précédents.
+
+   CE FICHIER NE CATÉGORISE RIEN. C'est une décision du biologiste, prise le
+   2026-10-31 en connaissance de l'alternative : demander la voie au
+   prescripteur et catégoriser dessus aurait fait de PhénoBac l'auteur d'un
+   choix thérapeutique, sur une donnée qu'un compte rendu d'antibiogramme ne
+   porte pas toujours. Elle MONTRE les deux seuils et laisse lire celui qui
+   s'applique. outils/essai-voies.js vérifie qu'aucune catégorie ne change
+   quand la note paraît — sans quoi la décision serait trahie par son
+   implémentation. */
+const VOIE = (typeof module !== "undefined" && module.exports)
+  ? require("./voies")
+  : (racine.PhenoBacVoies || { VOIES: {}, VOIES_SOURCE: null });
 if (!BASE || !BASE.regles)
   throw new Error("base-connaissances.js doit être chargé avant moteur.js");
 
@@ -623,6 +638,10 @@ let _depistageEchoue = [];
 // les conditions de réalisation à ce que le référentiel exige.
 let _mode = "sir";
 let _ctx = {};
+// Les seuils saisis par le laboratoire. voiesPour() en a besoin : quand le
+// seuil appliqué est celui du laboratoire, la note ne peut pas annoncer ceux
+// du CA-SFM — elle parlerait d'un seuil qui n'a pas servi.
+let _bpOverride = {};
 // Le rendu ciblé est une POLITIQUE DU LABORATOIRE : il voyage avec la demande,
 // il n'est pas un réglage du moteur. Un laboratoire qui ne l'a pas choisi rend
 // tout, et c'est l'état par défaut.
@@ -1776,6 +1795,18 @@ function finalize(A, r) {
     const p = posologiePour(k, r[k], _ctx);
     if (p && p.length) A.posologies[k] = p;
   });
+
+  /* Les seuils que le CA-SFM sépare par la voie, pour l'écran et le rendu.
+     Toutes les catégories, et non les seules S et I : la voie se lit aussi
+     devant un R, où elle dit par quel chemin la molécule a été jugée. */
+  A.voies = {};
+  if (org && org.bpGroup) {
+    Object.keys(r || {}).forEach(function (k) {
+      if (!r[k]) return;
+      const v = voiesPour(org.bpGroup, k, _ctx);
+      if (v) A.voies[k] = v;
+    });
+  }
 
   // Le rendu ciblé se calcule APRÈS les alertes : une molécule qui en porte
   // une ne doit jamais être masquée, et il faut donc les connaître.
@@ -4063,6 +4094,108 @@ function getBP(bpOverride, group, k, ctx) {
 
 
 /* ============================================================
+   LES SEUILS QUI DÉPENDENT DE LA VOIE D'ADMINISTRATION
+
+   Le CA-SFM donne parfois DEUX concentrations critiques pour une même
+   molécule au même site, séparées par la voie :
+
+       Amoxicilline iv       S ≤ 1     R > 2     (streptocoques, p85)
+       Amoxicilline per os   S ≤ 0,5   R > 1
+
+   La table BP de PhénoBac ne connaît que le site. Elle en applique donc UN
+   des deux, et ce qui suit ne change pas cela d'un iota : voiesPour() ne
+   rend qu'un TEXTE, jamais une catégorie. C'est la décision du biologiste du
+   2026-10-31 — montrer les deux seuils, laisser lire celui qui s'applique —
+   et outils/essai-voies.js vérifie qu'elle est tenue.
+
+   QUATRE REFUS, et chacun évite d'annoncer un seuil qui n'a pas servi :
+
+   1. hors CA-SFM. La table est celle du CA-SFM, avec sa page. Sous EUCAST,
+      l'afficher attribuerait à un référentiel la règle de l'autre — le
+      défaut déjà rencontré sur le dépistage de la pénicilline G, et il est
+      pire qu'un silence. L'EUCAST a ses propres seuils par voie ; ils ne
+      sont pas lus, et c'est un manque NOMMÉ, pas une omission.
+   2. seuils saisis par le laboratoire. Le seuil appliqué est alors le sien ;
+      lui opposer ceux du CA-SFM parlerait d'un seuil qui n'a pas servi.
+   3. site qui ne correspond pas. La clé porte le site : une urine ou un LCR
+      ne trouve rien tant que la table n'a pas de ligne pour ce site-là. On
+      ne retombe JAMAIS sur « standard » par défaut.
+   4. une seule voie connue. C'est le seuil ordinaire, déjà dans BP : il
+      n'apprend rien, et le dire ferait du bruit là où l'on veut un signal.
+   ============================================================ */
+const VOIE_LIBELLE = {
+  iv:    () => tr("intraveineuse", "intravenous"),
+  orale: () => tr("orale", "oral")
+};
+
+function voieLibelle(v) {
+  const f = VOIE_LIBELLE[v];
+  return f ? f() : v;
+}
+
+/* Un seuil s'écrit « 0.5 », pas « 0.5000000001 ». La page a son fmt() ; le
+   moteur n'en avait pas, et ma première version a appelé cadrer() en croyant
+   mettre en forme un nombre. cadrer() FIXE LE RÉFÉRENTIEL : chaque note
+   affichée aurait silencieusement renvoyé le moteur sous EUCAST au milieu
+   d'une interprétation CA-SFM, et effacé l'espèce active. Un nom qui ressemble
+   à ce qu'on cherche n'est pas ce qu'on cherche. */
+function voieNombre(x) {
+  return (Math.round(x * 1000) / 1000).toString();
+}
+
+function voiesPour(group, code, ctx) {
+  if (!estCasfm()) return null;                                   // refus 1
+  if (_bpOverride && _bpOverride[group + ":" + code]) return null; // refus 2
+  const c = ctx || {};
+  const site = (c.mening === "Oui") ? "meninge"
+             : (c.urin === "Oui")   ? "urinaire"
+             : "standard";
+  const e = (VOIE.VOIES || {})[group + ":" + code + ":" + site];   // refus 3
+  if (!e) return null;
+  const noms = Object.keys(e).sort();
+  if (noms.length < 2) return null;                               // refus 4
+  const pages = [];
+  const voies = noms.map(function (v) {
+    if (e[v].page && pages.indexOf(e[v].page) < 0) pages.push(e[v].page);
+    return {
+      voie: v,
+      libelle: voieLibelle(v),
+      S: e[v].S,
+      R: e[v].R,
+      /* « S: null » n'est pas une valeur manquante : c'est le comité qui
+         n'accorde AUCUNE catégorie sensible par cette voie. Rendre « ≤ null »
+         serait un chiffre inventé ; le dire en mots est la seule lecture
+         fidèle. */
+      dit: (e[v].S === null || e[v].S === undefined)
+        ? tr("aucune catégorie « sensible » par cette voie",
+             "no “susceptible” category by this route")
+        : "S ≤ " + voieNombre(e[v].S)
+          + (e[v].R === null || e[v].R === undefined
+             ? "" : " · R > " + voieNombre(e[v].R))
+          + " mg/L"
+    };
+  });
+  return {
+    site: site,
+    source: VOIE.VOIES_SOURCE,
+    pages: pages,
+    voies: voies,
+    /* CE QUE LA NOTE DIT D'ELLE-MÊME. Sans cette phrase, un lecteur qui voit
+       deux seuils et une catégorie peut croire que la catégorie a été choisie
+       sur l'un des deux. Elle ne l'a pas été. */
+    dit: tr("Le CA-SFM sépare ces concentrations critiques par la voie "
+            + "d'administration. La catégorie rendue ci-dessus n'en tient pas "
+            + "compte : PhénoBac ne connaît pas la voie prescrite. Lisez le "
+            + "seuil qui correspond au traitement envisagé.",
+            "CA-SFM splits these MIC breakpoints by route of administration. "
+            + "The category reported above does not take the route into "
+            + "account: PhenoBac does not know which route is prescribed. "
+            + "Read the breakpoint matching the treatment being considered.")
+  };
+}
+
+
+/* ============================================================
    DIAMÈTRES CRITIQUES (méthode des disques), EUCAST v16.1.
 
    Un laboratoire sans automate lit son antibiogramme au pied à
@@ -4513,6 +4646,7 @@ function runInterpretation(input) {
   _activeOrg = org; _activeId = organism;      // fixés juste avant le calcul (synchrone)
   _mode = input.mode || "sir";
   _ctx = input.ctx || {};
+  _bpOverride = input.bpOverride || {};
   _renduCibleActif = input.renduCible === true;
   const A = ENGINE[org.engine](results, input.ctx || {}, org.args || {});
   // Lecture interprétative : les catégories rendues peuvent différer des
@@ -4548,6 +4682,8 @@ const MOTEUR = {
   RC_GROUPE3_ORG, RC_NOM_CODES,
   // posologies qui fondent les seuils
   POSOLOGIE: POSO.POSOLOGIE, POSOLOGIE_VERSION: POSO.POSOLOGIE_VERSION, posologiePour,
+  // les seuils que le CA-SFM sépare par la voie — montrés, jamais appliqués
+  VOIES: VOIE.VOIES, VOIES_SOURCE: VOIE.VOIES_SOURCE, voiesPour,
   // § 15 : le commentaire en cinq moments
   COMMENT_MOMENTS, commentaireStructure, commentaireCopiable,
   // tables, pour l'affichage des seuils et des aides de saisie

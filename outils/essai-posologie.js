@@ -31,8 +31,21 @@ if (typeof require === "function" && typeof module === "object" && module.export
   var mb = { exports: {} };
   (new Function("module", "exports", readFile("base-connaissances.js")))(mb, mb.exports);
   var mm = { exports: {} };
+  var modV = { exports: {} };
+  (new Function("module", "exports", readFile("voies.js")))(modV, modV.exports);
+  // LE RÉSOLVEUR LÈVE SUR UN NOM QU'IL NE CONNAÎT PAS. Il rendait la base de
+  // connaissances par défaut : require("./voies") aurait rendu la base, et le
+  // moteur, ne trouvant pas VOIES, n'aurait affiché AUCUNE voie — au vert.
+  var resoudre = function (nom) {
+    if (/posologie/.test(nom)) return mp.exports;
+    if (/voies/.test(nom)) return modV.exports;
+    if (/rendu-cible/.test(nom)) return mb.exports;
+    if (/base-connaissances/.test(nom)) return mb.exports;
+    throw new Error("le banc ne sait pas charger " + nom
+      + " : ajoutez-le ici plutôt que de lui substituer la base");
+  };
   (new Function("module", "exports", "require", readFile("moteur.js")))(
-    mm, mm.exports, function (n) { return /posologie/.test(n) ? mp.exports : mb.exports; });
+    mm, mm.exports, resoudre);
   E = mm.exports;
 }
 

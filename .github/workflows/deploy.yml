@@ -125,6 +125,18 @@ jobs:
       - name: La posologie suit le contexte et n'est jamais inventée
         run: node outils/essai-posologie.js
 
+      # Le CA-SFM sépare parfois deux seuils par la VOIE d'administration.
+      # PhénoBac les MONTRE et ne catégorise pas avec : décision du biologiste
+      # du 2026-10-31, parce que demander la voie au prescripteur pour en
+      # déduire une catégorie ferait de l'application l'auteur d'un choix
+      # thérapeutique, sur une donnée qu'un compte rendu ne porte pas toujours.
+      # Une décision pareille se trahit par son implémentation, pas par son
+      # énoncé : il suffirait de brancher la table sur getBP « puisque la
+      # valeur est là ». Ce banc interprète toutes les espèces AVEC la table
+      # puis SANS, et exige que rien ne bouge hors le champ « voies ».
+      - name: La note « selon la voie » ne décide d'aucune catégorie
+        run: node outils/essai-voies.js
+
       # Masquer un résultat est un acte grave : le défaut qu'on redoute n'est
       # pas qu'une molécule de trop s'affiche, c'est qu'une molécule ACTIVE
       # disparaisse de la feuille du clinicien. Le banc éprouve donc d'abord

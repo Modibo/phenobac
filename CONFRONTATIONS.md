@@ -819,6 +819,59 @@ différente de celle annoncée, et il demande la lecture d'un biologiste : la
 question n'est pas « quelle voie ? » mais « pourquoi PhénoBac applique-t-elle
 hors urine un seuil que le CA-SFM réserve à la cystite ? ».
 
+#### La table est maintenant lue par l'application (2026-10-31)
+
+`voies.js` est livré, déclaré aux **quatre** endroits qu'un fichier de données
+doit occuper — `phenobac.html`, le `SHELL` du service worker, le `Dockerfile`
+et `install-caddy.sh` ; l'oubli des deux derniers avait rendu le site 502 le
+24 octobre. Le moteur l'expose en `A.voies`, l'écran en fait une section et le
+compte rendu imprimé une ligne sous la catégorie — là où le **prescripteur**,
+seul à connaître la voie, peut la lire.
+
+**Le moteur ne catégorise toujours pas avec.** `voiesPour()` ne rend qu'un
+texte, et il **refuse** dans quatre cas, chacun évitant d'annoncer un seuil
+qui n'a pas servi :
+
+| refus | pourquoi |
+|---|---|
+| hors CA-SFM | la table est celle du CA-SFM, avec sa page ; sous EUCAST l'afficher attribuerait à un référentiel la règle de l'autre |
+| seuils saisis par le laboratoire | le seuil appliqué est alors le sien |
+| site qui ne correspond pas | la clé porte le site ; on ne retombe jamais sur « standard » par défaut |
+| une seule voie connue | c'est le seuil ordinaire, déjà dans `BP` : il n'apprend rien |
+
+`outils/essai-voies.js` (30 contrôles, dans la chaîne) tient la décision par
+un **différentiel** : toutes les espèces, huit profils, deux référentiels —
+960 paires — interprétées **avec** la table puis **sans**, et l'on exige que
+les deux interprétations soient identiques champ pour champ, hors le champ
+`voies`. Vider la table est possible parce que le moteur la lit à chaque
+appel ; c'est l'interrupteur qui donne au banc son pouvoir de refus. Vérifié
+par mutation : brancher la table sur `getBP()` — le geste que la décision
+interdit — fait tomber le banc.
+
+> Un différentiel ne vaut rien s'il compare deux fois le même silence. Ma
+> première version du banc cadrait le référentiel par `cadrer()` **avant**
+> l'appel, alors que `runInterpretation()` refait `cadrer(input.ref, …)` à son
+> entrée : les cinq couples étaient déclarés inatteignables et le différentiel
+> comparait 960 fois deux absences. Le contrôle de **portée** — chaque couple
+> doit être atteint par au moins une espèce, et la comparaison doit avoir
+> tourné au moins une fois avec la note — l'a dit tout de suite. C'est à cela
+> qu'il sert, et c'est pourquoi un « rien n'a changé » sans lui ne prouve rien.
+
+Deux autres défauts posés puis retirés en chemin, tous deux muets :
+
+- j'ai appelé `cadrer()` **en croyant mettre en forme un nombre**. `cadrer()`
+  FIXE LE RÉFÉRENTIEL : chaque note affichée aurait silencieusement renvoyé le
+  moteur sous EUCAST au milieu d'une interprétation CA-SFM. Un nom qui
+  ressemble à ce qu'on cherche n'est pas ce qu'on cherche ;
+- les treize bancs rendaient **la base de connaissances pour tout nom de
+  fichier non reconnu**. `require("./voies")` aurait rendu la base, `VOIES`
+  serait resté vide, et les trente contrôles auraient passé au vert sans voir
+  une seule voie. Leur résolveur **lève** désormais.
+
+**Ce qui reste hors de la table, et c'est nommé :** l'EUCAST a lui aussi des
+seuils séparés par la voie. Ils ne sont pas lus — le classeur n'est pas
+redistribuable — et c'est pourquoi la note ne paraît que sous CA-SFM.
+
 **Le bilan honnête**, après ces trois corrections : 279 couples confrontés,
 228 où les deux comités disent la même chose, **27 écarts candidats** bâtis
 sur des lignes uniques, sans ambiguïté de voie ni d'espèce, **8 couples** à
