@@ -630,10 +630,11 @@ ensemble, jamais l'un sans l'autre.
 - **tables** : BP_CASFM
 - **empreinte** : 95c8f7ef64ad4671cfa20c206cc3b966e42ca388cc0743b295b4a38ec20ff9a3
 - **date** : 2026-10-25
-- **résultat** : **À RELIRE.** 286 couples confrontés, 228 où les deux comités
-  disent la même chose, **30 écarts candidats** dont **un vérifié dans le
+- **résultat** : **À RELIRE.** 279 couples confrontés, 228 où les deux comités
+  disent la même chose, **27 écarts candidats** dont **un vérifié dans le
   document et corrigé** (la colistine de *Pseudomonas*), **zéro nom que
-  l'outil ne sait pas lire**, 11 couples en attente d'une décision de modèle.
+  l'outil ne sait pas lire**, 14 couples en attente d'une décision de modèle
+  (8 à plusieurs lignes, 6 dépendant de la voie d'administration).
 
 ### Les seize noms illisibles : un défaut de lecture, pas seize molécules
 
@@ -723,10 +724,46 @@ et **n'en compare aucune** : distinguer la voie d'administration, ou une
 espèce à l'intérieur d'un chapitre, est une **décision de modèle** qui
 appartient au biologiste, pas à l'extracteur. Choisir serait inventer.
 
-**Le bilan honnête**, après ces deux corrections : 286 couples confrontés,
-228 où les deux comités disent la même chose, **30 écarts candidats** bâtis
-sur des lignes uniques et sans ambiguïté, **11 couples** qui attendent une
-décision de modèle, **1** dont la colonne S n'a pas été lue.
+### La fosfomycine, que j'avais désignée comme l'écart le plus urgent
+
+Elle n'en est pas un. Page 54, entérobactéries :
+
+```
+Fosfomycine iv                  S ≤ 32   R > 32
+Fosfomycine per os (cystites),  S ≤  8   R >  8
+```
+
+PhénoBac applique **S ≤ 8** — exactement la ligne *per os, cystites*.
+L'« écart » annoncé était la ligne **intraveineuse**, une voie que la table
+`BP` ne modélise pas.
+
+**Et il s'était caché derrière le filtre des sites.** La ligne *per os
+(cystites)* porte un site : elle part dans la passe des autres sites. La
+ligne *iv* reste seule au site ordinaire, paraît unique, et se compare. Un
+écart de VOIE prenait donc l'apparence d'un écart de SEUIL, et le filtre qui
+devait éviter les faux écarts en fabriquait un.
+
+`agents_fr.voie()` lit désormais la voie, et les six couples concernés ne
+sont plus comparés :
+
+| chapitre | molécule | iv | orale |
+|---|---|---|---|
+| entérobactéries p54 | fosfomycine | S ≤ 32 | S ≤ 8 *(cystites)* |
+| *Pseudomonas* p61 | fosfomycine | S ≤ 128 | — |
+| *Staphylococcus* p77 | fosfomycine | S ≤ 32 | — |
+| *Haemophilus* p105 | amoxicilline | S ≤ 2 | **pas de S** |
+| *Haemophilus* p105 | amox.-clavulanique | S ≤ 2 | **pas de S** |
+| streptocoques p85 | amoxicilline | S ≤ 1 | S ≤ 0,5 |
+
+> « iv » se cherche comme un MOT : « Lévofloxacine » contient « iv », et le
+> chercher dans la chaîne normalisée rendrait intraveineuse la moitié des
+> fluoroquinolones.
+
+**Le bilan honnête**, après ces trois corrections : 279 couples confrontés,
+228 où les deux comités disent la même chose, **27 écarts candidats** bâtis
+sur des lignes uniques, sans ambiguïté de voie ni d'espèce, **8 couples** à
+plusieurs lignes et **6** dont le seuil dépend de la voie — tous en attente
+d'une décision de modèle —, **1** dont la colonne S n'a pas été lue.
 
 Les cinquante-deux de la passe précédente en contenaient donc **vingt-deux
 qui n'étaient pas des écarts** : un artefact de lecture et vingt-et-un choix

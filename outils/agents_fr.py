@@ -220,6 +220,43 @@ def code(agent):
 
 # Indication portée par l'intitulé. PhénoBac range les seuils par SITE, et
 # comparer un seuil de cystite au seuil ordinaire donnerait un faux écart.
+def voie(agent):
+    """La voie d'administration, quand le libellé la dit.
+
+    LE SEUIL EN DÉPEND, ET PAS QU'UN PEU. Page 54, entérobactéries :
+
+        Fosfomycine iv                  S ≤ 32
+        Fosfomycine per os (cystites)   S ≤  8
+
+    Un facteur quatre. Confondre les deux lignes, c'est rendre « sensible »
+    une souche que le document tient pour résistante — ou l'inverse.
+
+    Le piège est qu'une des deux lignes porte AUSSI un site (« cystites ») :
+    elle part donc dans la passe des autres sites, et la ligne « iv » reste
+    seule au site ordinaire. Elle paraît unique, elle se compare, et l'écart
+    annoncé n'est qu'une différence de VOIE. C'est ce qui a fait prendre la
+    fosfomycine pour le plus urgent des écarts du CA-SFM : PhénoBac appliquait
+    déjà la bonne valeur, celle de la voie orale.
+
+    « standard » veut dire « le libellé ne dit pas la voie » — et non
+    « intraveineux par défaut » : ne rien dire n'est pas dire quelque chose.
+    """
+    a = norme(agent)
+    if "peros" in a or "orale" in a:
+        return "orale"
+    if "iv" in NORME_MOTS(agent):
+        return "iv"
+    return "standard"
+
+
+def NORME_MOTS(agent):
+    """Les mots du libellé, normalisés un à un. « iv » doit se chercher comme
+    un MOT : « Lévofloxacine » contient « iv », et la chercher dans la chaîne
+    normalisée rendrait intraveineuse la moitié des fluoroquinolones."""
+    import re as _re
+    return [norme(m) for m in _re.split(r"[^0-9A-Za-zÀ-ÿ]+", str(agent)) if m]
+
+
 def site(agent):
     a = norme(agent)
     if "cystite" in a or "urinaire" in a:

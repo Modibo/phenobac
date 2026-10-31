@@ -285,7 +285,7 @@ def main():
     print("%d lignes de concentrations critiques relevées.\n" % len(lues))
 
     perdus, perimes, divergents, muets, identiques = [], [], [], [], 0
-    aveugles, multiples = [], {}
+    aveugles, multiples, voies = [], {}, {}
     # UN COUPLE PEUT AVOIR PLUSIEURS LIGNES AU MÊME SITE, et l'outil n'en
     # gardait qu'une — celle que l'ordre de lecture lui donnait en dernier.
     # On les recense d'abord, pour ne comparer que les couples à ligne unique.
@@ -350,6 +350,31 @@ def main():
         if AF.site(agent) != "standard":
             autres_sites += 1
             continue
+        # LA VOIE D'ADMINISTRATION EST DANS LE SEUIL, ET PHÉNOBAC NE LA PORTE PAS.
+        #
+        # Page 54, entérobactéries :
+        #
+        #   Fosfomycine iv                  S ≤ 32
+        #   Fosfomycine per os (cystites)   S ≤  8
+        #
+        # Un facteur quatre. La table BP de PhénoBac n'a qu'un seuil par
+        # couple, plus un seuil urinaire et un seuil méningé : elle ne connaît
+        # pas la voie. Comparer la ligne « iv » à ce seuil unique revient donc
+        # à comparer deux choses différentes.
+        #
+        # ET LE PIÈGE EST QUE CELA NE SE VOIT PAS. La ligne « per os
+        # (cystites) » porte un SITE : elle part dans la passe des autres
+        # sites. La ligne « iv » reste seule au site ordinaire, paraît unique,
+        # se compare — et l'écart annoncé n'est qu'une différence de voie.
+        # C'est ainsi que la fosfomycine est passée pour le plus urgent des
+        # écarts du CA-SFM alors que PhénoBac appliquait déjà la bonne valeur,
+        # celle de la voie orale.
+        v = AF.voie(agent)
+        if v != "standard":
+            voies.setdefault((chapitre, code), []).append(
+                (agent[:46], v, sC, rC, page))
+            continue
+
         # PLUSIEURS LIGNES POUR LE MÊME COUPLE : NE PAS CHOISIR.
         #
         # Le communiqué donne parfois deux lignes au même site pour une même
@@ -400,6 +425,20 @@ def main():
             print("  %-12s %-5s  CA-SFM p%-4d S<=%-7s R>%-7s   EUCAST appliqué : S<=%-7s R>%s"
                   % (g, k, page, "aucune" if sC is None else sC, rC,
                      "aucune" if sE is None else sE, rE))
+    if voies:
+        print("\n=== LE SEUIL DÉPEND DE LA VOIE D'ADMINISTRATION (%d) ===" % len(voies))
+        print("La table BP de PhénoBac n'a qu'un seuil par couple, plus un seuil")
+        print("urinaire et un seuil méningé : elle ne connaît pas la voie. Ces")
+        print("lignes ne sont donc PAS comparées — ce serait comparer deux choses")
+        print("différentes. Pour chacune, la question est : PhénoBac doit-elle")
+        print("porter le seuil par voie, ou s'en tenir à une seule ?")
+        for (ch, code) in sorted(voies):
+            print("  %-20s %s" % (ch[:20], code))
+            for agent, v, sC, rC, page in voies[(ch, code)]:
+                print("      p%-4d %-7s S<=%-9s R>%-9s « %s »"
+                      % (page, v, "aucune" if sC is None else sC,
+                         "aucune" if rC is None else rC, agent))
+
     if multiples:
         print("\n=== PLUSIEURS LIGNES POUR LE MÊME COUPLE, AU MÊME SITE (%d) ==="
               % len(multiples))
@@ -448,6 +487,7 @@ def main():
     print("  non lus par l'outil         : %d" % len(set(muets)))
     print("  colonne S non lue           : %d" % len(set(aveugles)))
     print("  couples à plusieurs lignes  : %d (non comparés)" % len(multiples))
+    print("  seuil dépendant de la voie  : %d (non comparés)" % len(voies))
     print("  autres sites (cystite, LCR, dépistage), non traités ici : %d" % autres_sites)
     print("\nAucun fichier n'a été modifié. Toute correction doit être validée")
     print("par un biologiste avant d'être portée dans le code.")
