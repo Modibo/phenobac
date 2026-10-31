@@ -168,7 +168,18 @@ BRUIT = {"casfm", "zit", "", "note", "notes"}
 #
 # Le lecteur recolle (voir comparer-casfm.py) ; ce garde-fou attrape ce qui
 # lui échappe, en SIGNALANT au lieu de deviner.
-INCOMPLET = re.compile(r"[-–]\s*$")
+# UNE VIRGULE FINALE DIT « L'ESPÈCE SUIT », et elle suit sur la ligne d'après.
+#
+#   « Imipénème,      » + « Morganellaceae »
+#   « Pénicilline G,  » + « S. aureus »
+#   « Oxacilline,     » + « autres espèces »
+#
+# Sans elle, le libellé s'arrêtait au nom de la molécule, deux lignes du
+# document devenaient deux valeurs du MÊME couple, et l'outil les déclarait
+# « à plusieurs lignes, décision de modèle » — alors que le document avait
+# déjà tranché, en nommant l'espèce. Neuf couples attendaient une décision
+# que personne n'avait à prendre.
+INCOMPLET = re.compile(r"[-–,]\s*$")
 
 
 def tronque(agent):
@@ -178,12 +189,51 @@ def tronque(agent):
     return t.count("(") > t.count(")")
 
 
+# LA MOLÉCULE ET L'ESPÈCE SONT DEUX CHOSES, ET LE LIBELLÉ LES COLLE.
+#
+#   « Téicoplanine, S. aureus »                     molécule + espèce
+#   « Imipénème, Morganellaceae »                   molécule + genre
+#   « Céfuroxime iv, E. coli, Klebsiella spp. »     molécule + voie + espèces
+#   « Oxacilline, autres espèces »                  molécule + le complément
+#
+# Tant que les deux restaient collés, deux choses se produisaient ensemble :
+# le nom n'était pas reconnu (il ne figure pas, espèce comprise, dans la
+# TABLE), et l'espèce que le document NOMME était perdue — si bien que deux
+# lignes tranchées par le comité revenaient au biologiste comme une
+# « décision de modèle » à prendre.
+#
+# On coupe au premier séparateur suivi de quelque chose qui RESSEMBLE À UNE
+# ESPÈCE, et à rien d'autre. Aucun nom de molécule du panel ne porte de
+# virgule ; le risque de couper au mauvais endroit est donc nul, et la règle
+# du § 26 tient : on ne devine aucun nom, on en retire un suffixe.
+ESPECE_SUFFIXE = re.compile(
+    r"\s*[,;]\s*(?=("
+    r"[A-Z]\.\s*[a-zéèê]"          # « S. aureus », « E. coli »
+    r"|SCN\b"
+    r"|Morganellaceae\b|Enterobacterales\b|Klebsiella\b|Salmonella\b"
+    r"|Serratia\b|Proteus\b|Providencia\b|Streptococcus\b|Staphylococcus\b"
+    r"|autres\s+esp[èe]ces\b"
+    r"))", re.U)
+
+
+def scinder(agent):
+    """(molécule, espèces). « espèces » est vide quand le libellé n'en nomme
+    aucune — et vide ne veut pas dire « toutes » : cela veut dire que le
+    document n'a rien dit, ce qui est l'affaire de l'appelant."""
+    t = str(agent).strip()
+    m = ESPECE_SUFFIXE.search(t)
+    if not m:
+        return t, ""
+    return t[:m.start()].strip(), t[m.end():].strip()
+
+
 def code(agent):
     """(code, lu). « lu » distingue « hors panel, c'est voulu » — le code vaut
     alors None — de « nom que l'outil ne sait pas lire », qui est un défaut de
     l'outil et doit se voir."""
     if PAS_UN_NOM.match(str(agent)):
         return None, True                     # appel de note : rien à lire
+    agent = scinder(agent)[0]                 # l'espèce n'est pas la molécule
     n = norme(agent)
     if not n or n in BRUIT:
         return None, True

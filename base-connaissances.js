@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.22";
+const BASE_VERSION = "2026.23";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -101,8 +101,18 @@ const REGLES = [
        staph    CIP  p74     null / 1      (EUCAST null / 2)
        scn      CIP  p74     null / 1      (EUCAST null / 2)
      zone intermédiaire supprimée
-       listeria LZD  p100    2 / 2         (EUCAST 2 / 4)
        viridans PEN  p95     0,25 / 0,25   (EUCAST 0,25 / 1)
+
+   NEUF, ET NON DIX : « listeria LZD 2 / 2 » a été porté le matin du
+   2026-10-31 puis RETIRÉ le même jour. La page 100 n'est pas celle de
+   Listeria — c'est le chapitre « 5. 13. Corynebacterium spp. (à l'exception
+   de C. diphtheriae complex) ». Son titre fait soixante-six caractères, et
+   le lecteur écartait les titres de plus de soixante : le chapitre
+   n'existait pas pour lui, les pages suivantes gardaient l'étiquette
+   « Listeria » du chapitre précédent, et le linézolide des corynébactéries
+   est devenu celui de Listeria. La page 99, la vraie, ne porte AUCUNE ligne
+   de linézolide. Une valeur juste, au mauvais endroit, pour la troisième
+   fois de la journée et par une porte nouvelle : un garde-fou de longueur.
      et un seul dans l'autre sens — le CA-SFM ACCORDE ce que l'EUCAST refuse
        serratia SXT  p54     0,5 / 0,5     (EUCAST null / 2)
 
@@ -160,7 +170,6 @@ const REGLES = [
 ["casfm","entero","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","enteroc","DAP","cmi","standard",undefined,undefined,undefined,4,undefined,undefined,undefined,undefined,undefined],
-["casfm","listeria","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

@@ -110,7 +110,17 @@ def lignes_casfm(chemin):
                                            pdfpos.polices(objs, p), 'latin-1'))
         for _y, fr in lg:
             ligne = re.sub(r'\s+', ' ', ' '.join(s for _, s in fr)).strip()
-            if len(ligne) > 60:
+            # LE GARDE-FOU DE 60 CARACTÈRES ÉCARTAIT UN VRAI CHAPITRE.
+            # « 5. 13. Corynebacterium spp. (à l'exception de C. diphtheriae
+            # complex) » fait 66 caractères : le titre était rejeté, les
+            # pages qui suivaient gardaient l'étiquette « Listeria » du
+            # chapitre précédent, et deux couples de Corynebacterium ont été
+            # confrontés aux seuils de Listeria. L'un d'eux — le linézolide —
+            # est parti en production le 2026-10-31 avant d'être repris.
+            # Le motif numéroté « 5. 13. » suffit à distinguer un titre d'une
+            # phrase ; la longueur ne protégeait de rien qu'il n'écartait
+            # déjà, et elle coûtait un chapitre.
+            if len(ligne) > 120:
                 continue
             m = re.match(r'^\d+\s*\.\s*\d+\s*\.\s+(\S.*)$', ligne)
             if not m:
@@ -165,8 +175,17 @@ def lignes_casfm(chemin):
         # parenthèse nue. « (4) » part — c'est un appel de note ; « ) » reste.
         MIETTE = re.compile(r'^[\d.,;*†‡()\s-]+$')
 
+        # UNE VIRGULE SEULE NON PLUS : elle annonce l'espèce qui suit.
+        # « Imipénème » et « , » sont deux fragments distincts, à x=46 et
+        # x=102 ; en jetant le second, le filtre effaçait le signe même qui
+        # disait « Morganellaceae arrive à la ligne suivante ». Le libellé
+        # paraissait complet, la recollation ne se déclenchait pas, et deux
+        # lignes du document devenaient deux valeurs du même couple. C'est le
+        # défaut de la parenthèse fermante, une seconde fois et au même
+        # endroit : un filtre à bruit qui emporte de la ponctuation
+        # structurante fabrique le défaut qu'il devait réduire.
         def miette(t):
-            return t not in ("(", ")") and bool(MIETTE.match(t))
+            return t not in ("(", ")", ",") and bool(MIETTE.match(t))
 
         def nom_colonne(fr, xs):
             return ' '.join(s.strip() for x, s in fr
@@ -302,17 +321,63 @@ def main():
 
     perdus, perimes, divergents, muets, identiques = [], [], [], [], 0
     aveugles, multiples, voies = [], {}, {}
+
+    # UNE LIGNE QUI NOMME UNE ESPÈCE LA RETIRE À LA LIGNE GÉNÉRALE.
+    #
+    #   p51   Imipénème                    S ≤ 2      R > 4
+    #   p51   Imipénème, Morganellaceae    pas de S   R > 4
+    #
+    # La seconde vise « morganella » ; la première vise le chapitre entier,
+    # Morganellaceae compris. Les deux retombaient donc ensemble sur
+    # « morganella », et le couple était déclaré « à plusieurs lignes,
+    # décision de modèle » — alors que le document dit exactement l'inverse :
+    # il a tranché, en faisant une exception nommée.
+    #
+    # On recense d'abord les groupes RÉCLAMÉS par une ligne nommée, puis on
+    # les retire des lignes générales du même couple. C'est la lecture
+    # ordinaire d'un tableau : la ligne précise prime sur la ligne générale.
+    reclames = {}
+    for chapitre, agent, sC, rC, page, hors in lues:
+        g0 = CZ.CHAPITRE_GROUPES.get(chapitre)
+        if not g0:
+            continue
+        code, lu = AF.code(agent)
+        if not lu or code is None:
+            continue
+        v = CZ.groupes_vises(chapitre, agent, g0)
+        if v and len(v) < len(g0):
+            reclames.setdefault((chapitre, code), set()).update(v)
+
+    def vises(chapitre, agent, code, groupes):
+        v = CZ.groupes_vises(chapitre, agent, groupes)
+        if v and len(v) == len(groupes):          # ligne générale
+            pris = reclames.get((chapitre, code), set())
+            return [g for g in v if g not in pris]
+        return v
     # UN COUPLE PEUT AVOIR PLUSIEURS LIGNES AU MÊME SITE, et l'outil n'en
     # gardait qu'une — celle que l'ordre de lecture lui donnait en dernier.
     # On les recense d'abord, pour ne comparer que les couples à ligne unique.
     par_couple = {}
     for chapitre, agent, sC, rC, page, hors in lues:
-        if not CZ.CHAPITRE_GROUPES.get(chapitre):
+        groupes0 = CZ.CHAPITRE_GROUPES.get(chapitre)
+        if not groupes0:
             continue
         code, lu = AF.code(agent)
         if not lu or code is None or AF.site(agent) != "standard":
             continue
-        par_couple.setdefault((chapitre, code), set()).add((sC, rC))
+        # LE RECENSEMENT DOIT SE FAIRE PAR GROUPE, ET NON PAR CHAPITRE.
+        #
+        # Clé (chapitre, molécule), « Téicoplanine, S. aureus » 2/2 et
+        # « Téicoplanine, SCN » 4/4 tombaient dans le MÊME seau et le couple
+        # était déclaré « à plusieurs lignes, décision de modèle » — alors
+        # que groupes_vises() sait depuis toujours envoyer l'une à « staph »
+        # et l'autre à « scn ». Le document avait tranché ; l'outil demandait
+        # au biologiste de trancher une seconde fois.
+        #
+        # Ce qui reste après ce changement est ce qui MÉRITE une décision :
+        # deux lignes qui visent le MÊME groupe de PhénoBac.
+        for g in vises(chapitre, agent, code, groupes0):
+            par_couple.setdefault((g, code), set()).add((sC, rC))
     plusieurs = {k for k, v in par_couple.items() if len(v) > 1}
     autres_sites = 0
     vus = set()
@@ -409,11 +474,11 @@ def main():
         # distinguer la voie d'administration, ou une espèce à l'intérieur
         # d'un chapitre, est une décision de modèle qui appartient au
         # biologiste, pas à l'extracteur.
-        if (chapitre, code) in plusieurs:
+        if any((g, code) in plusieurs for g in vises(chapitre, agent, code, groupes)):
             multiples.setdefault((chapitre, code), []).append(
                 (agent[:46], sC, rC, page))
             continue
-        for g in CZ.groupes_vises(chapitre, agent, groupes):
+        for g in vises(chapitre, agent, code, groupes):
             vus.add((g, code))
             e = (EUCAST.get(g) or {}).get(code)
             porte = (CASFM.get(g) or {}).get(code)
@@ -494,6 +559,60 @@ def main():
         for m in sorted(set(muets)):
             print("  %s" % m)
 
+
+    # ==================================================================
+    # LE SENS INVERSE : le delta porte-t-il ce que le document ne dit pas ?
+    #
+    # Tout ce qui précède regarde dans UN sens — le document dit quelque
+    # chose, PhénoBac ne le porte pas. L'autre sens n'était pas regardé, et
+    # il est tout aussi grave : une valeur portée que le document ne dit
+    # NULLE PART est une valeur inventée ou mal rangée, et elle s'applique
+    # avec l'autorité du comité.
+    #
+    # Trouvé le 2026-10-31, et il a attrapé une faute commise le matin même :
+    # « listeria LZD 2 / 2 », lu page 100 — qui est le chapitre
+    # Corynebacterium spp., non celui de Listeria. La page de Listeria ne
+    # porte aucune ligne de linézolide.
+    #
+    # Les lignes qui ne portent QUE une ZIT (S et R absents) ne sont pas
+    # concernées : elles n'affirment aucun seuil.
+    orphelines = []
+    par_doc = {}
+    for chapitre, agent, sC, rC, page, hors in lues:
+        g0 = CZ.CHAPITRE_GROUPES.get(chapitre)
+        if not g0:
+            continue
+        code, lu = AF.code(agent)
+        if not lu or code is None:
+            continue
+        for g in vises(chapitre, agent, code, g0):
+            par_doc.setdefault((g, code, AF.site(agent)), set()).add((sC, rC, page))
+
+    def dit(v):
+        return "aucune" if v is None else ("—" if v == "?" else str(v))
+
+    for groupe in sorted(CASFM):
+        for code in sorted(CASFM[groupe]):
+            bp = CASFM[groupe][code] or {}
+            S, R = bp.get("S", "?"), bp.get("R", "?")
+            if S == "?" and R == "?":
+                continue          # ligne de ZIT seule : elle n'affirme aucun seuil
+            vals = par_doc.get((groupe, code, "standard"))
+            if not vals:
+                orphelines.append("%-9s %-5s : S<=%s R>%s — LE DOCUMENT NE DIT RIEN "
+                                  "pour ce couple" % (groupe, code, dit(S), dit(R)))
+            elif not any(v[0] == S and v[1] == R for v in vals):
+                orphelines.append("%-9s %-5s : la base dit S<=%s R>%s, le document dit %s"
+                                  % (groupe, code, dit(S), dit(R),
+                                     " ou ".join("S<=%s R>%s (p%d)" % (dit(a), dit(b), p)
+                                                 for a, b, p in sorted(vals, key=str))))
+    if orphelines:
+        print("\n=== LE DELTA PORTE CE QUE LE DOCUMENT NE DIT PAS (%d) ===" % len(orphelines))
+        print("Une valeur portée que le communiqué ne dit nulle part s'applique")
+        print("pourtant avec l'autorité du comité. C'est le sens que personne")
+        print("ne regardait, et il a attrapé une faute commise le jour même.")
+        for o in orphelines:
+            print("  " + o)
     print("\n=== bilan ===")
     print("  couples confrontés          : %d" % len(vus))
     print("  CA-SFM et EUCAST d'accord   : %d" % identiques)

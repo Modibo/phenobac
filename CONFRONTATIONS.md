@@ -649,16 +649,31 @@ ensemble, jamais l'un sans l'autre.
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM
-- **empreinte** : 4b1aa01db3ad3d242c231d408ccc965f38617a6c38971762f88f77d1c81417d5
-- **date** : 2026-10-31, le communiqué sous les yeux
-- **résultat** : **264 couples confrontés, 250 où les deux comités disent la
-  même chose, ZÉRO écart restant.** Les 14 derniers ont été portés ce jour
-  dans le delta — 10 concentrations critiques et 4 diamètres, relus un à un
-  sur le texte positionné de leur page. Zéro nom que l'outil ne sait pas lire.
-  Restent, hors comparaison et par décision de modèle : 9 couples à plusieurs
-  lignes, 6 dépendant de la voie d'administration, 1 colonne S portant le mot
-  « Note » (p72, pénicilline G des staphylocoques), et 49 lignes d'autres
-  sites (cystite, LCR, dépistage) qui n'ont pas encore eu leur passe.
+- **empreinte** : 68b414585e136806323169b549e62da7241d495403ed1f94450eb2e4732e1c27
+- **date** : 2026-10-31, le communiqué sous les yeux (seconde passe, le soir)
+- **résultat** : **271 couples confrontés, 259 où les deux comités disent la
+  même chose.** 13 écarts portés dans le delta ce jour (9 concentrations
+  critiques + 4 diamètres ; un dixième, « listeria LZD », a été porté puis
+  retiré — voir plus bas). Zéro nom que l'outil ne sait pas lire. **Deux
+  écarts restent à arbitrer**, apparus quand le lecteur a su distinguer les
+  espèces à l'intérieur d'un chapitre :
+
+  | groupe | molécule | page | CA-SFM | PhénoBac applique |
+  |---|---|---|---|---|
+  | *S. aureus* | oxacilline | 72 | S ≤ 2 · R > 2 | S ≤ 0,25 · R > 0,25 |
+  | SCN | vancomycine | 75 | S ≤ 2 · R > 2 | S ≤ 4 · R > 4 |
+
+  Et **une ligne du delta que le communiqué ne dit nulle part** :
+  `ngono GEN 16 / 16`. La page 108 ne mentionne 16 mg/L que dans une **note**,
+  pour distinguer les souches sauvages de celles ayant acquis un mécanisme —
+  c'est un **ECOFF**, pas une concentration critique clinique, et PhénoBac
+  l'applique comme un seuil de catégorisation.
+
+  Restent hors comparaison : **1** couple à plusieurs lignes (la
+  ciprofloxacine des entérobactéries, dont la seconde ligne appartient au
+  sous-tableau « *Salmonella* spp. » — les sous-titres ne sont pas encore
+  lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
+  pénicilline G), et 49 lignes d'autres sites.
 - **portée** : le passage de 279 à 264 couples n'est pas une perte de
   couverture, c'est la fin d'un mélange. Trois chapitres étaient mal
   rattachés — le pneumocoque aux streptocoques A/C/G, la mélioïdose à

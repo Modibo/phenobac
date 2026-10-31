@@ -90,15 +90,69 @@ AGENTS_FR = [
 #   · une ligne qui NOMME une espèce ne vaut que pour elle : « Vancomycine
 #     S. aureus » ne concerne pas les staphylocoques à coagulase négative,
 #     dont la ligne « Vancomycine, SCN » ne porte aucune ZIT.
+# L'ESPÈCE QUE LE LIBELLÉ NOMME -> le groupe de seuils de PhénoBac.
+#
+# Une entrée à None veut dire : le document nomme une espèce, et PhénoBac ne
+# sait pas l'isoler — son groupe en couvre plusieurs. Ce n'est PAS « applique
+# à tout le groupe » : appliquer à Enterobacter le seuil que le comité réserve
+# à E. coli serait « un chiffre juste au mauvais endroit », le défaut que ce
+# dépôt passe son temps à chasser. L'appelant le compte et le NOMME.
+ESPECE_GROUPE = [
+    (r"\bS\.?\s*aureus\b",                    ["staph"]),
+    (r"\bSCN\b|coagulase",                     ["scn"]),
+    (r"\bMorganellaceae\b",                    ["morganella"]),
+    (r"\bSalmonella\b",                        ["salmonella"]),
+    (r"\bSerratia\b",                          ["serratia"]),
+    (r"\bS\.?\s*agalactiae\b",                ["strepb"]),
+    (r"\bS\.?\s*pyogenes\b|\bS\.?\s*dysgalactiae\b", ["strepacg"]),
+    # Nommées, et non isolables : le groupe de PhénoBac couvre plus large.
+    (r"\bE\.?\s*coli\b|\bKlebsiella\b",      None),
+    (r"\bS\.?\s*lugdunensis\b",               None),   # un SCN parmi quatre
+    (r"\bS\.?\s*intermedius\b|\bS\.?\s*pseudintermedius\b", None),
+    (r"autres\s+esp[èe]ces",                    None),   # le complément
+]
+
+
 def groupes_vises(chapitre, agent, groupes):
-    a = agent.lower()
-    if chapitre == "Enterobacterales" and a.startswith("ciprofloxacine"):
+    """Les groupes de PhénoBac que cette LIGNE vise.
+
+    Rendre [] n'est pas un échec : c'est « le document nomme une espèce que je
+    ne sais pas isoler », et il vaut mieux ne rien comparer que comparer au
+    mauvais endroit. Jusqu'au 2026-10-31 cette fonction ne connaissait que
+    S. aureus et les SCN, et tout le reste retombait sur le chapitre entier —
+    si bien que « Téicoplanine, S. aureus » et « Téicoplanine, SCN » tombaient
+    dans le même seau et revenaient au biologiste comme une « décision de
+    modèle », alors que le comité avait tranché en nommant l'espèce."""
+    import re as _re
+    # LE SUFFIXE D'ABORD, LE LIBELLÉ ENTIER ENSUITE. « Téicoplanine, SCN »
+    # porte une virgule, « Vancomycine S. aureus » n'en porte pas : chercher
+    # UNIQUEMENT dans le suffixe faisait retomber la seconde sur le chapitre
+    # entier, et le seuil de S. aureus s'appliquait aux SCN. L'ancienne
+    # version cherchait dans tout le libellé ; ne garder que le suffixe
+    # aurait été une régression déguisée en resserrement.
+    espece = scinder_espece(agent) or agent
+    for motif, cibles in ESPECE_GROUPE:
+        if _re.search(motif, espece, _re.I):
+            return [] if cibles is None else [g for g in groupes if g in cibles]
+    # Cas particulier qui ne tient pas à un suffixe mais à un SOUS-TITRE : la
+    # ciprofloxacine des Enterobacterales a sa ligne propre sous le
+    # sous-tableau « Salmonella spp. ». Tant que les sous-titres ne sont pas
+    # lus, la ligne générale ne vaut pas pour Salmonella.
+    if chapitre == "Enterobacterales" and agent.lower().startswith("ciprofloxacine"):
         return [g for g in groupes if g != "salmonella"]
-    if "s. aureus" in a or "s.aureus" in a:
-        return [g for g in groupes if g == "staph"]
-    if "scn" in a or "coagulase" in a:
-        return [g for g in groupes if g == "scn"]
     return groupes
+
+
+def scinder_espece(agent):
+    """Le suffixe d'espèce du libellé, vide s'il n'en porte pas."""
+    import importlib.util as _i, os as _o, sys as _s
+    if "agents_fr" not in _s.modules:
+        _sp = _i.spec_from_file_location(
+            "agents_fr", _o.path.join(_o.path.dirname(_o.path.abspath(__file__)),
+                                      "agents_fr.py"))
+        _m = _i.module_from_spec(_sp); _s.modules["agents_fr"] = _m
+        _sp.loader.exec_module(_m)
+    return _s.modules["agents_fr"].scinder(agent)[1]
 
 
 def code_fr(agent):
@@ -320,7 +374,17 @@ def zit_casfm(chemin):
         # attribuées au genre lu juste avant.
         for _y, fr in lg:
             ligne = re.sub(r'\s+', ' ', ' '.join(s for _, s in fr)).strip()
-            if len(ligne) > 60:
+            # LE GARDE-FOU DE 60 CARACTÈRES ÉCARTAIT UN VRAI CHAPITRE.
+            # « 5. 13. Corynebacterium spp. (à l'exception de C. diphtheriae
+            # complex) » fait 66 caractères : le titre était rejeté, les
+            # pages qui suivaient gardaient l'étiquette « Listeria » du
+            # chapitre précédent, et deux couples de Corynebacterium ont été
+            # confrontés aux seuils de Listeria. L'un d'eux — le linézolide —
+            # est parti en production le 2026-10-31 avant d'être repris.
+            # Le motif numéroté « 5. 13. » suffit à distinguer un titre d'une
+            # phrase ; la longueur ne protégeait de rien qu'il n'écartait
+            # déjà, et elle coûtait un chapitre.
+            if len(ligne) > 120:
                 continue
             m = re.match(r'^\d+\s*\.\s*\d+\s*\.\s+(\S.*)$', ligne)
             if not m:
