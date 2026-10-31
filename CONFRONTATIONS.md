@@ -630,10 +630,10 @@ ensemble, jamais l'un sans l'autre.
 - **tables** : BP_CASFM
 - **empreinte** : 95c8f7ef64ad4671cfa20c206cc3b966e42ca388cc0743b295b4a38ec20ff9a3
 - **date** : 2026-10-25
-- **résultat** : **PREMIÈRE PASSE, À RELIRE.** 308 couples confrontés, 245 où
-  les deux comités disent la même chose, **52 écarts candidats** dont **un
-  vérifié dans le document et corrigé** (la colistine de *Pseudomonas*),
-  **zéro nom que l'outil ne sait pas lire**.
+- **résultat** : **À RELIRE.** 286 couples confrontés, 228 où les deux comités
+  disent la même chose, **30 écarts candidats** dont **un vérifié dans le
+  document et corrigé** (la colistine de *Pseudomonas*), **zéro nom que
+  l'outil ne sait pas lire**, 11 couples en attente d'une décision de modèle.
 
 ### Les seize noms illisibles : un défaut de lecture, pas seize molécules
 
@@ -683,11 +683,56 @@ et « imipenemrelebactam » y figuraient, mais le CA-SFM écrit
 étaient déclarées illisibles alors que la réponse était écrite deux lignes
 plus haut. Les trois sont hors panel, et « None » est une réponse.
 
-**Ce que cela change au fond :** six écarts candidats de plus (46 → 52), six
-lignes du CA-SFM qui n'étaient confrontées à rien — dont le **cotrimoxazole
-de cinq espèces** : *Listeria*, les entérobactéries, *Acinetobacter*,
-*Stenotrophomonas* et *Staphylococcus*. Pour celles-là, un laboratoire sous
-CA-SFM recevait la valeur EUCAST sans que rien ne le dise.
+**Ce que cela change au fond :** six lignes du CA-SFM n'étaient confrontées à
+rien — dont le **cotrimoxazole de cinq espèces** : *Listeria*, les
+entérobactéries, *Acinetobacter*, *Stenotrophomonas* et *Staphylococcus*.
+Pour celles-là, un laboratoire sous CA-SFM recevait la valeur EUCAST sans que
+rien ne le dise.
+
+### Puis la liste d'écarts elle-même s'est révélée bâtie sur du sable
+
+Les noms lus, il restait deux confusions **dans la comparaison** — et toutes
+deux gonflaient la liste d'écarts de candidats qui n'en étaient pas.
+
+**« Je n'ai rien lu » n'est pas « le comité refuse la catégorie S ».**
+Trois états se confondaient sous `sC is None` : la cellule porte « 0,001 »
+(le comité refuse — c'est une décision), la cellule porte un mot comme
+« Note » (l'outil n'a rien lu — c'est une lacune), ou il n'y a pas de
+cellule. Page 72, `Pénicilline G, | Note | 0,125` : la colonne S porte un
+appel de note, la valeur est à la ligne suivante — **S ≤ 0,125, comme
+l'EUCAST** — et l'outil annonçait un écart.
+
+> Faire dire à un comité qu'il refuse une catégorie qu'il accorde pousserait
+> PhénoBac à rendre « R » là où le document rend « S ». C'est la pire
+> direction possible, et c'est celle que produisait la confusion.
+
+**Un couple peut avoir PLUSIEURS lignes au même site, et l'outil en gardait
+une — au hasard de l'ordre de lecture.** Ce qui les sépare est écrit dans le
+libellé :
+
+| chapitre | molécule | lignes |
+|---|---|---|
+| *Haemophilus* p105 | amoxicilline | « iv » S ≤ 2 · « per os » **S = 0,001** |
+| streptocoques p90 | pénicilline G | « *S. agalactiae* » S ≤ 0,125 · « *S. pyogenes* » S ≤ 0,06 |
+| entérocoques p81 | vancomycine | « *E. faecalis* et… » · « autres » |
+| *Campylobacter* p117 | ciprofloxacine | « *Campylobacter* » · « *C. fetus* » |
+
+Pour *Haemophilus*, l'outil annonçait « pas de catégorie S » à
+l'amoxicilline — ce qui n'est vrai que **per os**. Il les recense désormais
+et **n'en compare aucune** : distinguer la voie d'administration, ou une
+espèce à l'intérieur d'un chapitre, est une **décision de modèle** qui
+appartient au biologiste, pas à l'extracteur. Choisir serait inventer.
+
+**Le bilan honnête**, après ces deux corrections : 286 couples confrontés,
+228 où les deux comités disent la même chose, **30 écarts candidats** bâtis
+sur des lignes uniques et sans ambiguïté, **11 couples** qui attendent une
+décision de modèle, **1** dont la colonne S n'a pas été lue.
+
+Les cinquante-deux de la passe précédente en contenaient donc **vingt-deux
+qui n'étaient pas des écarts** : un artefact de lecture et vingt-et-un choix
+arbitraires entre deux lignes. Une liste d'écarts qu'on présente à un
+biologiste doit être une liste d'écarts — vingt-deux faux candidats auraient
+coûté sa confiance à l'outil entier.
 
 ### Le défaut propre à la façon dont PhénoBac porte le CA-SFM
 

@@ -285,6 +285,19 @@ def main():
     print("%d lignes de concentrations critiques relevées.\n" % len(lues))
 
     perdus, perimes, divergents, muets, identiques = [], [], [], [], 0
+    aveugles, multiples = [], {}
+    # UN COUPLE PEUT AVOIR PLUSIEURS LIGNES AU MÊME SITE, et l'outil n'en
+    # gardait qu'une — celle que l'ordre de lecture lui donnait en dernier.
+    # On les recense d'abord, pour ne comparer que les couples à ligne unique.
+    par_couple = {}
+    for chapitre, agent, sC, rC, page, hors in lues:
+        if not CZ.CHAPITRE_GROUPES.get(chapitre):
+            continue
+        code, lu = AF.code(agent)
+        if not lu or code is None or AF.site(agent) != "standard":
+            continue
+        par_couple.setdefault((chapitre, code), set()).add((sC, rC))
+    plusieurs = {k for k, v in par_couple.items() if len(v) > 1}
     autres_sites = 0
     vus = set()
 
@@ -300,9 +313,34 @@ def main():
                          "à ajouter à la TABLE de outils/agents_fr.py, avec son code "
                          "ou avec None s'il est hors du panel" % (page, chapitre, agent[:48]))
             continue
-        # Une ligne sans colonne S du tout n'apprend rien ; une ligne qui
-        # porte « 0,001 » en apprend beaucoup, et sC y vaut None à dessein.
-        if code is None or (sC is None and not hors and rC is None):
+        if code is None:
+            continue
+        # TROIS ÉTATS, ET NON DEUX. « sC is None » recouvrait :
+        #
+        #   1. la cellule porte « 0,001 » — le comité REFUSE la catégorie S.
+        #      C'est une décision, et « hors » la marque ;
+        #   2. la cellule porte un mot — « Note », « NA » — et l'outil n'y a
+        #      trouvé aucun nombre. Ce n'est PAS une décision du comité :
+        #      c'est une lacune de lecture ;
+        #   3. il n'y a pas de cellule du tout.
+        #
+        # Les trois s'affichaient « aucune », et le deuxième se comparait donc
+        # comme si le CA-SFM avait refusé la catégorie. Page 72,
+        # « Pénicilline G, | Note | 0,125 » : la colonne S porte un appel de
+        # note, la valeur est à la ligne suivante (S ≤ 0,125, comme
+        # l'EUCAST), et l'outil annonçait un écart. Faire dire à un comité
+        # qu'il refuse une catégorie qu'il accorde pousserait PhénoBac à
+        # rendre « R » là où le document rend « S » : la pire direction
+        # possible.
+        #
+        # L'ignorance de l'outil se dit, elle ne se compare pas (§ 26).
+        if sC is None and not hors:
+            if rC is None:
+                continue              # pas de cellule : rien à apprendre
+            aveugles.append("p%d %s / « %s » : la colonne S n'a pas été lue "
+                            "(elle porte un mot, non un nombre) — R > %s a bien "
+                            "été lu. À relire sur la page avant toute conclusion."
+                            % (page, chapitre, agent[:44], rC))
             continue
         # Un seuil de cystite, de méningite ou de dépistage ne se compare pas
         # au seuil ordinaire : PhénoBac les range par SITE, et les confondre
@@ -311,6 +349,28 @@ def main():
         # le bilan le dit.
         if AF.site(agent) != "standard":
             autres_sites += 1
+            continue
+        # PLUSIEURS LIGNES POUR LE MÊME COUPLE : NE PAS CHOISIR.
+        #
+        # Le communiqué donne parfois deux lignes au même site pour une même
+        # molécule, et ce qui les sépare est écrit dans le libellé :
+        #
+        #   « Amoxicilline iv »              S ≤ 2      (Haemophilus, p105)
+        #   « Amoxicilline per os »          S = 0,001
+        #   « Pénicilline G S. agalactiae »  S ≤ 0,125  (streptocoques, p90)
+        #   « Pénicilline G S. pyogenes »    S ≤ 0,06
+        #
+        # L'outil n'en gardait qu'une, au hasard de l'ordre de lecture, et
+        # construisait l'écart dessus. Pour Haemophilus il annonçait « pas de
+        # catégorie S » à l'amoxicilline — ce qui n'est vrai que PER OS.
+        #
+        # Choisir serait inventer. On les signale, et on ne les compare pas :
+        # distinguer la voie d'administration, ou une espèce à l'intérieur
+        # d'un chapitre, est une décision de modèle qui appartient au
+        # biologiste, pas à l'extracteur.
+        if (chapitre, code) in plusieurs:
+            multiples.setdefault((chapitre, code), []).append(
+                (agent[:46], sC, rC, page))
             continue
         for g in CZ.groupes_vises(chapitre, agent, groupes):
             vus.add((g, code))
@@ -340,6 +400,28 @@ def main():
             print("  %-12s %-5s  CA-SFM p%-4d S<=%-7s R>%-7s   EUCAST appliqué : S<=%-7s R>%s"
                   % (g, k, page, "aucune" if sC is None else sC, rC,
                      "aucune" if sE is None else sE, rE))
+    if multiples:
+        print("\n=== PLUSIEURS LIGNES POUR LE MÊME COUPLE, AU MÊME SITE (%d) ==="
+              % len(multiples))
+        print("Ce qui les sépare est dans le libellé : la VOIE (iv / per os) ou")
+        print("une ESPÈCE à l'intérieur du chapitre. L'outil n'en choisit aucune")
+        print("— choisir serait inventer. Ces couples ne sont PAS comptés parmi")
+        print("les écarts : distinguer la voie ou l'espèce est une décision de")
+        print("modèle, et elle appartient au biologiste.")
+        for (ch, code) in sorted(multiples):
+            print("  %-20s %s" % (ch[:20], code))
+            for agent, sC, rC, page in multiples[(ch, code)]:
+                print("      p%-4d S<=%-9s R>%-9s « %s »"
+                      % (page, "aucune" if sC is None else sC,
+                         "aucune" if rC is None else rC, agent))
+
+    if aveugles:
+        print("\n=== LA COLONNE S N'A PAS ÉTÉ LUE (%d) ===" % len(set(aveugles)))
+        print("Ce n'est pas un refus du comité : c'est une lacune de l'outil.")
+        print("Ces lignes ne sont PAS comptées parmi les écarts.")
+        for a in sorted(set(aveugles)):
+            print("  " + a)
+
     if divergents:
         print("\n=== PHÉNOBAC PORTE UN ÉCART À UNE AUTRE VALEUR (%d) ===" % len(divergents))
         for g, k, page, sC, rC, sP, rP in sorted(set(divergents), key=_cle):
@@ -364,6 +446,8 @@ def main():
     print("  écart à une autre valeur    : %d" % len(divergents))
     print("  écart périmé                : %d" % len(perimes))
     print("  non lus par l'outil         : %d" % len(set(muets)))
+    print("  colonne S non lue           : %d" % len(set(aveugles)))
+    print("  couples à plusieurs lignes  : %d (non comparés)" % len(multiples))
     print("  autres sites (cystite, LCR, dépistage), non traités ici : %d" % autres_sites)
     print("\nAucun fichier n'a été modifié. Toute correction doit être validée")
     print("par un biologiste avant d'être portée dans le code.")
