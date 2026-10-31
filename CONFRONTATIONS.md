@@ -884,6 +884,86 @@ arbitraires entre deux lignes. Une liste d'écarts qu'on présente à un
 biologiste doit être une liste d'écarts — vingt-deux faux candidats auraient
 coûté sa confiance à l'outil entier.
 
+### La fosfomycine, reprise le 2026-10-31 : ce n'est pas un écart CA-SFM
+
+En remontant la piste, l'écart annoncé contre le CA-SFM s'est révélé être
+autre chose, et de plus grave : **une correction portée dans un groupe et
+oubliée dans ses trois frères.**
+
+Le 25 octobre 2026, `f0465a8` a retiré du groupe `entero` la ligne
+
+```
+["eucast","entero","FOS","cmi","standard",8,8,…]
+```
+
+et l'a remplacée par une ligne **urinaire**, restreinte à **E. coli**, parce
+que l'EUCAST v16.1 renvoie à une **note** pour la fosfomycine iv des « autres
+entérobactéries » et des « autres indications ». La correction était juste.
+Elle n'a touché qu'un groupe sur quatre.
+
+PhénoBac porte quatre groupes de seuils pour une seule table de l'EUCAST —
+`entero`, `morganella`, `salmonella`, `serratia` — et c'est le bon choix : le
+document chiffre la ciprofloxacine autrement chez *Salmonella*, refuse
+l'imipénème chez *Proteus* et *Morganella*, ne reconnaît la nitrofurantoïne
+que chez *E. coli*. Mais les trois frères ont gardé leur ligne
+`standard 8/8`. Six jours plus tard, pour une CMI de **16 mg/L hors urine** :
+
+| espèce | ce que rend PhénoBac |
+|---|---|
+| *E. coli*, *Klebsiella*, *Enterobacter*, *Citrobacter*, *Shigella* | **aucune catégorie** — le document refuse de trancher |
+| *Proteus mirabilis*, *P. vulgaris*, *Morganella morganii*, *Providencia* | **R** |
+| *Salmonella* spp. | **R** |
+| *Serratia marcescens* | **R** |
+
+Même molécule, même famille, même site, même document, **réponses opposées
+selon le genre** — et sous les deux référentiels. Six espèces, dont *Proteus
+mirabilis*, l'un des uropathogènes les plus fréquents.
+
+> Ce n'est donc pas « PhénoBac applique hors urine un seuil que le CA-SFM
+> réserve à la cystite ». C'est : **PhénoBac applique encore, pour six
+> espèces, un seuil qu'elle a déjà retiré pour les autres.** Le CA-SFM n'avait
+> fait que rendre le reliquat visible, par sa ligne iv à 32.
+
+#### Pourquoi rien ne le voyait
+
+`verifier-couverture-eucast.py` confronte le classeur **table par table**, et
+sa liste `TABLES` ne contient que les vingt-deux tables difficiles — anaérobies,
+*Pasteurella*, *Aeromonas*, *Achromobacter*, *Kingella*, *Aerococcus*,
+*Corynebacterium*. Les entérobactéries n'y figurent pas. Son « 409 règles, 0
+manque, 0 en trop » était vrai, et ne parlait pas de ces lignes.
+
+#### `outils/verifier-fratries.py`
+
+Nouveau contrôle, et il n'a besoin d'**aucun document** : il compare la base
+**à elle-même**. Pour chaque couple (référentiel, antibiotique, méthode)
+présent dans au moins deux groupes d'une fratrie, il regarde sa **portée** —
+le site, et la restriction d'espèce. Les **valeurs** ont le droit de différer,
+c'est l'objet du découpage ; une **portée** est une décision, et une décision
+prise pour un genre se prend rarement pour lui seul.
+
+Sur la base d'aujourd'hui : **54 couples** présents dans au moins deux
+groupes, 53 de même portée, **un seul** écart — la fosfomycine. Pas de bruit,
+donc rien à faire taire.
+
+> Son premier lecteur perdait deux colonnes sans rien dire : `"([a-z]+)"` ne
+> ramasse pas `"S"` ni `"R"`, en capitales dans `COLONNES`. Treize noms au
+> lieu de quinze, tout ce qui suit `site` glissé de deux rangs, et la
+> restriction d'espèce lue « undefined ». Le contrôle trouvait **quand même**
+> l'écart de site — il paraissait marcher en ayant cessé de voir la moitié de
+> ce qu'il regarde. Il exige désormais de retrouver les colonnes qu'il lit, et
+> s'arrête sinon.
+
+#### Aperçu de la correction, mesuré puis défait
+
+Les trois lignes frères retirées — la traduction fidèle de « ce seuil ne vaut
+que pour *E. coli*, indications urinaires » dans un modèle à quatre groupes,
+puisque *E. coli* vit dans `entero` : le contrôle passe à **54/54**, et les
+six espèces rendent « aucune catégorie » pour la fosfomycine, dans l'urine
+comme hors de l'urine. *E. coli* garde sa catégorie urinaire.
+
+**La base a été restaurée. Aucun seuil n'a été modifié : la décision revient
+au biologiste.**
+
 ### Le défaut propre à la façon dont PhénoBac porte le CA-SFM
 
 PhénoBac ne porte pas un second référentiel entier : elle porte le **delta** —
