@@ -759,6 +759,66 @@ sont plus comparés :
 > chercher dans la chaîne normalisée rendrait intraveineuse la moitié des
 > fluoroquinolones.
 
+### Décision du biologiste, 2026-10-31 : montrer les deux seuils
+
+Deux chemins étaient possibles pour la voie d'administration :
+
+- **demander la voie et catégoriser dessus** — PhénoBac deviendrait l'auteur
+  d'un choix thérapeutique qu'elle n'a pas à faire, sur une donnée qu'un
+  compte rendu d'antibiogramme ne porte pas toujours ;
+- **afficher les deux seuils**, et laisser lire celui qui s'applique.
+
+C'est le second. La catégorie rendue ne change pas ; le compte rendu gagne
+une ligne qui dit « ce seuil dépend de la voie, les voici tous les deux ».
+
+`outils/extraire-voies.py` produit la table, et **cinq couples** seulement y
+figurent — ceux où le document donne deux voies **au même site** :
+
+| groupe | molécule | iv | orale | page |
+|---|---|---|---|---|
+| *Haemophilus* | amoxicilline | S ≤ 2 · R > 2 | **pas de S** · R > 2 | 105 |
+| *Haemophilus* | amox.-clavulanique | S ≤ 2 · R > 2 | **pas de S** · R > 2 | 105 |
+| streptocoques A, C, G | amoxicilline | S ≤ 1 · R > 2 | S ≤ 0,5 · R > 1 | 85 |
+| streptocoque B | amoxicilline | S ≤ 1 · R > 2 | S ≤ 0,5 · R > 1 | 85 |
+| *viridans* | amoxicilline | S ≤ 1 · R > 2 | S ≤ 0,5 · R > 1 | 85 |
+
+#### J'ai rebâti dans cet outil le défaut que je venais d'en retirer
+
+Première version de l'extracteur : la clé était `(groupe, molécule)`, et la
+voie écrasait. Page 85, il y a **trois** lignes d'amoxicilline :
+
+```
+i=22  Amoxicilline iv                              S ≤ 1    R > 2
+i=25  Amoxicilline iv (méningites et endocardites) S ≤ 0,5  R > 0,5
+i=28  Amoxicilline per os                          S ≤ 0,5  R > 1
+```
+
+Les deux premières ont la même voie et des **sites** différents. En écrasant,
+l'extracteur gardait la dernière lue — la méningée — et l'appariait au *per
+os* ordinaire : il annonçait « iv : 0,5 » là où le document dit 1.
+
+> C'est exactement le défaut « garder la dernière ligne » que
+> `comparer-casfm.py` venait de perdre, et je l'ai reconstruit en écrivant
+> l'outil suivant. La leçon tient en une phrase : **un couple du CA-SFM n'est
+> pas (groupe, molécule) — c'est (groupe, molécule, site, voie), et toute clé
+> plus courte écrase quelque chose.**
+
+#### Et la fosfomycine n'est PAS un seuil dépendant de la voie
+
+Ses deux lignes diffèrent par la voie **et** par le site :
+
+```
+Fosfomycine iv                  S ≤ 32   (site ordinaire)
+Fosfomycine per os (cystites)   S ≤  8   (site urinaire)
+```
+
+Le document ne donne donc **aucun** seuil oral au site ordinaire. Or PhénoBac
+applique **S ≤ 8** au site ordinaire — c'est-à-dire la valeur *urinaire*, là
+où la ligne ordinaire du CA-SFM dit **32**. C'est un écart réel, d'une forme
+différente de celle annoncée, et il demande la lecture d'un biologiste : la
+question n'est pas « quelle voie ? » mais « pourquoi PhénoBac applique-t-elle
+hors urine un seuil que le CA-SFM réserve à la cystite ? ».
+
 **Le bilan honnête**, après ces trois corrections : 279 couples confrontés,
 228 où les deux comités disent la même chose, **27 écarts candidats** bâtis
 sur des lignes uniques, sans ambiguïté de voie ni d'espèce, **8 couples** à
