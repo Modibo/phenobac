@@ -104,7 +104,7 @@ def lignes_casfm(chemin):
     data = open(chemin, 'rb').read()
     objs = pdfpos.objets(data)
     pages = pdfpos.pages(data, objs)
-    out, chapitre = [], '?'
+    out, chapitre, sautes = [], '?', set()
     for num, p in enumerate(pages, 1):
         lg = pdfpos.lignes(pdfpos.extraire(pdfpos.contenu(objs, p),
                                            pdfpos.polices(objs, p), 'latin-1'))
@@ -116,8 +116,12 @@ def lignes_casfm(chemin):
             if not m:
                 continue
             titre = m.group(1).strip()
-            connu = [n for n in CZ.CHAPITRE_GROUPES if n.lower() in titre.lower()]
-            chapitre = connu[0] if connu else ('? ' + titre[:30])
+            # chapitre_de() prend le motif LE PLUS PRÉCIS, et non la première
+            # clé venue : « Streptococcus pneumoniae » n'est pas « Streptococcus ».
+            c = CZ.chapitre_de(titre)
+            chapitre = c if c else ('? ' + titre[:30])
+            if not c:
+                sautes.add(titre[:46])
         entetes = []
         for y, fr in lg:
             z = [x for x, s in fr if s.strip() == 'ZIT']
@@ -259,6 +263,12 @@ def lignes_casfm(chemin):
                 k += 1
             out.append((chapitre, agent, nb(s_[0]) if s_ else None,
                         nb(r_[0]) if r_ else None, num, hors_echelle))
+    # UN SILENCE QU'ON N'AFFICHE PAS SE CONFOND AVEC UNE CONCORDANCE. Les
+    # chapitres sautés sont ceux dont AUCUNE ligne n'a été confrontée : tant
+    # que « Streptocoques des groupes A, B, C ou G » y figurait, le bilan
+    # annonçait 279 couples confrontés sans dire qu'il n'avait jamais ouvert
+    # le chapitre des streptocoques.
+    lignes_casfm.sautes = sorted(sautes)
     return out
 
 
@@ -283,6 +293,12 @@ def main():
     lues = lignes_casfm(sys.argv[1])
     print("Communiqué lu : %s" % sys.argv[1])
     print("%d lignes de concentrations critiques relevées.\n" % len(lues))
+    if getattr(lignes_casfm, "sautes", None):
+        print("Chapitres du communiqué SANS groupe PhénoBac, donc non confrontés "
+              "(%d) :" % len(lignes_casfm.sautes))
+        for t in lignes_casfm.sautes:
+            print("    %s" % t)
+        print("")
 
     perdus, perimes, divergents, muets, identiques = [], [], [], [], 0
     aveugles, multiples, voies = [], {}, {}

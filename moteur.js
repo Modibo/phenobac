@@ -4152,7 +4152,10 @@ function voiesPour(group, code, ctx) {
              : "standard";
   const e = (VOIE.VOIES || {})[group + ":" + code + ":" + site];   // refus 3
   if (!e) return null;
-  const noms = Object.keys(e).sort();
+  /* « chapitre » EST UNE PROVENANCE, PAS UNE VOIE. Le couple porte désormais
+     le chapitre du communiqué d'où il sort, et énumérer bêtement ses clés
+     inventerait une troisième voie nommée « chapitre ». */
+  const noms = Object.keys(e).filter(function (k) { return k !== "chapitre"; }).sort();
   if (noms.length < 2) return null;                               // refus 4
   const pages = [];
   const voies = noms.map(function (v) {
@@ -4178,6 +4181,11 @@ function voiesPour(group, code, ctx) {
   return {
     site: site,
     source: VOIE.VOIES_SOURCE,
+    /* LE CHAPITRE, parce qu'une page ne dit pas de quel chapitre elle est.
+       « page 85 » paraissait suffire ; c'est le chapitre du PNEUMOCOQUE, et
+       trois couples de streptocoques A/C/G, B et viridans ont été livrés le
+       2026-10-31 avec des valeurs de pneumocoque sous ce numéro de page. */
+    chapitre: e.chapitre || null,
     pages: pages,
     voies: voies,
     /* CE QUE LA NOTE DIT D'ELLE-MÊME. Sans cette phrase, un lecteur qui voit

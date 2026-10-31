@@ -17,22 +17,17 @@ var VOIES = {
   "haemo:AMC:standard": {
     iv: { S: 2, R: 2, page: 105 },
     orale: { S: null, R: 2, page: 105 },
+    chapitre: "Haemophilus",
   },
   "haemo:AMX:standard": {
     iv: { S: 2, R: 2, page: 105 },
     orale: { S: null, R: 2, page: 105 },
+    chapitre: "Haemophilus",
   },
-  "strepacg:AMX:standard": {
+  "pneumo:AMX:standard": {
     iv: { S: 1, R: 2, page: 85 },
     orale: { S: 0.5, R: 1, page: 85 },
-  },
-  "strepb:AMX:standard": {
-    iv: { S: 1, R: 2, page: 85 },
-    orale: { S: 0.5, R: 1, page: 85 },
-  },
-  "viridans:AMX:standard": {
-    iv: { S: 1, R: 2, page: 85 },
-    orale: { S: 0.5, R: 1, page: 85 },
+    chapitre: "Streptococcus pneumoniae",
   },
 };
 

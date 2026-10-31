@@ -905,6 +905,81 @@ arbitraires entre deux lignes. Une liste d'écarts qu'on présente à un
 biologiste doit être une liste d'écarts — vingt-deux faux candidats auraient
 coûté sa confiance à l'outil entier.
 
+### Le rattachement des chapitres était faux, et j'ai livré trois valeurs de pneumocoque
+
+Trouvé le 2026-10-31 en relisant les pages **avant** de soumettre vingt-sept
+écarts au biologiste. C'est le plus grave défaut de cette série, parce qu'il a
+atteint la production.
+
+`CHAPITRE_GROUPES` était un **dictionnaire**, et l'on retenait la première clé
+qui soit une sous-chaîne du titre. « Streptococcus pneumoniae » contient
+« Streptococcus » :
+
+| chapitre du communiqué | rattaché à | aurait dû l'être à |
+|---|---|---|
+| p84 *Streptococcus pneumoniae* | strepacg, strepb, viridans | **pneumo** |
+| p89 Streptocoques des groupes A, B, C ou G | *(absent de la table)* | strepacg, strepb |
+| p94 Autres streptocoques | *(absent de la table)* | viridans |
+| p101 *Corynebacterium diphtheriae* complex | coryne | **rien** — c'est une autre table que *Corynebacterium* spp. |
+
+Les deux chapitres absents étaient rangés sous « ? <titre> » et **sautés** —
+aucune valeur fausse n'en est sortie, et c'est le bon réflexe. Mais le résultat
+net est que `strepacg`, `strepb` et `viridans` n'avaient **jamais** été
+confrontés à leur propre chapitre, et que tout ce qu'on leur attribuait venait
+du pneumocoque. Un silence vaut mieux qu'une erreur ; un silence qu'on ne
+compte pas vaut beaucoup moins qu'un silence qu'on affiche. Les deux lecteurs
+listent désormais les chapitres qu'ils ont sautés.
+
+#### Ce qui est parti en production
+
+`voies.js`, livré le matin même (`767f0b6`), portait :
+
+```
+"strepacg:AMX:standard":  { iv: {S:1, R:2, page:85}, orale: {S:0.5, R:1, page:85} },
+"strepb:AMX:standard":    { iv: {S:1, R:2, page:85}, orale: {S:0.5, R:1, page:85} },
+"viridans:AMX:standard":  { iv: {S:1, R:2, page:85}, orale: {S:0.5, R:1, page:85} },
+```
+
+La page 85 est celle du **pneumocoque**. Le CA-SFM renvoie l'amoxicilline des
+streptocoques A, B, C et G à une **note** (p90, « se déduit de la sensibilité à
+la pénicilline G ») et ne donne aux autres streptocoques qu'une **ligne unique
+sans voie** (p95, 0,5 / 2). Ces trois couples n'auraient dû porter **aucune**
+note. Corrigés le jour même ; il reste `pneumo:AMX`, qui est la vraie ligne.
+
+> Le banc d'alors était vert, et il avait raison : la note ne changeait aucune
+> catégorie. **Il ne demandait pas d'où venaient les valeurs.** Un banc qui
+> prouve ce qu'on lui a demandé, pas ce qui compte.
+
+#### La correction de fond : une valeur porte sa provenance
+
+La table portait `page: 85`, et 85 paraissait suffire. **Une valeur qui ne dit
+pas d'où elle vient ne peut pas être prise en défaut.** Chaque couple de
+`voies.js` porte maintenant son `chapitre`, et `essai-voies.js` le confronte à
+une seconde lecture écrite à la main, le communiqué sous les yeux. Deux sources
+qui se contredisent s'arrêtent ; une seule source ne se contredit jamais.
+Vérifié par mutation : remettre `strepacg` à la place de `pneumo` fait tomber
+le banc sur « aucun couple n'est attendu pour strepacg ».
+
+`CHAPITRE_GROUPES` est désormais construit à partir d'une **liste ordonnée**,
+du plus précis au plus général, et le complexe *diphtheriae* y est **nommé et
+rattaché à rien** — ce qui n'est pas la même chose que ne pas le nommer.
+
+#### Le bilan refait
+
+| | avant | après |
+|---|---|---|
+| couples confrontés | 279 | 271 |
+| d'accord | 228 | 250 |
+| **écarts candidats** | **27** | **14** |
+| écarts à une autre valeur | 2 | 0 |
+| couples à plusieurs lignes | 8 | 9 |
+| dépendant de la voie | 6 | 6 |
+
+Les treize écarts disparus étaient **cinq** lectures du mauvais chapitre
+*Corynebacterium* et **huit** du chapitre du pneumocoque. Les deux « écarts à
+une autre valeur » étaient de la même famille. Un nouveau est apparu, lu cette
+fois dans le bon chapitre : *viridans* / pénicilline G, p95.
+
 ### La fosfomycine, reprise le 2026-10-31 : ce n'est pas un écart CA-SFM
 
 En remontant la piste, l'écart annoncé contre le CA-SFM s'est révélé être

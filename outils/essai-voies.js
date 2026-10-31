@@ -122,7 +122,7 @@ dire("\nLa table des voies");
 var VOIES = E.VOIES || {};
 var couples = Object.keys(VOIES);
 verif(!!E.VOIES_SOURCE, "voies.js s'est chargé et se nomme : " + (E.VOIES_SOURCE || "AUCUNE SOURCE"));
-verif(couples.length >= 5, couples.length + " couples (groupe, molécule, site) à voies multiples");
+verif(couples.length >= 3, couples.length + " couples (groupe, molécule, site) à voies multiples");
 
 /* Les groupes que la table nomme doivent exister dans le moteur. Un groupe
    mal orthographié ne lèverait rien : la note ne paraîtrait simplement
@@ -137,7 +137,9 @@ couples.forEach(function (c) {
   if (p.length !== 3) { malformes.push(c); return; }
   if (!groupesMoteur[p[0]]) mauvais.push(c);
   if (!E.ABXNAME[p[1]]) mauvais.push(c + " (molécule inconnue)");
-  var v = VOIES[c], noms = Object.keys(v);
+  // « chapitre » est une provenance, pas une voie — ici comme dans le moteur.
+  var v = VOIES[c];
+  var noms = Object.keys(v).filter(function (k) { return k !== "chapitre"; });
   if (noms.length < 2) malformes.push(c + " (une seule voie : elle n'apprend rien)");
   noms.forEach(function (n) {
     var e = v[n];
@@ -153,6 +155,55 @@ verif(mauvais.length === 0,
 verif(malformes.length === 0,
       malformes.length === 0 ? "chaque voie porte S, R et sa page du communiqué"
         : "formes fautives : " + malformes.join(", "));
+
+/* ---------- 1 bis. CHAQUE COUPLE DIT-IL DE QUEL CHAPITRE IL SORT ? ----------
+
+   LE DÉFAUT QUI A FAIT NAÎTRE CE CONTRÔLE, livré en production le
+   2026-10-31 et retiré le même jour.
+
+   La table portait « page: 85 », et 85 paraissait suffire. C'est la page du
+   chapitre « Streptococcus pneumoniae ». Le rattachement des chapitres du
+   communiqué se faisait par la première clé d'un dictionnaire qui soit une
+   sous-chaîne du titre, et « Streptococcus pneumoniae » contient
+   « Streptococcus » : les valeurs du PNEUMOCOQUE ont été livrées comme
+   celles des streptocoques A/C/G, de B et des viridans. Le document donne
+   « Note » à l'amoxicilline des groupes A, B, C et G, et une ligne unique
+   sans voie aux autres streptocoques — ils n'auraient dû porter AUCUNE note.
+
+   Le banc d'alors était vert : il prouvait que la note ne change aucune
+   catégorie, et c'était vrai. Il ne demandait pas d'où venaient les valeurs.
+
+   Une valeur qui ne dit pas d'où elle vient ne peut pas être prise en
+   défaut. Chaque couple porte donc son CHAPITRE, et la table ci-dessous est
+   la seconde lecture — écrite à la main, le communiqué sous les yeux — que
+   l'on confronte à celle de l'extracteur. Deux sources qui se contredisent
+   s'arrêtent ; une seule source ne se contredit jamais. */
+dire("\nChaque couple dit-il de quel chapitre du communiqué il sort ?");
+var CHAPITRE_ATTENDU = {
+  haemo:    "Haemophilus",
+  pneumo:   "Streptococcus pneumoniae"
+  // strepacg, strepb, viridans : AUCUN couple attendu. Le CA-SFM renvoie
+  // l'amoxicilline des groupes A, B, C et G à une note (p90), et ne donne
+  // aux autres streptocoques qu'une ligne unique, sans voie (p95).
+};
+(function () {
+  var sans = [], faux = [];
+  couples.forEach(function (c) {
+    var g = c.split(":")[0], ch = VOIES[c].chapitre;
+    if (!ch) { sans.push(c); return; }
+    var attendu = CHAPITRE_ATTENDU[g];
+    if (!attendu) { faux.push(c + " : aucun couple n'est attendu pour « " + g + " »"); return; }
+    if (ch.indexOf(attendu) < 0)
+      faux.push(c + " : lu dans « " + ch + " », attendu « " + attendu + " »");
+  });
+  verif(sans.length === 0,
+        sans.length === 0 ? "les " + couples.length + " couples nomment leur chapitre"
+          : "couples sans chapitre — leur provenance est invérifiable : " + sans.join(", "));
+  verif(faux.length === 0,
+        faux.length === 0
+          ? "et chacun sort du chapitre que la seconde lecture lui donne"
+          : "CHAPITRE INATTENDU : " + faux.join(" ; "));
+})();
 
 /* ---------- 2. CHAQUE COUPLE EST-IL ATTEINT PAR UNE ESPÈCE ? ----------
    Le contrôle qui empêche le différentiel d'être vide. Une table dont aucune
@@ -189,10 +240,10 @@ verif(orphelins.length === 0,
 /* ---------- 3. LA NOTE DIT-ELLE CE QU'ELLE EST ? ---------- */
 dire("\nCe que la note dit d'elle-même");
 E.fixerLangue("fr");
-var strep = E.runInterpretation({ organism: "spyogenes", ref: "casfm", mode: "sir",
+var strep = E.runInterpretation({ organism: "pneumocoque", ref: "casfm", mode: "sir",
   results: { AMX: "S" }, ctx: {} }).interpretation;
 var nAMX = strep.voies && strep.voies.AMX;
-verif(!!nAMX, "Streptococcus pyogenes, amoxicilline : la note paraît");
+verif(!!nAMX, "Streptococcus pneumoniae, amoxicilline : la note paraît");
 if (nAMX) {
   verif(/ne connaît pas la voie prescrite/.test(nAMX.dit),
         "elle dit que la catégorie a été rendue SANS la voie — sans quoi un "
@@ -228,22 +279,22 @@ function voiesDe(appel) {
   var a = E.runInterpretation(appel).interpretation;
   return Object.keys(a.voies || {}).length;
 }
-verif(voiesDe({ organism: "spyogenes", ref: "eucast", mode: "sir",
+verif(voiesDe({ organism: "pneumocoque", ref: "eucast", mode: "sir",
                 results: { AMX: "S" }, ctx: {} }) === 0,
       "sous EUCAST, rien : la table est celle du CA-SFM, avec sa page. "
       + "L'afficher attribuerait à un référentiel la règle de l'autre");
-verif(voiesDe({ organism: "spyogenes", ref: "casfm", mode: "sir", results: { AMX: "S" },
+verif(voiesDe({ organism: "pneumocoque", ref: "casfm", mode: "sir", results: { AMX: "S" },
                 ctx: { urin: "Oui" } }) === 0,
       "en contexte urinaire, rien : la clé porte le site, et l'on ne retombe "
       + "jamais sur « standard » par défaut");
-verif(voiesDe({ organism: "spyogenes", ref: "casfm", mode: "sir", results: { AMX: "S" },
+verif(voiesDe({ organism: "pneumocoque", ref: "casfm", mode: "sir", results: { AMX: "S" },
                 ctx: { mening: "Oui" } }) === 0,
       "en contexte méningé, rien, pour la même raison");
-verif(voiesDe({ organism: "spyogenes", ref: "casfm", mode: "mic", mic: { AMX: "0.25" },
-                ctx: {}, bpOverride: { "strepacg:AMX": { S: 4, R: 8 } } }) === 0,
+verif(voiesDe({ organism: "pneumocoque", ref: "casfm", mode: "mic", mic: { AMX: "0.25" },
+                ctx: {}, bpOverride: { "pneumo:AMX": { S: 4, R: 8 } } }) === 0,
       "seuils saisis par le laboratoire : rien. Le seuil appliqué est le sien ; "
       + "lui opposer ceux du CA-SFM parlerait d'un seuil qui n'a pas servi");
-verif(voiesDe({ organism: "spyogenes", ref: "casfm", mode: "sir",
+verif(voiesDe({ organism: "pneumocoque", ref: "casfm", mode: "sir",
                 results: { E: "S" }, ctx: {} }) === 0,
       "une molécule que la table ne connaît pas ne reçoit rien");
 
@@ -336,7 +387,7 @@ var PROFILS = [
 dire("\nLa note dans les deux langues");
 function noteEn(lang) {
   E.fixerLangue(lang);
-  var a = E.runInterpretation({ organism: "spyogenes", ref: "casfm", lang: lang,
+  var a = E.runInterpretation({ organism: "pneumocoque", ref: "casfm", lang: lang,
     mode: "sir", results: { AMX: "S" }, ctx: {} }).interpretation;
   return (a.voies && a.voies.AMX) || null;
 }

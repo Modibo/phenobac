@@ -114,18 +114,81 @@ def code_fr(agent):
 # Chapitre CA-SFM (page du PDF où il commence) -> groupes PhénoBac.
 # Le PDF n'a pas de titre courant portant l'espèce : on repère les chapitres
 # par leur intitulé numéroté, « 5. 2. Pseudomonas spp. » et ainsi de suite.
-CHAPITRE_GROUPES = {
-    'Enterobacterales': ['entero', 'salmonella', 'morganella', 'serratia'],
-    'Pseudomonas': ['pseudo'], 'Acinetobacter': ['acineto'],
-    'Stenotrophomonas': ['steno'], 'Burkholderia': ['burk'],
-    'Staphylococcus': ['staph', 'scn'], 'Enterococcus': ['enteroc'],
-    'Streptococcus': ['strepacg', 'strepb', 'viridans'],
-    'pneumoniae': ['pneumo'], 'Haemophilus': ['haemo'],
-    'Neisseria gonorrhoeae': ['ngono'], 'Neisseria meningitidis': ['nmening'],
-    'Moraxella': ['moraxella'], 'Listeria': ['listeria'],
-    'Corynebacterium': ['coryne'], 'Campylobacter': ['campylo'],
-    'Vibrio': ['vibrio'],
-}
+#
+# TROIS DÉFAUTS ONT VÉCU ICI, ET ILS ONT ENVOYÉ DE VRAIES VALEURS AU MAUVAIS
+# ENDROIT. Trouvés le 2026-10-31, en relisant les pages avant de soumettre
+# vingt-sept écarts au biologiste.
+#
+#  1. LA TABLE ÉTAIT UN DICTIONNAIRE, ET L'ON PRENAIT LA PREMIÈRE CLÉ QUI SOIT
+#     UNE SOUS-CHAÎNE DU TITRE. « Streptococcus pneumoniae » contient
+#     « Streptococcus » : le chapitre du PNEUMOCOQUE était rattaché à
+#     strepacg, strepb et viridans, et « pneumo » n'a jamais reçu une seule
+#     ligne. La table est désormais une LISTE ORDONNÉE, du plus précis au plus
+#     général, et le premier motif qui s'applique gagne — « Streptococcus
+#     pneumoniae » avant « Streptococcus ».
+#
+#  2. DEUX CHAPITRES N'ÉTAIENT PAS DANS LA TABLE DU TOUT, et personne ne le
+#     disait. Les deux vrais chapitres de streptocoques — « Streptocoques des
+#     groupes A, B, C ou G » (p89) et « Autres streptocoques » (p94) — n'y
+#     figuraient pas. Les outils les rangeaient sous « ? <titre> » et les
+#     SAUTAIENT, ce qui est le bon réflexe : aucune valeur fausse n'en est
+#     sortie. Mais le résultat net est que strepacg, strepb et viridans
+#     n'avaient JAMAIS été confrontés à leur propre chapitre, et que ce qu'on
+#     leur attribuait venait entièrement du pneumocoque, par le défaut 1. Un
+#     silence vaut mieux qu'une erreur ; un silence qu'on ne compte pas vaut
+#     beaucoup moins qu'un silence qu'on affiche. Les appelants annoncent
+#     désormais les chapitres qu'ils ont sautés.
+#
+#  3. « Corynebacterium diphtheriae complex » (p101) était rattaché à
+#     « coryne », qui est le Corynebacterium spp. de PhénoBac. Ce sont deux
+#     tables différentes, et la page le dit elle-même : « Pour les autres
+#     corynébactéries, utiliser les valeurs critiques présentées au chapitre
+#     Corynebacterium spp. » Le complexe diphtheriae n'a pas de groupe dans
+#     PhénoBac ; il est donc nommé ici et rattaché à RIEN, ce qui n'est pas
+#     la même chose que ne pas le nommer.
+CHAPITRES = [
+    # (motif cherché dans le titre, groupes PhénoBac) — LE PLUS PRÉCIS D'ABORD.
+    ('Streptococcus pneumoniae',          ['pneumo']),
+    ('Streptocoques des groupes',         ['strepacg', 'strepb']),
+    ('Autres streptocoques',              ['viridans']),
+    # Nommé pour n'être pas confondu avec Corynebacterium spp., qui est le
+    # « coryne » de PhénoBac et vit dans un autre chapitre.
+    ('Corynebacterium diphtheriae',       []),
+    ('Corynebacterium',                   ['coryne']),
+    ('Enterobacterales', ['entero', 'salmonella', 'morganella', 'serratia']),
+    ('Pseudomonas',                       ['pseudo']),
+    ('Acinetobacter',                     ['acineto']),
+    ('Stenotrophomonas',                  ['steno']),
+    ('Burkholderia',                      ['burk']),
+    ('Staphylococcus',                    ['staph', 'scn']),
+    ('Enterococcus',                      ['enteroc']),
+    ('Haemophilus',                       ['haemo']),
+    ('Neisseria gonorrhoeae',             ['ngono']),
+    ('Neisseria meningitidis',            ['nmening']),
+    ('Moraxella',                         ['moraxella']),
+    ('Listeria',                          ['listeria']),
+    ('Campylobacter',                     ['campylo']),
+    ('Vibrio',                            ['vibrio']),
+]
+
+
+def chapitre_de(titre):
+    """Le nom de chapitre retenu pour ce titre, ou None s'il n'est pas connu.
+
+    RENDRE None N'EST PAS UN ÉCHEC : la plupart des chapitres du communiqué
+    n'ont pas de groupe dans PhénoBac — mycobactéries, Bacillus, Aerococcus,
+    Helicobacter… Ce qui serait un échec, c'est que l'appelant garde le
+    chapitre précédent en recevant None."""
+    t = (titre or '').lower()
+    for motif, _g in CHAPITRES:
+        if motif.lower() in t:
+            return motif
+    return None
+
+
+# L'ancien nom, conservé parce que trois outils l'appellent — mais construit à
+# partir de la liste ordonnée, pour qu'il n'existe qu'UNE table.
+CHAPITRE_GROUPES = dict(CHAPITRES)
 
 NOMBRE = re.compile(r'^\d+(?:[,.]\d+)?$')
 
@@ -203,7 +266,7 @@ def zit_casfm(chemin):
     data = open(chemin, 'rb').read()
     objs = pdfpos.objets(data)
     pages = pdfpos.pages(data, objs)
-    out, chapitre = [], '?'
+    out, chapitre, sautes = [], '?', set()
     for num, p in enumerate(pages, 1):
         lg = pdfpos.lignes(pdfpos.extraire(pdfpos.contenu(objs, p),
                                            pdfpos.polices(objs, p), 'latin-1'))
@@ -222,8 +285,12 @@ def zit_casfm(chemin):
             if not m:
                 continue
             titre = m.group(1).strip()
-            connu = [n for n in CHAPITRE_GROUPES if n.lower() in titre.lower()]
-            chapitre = connu[0] if connu else ('? ' + titre[:30])
+            # chapitre_de() prend le motif LE PLUS PRÉCIS, et non la première
+            # clé venue : « Streptococcus pneumoniae » n'est pas « Streptococcus ».
+            c = chapitre_de(titre)
+            chapitre = c if c else ('? ' + titre[:30])
+            if not c:
+                sautes.add(titre[:46])
         entetes = []
         for y, fr in lg:
             z = [x for x, s in fr if s.strip() == 'ZIT']

@@ -146,7 +146,7 @@ def main():
                 # choisit pas. On le dit, et on écarte le couple.
                 par[cle][v] = "AMBIGU"
             else:
-                par[cle][v] = (sC, rC, page)
+                par[cle][v] = (sC, rC, page, chapitre)
 
     # Une seule voie connue n'apprend rien : c'est le seuil ordinaire, déjà
     # dans BP. On ne garde que les couples où le document donne DEUX chemins
@@ -167,10 +167,17 @@ def main():
     for (g, code, site) in sorted(utiles):
         voies = utiles[(g, code, site)]
         out.write('  "%s:%s:%s": {\n' % (g, code, site))
+        chapitres = sorted(set(x[3] for x in voies.values()))
         for v in sorted(voies):
-            sC, rC, page = voies[v]
+            sC, rC, page, _ch = voies[v]
             out.write('    %s: { S: %s, R: %s, page: %d },\n'
                       % (v, js(sC), js(rC), page))
+        # LE CHAPITRE VOYAGE AVEC LA VALEUR. Sans lui, « page: 85 » ne disait
+        # pas que la page 85 est celle du PNEUMOCOQUE, et trois couples de
+        # streptocoques A/C/G, B et viridans ont été livrés avec des valeurs
+        # de pneumocoque. Une valeur qui ne dit pas d'où elle vient ne peut
+        # pas être prise en défaut.
+        out.write('    chapitre: %s,\n' % js(" / ".join(chapitres)))
         out.write('  },\n')
     out.write(PIED)
     sys.stdout.write(out.getvalue())
