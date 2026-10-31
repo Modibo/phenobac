@@ -306,8 +306,47 @@ def main():
     s = importlib.util.spec_from_file_location("moteur_py", os.path.join(ICI, "moteur_py.py"))
     MP = importlib.util.module_from_spec(s)
     s.loader.exec_module(MP)
-    T = MP.tables(["BP", "BP_CASFM"])
+    T = MP.tables(["BP", "BP_CASFM", "BP_URIN", "BP_CASFM_URIN",
+                   "BP_MENINGE", "BP_MENINGE_CASFM"])
     EUCAST, CASFM = T["BP"] or {}, T.get("BP_CASFM") or {}
+    URIN, URIN_C = T.get("BP_URIN") or {}, T.get("BP_CASFM_URIN") or {}
+    MENIN, MENIN_C = T.get("BP_MENINGE") or {}, T.get("BP_MENINGE_CASFM") or {}
+
+    def _cell(t, g, k):
+        return (t.get(g) or {}).get(k)
+
+    def applique(site, g, k, ref):
+        """Le seuil que le moteur emploierait à ce site, sous ce référentiel.
+
+        Copie conforme de l'ordre de getBP() : le méningé l'emporte sur tout,
+        puis le CA-SFM (urinaire, ordinaire), puis l'EUCAST urinaire, puis
+        l'EUCAST ordinaire. Reproduire cet ordre est la seule façon de
+        comparer ce que le laboratoire REÇOIT, et non ce que la table
+        contient."""
+        chaine = []
+        if site == "meninge":
+            if ref == "casfm":
+                chaine.append(_cell(MENIN_C, g, k))
+            chaine.append(_cell(MENIN, g, k))
+        if ref == "casfm":
+            if site == "urinaire":
+                chaine.append(_cell(URIN_C, g, k))
+            chaine.append(_cell(CASFM, g, k))
+        if site == "urinaire":
+            chaine.append(_cell(URIN, g, k))
+        chaine.append(_cell(EUCAST, g, k))
+        for c in chaine:
+            if c is not None:
+                return c
+        return None
+
+    def delta_du_site(site, g, k):
+        """La ligne CA-SFM propre à ce site, si elle existe."""
+        if site == "meninge":
+            return _cell(MENIN_C, g, k)
+        if site == "urinaire":
+            return _cell(URIN_C, g, k) or _cell(CASFM, g, k)
+        return _cell(CASFM, g, k)
 
     lues = lignes_casfm(sys.argv[1])
     print("Communiqué lu : %s" % sys.argv[1])
@@ -380,6 +419,7 @@ def main():
             par_couple.setdefault((g, code), set()).add((sC, rC))
     plusieurs = {k for k, v in par_couple.items() if len(v) > 1}
     autres_sites = 0
+    sites_ecarts, sites_sans, sites_ok = [], [], {}
     vus = set()
 
     for chapitre, agent, sC, rC, page, hors in lues:
@@ -428,7 +468,26 @@ def main():
         # fabriquerait des écarts qui n'existent pas. Cette passe ne traite
         # que le site ordinaire ; les autres attendent leur propre passe, et
         # le bilan le dit.
-        if AF.site(agent) != "standard":
+        site_ligne = AF.site(agent)
+        if site_ligne in ("urinaire", "meninge"):
+            # LA PASSE DES AUTRES SITES, qui n'avait jamais été faite. Un
+            # seuil de cystite ou de LCR ne se compare pas au seuil
+            # ordinaire — PhénoBac les range par site — mais il se compare
+            # TRÈS BIEN au seuil du même site, et personne ne le faisait :
+            # quarante-neuf lignes du communiqué étaient simplement comptées.
+            for g in vises(chapitre, agent, code, groupes):
+                a_c = applique(site_ligne, g, code, "casfm")
+                if a_c is None:
+                    sites_sans.append((site_ligne, g, code, page, sC, rC))
+                    continue
+                if a_c.get("S") == sC and a_c.get("R") == rC:
+                    sites_ok[site_ligne] = sites_ok.get(site_ligne, 0) + 1
+                    continue
+                sites_ecarts.append((site_ligne, g, code, page, sC, rC,
+                                     a_c.get("S"), a_c.get("R"),
+                                     delta_du_site(site_ligne, g, code) is not None))
+            continue
+        if site_ligne != "standard":
             autres_sites += 1
             continue
         # LA VOIE D'ADMINISTRATION EST DANS LE SEUIL, ET PHÉNOBAC NE LA PORTE PAS.
@@ -519,6 +578,28 @@ def main():
                 print("      p%-4d %-7s S<=%-9s R>%-9s « %s »"
                       % (page, v, "aucune" if sC is None else sC,
                          "aucune" if rC is None else rC, agent))
+
+    NOM_SITE = {"urinaire": "INFECTION URINAIRE", "meninge": "MÉNINGITE"}
+    if sites_ecarts:
+        print("\n=== AUTRES SITES : LE CA-SFM DIT AUTRE CHOSE (%d) ===" % len(sites_ecarts))
+        print("Comparé au seuil DU MÊME SITE, et non au seuil ordinaire. La")
+        print("dernière colonne dit si PhénoBac porte déjà une ligne CA-SFM pour")
+        print("ce site : « non » veut dire que la valeur EUCAST s'applique sous")
+        print("le nom du comité français.")
+        for site, g, k, page, sC, rC, sA, rA, a_delta in sorted(set(sites_ecarts), key=str):
+            print("  %-10s %-10s %-5s p%-4d CA-SFM S<=%-7s R>%-7s   appliqué : S<=%-7s R>%-7s  delta : %s"
+                  % (NOM_SITE.get(site, site), g, k, page,
+                     "aucune" if sC is None else sC, rC,
+                     "aucune" if sA is None else sA, rA, "oui" if a_delta else "NON"))
+    if sites_sans:
+        print("\n=== AUTRES SITES : PHÉNOBAC N'A PAS CE COUPLE DU TOUT (%d) ===" % len(sites_sans))
+        print("Le communiqué chiffre la molécule à ce site ; PhénoBac n'a aucun")
+        print("seuil pour elle, ni au site ni ailleurs. Ce n'est pas un écart de")
+        print("valeur : c'est une molécule absente du panel, ou un couple à créer.")
+        for site, g, k, page, sC, rC in sorted(set(sites_sans), key=str):
+            print("  %-10s %-10s %-5s p%-4d CA-SFM S<=%-7s R>%s"
+                  % (NOM_SITE.get(site, site), g, k, page,
+                     "aucune" if sC is None else sC, rC))
 
     if multiples:
         print("\n=== PLUSIEURS LIGNES POUR LE MÊME COUPLE, AU MÊME SITE (%d) ==="
@@ -623,7 +704,9 @@ def main():
     print("  colonne S non lue           : %d" % len(set(aveugles)))
     print("  couples à plusieurs lignes  : %d (non comparés)" % len(multiples))
     print("  seuil dépendant de la voie  : %d (non comparés)" % len(voies))
-    print("  autres sites (cystite, LCR, dépistage), non traités ici : %d" % autres_sites)
+    print("  site urinaire et méningé : %d d'accord, %d écarts, %d couples absents"
+          % (sum(sites_ok.values()), len(set(sites_ecarts)), len(set(sites_sans))))
+    print("  dépistage et endocardite, non traités ici : %d" % autres_sites)
     print("\nAucun fichier n'a été modifié. Toute correction doit être validée")
     print("par un biologiste avant d'être portée dans le code.")
     return 1 if (perdus or divergents or perimes or muets) else 0

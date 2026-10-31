@@ -673,7 +673,51 @@ ensemble, jamais l'un sans l'autre.
   ciprofloxacine des entérobactéries, dont la seconde ligne appartient au
   sous-tableau « *Salmonella* spp. » — les sous-titres ne sont pas encore
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
-  pénicilline G), et 49 lignes d'autres sites.
+  pénicilline G), et 20 lignes de dépistage ou d'endocardite.
+
+### La passe des autres sites, faite le 2026-10-31
+
+Les lignes de cystite et de LCR étaient **comptées, jamais comparées** — un
+silence de quarante-neuf lignes qui ne se distinguait pas d'un accord. Elles
+ne se comparent pas au seuil ordinaire, c'est vrai ; elles se comparent très
+bien au seuil **du même site**, et `comparer-casfm.py` le fait désormais en
+rejouant l'ordre exact de `getBP()` : méningé d'abord, puis CA-SFM urinaire,
+CA-SFM ordinaire, EUCAST urinaire, EUCAST ordinaire. Reproduire cet ordre est
+la seule façon de comparer ce que le laboratoire **reçoit**.
+
+**44 d'accord, 6 écarts, 10 couples absents.** Les six écarts sont trois
+faits :
+
+| site | groupe | molécule | page | CA-SFM | PhénoBac applique |
+|---|---|---|---|---|---|
+| LCR | *Haemophilus* | méropénème | 106 | S ≤ 0,25 · R > 0,25 | **S ≤ 2 · R > 2** |
+| LCR | pneumocoque | amoxicilline | 85 | S ≤ 0,5 · R > 0,5 | **S ≤ 0,06 · R > 0,06** |
+| cystite | entéro., morganella, salmonella, serratia | amox.-clav. | 48 | S ≤ 32 · R > 32 | **S ≤ 8 · R > 8** |
+
+Les deux premiers vont dans des sens opposés : sur *Haemophilus*, PhénoBac
+est **huit fois trop permissive** en LCR ; sur le pneumocoque, **huit fois
+trop stricte**. La page 85 mérite un regard : PhénoBac porte `0,06 / 0,06` au
+site méningé pour la **pénicilline G, l'ampicilline ET l'amoxicilline** — or
+`0,06` est la valeur de la pénicilline G, et le CA-SFM donne `0,5 / 0,5` aux
+deux autres. Trois β-lactamines qui partagent la valeur de la première
+ressemblent à une recopie.
+
+Les dix couples absents sont d'une autre nature — le communiqué chiffre la
+molécule, PhénoBac n'a pas le couple du tout : nitrofurantoïne pour
+`morganella`, `salmonella`, `serratia`, `staph` et `strepacg` ; triméthoprime
+et témocilline pour `morganella`, `salmonella`, `serratia`. **La
+nitrofurantoïne demande une prudence particulière** : PhénoBac la restreint à
+*E. coli*, restriction venue de l'EUCAST, et *Proteus* et *Morganella* lui
+sont **naturellement résistants**. Porter `64 / 64` sur `morganella` parce
+que la ligne du communiqué ne le restreint pas donnerait un « sensible » sur
+une espèce qui ne l'est jamais.
+
+> Et un faux écart évité de justesse : `agents_fr.site()` testait
+> « méningite » **avant** « dépistage ». La ligne « Ampicilline (dépistage –
+> méningites et endocardites) » du pneumocoque partait donc au site méningé
+> et se comparait au seuil **clinique** du LCR, annonçant un écart d'un
+> facteur huit. Un seuil de dépistage dit « cette souche mérite une CMI »,
+> pas « ce traitement marchera ». Le dépistage passe désormais en premier.
 - **portée** : le passage de 279 à 264 couples n'est pas une perte de
   couverture, c'est la fin d'un mélange. Trois chapitres étaient mal
   rattachés — le pneumocoque aux streptocoques A/C/G, la mélioïdose à

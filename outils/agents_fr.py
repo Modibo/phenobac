@@ -308,13 +308,27 @@ def NORME_MOTS(agent):
 
 
 def site(agent):
+    """Le site auquel la ligne s'applique.
+
+    LE DÉPISTAGE PASSE AVANT TOUT LE RESTE, et c'est une correction du
+    2026-10-31. Page 85, le pneumocoque porte
+
+        « Ampicilline (dépistage) »                            0,5 / 1
+        « Ampicilline (dépistage - méningites et endocardites) » 0,5 / 0,5
+
+    La seconde contient « méningites » : rangée au site méningé, elle se
+    comparait au seuil CLINIQUE du LCR et annonçait un écart d'un facteur
+    huit. Un seuil de dépistage ne dit pas la même chose qu'une
+    concentration critique — il dit « cette souche mérite une CMI », pas
+    « ce traitement marchera ». Les confondre fabrique un écart qui n'existe
+    pas, et pire, il aurait été lu comme une correction à porter."""
     a = norme(agent)
+    if "depistage" in a:
+        return "depistage"
     if "cystite" in a or "urinaire" in a:
         return "urinaire"
     if "meningite" in a:
         return "meninge"
-    if "depistage" in a:
-        return "depistage"
     if "endocardite" in a:
         return "endocardite"
     return "standard"
