@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.24";
+const BASE_VERSION = "2026.25";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -96,6 +96,44 @@ const REGLES = [
 
    Un banc qui tombe en citant sa source vaut mieux qu'une suppression qui
    paraît propre. */
+
+/* NITROFURANTOÏNE ET TRIMÉTHOPRIME : LA RESTRICTION D'ESPÈCE LEVÉE, SAUF LÀ
+   OÙ PHÉNOBAC SAIT DÉJÀ QUE L'ESPÈCE EST RÉSISTANTE. Décision du biologiste
+   du 2026-10-31.
+
+   Huit couples avaient la même forme : le CA-SFM donne la molécule à TOUT le
+   chapitre, l'EUCAST la restreint à certaines espèces, et PhénoBac suivait
+   l'EUCAST — si bien qu'un laboratoire en mode CA-SFM ne recevait aucune
+   catégorie là où le comité français en donne une.
+
+   Sept sont portés (cystite, CMI et diamètre) :
+
+     salmonella NIT  p54   64 / 64   disque 100 µg  11 / 11
+     serratia   NIT  p54   64 / 64   disque 100 µg  11 / 11
+     staph      NIT  p77   64 / 64   disque 100 µg  13 / 13
+     strepacg   NIT  p93   64 / 64   disque 100 µg  15 / 15
+     morganella TMP  p54    2 / 2    disque   5 µg  15 / 15
+     salmonella TMP  p54    2 / 2    disque   5 µg  15 / 15
+     serratia   TMP  p54    2 / 2    disque   5 µg  15 / 15
+
+   LE HUITIÈME NE L'EST PAS, ET CE N'EST PAS UNE PRUDENCE : « morganella NIT »
+   couvre Proteus mirabilis, P. vulgaris, Morganella morganii et Providencia,
+   et PhénoBac porte DÉJÀ pour ces quatre espèces la résistance naturelle à
+   la nitrofurantoïne — EUCAST, phénotypes résistants attendus v1.2, règles
+   1.10, 1.12 et 1.14. Porter 64 / 64 ferait rendre « sensible » une souche
+   dont la même interprétation annoncerait, deux lignes plus bas,
+   « incohérence : résistance naturelle attendue ». L'application se
+   contredirait elle-même sur le même rendu, et la ligne du communiqué, qui
+   vise la famille sans nommer les genres, ne vaut pas qu'on en arrive là.
+
+   La ligne générale d'un chapitre ne défait pas une résistance naturelle
+   connue de l'espèce.
+
+   RESTE OUVERT, ET DU MÊME ORDRE : « scn NIT » est restreint par l'EUCAST à
+   S. saprophyticus, alors que la page 77 du communiqué donne la
+   nitrofurantoïne à tout le chapitre des staphylocoques. Lever cette
+   restriction-là concerne S. epidermidis, S. lugdunensis et
+   S. haemolyticus ; elle n'a pas été levée faute d'avoir été posée. */
 
 /* LES NEUF ÉCARTS DU CA-SFM, PORTÉS LE 2026-10-31 SUR DÉCISION DU BIOLOGISTE.
 
@@ -204,6 +242,8 @@ const REGLES = [
 ["casfm","morganella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","morganella","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","morganella","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","ngono","GEN","cmi","standard",16,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","nmening","AMX","cmi","meninge",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 /* LA COLISTINE DE PSEUDOMONAS SOUS CA-SFM.
@@ -228,10 +268,14 @@ const REGLES = [
 ["casfm","salmonella","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","NIT","disque","urinaire",11,11,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","disque","standard",null,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -242,14 +286,20 @@ const REGLES = [
 ["casfm","serratia","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","NIT","disque","urinaire",11,11,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","disque","standard",15,15,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","disque","standard",null,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","NIT","disque","urinaire",13,13,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -258,6 +308,8 @@ const REGLES = [
 ["casfm","staph","VA","cmi","standard",1,1,undefined,2,undefined,undefined,undefined,undefined,undefined],
 ["casfm","steno","LVX","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","steno","MIN","disque","standard",null,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","strepacg","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","strepacg","NIT","disque","urinaire",15,15,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","strepacg","PEN","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","strepacg","PEN","disque","standard",undefined,undefined,undefined,undefined,undefined,23,undefined,undefined,undefined],
 ["casfm","viridans","PEN","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

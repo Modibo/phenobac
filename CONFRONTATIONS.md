@@ -648,9 +648,14 @@ ensemble, jamais l'un sans l'autre.
 
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
-- **tables** : BP_CASFM
-- **empreinte** : 49005415d15d649b2c8ed1bfe80d526fc34daa2eb1c1345595d51e4207d94ed5
-- **date** : 2026-10-31, le communiqué sous les yeux (troisième passe)
+- **tables** : BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM
+- **empreinte** : 42f8bb2a312933ae382ceaa2f21e546e68d960018b1c4822ba99995a9c7e53f4
+- **date** : 2026-10-31, le communiqué sous les yeux (quatrième passe)
+- **portée du registre élargie le même jour** : l'empreinte ne couvrait que
+  `BP_CASFM`. La passe des autres sites ayant rendu `BP_CASFM_URIN` et
+  `BP_MENINGE_CASFM` comparables, quatorze lignes urinaires ont pu être
+  ajoutées **sans que le garde-fou bronche** : il surveillait une table sur
+  trois. Les trois y sont désormais.
 - **résultat** : **271 couples confrontés, 259 où les deux comités disent la
   même chose.** 13 écarts portés dans le delta ce jour (9 concentrations
   critiques + 4 diamètres ; un dixième, « listeria LZD », a été porté puis
@@ -732,12 +737,36 @@ restreint à certaines espèces, et PhénoBac suit l'EUCAST.*
 | nitrofurantoïne | *morganella*, *salmonella*, *serratia*, *staph*, *strepacg* | *E. coli* chez les entérobactéries, *S. saprophyticus* chez les SCN, *E. faecalis* chez les entérocoques |
 | triméthoprime | *morganella*, *salmonella*, *serratia* | *E. coli*, *K. pneumoniae*, *K. oxytoca* |
 
-Elles n'ont pas été portées, et la raison n'est pas la prudence seule :
-***Proteus* et *Morganella* sont naturellement résistants à la
-nitrofurantoïne.** Porter 64 / 64 sur `morganella` parce que la ligne du
-communiqué ne restreint rien rendrait « sensible » une espèce qui ne l'est
-jamais. Lever une restriction d'espèce est une décision de modèle à part
-entière, et elle vaut pour les huit d'un coup.
+**Arbitré le 2026-10-31 : la restriction est levée, sauf là où PhénoBac sait
+déjà que l'espèce est résistante.** Sept couples portés (CMI et diamètre) :
+
+| couple | page | CMI | disque |
+|---|---|---|---|
+| *salmonella* · nitrofurantoïne | 54 | 64 / 64 | 100 µg · 11 / 11 |
+| *serratia* · nitrofurantoïne | 54 | 64 / 64 | 100 µg · 11 / 11 |
+| *S. aureus* · nitrofurantoïne | 77 | 64 / 64 | 100 µg · 13 / 13 |
+| strepto. A/C/G · nitrofurantoïne | 93 | 64 / 64 | 100 µg · 15 / 15 |
+| *morganella* · triméthoprime | 54 | 2 / 2 | 5 µg · 15 / 15 |
+| *salmonella* · triméthoprime | 54 | 2 / 2 | 5 µg · 15 / 15 |
+| *serratia* · triméthoprime | 54 | 2 / 2 | 5 µg · 15 / 15 |
+
+**Le huitième ne l'est pas, et ce n'est pas une prudence.**
+`morganella NIT` couvre *Proteus mirabilis*, *P. vulgaris*, *Morganella
+morganii* et *Providencia*, et PhénoBac porte **déjà** pour ces quatre
+espèces la résistance naturelle à la nitrofurantoïne — EUCAST, phénotypes
+résistants attendus v1.2, règles 1.10, 1.12 et 1.14. Vérifié : forcer « S »
+sur un *Proteus* déclenche aujourd'hui « Incohérence : nitrofurantoïne rendue
+S alors qu'une résistance naturelle est attendue ». Porter 64 / 64 ferait
+rendre « sensible » une souche que la même interprétation contredirait deux
+lignes plus bas.
+
+> **La ligne générale d'un chapitre ne défait pas une résistance naturelle
+> connue de l'espèce.**
+
+Reste ouvert, du même ordre : `scn NIT` est restreint par l'EUCAST à
+*S. saprophyticus* alors que la page 77 donne la nitrofurantoïne à tout le
+chapitre des staphylocoques. Lever cette restriction-là concernerait
+*S. epidermidis*, *S. lugdunensis* et *S. haemolyticus*.
 
 ### La passe des autres sites, faite le 2026-10-31
 
