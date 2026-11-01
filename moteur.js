@@ -3725,7 +3725,79 @@ function autresbgnInterpret(r, c, a) {
                  + "Amoxicillin-clavulanic acid is the reference treatment. Oxacillin, "
                  + "first-generation cephalosporins and clindamycin are inactive — do not "
                  + "treat this as an ordinary skin infection. Consider rabies and tetanus.");
-    if (isRI(r.PEN) || isRI(r.AMX)) {
+    /* LA PÉNICILLINASE DE PASTEURELLA
+       CA-SFM 2026, chapitre 5.21, p. 113, note 1 ; et
+       « Différences principales entre le CA-SFM et l'EUCAST », p. 15.
+
+       L'EUCAST chiffre la pénicilline G, l'ampicilline et l'amoxicilline chez
+       Pasteurella, mais « n'indique pas la nécessité de rechercher la présence
+       d'une pénicillinase avant de rendre un résultat sensible pour ces
+       molécules ». Le CA-SFM l'exige, par un test chromogénique, et tranche :
+       « Les souches productrices de β-lactamase doivent être catégorisées
+       « résistantes » à la pénicilline G et aux aminopénicillines (sans
+       inhibiteurs de β-lactamase). »
+
+       Quatre états, et ils ne disent pas la même chose :
+
+         test POSITIF sous CA-SFM — le comité écrit « doivent » : on rend
+           résistant, et rendreR garde la lecture de paillasse à côté du rendu ;
+         test POSITIF sous EUCAST — le document est MUET. La catégorie ne
+           change pas ; une alerte nomme les deux référentiels. Prêter à
+           l'EUCAST la règle du CA-SFM serait pire qu'un silence ;
+         test NON FAIT sous CA-SFM — la consigne manque, et elle manque AVANT
+           le rendu : c'est une alerte, pas une note de bas de page ;
+         test NÉGATIF — c'est là que le CA-SFM « précise la conduite à tenir » :
+           la souche se rend sur les chiffres.
+
+       L'amoxicilline-acide clavulanique est ÉPARGNÉE dans les trois cas : elle
+       porte l'inhibiteur, le CA-SFM ne la nomme pas dans sa note, et c'est
+       elle le traitement de référence de la morsure. L'étendre aurait retiré
+       au clinicien la seule molécule que le chapitre lui recommande.  */
+    const blac = c && c.blac;
+    const PENIS = ["PEN", "AMP", "AMX"];
+    const penisRendues = PENIS.filter(k => r[k] === "S" || r[k] === "I");
+    if (blac === "Positif") {
+      A.sev = "mod";
+      A.name = tr("Pasteurella multocida — β-lactamase +",
+                  "Pasteurella multocida — beta-lactamase positive");
+      if (estCasfm()) {
+        rendreR(A, r, PENIS,
+          tr("β-lactamase détectée par test chromogénique — CA-SFM : pénicilline G et "
+           + "aminopénicillines sans inhibiteur rendues résistantes.",
+             "Beta-lactamase detected by a chromogenic test — CA-SFM: benzylpenicillin "
+           + "and aminopenicillins without an inhibitor are reported resistant."));
+        A.rules.push({ k: "→R", txt: tr("Pénicilline G, ampicilline et amoxicilline rendues "
+          + "résistantes. L'amoxicilline-acide clavulanique est épargnée : elle porte "
+          + "l'inhibiteur, et elle reste le traitement de référence de la morsure.",
+            "Benzylpenicillin, ampicillin and amoxicillin are reported resistant. "
+          + "Amoxicillin-clavulanic acid is spared: it carries the inhibitor, and it "
+          + "remains the reference treatment for a bite.") });
+      } else if (penisRendues.length) {
+        A.alerts.push({ lvl: "warn", txt: tr("β-lactamase détectée : le CA-SFM impose de "
+          + "catégoriser ces souches résistantes à la pénicilline G et aux "
+          + "aminopénicillines sans inhibiteur. L'EUCAST, choisi ici, ne le précise "
+          + "pas — les catégories rendues restent celles de la paillasse.",
+            "Beta-lactamase detected: the CA-SFM requires such isolates to be "
+          + "categorised resistant to benzylpenicillin and to aminopenicillins without "
+          + "an inhibitor. EUCAST, selected here, does not say so — the reported "
+          + "categories remain those read at the bench.") });
+      }
+    } else if (estCasfm() && penisRendues.length && blac !== "Négatif") {
+      A.alerts.push({ lvl: "warn", txt: tr("CA-SFM : rechercher la β-lactamase par un test "
+        + "chromogénique AVANT de rendre " + penisRendues.map(k => nomAbx(k)).join(", ")
+        + " sensible. Les souches productrices sont rares, mais des isolats d'infections "
+        + "humaines ont été décrits en France.",
+          "CA-SFM: look for a beta-lactamase with a chromogenic test BEFORE reporting "
+        + penisRendues.map(k => nomAbx(k)).join(", ") + " susceptible. Producing isolates "
+        + "are rare, but ones from human infection have been described in France.") });
+    } else if (estCasfm() && blac === "Négatif" && penisRendues.length) {
+      A.rules.push({ k: "📕", txt: tr("CA-SFM : test à la β-lactamase négatif — la "
+        + "pénicilline G et les aminopénicillines se rendent sur les concentrations "
+        + "critiques, sans réserve.",
+          "CA-SFM: a negative beta-lactamase test — benzylpenicillin and the "
+        + "aminopenicillins are reported on the breakpoints, with no reservation.") });
+    }
+    if (blac !== "Positif" && (isRI(r.PEN) || isRI(r.AMX))) {
       A.sev = "mod";
       A.alerts.push({ lvl: "info", txt: tr("β-lactamase possible chez Pasteurella : rare, mais "
         + "décrite. L'amoxicilline-acide clavulanique reste alors active.",

@@ -2471,7 +2471,10 @@ const PRESENTATION = {
       {t:"β-lactamines",abx:["PEN","AMP","AMX","AMC","CTX"]},
       {t:"Autres familles",abx:["CIP","LVX","TET","DOX","SXT"]}
     ],
-    ctx:[],
+    // Le CA-SFM (p. 113, note 1) exige la recherche de β-lactamase par test
+    // chromogénique avant de rendre la pénicilline G ou une aminopénicilline
+    // sensible. Sans cette question, le moteur lisait c.blac pour rien.
+    ctx:[{id:"blac",q:"Test à la β-lactamase (nitrocéfine) ?",opts:["Positif","Négatif","Non fait"]}],
   },
 
   aeromonas:{

@@ -208,6 +208,13 @@ jobs:
       - name: La note 13, les feuilles partagées et les seuils de cystite
         run: node outils/essai-especes-aerobies.js
 
+      # Une question de contexte vit dans DEUX fichiers : le moteur lit la
+      # réponse, la page pose la question. Pasteurella avait « ctx:[] » dans
+      # la page pendant que le moteur s'apprêtait à lire c.blac : la règle du
+      # CA-SFM sur la pénicillinase serait restée inatteignable, au vert.
+      - name: Toute question posée sert, et tout ce qui sert est demandé
+        run: node outils/essai-contexte.js
+
       - name: Aucun argument ne contredit la catégorie qu'il explique
         run: python3 outils/verifier-arguments.py
 

@@ -254,6 +254,94 @@ dire("\nPasteurella : le piège que l'on tend à la morsure");
         "… et l'on rappelle la rage et le tétanos, qui ne se lisent pas sur un antibiogramme");
 })();
 
+/* ---------- 10 bis. LA PÉNICILLINASE DE PASTEURELLA ----------
+
+   CA-SFM 2026, chapitre 5.21, p. 113, note 1 ; et « Différences principales
+   entre le CA-SFM et l'EUCAST », p. 15 :
+
+     l'EUCAST chiffre la pénicilline G, l'ampicilline et l'amoxicilline chez
+     Pasteurella mais « n'indique pas la nécessité de rechercher la présence
+     d'une pénicillinase avant de rendre un résultat sensible » ;
+
+     le CA-SFM l'exige par un test chromogénique, et tranche : « Les souches
+     productrices de β-lactamase DOIVENT être catégorisées "résistantes" à la
+     pénicilline G et aux aminopénicillines (sans inhibiteurs de
+     β-lactamase). »
+
+   Ce qui se joue ici est une catégorie, pas une note : le moteur contredit la
+   paillasse. Les quatre états du test et les deux référentiels sont donc
+   éprouvés un par un, et la vérification la plus importante du lot est la
+   NÉGATIVE : sous EUCAST, un test positif ne doit RIEN changer. Prêter à un
+   référentiel la règle de l'autre est pire qu'un silence, et c'est l'erreur
+   qu'on ne verrait pas — le rendu serait « plus prudent », donc plausible. */
+dire("\nPasteurella : la pénicillinase, et à qui appartient la règle");
+(function () {
+  function p(ref, ctx, res) {
+    return E.runInterpretation({ organism: "pasteurella", mode: "sir", ref: ref,
+      results: res || { PEN: "S", AMP: "S", AMX: "S", AMC: "S", CTX: "S", DOX: "S" },
+      ctx: ctx || {} }).interpretation;
+  }
+  function rendues(a) {
+    return (a.rendu || []).map(function (x) { return x.abx; }).sort().join(",");
+  }
+
+  var pos = p("casfm", { blac: "Positif" });
+  verif(rendues(pos) === "AMP,AMX,PEN",
+        "CA-SFM, test positif : pénicilline G, ampicilline et amoxicilline rendues R ("
+        + (rendues(pos) || "aucune") + ")");
+  verif((pos.rendu || []).every(function (x) { return x.brut === "S" && x.rendu === "R"; }),
+        "… la lecture de paillasse est conservée à côté du rendu : le biologiste "
+        + "peut refaire le raisonnement");
+  verif(rendues(pos).indexOf("AMC") < 0,
+        "… et l'amoxicilline-acide clavulanique est ÉPARGNÉE : elle porte "
+        + "l'inhibiteur, et c'est le traitement de référence de la morsure");
+  verif(/\u03b2-lactamase/.test(pos.name || ""),
+        "… le phénotype est nommé : « " + (pos.name || "") + " »");
+
+  /* LA VÉRIFICATION QUI COMPTE. */
+  var posE = p("eucast", { blac: "Positif" });
+  verif(!(posE.rendu && posE.rendu.length),
+        "EUCAST, test positif : AUCUNE catégorie changée — le document ne l'écrit pas");
+  verif(/CA-SFM/.test(textes(posE)) && /EUCAST/.test(textes(posE)),
+        "… mais la note nomme les deux référentiels, et dit lequel exige quoi");
+
+  var neg = p("casfm", { blac: "N\u00e9gatif" });
+  verif(!(neg.rendu && neg.rendu.length),
+        "CA-SFM, test négatif : rien n'est rendu R — c'est la « conduite à tenir » "
+        + "que le comité précise");
+  verif(/concentrations critiques|sans r\u00e9serve/.test(textes(neg)),
+        "… et la note le dit au lieu de laisser un silence");
+
+  ["Non fait", null].forEach(function (etat) {
+    var a = p("casfm", etat ? { blac: etat } : {});
+    var t = textes(a);
+    verif(/chromog\u00e9nique/.test(t) && /AVANT/.test(t),
+          "CA-SFM, test " + (etat ? "« non fait »" : "non renseigné")
+          + " : on réclame le test chromogénique AVANT de rendre sensible");
+    verif(!(a.rendu && a.rendu.length),
+          "… sans rien rendre R pour autant : l'application ne conclut pas à la "
+          + "place du laboratoire");
+  });
+
+  /* Sous EUCAST, le test n'est pas exigé : réclamer un examen qu'un
+     référentiel ne demande pas, en son nom, est une faute d'attribution. */
+  verif(!/chromog\u00e9nique/.test(textes(p("eucast", {}))),
+        "EUCAST, test non renseigné : on ne réclame rien — l'exigence n'est pas la sienne");
+
+  /* « Un antibiotique non testé n'est pas rendu résistant. » */
+  var seule = p("casfm", { blac: "Positif" }, { PEN: "S", AMC: "S" });
+  verif(rendues(seule) === "PEN",
+        "une molécule non testée n'est pas rendue R : seule la pénicilline G l'est ("
+        + (rendues(seule) || "aucune") + ")");
+
+  /* Une molécule déjà résistante à la paillasse n'est pas « re-rendue » : le
+     compte rendu afficherait une lecture interprétative là où il n'y a rien à
+     interpréter. */
+  var deja = p("casfm", { blac: "Positif" }, { PEN: "R", AMX: "S", AMC: "S" });
+  verif(rendues(deja) === "AMX",
+        "une molécule déjà R n'est pas rendue une seconde fois (" + rendues(deja) + ")");
+})();
+
 /* ---------- 11. Kingella : la culture qu'on rend « stérile » ---------- */
 dire("\nKingella : elle pousse mal, et c'est le vrai risque");
 (function () {

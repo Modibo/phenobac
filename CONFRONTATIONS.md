@@ -862,12 +862,70 @@ déclarées, avec la raison.
 > mauvaise molécule est pire qu'une consigne générale : le biologiste croit
 > avoir mal lu son propre écran.
 
-**La recherche de pénicillinase chez *Pasteurella* (p15).** Le CA-SFM
-« recommande de rechercher la production de β-lactamase par un test
-chromogénique » avant de rendre sensible la pénicilline G, l'ampicilline ou
-l'amoxicilline. *Moraxella* a cette question dans PhénoBac
-(`blac`, « test à la β-lactamase (nitrocéfine) ») ; ***Pasteurella* a
-`ctx:[]`** — aucune question.
+**La recherche de pénicillinase chez *Pasteurella* (p15) — PORTÉE le
+2026-11-01.** Le document des différences est explicite sur le partage :
+l'EUCAST « propose des breakpoints pour la pénicilline G, l'ampicilline et
+l'amoxicilline, mais n'indique pas la nécessité de rechercher la présence
+d'une pénicillinase avant de rendre un résultat sensible pour ces
+molécules ». Le CA-SFM l'exige, par un test chromogénique, et tranche —
+communiqué p113, chapitre 5.21, note 1 :
+
+> « Les souches productrices de β-lactamase doivent être catégorisées
+> « résistantes » à la pénicilline G et aux aminopénicillines (sans
+> inhibiteurs de β-lactamase). »
+
+**Aucun chiffre ne bouge** : les concentrations critiques du chapitre sont
+celles de l'EUCAST, et la base ne change pas (`BASE_VERSION` reste
+`2026.33`). Ce qui change est une CONDUITE, et elle vaut une catégorie.
+
+| test à la β-lactamase | sous CA-SFM | sous EUCAST |
+|---|---|---|
+| **positif** | PEN, AMP, AMX **rendus R** par `rendreR()`, la lecture de paillasse conservée à côté | **rien ne change** — une note dit que le CA-SFM l'exigerait |
+| **négatif** | les chiffres s'appliquent, sans réserve — c'est la « conduite à tenir » que le comité précise | rien |
+| **non fait / non renseigné** | on réclame le test AVANT de rendre sensible, sans rien rendre R à la place | rien — l'exigence n'est pas la sienne |
+
+L'**amoxicilline-acide clavulanique est épargnée** dans tous les cas : le
+comité écrit « sans inhibiteurs », et c'est elle le traitement de référence
+de la morsure. L'étendre aurait retiré au clinicien la seule molécule que le
+chapitre lui recommande.
+
+La vérification qui compte est la négative, et elle est au banc
+(`essai-especes-aerobies.js`, section 10 bis, 15 contrôles) : **sous EUCAST,
+un test positif ne doit RIEN changer.** C'est l'erreur qu'on ne verrait pas,
+parce que le rendu serait « plus prudent », donc plausible.
+
+### Et la page ne posait pas la question
+
+Le moteur lisait déjà `c.blac` pour *Haemophilus*, le gonocoque et
+*Moraxella*. ***Pasteurella* avait `ctx:[]`** — aucune question. Une règle
+branchée là serait restée **inatteignable pour toujours** : le contexte
+arrive vide, la condition est fausse, il n'y a rien à voir, et tous les
+bancs restent verts.
+
+C'est la forme la plus discrète du défaut qui revient dans tout ce dépôt :
+**une chose juste déclarée à un seul endroit quand il en fallait deux.** Le
+moteur sait lire la réponse, la page ne sait pas poser la question, et les
+deux fichiers sont corrects pris séparément.
+
+**`outils/essai-contexte.js`** (nouveau, dans la chaîne) le mesure par
+différentiel, sans lire le code : pour chaque espèce et chaque question, il
+interprète le même antibiogramme avec la réponse et sans elle, et tient deux
+ensembles — ce à quoi le moteur RÉPOND, ce que la page OFFRE. Il exige
+l'égalité. Les deux écarts sont des défauts de sens opposé : du code mort
+d'un côté, une question posée pour rien de l'autre.
+
+> **Un seul profil ne suffisait pas, et la première version a accusé
+> vingt-deux questions justes.** Elle interprétait un antibiogramme tout
+> sensible. Or une question de contexte ne sert qu'en présence d'une
+> résistance : le D-test ne se lit que si l'érythromycine est atteinte, la
+> synergie au clavulanate que si une C3G l'est. Le banc balaie désormais une
+> famille de profils où chaque molécule du panel se présente une fois
+> résistante isolément. Un contrôle qui accuse à tort est pire qu'un
+> contrôle absent : on finit par le désarmer.
+
+État : **28 751 interprétations comparées à leur témoin, 0 écart.** Le banc
+a été éprouvé en retirant la question de *Pasteurella* — il la nomme
+(« code mort : pasteurella.blac ») — et en retirant celle d'*Haemophilus*.
 
 ## Le bloc aminosides des staphylocoques, porté le 2026-11-01
 
