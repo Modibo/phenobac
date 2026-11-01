@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.33";
+const BASE_VERSION = "2026.34";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -1363,15 +1363,48 @@ const REGLES = [
 ["eucast","enteroc","CIP","disque","standard",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","enteroc","DAP","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,true,undefined],
 ["eucast","enteroc","HLG","cmi","standard",128,128,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","enteroc","IPM","disque","standard",null,21,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","enteroc","IPM","disque","standard",null,21,"10",undefined,undefined,undefined,undefined,undefined,["efaecalis"]],
 ["eucast","enteroc","LVX","disque","standard",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","enteroc","LZD","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","enteroc","LZD","disque","standard",20,20,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","enteroc","TEC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","enteroc","TEC","disque","standard",16,16,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","enteroc","TZP","disque","standard",null,18,"30-6",undefined,undefined,undefined,undefined,undefined,undefined],
+/* CES DEUX DIAMÈTRES ÉTAIENT RESTREINTS SANS LE DIRE. Tant que la clé de
+   restriction ignorait la méthode, « espece » écrit sur la ligne de CMI
+   gouvernait aussi le disque : l'imipénème et la pipéracilline-tazobactam
+   de l'entérocoque étaient correctement limités à E. faecalis, mais par
+   ricochet. Depuis que chaque méthode porte la sienne, le ricochet n'existe
+   plus et il fallait l'écrire. Le classeur v16.1 nomme bien l'espèce sur la
+   LIGNE ENTIÈRE — « Imipenem, E. faecalis » et « Piperacillin-tazobactam,
+   E. faecalis » —, donc en CMI comme au disque. Le comportement ne change
+   pas ; il est seulement, désormais, déclaré. */
+["eucast","enteroc","TZP","disque","standard",null,18,"30-6",undefined,undefined,undefined,undefined,undefined,["efaecalis"]],
 ["eucast","enteroc","VA","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","enteroc","VA","disque","standard",12,12,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+/* LE DIAMÈTRE DE LA VANCOMYCINE EST CELUI DE DEUX ESPÈCES, PAS DU GENRE.
+   Classeur EUCAST v16.1, feuille « Enterococcus » : TROIS lignes pour la
+   vancomycine, et la CMI est la même dans deux d'entre elles — seul le
+   diamètre sépare.
+
+     l.81  Vancomycin, E. faecalis and E. faecium      CMI 4/4   disque 12/12
+     l.82  Vancomycin, E. casseliflavus and            «  -  »   «   -   »
+           E. gallinarum
+     l.83  Vancomycin, other enterococci               CMI 4/4   disque 15/15
+
+   PhénoBac ne couvre que E. faecalis et E. faecium : 12 mm est donc juste,
+   et c'était le constat de l'arbitrage du 2026-10-25. Mais il était juste
+   SANS ÊTRE DIT, et un chiffre qui ne dit pas de quelle espèce il sort ne
+   peut pas être pris en défaut : le jour où le genre accueillerait une
+   troisième espèce, elle hériterait du 12 mm, et personne ne le verrait. La
+   restriction rend le silence impossible — un entérocoque hors des deux
+   espèces n'aura AUCUN diamètre de vancomycine, ce qui est la bonne réponse
+   plutôt qu'une mauvaise.
+
+   La CMI, elle, reste SANS restriction : le document la donne à 4/4 pour les
+   deux lignes. La restreindre retirerait une valeur que l'EUCAST accorde.
+   « - » de la ligne 82 (VanC de E. casseliflavus et E. gallinarum) veut dire
+   « ne jamais rendre sensible » ; PhénoBac ne porte pas ces deux espèces, et
+   l'absence de diamètre est, pour elles aussi, le comportement juste. */
+["eucast","enteroc","VA","disque","standard",12,12,"5",undefined,undefined,undefined,undefined,undefined,["efaecalis","efaecium"]],
 ["eucast","haemo","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","haemo","AMC","disque","standard",15,15,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","haemo","AMP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -1539,8 +1572,18 @@ const REGLES = [
 ["eucast","pseudo","LVX","disque","standard",null,18,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","pseudo","MEM","cmi","meninge",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","pseudo","MEM","cmi","standard",2,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","pseudo","MEM","disque","meninge",20,20,"10",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","pseudo","MEM","disque","standard",20,14,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+/* MÊME CAS, MÊME GESTE, chez Pseudomonas. Feuille « Pseudomonas » :
+
+     l.49  Meropenem (hors méningite), P. aeruginosa         CMI 2/8  20/14
+     l.50  Meropenem (hors méningite), Pseudomonas autres    CMI 2/8  24/18
+           que P. aeruginosa
+     l.51  Meropenem (méningite), P. aeruginosa              CMI 2/2  20/20
+
+   Là encore la CMI est la même et seul le diamètre sépare ; là encore
+   PhénoBac ne couvre que l'espèce nommée. Les deux lignes de disque portent
+   donc leur espèce, et la CMI reste libre. */
+["eucast","pseudo","MEM","disque","meninge",20,20,"10",undefined,undefined,undefined,undefined,undefined,["paeru"]],
+["eucast","pseudo","MEM","disque","standard",20,14,"10",undefined,undefined,undefined,undefined,undefined,["paeru"]],
 ["eucast","pseudo","TZP","cmi","standard",null,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","pseudo","TZP","disque","standard",null,18,"30-6",[18,19],undefined,undefined,undefined,undefined,undefined],
 ["eucast","salmonella","AMC","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

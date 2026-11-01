@@ -31,8 +31,9 @@ pour obtenir la nouvelle empreinte.
 - **date** : **2026-11-01, le classeur en main** (sha256 `5de6f4a097f7f655…`)
 - **résultat** : **511 seuils confrontés — 511 identiques, 0 différent**,
   0 drapeau incohérent, 91 non comparés. Diamètres : **437 identiques, 0
-  différent**, 2 à arbitrer (vancomycine et méropénème, deux lignes
-  possibles). Méningé : **24 identiques, 0 différent**.
+  différent**, 2 arbitrés **et liés le 2026-11-01** (vancomycine de
+  l'entérocoque, méropénème de *Pseudomonas* : deux lignes possibles, celle
+  de l'espèce couverte retenue et désormais déclarée comme telle). Méningé : **24 identiques, 0 différent**.
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : le
   2026-10-31, trois lignes ont été **retirées** de BP —
   `morganella/salmonella/serratia · FOS · cmi · standard 8-8`. Aucune
@@ -310,7 +311,8 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 - **empreinte** : 016d9cba32aafc429ec2ee880cb1e5115620ae3ba5347ca579f1fbd4aded864e
 - **date** : 2026-10-25
 - **résultat** : **435** diamètres confrontés — **435 identiques, 0 différent**,
-  0 non comparé, 2 à arbitrer (les deux concordent). Dans l'autre sens : aucune
+  0 non comparé, 2 arbitrés **et liés le 2026-11-01** (les deux concordent ;
+  la ligne retenue porte maintenant sa restriction d'espèce). Dans l'autre sens : aucune
   molécule du panel n'est privée de son diamètre ; il reste 2 couples hors
   panel, faute de charge de disque dans le document, et 6 absences expliquées
   par un témoin ou un écran.
@@ -371,12 +373,76 @@ Le premier passage a crié **32 divergences**. Aucune n'en était une :
   « réserve de trop » aurait fait six fausses alertes pour une réserve bien
   fondée côté CMI.
 
-### Les deux « à arbitrer » concordent
+### Les deux « à arbitrer » concordent — et sont désormais LIÉS (2026-11-01)
 
 | couple | lignes du document | ce que PhénoBac retient |
 |---|---|---|
-| *Enterococcus* / vancomycine | *E. faecalis* et *E. faecium* 12 mm ; autres entérocoques 15 mm | **12 mm** — les deux espèces qu'il couvre |
-| *Pseudomonas* / méropénème | *P. aeruginosa* 20/14 ; autres *Pseudomonas* 24/18 | **20/14** — l'espèce qu'il couvre |
+| *Enterococcus* / vancomycine | l.81 *E. faecalis* et *E. faecium* 12 mm · l.82 *E. casseliflavus* et *E. gallinarum* « - » · l.83 autres entérocoques 15 mm | **12 mm** — les deux espèces qu'il couvre |
+| *Pseudomonas* / méropénème | l.49 *P. aeruginosa* 20/14 · l.50 autres *Pseudomonas* 24/18 · l.51 méningite *P. aeruginosa* 20/20 | **20/14** et **20/20** — l'espèce qu'il couvre |
+
+Le constat était juste **et muet**. Un chiffre qui ne dit pas de quelle espèce
+il sort ne peut pas être pris en défaut : le jour où le genre accueillerait une
+troisième espèce, elle hériterait du 12 mm et personne ne le verrait. Les deux
+lignes portent maintenant leur restriction d'espèce, ce qui change le défaut
+futur en **silence** — aucun diamètre — plutôt qu'en mauvaise réponse.
+
+### Et cela a découvert que la clé de restriction écrasait la méthode
+
+Dans les deux cas, **la CMI est la même pour toutes les espèces et seul le
+diamètre sépare** : vancomycine 4/4 partout (l.81 et l.83), méropénème 2/8
+partout (l.49 et l.50). Or la restriction d'espèce s'indexait sur
+`groupe:molécule`, sans la méthode. Déclarer le diamètre aurait donc restreint
+**aussi la CMI** — et retiré aux autres entérocoques une concentration critique
+que l'EUCAST leur accorde.
+
+La clé porte désormais `groupe:molécule:méthode`. Deux lignes en profitaient
+déjà sans le dire — l'imipénème et la pipéracilline-tazobactam de
+l'entérocoque étaient limités à *E. faecalis* **par ricochet** de la ligne de
+CMI ; le classeur nomme bien l'espèce sur la ligne entière (« Imipenem,
+E. faecalis »), et c'est maintenant écrit des deux côtés. Comportement
+inchangé, déclaration rétablie.
+
+> **Le prix du gain est une inversion du sens de panne.** Avant, oublier la
+> restriction sur une ligne était rattrapé par la ligne sœur. Maintenant
+> l'oubli **ouvre** le seuil, en silence. Trois garde-fous répondent à cela :
+> `especeAutorisee()` **lève** si on l'appelle sans méthode ; `essai-categorisation.js`
+> balaie les 28 restrictions et exige que **62 couples (espèce hors liste,
+> molécule restreinte) restent sans catégorie** ; `verifier-fratries.py` gagne
+> une seconde passe qui exige que **chaque ligne d'un couple restreint soit
+> tranchée** — restreinte elle aussi, ou déclarée dans `ASYMETRIE_VOULUE` avec
+> la ligne du document qui la fonde. Les trois ont été éprouvés par mutation.
+
+### La note de lecture du disque, qui manquait tout entière
+
+PhénoBac portait les 435 diamètres de l'EUCAST et **aucune de leurs notes de
+lecture**. Pour un laboratoire qui mesure au pied à coulisse — son public —
+c'est la moitié qui manque : le chiffre dit où couper, la note dit **quand le
+chiffre ne suffit pas**. Note A de la feuille « Enterococcus » :
+
+> « Vancomycin susceptible *E. faecalis* and *E. faecium* exhibit sharp zone
+> edges and do not exhibit colonies in the inhibition zone. Examine zone edges
+> with transmitted light… If the zone edge is fuzzy, colonies grow within the
+> zone or if you are uncertain, then perform confirmatory testing with PCR or
+> report resistant **even if the zone diameter is ≥ 12 mm**. Isolates must not
+> be reported susceptible before 24 h incubation. »
+
+Autrement dit : **13 mm peut être un VRE.** Le VanB de bas niveau ne se lit pas
+autrement sans biologie moléculaire. La réincubation à 24 h était déjà dite,
+comme *condition de réalisation* (§ 9) — elle se déclare avant de lire. Ce qui
+manquait est l'autre moitié, qui se joue PENDANT la lecture et vise une
+molécule précise. D'où `LECTURE_DISQUE`, indexée par couple, émise en **warn**
+— elle peut renverser la catégorie — et seulement quand une catégorie S ou I
+est sortie : elle n'a rien à dire à une souche déjà résistante.
+
+> **Elle a failli être posée au milieu d'une chaîne `if / else if`.** Écrite
+> entre `if (cat) results[k] = cat;` et son premier `else if`, elle détachait
+> les deux branches suivantes de leur condition. Un entérocoque mesuré à 11 mm
+> sortait alors **« VA = R »** *et* **« 11 mm non catégorisé — valeur
+> illisible »** dans le même compte rendu : deux phrases contradictoires sur
+> l'alerte la plus grave que l'application sache rendre. Aucun banc ne le
+> voyait — chacun regardait sa question, la catégorie d'un côté, le message de
+> l'autre. `essai-diametres.js` balaie désormais **4 746 mesures** et exige
+> qu'un diamètre catégorisé ne soit jamais annoncé « non catégorisé ».
 
 ---
 
@@ -697,7 +763,7 @@ confrontations qui attendaient depuis une semaine ont tourné :
 | passe | résultat |
 |---|---|
 | concentrations critiques | **511 identiques, 0 différent**, 0 drapeau incohérent |
-| diamètres | **437 identiques, 0 différent**, 2 à arbitrer |
+| diamètres | **437 identiques, 0 différent**, 2 arbitrés et liés |
 | méningé | **24 identiques, 0 différent** |
 | couverture, 22 tables | **409 règles, aucun écart** |
 

@@ -90,6 +90,43 @@ EN_SUSPENS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# LA SECONDE PASSE : UN COUPLE RESTREINT D'UN CÔTÉ ET PAS DE L'AUTRE
+#
+# Depuis le 2026-11-01, la restriction d'espèce s'indexe sur
+# « groupe:molécule:MÉTHODE » et non plus sur « groupe:molécule ». Il le
+# fallait : la vancomycine de l'entérocoque a une CMI valable pour TOUS les
+# entérocoques (4 mg/L) et un diamètre qui ne vaut que pour E. faecalis et
+# E. faecium (12 mm contre 15). L'ancienne clé ne savait pas le dire.
+#
+# Mais ce gain a un prix, et il est exactement du genre que ce fichier
+# traque : AVANT, une restriction écrite sur la CMI protégeait le disque par
+# ricochet ; MAINTENANT, l'oublier sur le disque l'ouvre en silence. Le sens
+# de panne s'est inversé — il ouvre au lieu de fermer.
+#
+# D'où cette passe. Pour chaque couple (référentiel, groupe, molécule, site)
+# dont AU MOINS UNE ligne porte une restriction, toutes les autres doivent en
+# porter une aussi — ou figurer ci-dessous, avec la raison lue dans le
+# document. Une asymétrie non déclarée est un oubli jusqu'à preuve du
+# contraire.
+ASYMETRIE_VOULUE = {
+    ("eucast", "enteroc", "VA", "standard", "cmi"):
+        "Classeur v16.1, feuille Enterococcus : la CMI de la vancomycine vaut "
+        "4/4 pour E. faecalis et E. faecium (l.81) COMME pour les autres "
+        "entérocoques (l.83) ; seul le diamètre sépare (12 contre 15 mm). "
+        "Restreindre la CMI retirerait une valeur que l'EUCAST accorde.",
+    ("eucast", "pseudo", "MEM", "standard", "cmi"):
+        "Feuille Pseudomonas : la CMI du méropénème vaut 2/8 pour "
+        "P. aeruginosa (l.49) comme pour les autres Pseudomonas (l.50) ; seul "
+        "le diamètre sépare (20/14 contre 24/18).",
+    ("eucast", "pseudo", "MEM", "meninge", "cmi"):
+        "Feuille Pseudomonas, l.51 : la ligne méningée ne nomme que "
+        "P. aeruginosa, et le document ne donne aucune ligne méningée aux "
+        "autres Pseudomonas — leur CMI méningée n'existe pas, elle n'est pas "
+        "ouverte. L'absence de restriction sur la CMI est ici sans portée.",
+}
+
+
 def regles():
     """Les lignes de base-connaissances.js, en champs nommés."""
     s = open(BASE, encoding="utf-8").read()
@@ -228,9 +265,55 @@ def main():
               "validée par un biologiste avant d'être portée dans le code.")
         return 1
 
+    # ------------------------------------------------------------------
+    # SECONDE PASSE : au sein d'un couple, chaque méthode est-elle tranchée ?
+    # ------------------------------------------------------------------
+    couples = {}
+    for r in lignes:
+        cle = (r["ref"], r["groupe"], r["abx"], r.get("site", "?"))
+        esp = r.get("espece", "undefined")
+        couples.setdefault(cle, []).append(
+            (r.get("meth", "?"), "" if esp in ("undefined", "null") else esp))
+
+    muets, declares, examines = [], [], 0
+    for cle, rangs in sorted(couples.items()):
+        if len(rangs) < 2:
+            continue
+        restreints = [m for m, e in rangs if e]
+        if not restreints or len(restreints) == len(rangs):
+            continue
+        examines += 1
+        for meth, esp in sorted(rangs):
+            if esp:
+                continue
+            raison = ASYMETRIE_VOULUE.get(cle + (meth,))
+            ou = "%s %s/%s %s · %s" % (cle[0], cle[1], cle[2], cle[3], meth)
+            if raison:
+                declares.append("%s — %s" % (ou, raison))
+            else:
+                muets.append("%s : restreint en « %s », libre ici."
+                             % (ou, ", ".join(sorted(restreints))))
+
+    if muets:
+        print("UNE RESTRICTION D'ESPÈCE NE COUVRE PAS TOUTES LES MÉTHODES DU COUPLE :")
+        for m in muets:
+            print("  -", m)
+        print("\nDepuis que la clé porte la méthode, l'oubli OUVRE le seuil au "
+              "lieu de le fermer. Soit la ligne doit porter la même restriction, "
+              "soit l'asymétrie est voulue et se déclare dans ASYMETRIE_VOULUE "
+              "avec la ligne du document qui la fonde.")
+        print("\nAucun fichier n'a été modifié. Toute correction doit être "
+              "validée par un biologiste avant d'être portée dans le code.")
+        return 1
+
     print("Dans chaque fratrie, une restriction posée sur un genre est posée "
           "sur tous — ou déclarée.")
     for d in dits:
+        print("  ·", d)
+    print("Et dans chaque couple, une restriction posée sur une méthode est "
+          "posée sur toutes — ou déclarée (%d couples asymétriques examinés)."
+          % examines)
+    for d in declares:
         print("  ·", d)
     return 0
 

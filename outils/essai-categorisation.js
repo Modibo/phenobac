@@ -261,6 +261,141 @@ dire("\nUn seuil validé pour une espèce ne vaut pas pour sa voisine");
         "le pivmécillinam, lui, vaut pour les deux : la restriction n'est pas globale");
 })();
 
+/* ---------- 10 bis. LA RESTRICTION PORTE SUR UNE MÉTHODE ----------
+
+   LE CHANGEMENT DU 2026-11-01, ET POURQUOI IL DEMANDE CE BANC.
+
+   La restriction d'espèce s'indexait sur « groupe:molécule ». Une
+   restriction écrite sur la ligne de CMI gouvernait donc aussi le disque, et
+   réciproquement. Cela marchait tant que le document restreignait des LIGNES
+   ENTIÈRES — et il le fait presque toujours : « Imipenem, E. faecalis »
+   nomme l'espèce pour la CMI comme pour le diamètre.
+
+   La vancomycine de l'entérocoque est l'exception, et elle est exactement à
+   l'envers de ce que l'ancienne clé savait dire. Classeur v16.1, feuille
+   « Enterococcus » :
+
+       l.81  Vancomycin, E. faecalis and E. faecium   CMI 4/4   disque 12/12
+       l.82  Vancomycin, E. casseliflavus and           «  -  »      «  -  »
+             E. gallinarum
+       l.83  Vancomycin, other enterococci            CMI 4/4   disque 15/15
+
+   La CMI est la MÊME partout ; seul le diamètre sépare. Restreindre le
+   couple entier aurait retiré aux autres entérocoques une concentration
+   critique que l'EUCAST leur accorde.
+
+   LE PRIX DU GAIN EST UNE INVERSION DU SENS DE PANNE. Avant, oublier la
+   restriction sur une ligne était rattrapé par la ligne sœur ; maintenant,
+   l'oubli OUVRE le seuil, en silence. Trois garde-fous répondent à cela —
+   celui-ci éprouve les deux premiers, verifier-fratries.py tient le
+   troisième (chaque ligne d'un couple restreint doit être tranchée). */
+dire("\nLa restriction d'espèce porte sur une méthode, et l'oubli doit lever");
+(function () {
+  /* 1. LA PORTE LÈVE SI ON L'APPELLE SANS MÉTHODE.
+     C'est le garde-fou le plus important du lot : un appel qui oublie la
+     méthode ne trouverait aucune limite, conclurait « autorisé », et
+     rendrait un seuil à une espèce que le document exclut. */
+  var leve = false;
+  try { E.especeAutorisee("enteroc", "VA", "eucast"); }
+  catch (e) { leve = /méthode/.test(String(e)); }
+  verif(leve, "especeAutorisee() sans méthode LÈVE au lieu d'ouvrir le seuil");
+  var leve2 = false;
+  try { E.especeAutorisee("enteroc", "VA", "eucast", "diametre"); }
+  catch (e) { leve2 = /méthode/.test(String(e)); }
+  verif(leve2, "… et une méthode inventée lève aussi : « diametre » n'est pas « disque »");
+  verif(E.especeAutorisee("pseudo", "CAZ", "eucast", "cmi") === true,
+        "… tandis qu'un couple sans restriction reste autorisé");
+
+  /* 2. LA TABLE DIT CE QUE LE DOCUMENT DIT. */
+  verif(!!E.ESPECE_EUCAST["enteroc:VA:disque"],
+        "le diamètre de la vancomycine porte sa restriction d'espèce");
+  verif(E.ESPECE_EUCAST["enteroc:VA:cmi"] === undefined,
+        "… et la CMI n'en porte PAS : l'EUCAST la donne à tous les entérocoques");
+  verif(!!E.ESPECE_EUCAST["pseudo:MEM:disque"] && E.ESPECE_EUCAST["pseudo:MEM:cmi"] === undefined,
+        "même partage pour le méropénème de Pseudomonas : le diamètre est nommé, la CMI non");
+
+  /* 3. AUCUNE LISTE NE NOMME UNE ESPÈCE QUI N'EXISTE PAS.
+     Un identifiant mal orthographié ne correspondrait à aucune espèce : le
+     seuil se fermerait pour TOUT LE MONDE. C'est le sens de panne sûr, mais
+     c'est une panne, et elle est muette.
+
+     CE CONTRÔLE A D'ABORD EXIGÉ QUE L'ESPÈCE SOIT DU GROUPE DE LA CLÉ, ET
+     IL A ACCUSÉ QUARANTE-TROIS LIGNES JUSTES. Les listes sont à l'échelle
+     de l'ORDRE, par construction : l'EUCAST publie une seule table pour les
+     entérobactéries, PhénoBac en tient quatre groupes de seuils (entero,
+     morganella, salmonella, serratia), et verifier-fratries.py exige que la
+     restriction du pivmécillinam soit la MÊME dans les quatre. Chacune
+     nomme donc des espèces des quatre groupes. Le filtre par groupe aurait
+     fait rayer, pour « nettoyer », la symétrie que l'autre contrôle
+     impose — deux contrôles qui se contredisent valent moins qu'un seul. */
+  var fantomes = [], vides = [];
+  [["eucast", E.ESPECE_EUCAST], ["casfm", E.ESPECE_CASFM]].forEach(function (p) {
+    Object.keys(p[1]).forEach(function (cle) {
+      var liste = p[1][cle];
+      if (!liste || !liste.length) { vides.push(p[0] + " " + cle); return; }
+      liste.forEach(function (id) {
+        if (!E.ORG[id]) fantomes.push(p[0] + " " + cle + " nomme « " + id + " »");
+      });
+    });
+  });
+  verif(fantomes.length === 0,
+        fantomes.length === 0
+          ? "les " + (Object.keys(E.ESPECE_EUCAST).length + Object.keys(E.ESPECE_CASFM).length)
+            + " restrictions ne nomment que des espèces que le moteur connaît"
+          : "restriction qui nomme une espèce inconnue : " + fantomes.join(" ; "));
+  verif(vides.length === 0,
+        vides.length === 0 ? "aucune liste de restriction n'est vide"
+          : "liste vide — le seuil se fermerait pour tout le monde : " + vides.join(", "));
+
+  /* 4. LE BALAYAGE : une espèce hors liste n'obtient RIEN.
+     Générique, et c'est voulu : il visite chaque restriction de la base, et
+     non les trois que le banc aurait choisies. Une restriction ajoutée
+     demain sera éprouvée sans qu'on y pense. */
+  var ouverts = [], fermes = 0;
+  Object.keys(E.ESPECE_EUCAST).forEach(function (cle) {
+    var p = cle.split(":"), groupe = p[0], abx = p[1], meth = p[2];
+    var liste = E.ESPECE_EUCAST[cle];
+    Object.keys(E.ORG).forEach(function (id) {
+      if (E.ORG[id].bpGroup !== groupe) return;
+      if (liste.indexOf(id) !== -1) return;              // espèce autorisée
+      /* DEUX MESURES, L'UNE FRANCHEMENT SENSIBLE ET L'AUTRE FRANCHEMENT
+         RÉSISTANTE. Une seule ne suffit pas : plusieurs de ces seuils
+         s'écrivent « S: null » — « ne jamais rendre sensible » —, et une
+         mesure très sensible n'en tire alors aucune catégorie même quand la
+         porte est grande ouverte. L'épreuve par mutation l'a montré :
+         l'imipénème au disque échappait au balayage. */
+      var sondes = meth === "cmi" ? ["0.002", "1024"] : ["45", "6"];
+      var vu = null;
+      sondes.forEach(function (v) {
+        if (vu) return;
+        var appel = { organism: id, ref: "eucast", ctx: { urin: "Oui" } };
+        if (meth === "cmi") { appel.mode = "mic"; appel.mic = {}; appel.mic[abx] = v; }
+        else { appel.mode = "diam"; appel.diam = {}; appel.diam[abx] = v; }
+        var c = E.runInterpretation(appel).categories;
+        if (c[abx] !== undefined) vu = c[abx] + " (mesure " + v + ")";
+      });
+      if (vu) ouverts.push(id + " obtient " + abx + " (" + meth + ") = " + vu);
+      else fermes++;
+    });
+  });
+  verif(ouverts.length === 0,
+        ouverts.length === 0
+          ? fermes + " couples (espèce hors liste, molécule restreinte) restent sans catégorie"
+          : "UN SEUIL RESTREINT A ÉTÉ RENDU À UNE ESPÈCE EXCLUE : " + ouverts.join(" ; "));
+  verif(fermes > 0, "… et le balayage a bien visité quelque chose (" + fermes + " cas)");
+
+  /* 5. Les espèces couvertes, elles, gardent leur seuil. Un contrôle qui
+     ferme tout passerait les quatre précédents. */
+  verif(categ("efaecalis", { VA: "2" }).VA === "S" && categ("efaecium", { VA: "2" }).VA === "S",
+        "la vancomycine reste catégorisée en CMI chez les deux entérocoques couverts");
+  var d = function (org, mm) { return E.runInterpretation({ organism: org, mode: "diam",
+    diam: mm, ctx: {}, ref: "eucast" }).categories; };
+  verif(d("efaecalis", { VA: "13" }).VA === "S" && d("efaecium", { VA: "11" }).VA === "R",
+        "… et au disque, le 12 mm sépare toujours S de R chez E. faecalis et E. faecium");
+  verif(d("paeru", { MEM: "22" }).MEM === "S" && d("paeru", { MEM: "13" }).MEM === "R",
+        "… et le 20/14 du méropénème vaut toujours pour P. aeruginosa");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : une mesure ne devient une catégorie que"
                     + " lorsqu'elle la détermine."));

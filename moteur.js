@@ -352,8 +352,27 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
           r.groupe, r.abx, r.zit);
     if (r.temoin !== undefined) met(DZ_TEMOIN, r.groupe, r.abx, r.temoin);
     if (r.dep !== undefined)    met(r.ref === "casfm" ? DEPISTAGE_CASFM : DEPISTAGE, r.groupe, r.abx, r.dep);
+    /* LA CLÉ PORTE LA MÉTHODE, et elle ne la portait pas.
+       Jusqu'au 2026-11-01 la restriction d'espèce s'indexait sur
+       « groupe:molécule » seulement. Une restriction écrite sur la ligne de
+       CMI gouvernait donc aussi le disque, et réciproquement — ce qui
+       marchait tant que le document restreignait des LIGNES ENTIÈRES.
+
+       La vancomycine de l'entérocoque a montré que ce n'est pas toujours le
+       cas. Classeur v16.1, feuille « Enterococcus » : la CMI vaut 4/4 pour
+       E. faecalis, E. faecium ET les autres entérocoques, tandis que le
+       diamètre vaut 12 mm pour les deux premières et 15 mm pour les autres.
+       Restreindre le couple entier aurait retiré aux autres espèces une CMI
+       que l'EUCAST leur accorde.
+
+       Avec la méthode dans la clé, chaque moitié porte la sienne. Le prix à
+       payer est qu'un oubli ne se voit plus : une restriction déclarée sur
+       la CMI ne protège plus le disque. D'où deux garde-fous —
+       especeAutorisee() LÈVE si on l'appelle sans méthode, et
+       verifier-fratries.py exige que chaque ligne d'un couple restreint soit
+       tranchée. */
     if (r.espece !== undefined)
-      (r.ref === "casfm" ? ESPECE_CASFM : ESPECE_EUCAST)[r.groupe + ":" + r.abx] = r.espece;
+      (r.ref === "casfm" ? ESPECE_CASFM : ESPECE_EUCAST)[r.groupe + ":" + r.abx + ":" + r.meth] = r.espece;
     if (r.ecoff) ECOFF[r.groupe + ":" + r.abx] = true;
     if (r.conv) dans(HORS_EUCAST, r.groupe, r.abx);
     if (r.couv !== undefined) {
@@ -648,6 +667,54 @@ let _activeId = null;
 // Couples tombant dans la zone d'incertitude technique pour la requête en cours.
 let _zit = [];
 let _sansDisque = [];
+/* ------------------------------------------------------------
+   LES NOTES DE LECTURE DU DISQUE — ce que le classeur écrit À CÔTÉ du
+   chiffre, et qui peut le contredire.
+
+   PhénoBac portait les 435 diamètres de l'EUCAST et aucune de leurs notes de
+   lecture. Pour un laboratoire qui mesure au pied à coulisse — son public —
+   c'est la moitié qui manque : le chiffre dit où couper, la note dit QUAND
+   LE CHIFFRE NE SUFFIT PAS.
+
+   La vancomycine de l'entérocoque en est le cas le plus lourd. Note A de la
+   feuille « Enterococcus », v16.1 :
+
+     « Vancomycin susceptible E. faecalis and E. faecium exhibit sharp zone
+       edges and do not exhibit colonies in the inhibition zone. Examine zone
+       edges with transmitted light (plate held up to light). If the zone
+       edge is fuzzy, colonies grow within the zone or if you are uncertain,
+       then perform confirmatory testing with PCR or report resistant (see
+       pictures below) EVEN IF THE ZONE DIAMETER IS ≥ 12 mm. Isolates must
+       not be reported susceptible before 24 h incubation. »
+
+   Autrement dit : 13 mm peut être un entérocoque résistant à la
+   vancomycine. Le VanB de bas niveau se lit comme cela, et pas autrement
+   sans biologie moléculaire. Rendre « sensible » sur le seul chiffre, c'est
+   laisser partir un VRE avec un glycopeptide.
+
+   La réincubation à 24 h était déjà dite, comme CONDITION DE RÉALISATION
+   (§ 9, table CONDITIONS). Elle y est à sa place : elle se déclare avant de
+   lire. Ce qui manquait est l'autre moitié, qui se joue PENDANT la lecture
+   et vise une molécule précise — d'où une table à part, indexée par couple.
+   ------------------------------------------------------------ */
+const LECTURE_DISQUE = {
+  enteroc: {
+    VA: {
+      fr: "Lecture du disque de vancomycine : un entérocoque sensible donne un bord de zone NET, "
+        + "sans colonies dans la zone. Examiner le bord en lumière transmise (boîte levée vers la "
+        + "lumière). Bord flou, colonies dans la zone, ou simple doute : confirmer par PCR ou "
+        + "rendre RÉSISTANT — même si le diamètre atteint 12 mm. Et ne rien rendre sensible avant "
+        + "24 h d'incubation.",
+      en: "Reading the vancomycin disk: a susceptible enterococcus gives a SHARP zone edge with no "
+        + "colonies inside the zone. Examine the edge with transmitted light (hold the plate up to "
+        + "the light). A fuzzy edge, colonies within the zone, or any uncertainty: confirm by PCR or "
+        + "report RESISTANT — even if the diameter reaches 12 mm. And report nothing susceptible "
+        + "before 24 h of incubation."
+    }
+  }
+};
+// Les diamètres mesurés dont le couple porte une note de lecture.
+let _lectureDisque = [];
 // La règle des carbapénèmes a-t-elle déjà été appliquée par une branche
 // phénotypique ? Sans ce drapeau, le filet posé dans finalize() la
 // rejouerait et le compte rendu porterait deux fois la même consigne.
@@ -2004,6 +2071,18 @@ function finalize(A, r) {
       A.alerts.push({ lvl: "info",
         txt: tr(`${nomAbx(d.abx)} : ${d.valeur} mm non catégorisé — ${d.raison}.`,
                 `${nomAbx(d.abx)}: ${d.valeur} mm not categorised — ${d.raison}.`) });
+    });
+  }
+
+  /* Les notes de lecture du disque. En « warn » et non en « info » : celle
+     de la vancomycine peut RENVERSER la catégorie que le chiffre a donnée,
+     et une alerte qu'on classe trop bas est une alerte qu'on ne lit pas. */
+  if (_lectureDisque.length) {
+    A.lectureDisque = _lectureDisque.slice();
+    _lectureDisque.forEach(d => {
+      A.alerts.push({ lvl: "warn",
+        txt: tr(`${nomAbx(d.abx)}, ${d.mm} mm — ${d.note.fr}`,
+                `${nomAbx(d.abx)}, ${d.mm} mm — ${d.note.en}`) });
     });
   }
 
@@ -4354,9 +4433,9 @@ function getBP(bpOverride, group, k, ctx) {
        à 0,25 pour les autres ; sans ce contrôle, le 2 se serait appliqué à
        tout le groupe « scn », S. epidermidis compris. */
     if (c.urin === "Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]
-        && especeAutorisee(group, k, "casfm")) return BP_CASFM_URIN[group][k];
+        && especeAutorisee(group, k, "casfm", "cmi")) return BP_CASFM_URIN[group][k];
     if (BP_CASFM[group] && BP_CASFM[group][k]
-        && especeAutorisee(group, k, "casfm")) return BP_CASFM[group][k];
+        && especeAutorisee(group, k, "casfm", "cmi")) return BP_CASFM[group][k];
   }
   // L'EUCAST a lui aussi des seuils propres à la cystite simple : le
   // pivmécillinam, le céfixime, la nitrofurantoïne et le triméthoprime n'y
@@ -4367,7 +4446,7 @@ function getBP(bpOverride, group, k, ctx) {
   // valait d'abord que pour le disque, et la nitrofurantoïne se trouvait
   // catégorisée en CMI chez Klebsiella alors que l'EUCAST ne la valide que
   // chez E. coli — un chiffre juste au mauvais endroit.
-  if (c.urin === "Oui" && BP_URIN[group] && BP_URIN[group][k] && especeAutorisee(group, k, "eucast"))
+  if (c.urin === "Oui" && BP_URIN[group] && BP_URIN[group][k] && especeAutorisee(group, k, "eucast", "cmi"))
     return BP_URIN[group][k];
   /* Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas.
      Cette ligne est une ceinture par-dessus des bretelles, et l'épreuve par
@@ -4389,7 +4468,7 @@ function getBP(bpOverride, group, k, ctx) {
      Une restriction écrite dans la base et ignorée par le moteur est pire
      qu'une restriction absente : elle donne à relire une garantie qui
      n'existe pas. */
-  if (BP[group] && BP[group][k] && !especeAutorisee(group, k, "eucast")) return null;
+  if (BP[group] && BP[group][k] && !especeAutorisee(group, k, "eucast", "cmi")) return null;
   return (BP[group] && BP[group][k]) || null;
 }
 
@@ -4648,7 +4727,7 @@ function getDZ(dzOverride, group, k, ctx) {
     // dans la boucle de traduction, pour ne pas rendre « R » ce que le
     // CA-SFM refuse de trancher au disque.
     if (DEPISTAGE_CASFM[group] && DEPISTAGE_CASFM[group][k]) return null;
-    const limite = ESPECE_CASFM[group + ":" + k];
+    const limite = ESPECE_CASFM[group + ":" + k + ":disque"];
     if (!limite || (_activeId && limite.indexOf(_activeId) !== -1)) {
       const d = dzCasfm(group, k, c);
       if (d) return d;
@@ -4678,26 +4757,34 @@ function getDZ(dzOverride, group, k, ctx) {
   // Klebsiella. Appliquer ces seuils ailleurs donnerait un chiffre juste au
   // mauvais endroit, le défaut le plus difficile à repérer.
   if (c.urin === "Oui" && DZ_URIN[group] && DZ_URIN[group][k]
-      && especeAutorisee(group, k, "eucast")) return DZ_URIN[group][k];
+      && especeAutorisee(group, k, "eucast", "disque")) return DZ_URIN[group][k];
   // Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas :
   // ne pas retomber sur un seuil d'une autre indication.
   if (DZ_URIN[group] && DZ_URIN[group][k] && !(DZ[group] && DZ[group][k])) return null;
   // Symétrique de getBP : au disque comme en CMI, la restriction d'espèce
   // du site ordinaire était écrite et non lue.
-  if (DZ[group] && DZ[group][k] && !especeAutorisee(group, k, "eucast")) return null;
+  if (DZ[group] && DZ[group][k] && !especeAutorisee(group, k, "eucast", "disque")) return null;
   return (DZ[group] && DZ[group][k]) || null;
 }
 
 /* La restriction d'espèce d'un seuil, s'il en porte une. Sert aux seuils
    urinaires de l'EUCAST comme à ceux du CA-SFM : une seule règle, une seule
    place où elle peut être oubliée. */
-function especeAutorisee(group, k, ref) {
+function especeAutorisee(group, k, ref, meth) {
+  /* « meth » EST OBLIGATOIRE, ET L'OUBLI LÈVE. Une méthode absente donnerait
+     une clé qui ne trouve rien, donc « aucune restriction », donc un seuil
+     rendu à une espèce que le document exclut — et le moteur se tairait.
+     C'est le sens de panne le plus dangereux : il ouvre au lieu de fermer. */
+  if (meth !== "cmi" && meth !== "disque")
+    throw new Error("especeAutorisee : méthode manquante ou inconnue (« " + meth
+      + " ») pour " + group + "/" + k + " — sans elle la restriction d'espèce "
+      + "serait silencieusement levée");
   /* « ref » est le référentiel QUI A FOURNI LA VALEUR, et non le référentiel
      actif : c'est la ligne employée qui porte — ou ne porte pas — sa
      restriction. Pas de repli sur l'autre table, sinon une restriction de
      l'EUCAST s'appliquerait encore à une valeur du CA-SFM qui, elle, ne
      restreint rien. */
-  const limite = (ref === "casfm" ? ESPECE_CASFM : ESPECE_EUCAST)[group + ":" + k];
+  const limite = (ref === "casfm" ? ESPECE_CASFM : ESPECE_EUCAST)[group + ":" + k + ":" + meth];
   if (!limite) return true;
   return !!_activeId && limite.indexOf(_activeId) !== -1;
 }
@@ -4755,9 +4842,9 @@ function catFromDiam(str, dz) {
 // une décision du référentiel, et le biologiste doit savoir laquelle.
 /* Les espèces auxquelles un seuil est restreint, nommées comme le biologiste
    les lit. Sans cela le message citerait des identifiants (« ecoli »). */
-function especesDites(group, k) {
-  const limite = (ESPECE_CASFM[group + ":" + k]
-                  || ESPECE_EUCAST[group + ":" + k] || []);
+function especesDites(group, k, meth) {
+  const limite = (ESPECE_CASFM[group + ":" + k + ":" + meth]
+                  || ESPECE_EUCAST[group + ":" + k + ":" + meth] || []);
   const noms = limite.map(function (id) {
     return (ORG[id] && ORG[id].args && ORG[id].args.species) || id;
   });
@@ -4790,9 +4877,9 @@ function raisonSansDisque(group, k, ctx) {
     // urinaire, les deux raisons valent — mais seule la première est
     // RÉPARABLE par l'utilisateur, et l'annoncer serait lui faire cocher une
     // question qui ne changera rien.
-    if (urinaire && !especeAutorisee(group, k, "eucast"))
+    if (urinaire && !especeAutorisee(group, k, "eucast", "disque"))
       return tr("l'EUCAST ne chiffre ce couple que pour ", "EUCAST sets this breakpoint only for ")
-           + especesDites(group, k)
+           + especesDites(group, k, "disque")
            + tr(" — pour les autres espèces du groupe, le document renvoie à une note "
               + "et ne donne aucun seuil, ni au disque ni en CMI",
                 " — for the other species in the group the document refers to a note "
@@ -4808,11 +4895,25 @@ function raisonSansDisque(group, k, ctx) {
       : tr("l'EUCAST ne reconnaît pas la méthode des disques pour ce couple — une CMI est nécessaire",
            "EUCAST does not accept disk diffusion for this pair — an MIC is required");
   }
-  if (!especeAutorisee(group, k, "eucast"))
-    return tr("l'EUCAST ne chiffre ce couple que pour ", "EUCAST sets this breakpoint only for ")
-         + especesDites(group, k)
-         + tr(" — pour les autres espèces du groupe, le document ne donne aucun seuil",
-              " — for the other species in the group the document gives no breakpoint");
+  if (!especeAutorisee(group, k, "eucast", "disque")) {
+    /* DEPUIS QUE LA RESTRICTION PORTE SUR UNE MÉTHODE, « aucun seuil » peut
+       être faux. La vancomycine de l'entérocoque en est le cas type : le
+       diamètre de 12 mm ne vaut que pour E. faecalis et E. faecium, tandis
+       que la CMI de 4 mg/L vaut pour tous. Dire « aucun seuil » à un
+       laboratoire qui mesure au pied à coulisse le renverrait les mains
+       vides alors qu'une CMI lui est ouverte — et c'est précisément la
+       sortie que le document lui indique. */
+    const cmiOuverte = BP[group] && BP[group][k] && especeAutorisee(group, k, "eucast", "cmi");
+    return tr("l'EUCAST ne donne ce diamètre que pour ", "EUCAST gives this zone diameter only for ")
+         + especesDites(group, k, "disque")
+         + (cmiOuverte
+            ? tr(" — pour les autres espèces du groupe il n'y a pas de diamètre, mais la "
+               + "concentration critique, elle, reste chiffrée : déterminer la CMI",
+                 " — for the other species in the group there is no zone diameter, but the "
+               + "MIC breakpoint still applies: determine the MIC")
+            : tr(" — pour les autres espèces du groupe, le document ne donne aucun seuil",
+                 " — for the other species in the group the document gives no breakpoint"));
+  }
   return tr("valeur illisible : un diamètre s'écrit en millimètres, entre 6 (pas de zone) et 60",
             "unreadable value: a zone diameter is written in millimetres, between 6 (no zone) and 60");
 }
@@ -4919,6 +5020,7 @@ function runInterpretation(input) {
   let results = {};
   _zit = [];
   _sansDisque = [];
+  _lectureDisque = [];
   _depistage = null;
   _depistageEchoue = [];
   if (input.mode === "mic") {
@@ -4959,6 +5061,21 @@ function runInterpretation(input) {
       else if (!(org.bpGroup === "pneumo" && k === "OXA"))   // dépistage, pas un résultat à rendre
         _sansDisque.push({ abx: k, valeur: String(dia[k]).slice(0, 12),
                            raison: raisonSansDisque(org.bpGroup, k, input.ctx || {}) });
+      /* La note de lecture, APRÈS la chaîne ci-dessus et jamais au milieu.
+         Écrite d'abord entre « if (cat) » et son premier « else if », elle
+         détachait les deux branches suivantes de leur condition : un
+         entérocoque à 11 mm sortait « R » ET « 11 mm non catégorisé, valeur
+         illisible » dans le même compte rendu — deux phrases contradictoires
+         sur la pire alerte que l'application sache rendre. Une chaîne
+         if/else if ne se traverse pas.
+
+         Elle ne vaut que si une catégorie EST sortie et qu'elle n'est pas
+         déjà « R » : la note sert à empêcher un « sensible » rendu trop
+         vite, et n'a rien à dire à une souche déjà résistante. */
+      if ((cat === "S" || cat === "I") && LECTURE_DISQUE[org.bpGroup]
+          && LECTURE_DISQUE[org.bpGroup][k])
+        _lectureDisque.push({ abx: k, mm: String(dia[k]).slice(0, 12),
+                              note: LECTURE_DISQUE[org.bpGroup][k] });
       if (enZitZone(dia[k], input.bpOverride || {}, org.bpGroup, k, input.ctx || {})) {
         const z = zitZonePour(input.bpOverride || {}, org.bpGroup, k, input.ctx || {});
         _zit.push({ abx: k, mic: String(dia[k]).slice(0, 24), cat: cat || null,
@@ -5022,6 +5139,12 @@ const MOTEUR = {
   BP, BP_MENINGE, BP_URIN, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
   DZ, DZ_MENINGE, DZ_URIN, DZ_CASFM, DZ_CASFM_URIN, DZ_TEMOIN,
   ESPECE_EUCAST, ESPECE_CASFM,
+  /* Exportée POUR ÊTRE VÉRIFIÉE : le banc exige qu'elle LÈVE quand on
+     l'appelle sans méthode. Depuis que la clé porte la méthode, un appel qui
+     l'oublie ouvrirait le seuil au lieu de le fermer, et se tairait. */
+  especeAutorisee,
+  // Exportée pour que le banc confronte chaque note à la feuille du classeur.
+  LECTURE_DISQUE,
   DISQUE, DISQUE_CASFM, OXA_PNEUMO, DEPISTAGE, DEPISTAGE_CASFM,
   ZIT, ZIT_CASFM, ZIT_ZONE, ZIT_ZONE_CASFM,
   HORS_EUCAST, CASFM_COUVRE, CASFM_COUVRE_ESPECE,

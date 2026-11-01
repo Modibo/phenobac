@@ -316,6 +316,116 @@ dire("\nLes diamètres alimentent bien la lecture interprétative");
         "… et le phénotype reconnu est bien « " + r.interpretation.name + " »");
 })();
 
+/* ---------- 11. UNE CATÉGORIE ET « NON CATÉGORISÉ » NE COHABITENT PAS ----------
+
+   LE DÉFAUT QUE CE BALAYAGE A ATTRAPÉ, le 2026-11-01, sur du code écrit la
+   minute d'avant.
+
+   La note de lecture du disque de vancomycine a été insérée entre
+   « if (cat) results[k] = cat; » et son premier « else if ». Les deux
+   branches suivantes se sont rattachées à la NOUVELLE condition, et un
+   entérocoque mesuré à 11 mm est sorti ainsi :
+
+       catégorie   VA = R
+       alerte      « Vancomycine : 11 mm non catégorisé — valeur illisible »
+
+   Deux phrases contradictoires dans le même compte rendu, sur l'alerte la
+   plus grave que l'application sache rendre — un entérocoque résistant à la
+   vancomycine. Aucun banc ne le voyait : chacun regardait SA question, la
+   catégorie d'un côté, le message de l'autre.
+
+   L'invariant est pourtant simple et vaut partout : un diamètre qui a donné
+   une catégorie n'est pas un diamètre non catégorisé. Il se balaie, et il
+   n'a besoin d'aucun document. */
+dire("\nUn diamètre catégorisé n'est jamais annoncé « non catégorisé »");
+(function () {
+  var contradictions = [], examines = 0;
+  var sondes = ["6", "11", "14", "18", "22", "28", "45"];
+  Object.keys(E.ORG).forEach(function (id) {
+    var groupe = E.ORG[id].bpGroup;
+    if (!groupe || !E.DZ || !E.DZ[groupe]) return;
+    Object.keys(E.DZ[groupe]).forEach(function (abx) {
+      sondes.forEach(function (mm) {
+        var d = {}; d[abx] = mm;
+        var a = E.runInterpretation({ organism: id, mode: "diam", diam: d,
+                                      ctx: {}, ref: "eucast" });
+        examines++;
+        var categorise = a.categories[abx] !== undefined;
+        var annonceMuet = (a.interpretation.sansDisque || [])
+          .some(function (x) { return x.abx === abx; });
+        if (categorise && annonceMuet)
+          contradictions.push(id + " " + abx + " " + mm + " mm : rendu « "
+            + a.categories[abx] + " » ET annoncé non catégorisé");
+      });
+    });
+  });
+  verif(examines > 2000, examines + " mesures balayées, toutes espèces et "
+        + "toutes molécules chiffrées au disque");
+  verif(contradictions.length === 0,
+        contradictions.length === 0
+          ? "aucune mesure ne reçoit à la fois une catégorie et un « non catégorisé »"
+          : "CONTRADICTION DANS LE COMPTE RENDU : " + contradictions.slice(0, 6).join(" ; ")
+            + (contradictions.length > 6 ? " … et " + (contradictions.length - 6) + " autres" : ""));
+})();
+
+/* ---------- 12. LA NOTE DE LECTURE DU DISQUE ----------
+
+   Le classeur écrit, à côté du chiffre, ce qui peut le contredire. Note A
+   de la feuille « Enterococcus », v16.1 : un entérocoque sensible donne un
+   bord de zone NET ; bord flou, colonies dans la zone ou simple doute →
+   PCR ou rendre résistant, « even if the zone diameter is ≥ 12 mm ».
+
+   Autrement dit : 13 mm peut être un VRE. PhénoBac portait les 435
+   diamètres de l'EUCAST et aucune de leurs notes de lecture — pour un
+   laboratoire qui mesure au pied à coulisse, c'est la moitié qui manque. */
+dire("\nLa note de lecture du disque de vancomycine");
+(function () {
+  function alertes(org, mm, lang) {
+    var d = { VA: mm };
+    var a = E.runInterpretation({ organism: org, mode: "diam", diam: d,
+                                  ctx: {}, ref: "eucast", lang: lang || "fr" });
+    return (a.interpretation.alerts || []);
+  }
+  function note(org, mm, lang) {
+    return alertes(org, mm, lang).filter(function (x) {
+      return /bord de zone|zone edge/.test(x.txt); })[0] || null;
+  }
+  var n = note("efaecalis", "13");
+  verif(!!n, "à 13 mm — rendu sensible — la note de lecture paraît");
+  verif(!!n && n.lvl === "warn",
+        "… en « warn » et non en « info » : elle peut renverser la catégorie");
+  verif(!!n && /12 mm/.test(n.txt) && /PCR/.test(n.txt),
+        "… et elle dit l'essentiel : PCR ou résistant, même à 12 mm");
+  verif(!!n && /24 h/.test(n.txt),
+        "… ainsi que les 24 h avant de rendre sensible");
+  verif(note("efaecalis", "11") === null,
+        "à 11 mm — déjà résistant — elle se tait : il n'y a plus rien à empêcher");
+  verif(!!note("efaecium", "20"), "elle vaut pour E. faecium comme pour E. faecalis");
+  var en = note("efaecalis", "13", "en");
+  E.fixerLangue("fr");
+  verif(!!en && /SHARP zone edge/.test(en.txt) && !/bord/.test(en.txt),
+        "… et elle existe en anglais, sans reste de français");
+
+  /* La table ne doit nommer que des groupes et des molécules que le moteur
+     connaît : une clé mal orthographiée ferait une note qui ne paraît
+     jamais, et le fichier resterait là, juste et inutile. */
+  var faux = [];
+  Object.keys(E.LECTURE_DISQUE).forEach(function (g) {
+    var connu = Object.keys(E.ORG).some(function (i) { return E.ORG[i].bpGroup === g; });
+    if (!connu) faux.push("groupe inconnu : " + g);
+    Object.keys(E.LECTURE_DISQUE[g]).forEach(function (k) {
+      if (!E.ABXNAME[k]) faux.push("molécule inconnue : " + g + "/" + k);
+      if (!(E.DZ[g] && E.DZ[g][k]))
+        faux.push(g + "/" + k + " n'a pas de diamètre : la note ne paraîtra jamais");
+      var t = E.LECTURE_DISQUE[g][k];
+      if (!t || !t.fr || !t.en) faux.push(g + "/" + k + " : note incomplète");
+    });
+  });
+  verif(faux.length === 0,
+        faux.length === 0 ? "la table ne nomme que des couples réellement chiffrés au disque"
+          : "note de lecture inatteignable : " + faux.join(" ; "));
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " vérifications."
                 : OK + " vérifications, aucune divergence."));
 if (KO && typeof process === "object" && process.exit) process.exit(1);
