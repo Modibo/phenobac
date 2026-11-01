@@ -648,6 +648,10 @@ let _activeId = null;
 // Couples tombant dans la zone d'incertitude technique pour la requête en cours.
 let _zit = [];
 let _sansDisque = [];
+// La règle des carbapénèmes a-t-elle déjà été appliquée par une branche
+// phénotypique ? Sans ce drapeau, le filet posé dans finalize() la
+// rejouerait et le compte rendu porterait deux fois la même consigne.
+let _carbaRendu = false;
 let _depistage = null;
 let _depistageEchoue = [];
 // Mode de saisie et contexte déclaré : finalize() en a besoin pour confronter
@@ -1782,6 +1786,57 @@ function renduCible(A, r, ctx, org, actif) {
 }
 
 /* ------------------------------------------------------------
+   LA PORTE D'ENTRÉE DE LA RÈGLE DES CARBAPÉNÉMASES.
+
+   Le CA-SFM 2026 (chapitre 5.1, annexe 5, et page 8 du document des
+   différences) fait rendre les carbapénèmes RÉSISTANTS pour toute souche
+   productrice de carbapénémase, « quel que soit le type d'enzyme produite
+   et LES CMI DES CARBAPÉNÈMES ».
+
+   La règle était écrite, citée, et elle marchait — mais seulement quand un
+   carbapénème sortait déjà R ou I, parce qu'elle vivait à l'intérieur de la
+   branche phénotypique « suspicion de carbapénémase », laquelle ne
+   s'ouvre que sur un carbapénème atteint. Une souche à carbapénémase
+   CONFIRMÉE par le laboratoire dont les trois carbapénèmes sortent
+   sensibles ne la traversait jamais.
+
+   C'est précisément le cas que la règle nomme, et le plus dangereux : les
+   producteurs d'OXA-48 ont souvent des CMI de carbapénèmes basses. La
+   phrase « quel que soit les CMI » n'a de sens que si elle s'applique quand
+   les CMI sont bonnes.
+
+   Le filet est donc posé dans finalize(), que TOUTES les branches
+   traversent, et un drapeau empêche de rejouer ce qu'une branche a déjà
+   fait. Même correction, même jour, que pour le bloc aminosides : une règle
+   qui ne dépend pas du phénotype ne doit pas vivre dans une branche de
+   phénotype.
+   ------------------------------------------------------------ */
+function carbapenemesCasfm(A, r, org) {
+  if (_carbaRendu) return;
+  if (!estCasfm()) return;
+  const g = (org && org.bpGroup) || "";
+  if (GROUPES_ENTEROBACTERALES_SRV.indexOf(g) < 0) return;
+  const cb = carbaConfirmee(_ctx);
+  if (!cb.confirmee) return;
+  _carbaRendu = true;
+  rendreR(A, r, ["ETP", "IPM", "MEM"],
+    tr("Carbapénémase confirmée — CA-SFM 2026, chapitre 5.1 et annexe 5.",
+       "Confirmed carbapenemase — CA-SFM 2026, chapter 5.1 and annex 5."));
+  A.rules.push({ k: "→R", txt: tr(
+    "CA-SFM : carbapénémase confirmée — ertapénème, imipénème et méropénème rendus résistants, quel que soit le type d'enzyme et quelles que soient les CMI, même sensibles.",
+    "CA-SFM: confirmed carbapenemase — ertapenem, imipenem and meropenem reported resistant, whatever the enzyme and whatever the MICs, even susceptible ones.") });
+  if (cb.oxa48) {
+    rendreR(A, r, ["CTX", "CRO"],
+      tr("OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.",
+         "OXA-48 — CA-SFM: cefotaxime and ceftriaxone reported resistant."));
+    A.rules.push({ k: "→R", txt: tr(
+      "OXA-48 : céfotaxime et ceftriaxone rendus résistants (règle CA-SFM depuis 2023).",
+      "OXA-48: cefotaxime and ceftriaxone reported resistant (CA-SFM rule since 2023).") });
+  }
+}
+
+
+/* ------------------------------------------------------------
    LE BLOC AMINOSIDES DES STAPHYLOCOQUES — CA-SFM 2026, page 74.
 
    Le communiqué y donne six lignes et trois notes, et les notes sont des
@@ -1854,6 +1909,7 @@ function finalize(A, r) {
     _depistage.alerts.forEach(x => A.alerts.push(x));
     if (_depistage.sev && A.sev === "wild") A.sev = _depistage.sev;
   }
+  carbapenemesCasfm(A, r, org);
   aminosidesCasfm(A, r, org);
   coherence(A, r, org, _ctx);
   // § 9 : les conditions de réalisation déclarées, confrontées au référentiel.
@@ -2022,13 +2078,14 @@ function enteroInterpret(r, c, { amino, species, klebsiella, imipenemIntrinsic }
         // n'ont plus lieu d'être et brouilleraient le compte-rendu.
         A.rules = A.rules.filter(x => x.txt.indexOf("tant que le mécanisme") === -1);
         A.alerts = A.alerts.filter(x => x.txt.indexOf("Confirmer le mécanisme") === -1);
+        _carbaRendu = true;
         rendreR(A, r, ["ETP", "IPM", "MEM"],
           tr("Carbapénémase confirmée — CA-SFM 2026, chapitre 5.1 et annexe 5.",
              "Confirmed carbapenemase — CA-SFM 2026, chapter 5.1 and annex 5."));
         A.rules.push({ k: "→R", txt: tr("CA-SFM : ertapénème, imipénème et méropénème rendus résistants, quel que soit le type d'enzyme et quelles que soient les CMI.",
           "CA-SFM: ertapenem, imipenem and meropenem are reported resistant, whatever the type of enzyme and whatever the MICs.") });
         if (cb.oxa48) {
-          rendreR(A, r, ["CTX"], tr("OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.",
+          rendreR(A, r, ["CTX", "CRO"], tr("OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.",
                                     "OXA-48 — CA-SFM: cefotaxime and ceftriaxone reported resistant."));
           A.rules.push({ k: "→R", txt: tr("OXA-48 : céfotaxime et ceftriaxone rendus résistants (règle CA-SFM depuis 2023).",
             "OXA-48: cefotaxime and ceftriaxone reported resistant (CA-SFM rule since 2023).") });
@@ -2231,13 +2288,14 @@ function enterobacterInterpret(r, c, a) {
         A.mech = tr("Carbapénémase confirmée chez une souche à AmpC naturelle. Le CA-SFM 2026 rend les carbapénèmes résistants quelles que soient les CMI.",
                     "A confirmed carbapenemase in an isolate with a natural AmpC. CA-SFM 2026 reports carbapenems as resistant whatever the MICs.");
         A.rules = A.rules.filter(x => x.txt.indexOf("jusqu'à confirmation") === -1);
+        _carbaRendu = true;
         rendreR(A, r, ["ETP", "IPM", "MEM"],
           tr("Carbapénémase confirmée — CA-SFM 2026, chapitre 5.1 et annexe 5.",
              "Confirmed carbapenemase — CA-SFM 2026, chapter 5.1 and appendix 5."));
         A.rules.push({ k: "→R", txt: tr("CA-SFM : carbapénèmes rendus résistants quelles que soient les CMI.",
           "CA-SFM: carbapenems reported resistant whatever the MICs.") });
         if (cb.oxa48) {
-          rendreR(A, r, ["CTX"], tr("OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.",
+          rendreR(A, r, ["CTX", "CRO"], tr("OXA-48 — CA-SFM : céfotaxime et ceftriaxone rendus résistants.",
             "OXA-48 — CA-SFM: cefotaxime and ceftriaxone reported resistant."));
           A.rules.push({ k: "→R", txt: tr("OXA-48 : céfotaxime et ceftriaxone rendus résistants.",
             "OXA-48: cefotaxime and ceftriaxone reported resistant.") });
@@ -4238,6 +4296,20 @@ function getBP(bpOverride, group, k, ctx) {
      qu'elle DIT l'intention — et que la table ordinaire pourrait un jour
      recevoir un seuil pour l'une de ces molécules sans qu'on y pense. */
   if (BP_URIN[group] && BP_URIN[group][k] && !(BP[group] && BP[group][k])) return null;
+  /* LA RESTRICTION D'ESPÈCE VAUT AUSSI AU SITE ORDINAIRE, et elle n'y était
+     pas : seules les branches urinaires la consultaient.
+
+     Le classeur v16.1 écrit « Benzylpenicillin, S. aureus 0,125 »,
+     « S. lugdunensis 0,125 » et « other staphylococci : Note » ; il écrit
+     « Imipenem, E. faecalis » et « Piperacillin-tazobactam, E. faecalis ».
+     PhénoBac portait bien ces restrictions dans la colonne « espece » — et
+     ne les lisait pas ici. S. epidermidis recevait donc la pénicilline G de
+     S. lugdunensis, et E. faecium l'imipénème d'E. faecalis.
+
+     Une restriction écrite dans la base et ignorée par le moteur est pire
+     qu'une restriction absente : elle donne à relire une garantie qui
+     n'existe pas. */
+  if (BP[group] && BP[group][k] && !especeAutorisee(group, k, "eucast")) return null;
   return (BP[group] && BP[group][k]) || null;
 }
 
@@ -4530,6 +4602,9 @@ function getDZ(dzOverride, group, k, ctx) {
   // Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas :
   // ne pas retomber sur un seuil d'une autre indication.
   if (DZ_URIN[group] && DZ_URIN[group][k] && !(DZ[group] && DZ[group][k])) return null;
+  // Symétrique de getBP : au disque comme en CMI, la restriction d'espèce
+  // du site ordinaire était écrite et non lue.
+  if (DZ[group] && DZ[group][k] && !especeAutorisee(group, k, "eucast")) return null;
   return (DZ[group] && DZ[group][k]) || null;
 }
 
@@ -4821,6 +4896,7 @@ function runInterpretation(input) {
   _mode = input.mode || "sir";
   _ctx = input.ctx || {};
   _bpOverride = input.bpOverride || {};
+  _carbaRendu = false;
   _renduCibleActif = input.renduCible === true;
   const A = ENGINE[org.engine](results, input.ctx || {}, org.args || {});
   // Lecture interprétative : les catégories rendues peuvent différer des

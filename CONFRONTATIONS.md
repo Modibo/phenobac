@@ -28,7 +28,11 @@ pour obtenir la nouvelle empreinte.
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
 - **empreinte** : 58c872d69fe3030280b51ae799a8afe5126febdcb82772223df773ba61d9c9a1
-- **date** : 2026-10-25, empreinte reprise le 2026-10-31
+- **date** : **2026-11-01, le classeur en main** (sha256 `5de6f4a097f7f655…`)
+- **résultat** : **511 seuils confrontés — 511 identiques, 0 différent**,
+  0 drapeau incohérent, 91 non comparés. Diamètres : **437 identiques, 0
+  différent**, 2 à arbitrer (vancomycine et méropénème, deux lignes
+  possibles). Méningé : **24 identiques, 0 différent**.
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : le
   2026-10-31, trois lignes ont été **retirées** de BP —
   `morganella/salmonella/serratia · FOS · cmi · standard 8-8`. Aucune
@@ -684,6 +688,143 @@ ensemble, jamais l'un sans l'autre.
   sous-tableau « *Salmonella* spp. » — les sous-titres ne sont pas encore
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
   pénicilline G), et 20 lignes de dépistage ou d'endocardite.
+
+## Le classeur en xlsx, 2026-11-01 : la dette est close
+
+Déposé par le biologiste (sha256 `5de6f4a097f7f655…`). Les quatre
+confrontations qui attendaient depuis une semaine ont tourné :
+
+| passe | résultat |
+|---|---|
+| concentrations critiques | **511 identiques, 0 différent**, 0 drapeau incohérent |
+| diamètres | **437 identiques, 0 différent**, 2 à arbitrer |
+| méningé | **24 identiques, 0 différent** |
+| couverture, 22 tables | **409 règles, aucun écart** |
+
+**La base EUCAST de PhénoBac dit exactement ce que dit le classeur.**
+
+### Mais le comparateur a commencé par accuser ma propre livraison
+
+Il réclamait le drapeau « convention de laboratoire » sur `staph / TOB` et
+`scn / TOB` — « le document ne donne aucun chiffre pour ce couple ». Le
+classeur donne pourtant `Tobramycin, S. aureus (2)/(2)`, exactement ce que
+j'avais lu sur le PDF une heure plus tôt.
+
+La cause : **`AGENTS`, le vocabulaire du comparateur, ne connaissait pas la
+tobramycine.** Faute de motif, la ligne du classeur n'était pas trouvée, le
+couple passait pour absent du document, et le drapeau était réclamé sur une
+valeur parfaitement fixée.
+
+> **Une molécule ajoutée au panel doit l'être dans `AGENTS` aussi**, sinon la
+> confrontation cesse de la couvrir sans le dire. La kanamycine y figure
+> désormais elle aussi, quoique l'EUCAST l'ait retirée en v14.0 : c'est ainsi
+> que l'outil peut le **constater** plutôt que de l'ignorer.
+
+### Et une couverture à étendre, nommée
+
+L'EUCAST chiffre la tobramycine (entre parenthèses) pour **six groupes de
+plus** que PhénoBac ne porte pas : `acineto`, `entero`, `morganella`,
+`pseudo`, `salmonella`, `serratia`. Le bloc du 2026-11-01 ne visait que les
+staphylocoques, qui sont le chapitre du CA-SFM. L'extension est à décider.
+
+## Les restrictions d'espèce du site ordinaire, 2026-11-01
+
+Le classeur a permis de trancher `scn PEN`, et la correction en a découvert
+deux autres de la même forme.
+
+```
+Benzylpenicillin, S. aureus             0,125 / 0,125
+Benzylpenicillin, S. lugdunensis        0,125 / 0,125
+Benzylpenicillin, other staphylococci   Note / Note
+Imipenem, E. faecalis                   0,001 / 4
+Piperacillin-tazobactam, E. faecalis    0,001 / 16
+```
+
+**La restriction d'espèce était écrite dans la base et non lue par le
+moteur.** `getBP()` et `getDZ()` ne la consultaient qu'aux branches
+urinaires ; au site ordinaire, le retour final rendait la valeur sans
+regarder l'espèce. Trois couples en souffraient :
+
+| couple | avant | après |
+|---|---|---|
+| *S. epidermidis*, *S. saprophyticus*, *S. haemolyticus* · pénicilline G | **S** à 0,06 | aucune catégorie |
+| *E. faecium* · imipénème | **I** à 2 | aucune catégorie |
+| *E. faecium* · pipéracilline-tazobactam | **I** à 8 | aucune catégorie |
+
+*S. aureus* et *S. lugdunensis* gardent leur pénicilline G ; *E. faecalis*
+garde ses deux molécules.
+
+> Une restriction écrite dans la base et ignorée par le moteur est **pire
+> qu'une restriction absente** : elle donne à relire une garantie qui
+> n'existe pas.
+
+## La porte d'entrée des carbapénémases, ouverte le 2026-11-01
+
+Le CA-SFM 2026 fait rendre les carbapénèmes résistants pour toute souche
+productrice de carbapénémase, « quel que soit le type d'enzyme produite et
+**les CMI des carbapénèmes** ». La règle était écrite, citée, et elle
+marchait — **mais seulement quand un carbapénème sortait déjà R ou I**,
+parce qu'elle vivait dans la branche phénotypique « suspicion de
+carbapénémase », laquelle ne s'ouvre que sur un carbapénème atteint.
+
+Une souche à carbapénémase **confirmée** dont les trois carbapénèmes sortent
+sensibles ne la traversait jamais — le cas que la phrase nomme, et le plus
+dangereux, les producteurs d'OXA-48 ayant souvent des CMI basses.
+
+| *E. coli*, OXA-48 confirmée, CA-SFM | avant | après |
+|---|---|---|
+| ETP, IPM, MEM tous lus **S** | S · S · S | **R · R · R** (+ CTX et CRO R) |
+| ETP lu I | déjà R · R · R | inchangé |
+| carbapénémase non confirmée | rien | rien |
+
+Le filet est posé dans `finalize()`, que toutes les branches traversent, et
+un drapeau empêche de rejouer ce qu'une branche a déjà fait. **Même
+correction, même jour, que pour le bloc aminosides** : une règle qui ne
+dépend pas du phénotype ne doit pas vivre dans une branche de phénotype.
+
+**Et la ceftriaxone a rejoint la céfotaxime.** La règle OXA-48 écrivait
+« céfotaxime *et ceftriaxone* rendus résistants » et ne rendait que la
+céfotaxime. La ceftriaxone est au panel depuis toujours.
+
+## Les six dernières pages du document des différences, lues le 2026-11-01
+
+**Aucune ne porte de seuil à corriger.** Quatre sont de la méthode ou de la
+politique, deux ont du contenu opérationnel.
+
+- **p3, concentrations PK/PD** — l'EUCAST a supprimé son tableau en v14.0 ;
+  le CA-SFM garde le terme. Rien à porter.
+- **p4, aminopénicillines** — le CA-SFM **refuse délibérément** de scinder
+  par voie et par site là où l'EUCAST le fait, « pour ne pas complexifier la
+  présentation des tableaux », et parce que les posologies françaises
+  diffèrent. **Cela confirme le travail sur les voies** : PhénoBac ne montre
+  que les scissions que le CA-SFM maintient réellement.
+- **p16-17, anaérobies** — le CA-SFM maintient des *breakpoints* cliniques
+  là où l'EUCAST se replie sur les ECOFF, en les adaptant du CLSI. C'est la
+  provenance de plusieurs valeurs d'anaérobies de PhénoBac.
+- **p18, valeurs adaptées du CLSI** — la page nomme les molécules
+  concernées. **Confronté : les six que PhénoBac porte sont déjà marquées
+  `conv`** — `acineto` CAZ, FEP, MIN, TZP et `steno` LVX, MIN. La convention
+  de laboratoire disait vrai ; elle a maintenant sa source.
+
+### Deux trouvailles qui demandent une décision
+
+**Le céfidérocol au disque (p5).** Le CA-SFM « recommande de **ne pas
+utiliser la méthode des disques** » pour les *Enterobacterales*, et pour
+*Pseudomonas* ne l'admet que comme dépistage — « en dessous de 27 mm, le
+CA-SFM recommande de tester la CMI ». PhénoBac applique un diamètre dans les
+deux cas :
+
+| | PhénoBac, sous CA-SFM | ce que dit le CA-SFM |
+|---|---|---|
+| *Enterobacterales* · FDC | disque 23 / 23 | pas de disque du tout |
+| *Pseudomonas* · FDC | disque 22 / 22 | dépistage seulement, CMI en dessous de 27 mm |
+
+**La recherche de pénicillinase chez *Pasteurella* (p15).** Le CA-SFM
+« recommande de rechercher la production de β-lactamase par un test
+chromogénique » avant de rendre sensible la pénicilline G, l'ampicilline ou
+l'amoxicilline. *Moraxella* a cette question dans PhénoBac
+(`blac`, « test à la β-lactamase (nitrocéfine) ») ; ***Pasteurella* a
+`ctx:[]`** — aucune question.
 
 ## Le bloc aminosides des staphylocoques, porté le 2026-11-01
 

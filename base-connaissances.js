@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.30";
+const BASE_VERSION = "2026.31";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -1557,8 +1557,8 @@ const REGLES = [
 ["eucast","scn","MXF","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","MXF","disque","standard",28,28,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","OXA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","scn","PEN","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","scn","PEN","disque","standard",26,26,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","scn","PEN","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,["slugdunensis"]],
+["eucast","scn","PEN","disque","standard",26,26,"1 unit",undefined,undefined,undefined,undefined,undefined,["slugdunensis"]],
 ["eucast","scn","RD","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","RD","disque","standard",30,30,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

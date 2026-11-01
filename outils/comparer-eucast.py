@@ -137,6 +137,17 @@ AGENTS = {
     'MEM': r'^meropenem\b(?!-)', 'CIP': r'^ciprofloxacin', 'LVX': r'^levofloxacin',
     'GEN': r'^gentamicin\b(?!.*high)', 'HLG': r'gentamicin.*high|high.*gentamicin',
     'AMK': r'^amikacin', 'SXT': r'^trimethoprim-sulfamethoxazole',
+    # TOB et KAN sont arrivées au panel le 2026-11-01 avec le bloc
+    # aminosides. Sans leur ligne ICI, le comparateur ne trouvait pas
+    # « Tobramycin » dans le classeur, rangeait le couple parmi les
+    # ABSENTS, et réclamait le drapeau « convention de laboratoire » sur
+    # une valeur que l'EUCAST fixe bel et bien — entre parenthèses, comme
+    # la gentamicine et l'amikacine qui l'encadrent. UNE MOLÉCULE AJOUTÉE
+    # AU PANEL DOIT L'ÊTRE ICI AUSSI, sinon la confrontation cesse de la
+    # couvrir sans le dire. La kanamycine y figure quoique l'EUCAST l'ait
+    # retirée en v14.0 : c'est ainsi que l'outil peut le CONSTATER plutôt
+    # que de l'ignorer.
+    'TOB': r'^tobramycin', 'KAN': r'^kanamycin',
     'FOS': r'^fosfomycin', 'COL': r'^colistin', 'AZM': r'^azithromycin',
     'OXA': r'^oxacillin', 'PEN': r'^benzylpenicillin', 'E': r'^erythromycin',
     'DA': r'^clindamycin', 'RD': r'^rifampicin', 'VA': r'^vancomycin',
