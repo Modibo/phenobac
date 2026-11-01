@@ -84,6 +84,39 @@ PLAFOND = {
 # sans son entrée de catalogue le fait échouer. Il ne remonte pas.
 PLAFOND_VISIBLE = 0
 
+# LA MESURE QUI NE DEVINE PAS LA LANGUE.
+#
+# Le plafond ci-dessus compte le texte visible QUE L'ON RECONNAÎT comme
+# français. Il a fuité deux fois le 2026-11-01 : « Ce qu'il apporte » et
+# « Outil d'aide et de formation — validation biologique requise » n'ont ni
+# accent ni mot-outil, et le compteur les a laissés passer pendant des
+# semaines. Affûter le vocabulaire a sorti douze autres phrases du même
+# profil — ce qui prouve surtout que le prochain affûtage en sortira
+# d'autres. Deviner la langue d'une chaîne est une heuristique, et une
+# heuristique ne ferme pas une classe de défauts.
+#
+# Cette seconde mesure ne devine rien. Elle pose une règle structurelle, qui
+# est déjà celle de la page : TOUT TEXTE VISIBLE EST MARQUÉ. Ce qui ressemble
+# à de la prose — deux mots d'au moins deux lettres — et qui ne porte pas de
+# clé est signalé, dans quelque langue qu'il soit. Les rares exceptions
+# légitimes sont nommées ici, et elles doivent le rester courtes : une liste
+# qui s'allonge est le signe qu'on a cessé de marquer.
+HORS_CATALOGUE = {
+    "CA-SFM",               # nom du comité, identique dans les deux langues
+    "Resistance Detective", # nom de la fonction, déjà anglais des deux côtés
+}
+
+
+def non_marques(page):
+    """Le texte visible, non marqué, qui ressemble à de la prose."""
+    out = []
+    for t in texte_visible(page):
+        if t in HORS_CATALOGUE or PROPRES.search(t):
+            continue
+        if len(re.findall(r"[A-Za-zÀ-ÿ]{2,}", t)) >= 2:
+            out.append(t)
+    return out
+
 ACCENTS = re.compile(r'[àâäéèêëîïôöùûüçœÀÉÈÊÎÔÛÇ]')
 
 # NOMS PROPRES ACCENTUÉS, QUI NE SONT PAS DU FRANÇAIS.
@@ -97,7 +130,37 @@ ACCENTS = re.compile(r'[àâäéèêëîïôöùûüçœÀÉÈÊÎÔÛÇ]')
 # Le morceau de gauche arrivait au compteur comme un mot français accentué.
 PROPRES = re.compile(r'Phéno\s*Bac|^Phéno$|Sominé\s*DOLO|Mopti|Modibo|Coulibaly|'
                      r'Céfidérocol|Témocilline', re.I)
-MOTS_FR = re.compile(r'\b(le|la|les|des|une|un|aux|est|pas|qui|que|pour|sur|dans|avec)\b')
+# DEUX PHRASES FRANÇAISES SONT PASSÉES SOUS CE FILET, et l'on peut dire
+# exactement pourquoi : « Ce qu'il apporte » et « Outil d'aide et de formation
+# — validation biologique requise » ne portent AUCUN accent et AUCUN des
+# quinze mots-outils ci-dessus. Signalées par le biologiste le 2026-11-01,
+# après que la page « À propos » a été lue en anglais.
+#
+# L'ÉLISION EST LE SIGNAL LE PLUS SÛR. « qu'il », « d'aide », « l'antibio- »,
+# « n'est », « s'il » : l'anglais n'élide pas ainsi, et aucune de ces formes
+# n'apparaît dans un texte anglais ordinaire. Elles coûtent donc zéro faux
+# positif et attrapent la moitié du français qui n'a pas d'accent.
+#
+# Et quelques mots fréquents qui manquaient — « et », « de », « du », « ce »,
+# « ne », « au », « par », « son », « sont », « cette ».
+#
+# « PLUS » A ÉTÉ ESSAYÉ ET RETIRÉ : c'est aussi un mot anglais, et il a fait
+# accuser deux traductions justes — « AmpC plus a superimposed ESBL »,
+# « a positive cephalosporin plus clavulanate synergy ». Un détecteur qui
+# accuse à tort se fait désarmer ; mieux vaut un mot de moins.
+MOTS_FR = re.compile(
+    r"\b(le|la|les|des|une|un|aux|est|pas|qui|que|pour|sur|dans|avec"
+    r"|et|de|du|ce|ne|au|par|son|ses|sont|leur|cette|elle|sans|dont)\b"
+    r"|\b[cdjlmnst]'|\bqu'"
+    # LE VOCABULAIRE DES BOUTONS. Un libellé d'interface est court et n'a ni
+    # accent ni mot-outil : « Exporter en CSV », « Effacer l'historique »,
+    # « Plus tard », « En attente ». Ces verbes et ces noms-là sont français
+    # sans ambiguïté — aucun n'est un mot anglais — et ils ne coûtent donc
+    # aucune fausse accusation, là où « en » et « plus » en coûtent.
+    r"|\b(exporter|effacer|enregistrer|imprimer|payer|afficher|fermer|annuler"
+    r"|ajouter|supprimer|modifier|valider|envoyer|retour|suivant|tard"
+    r"|attente|demandeur|laboratoire|renseign\w*)\b",
+    re.I)
 
 
 def chaines(src):
@@ -720,6 +783,18 @@ def main():
     if not (vides or calques):
         n = len(re.findall(r"(?<![\w.$])tr\(", moteur))
         dits.append("les %d phrases bilingues du moteur ont leurs deux langues." % n)
+
+    # --- LE TEXTE VISIBLE NON MARQUÉ, quelle que soit sa langue ---
+    nus = non_marques(page)
+    if nus:
+        ecarts.append("%d morceau(x) de texte visible n'ont AUCUNE clé de "
+                      "catalogue : %s. Marqués ou non, ils ne changeront pas "
+                      "avec la langue — et deviner laquelle ils parlent est "
+                      "précisément ce qui a laissé passer « Ce qu'il apporte »."
+                      % (len(nus), " ; ".join("« %s »" % t[:60] for t in nus[:6])))
+    else:
+        dits.append("tout le texte visible de la page porte une clé de catalogue : "
+                    "rien ne dépend d'un détecteur de langue.")
 
     # --- LE PLAFOND ---
     restes, monte, limites = {}, [], dict(PLAFOND)

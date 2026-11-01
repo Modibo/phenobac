@@ -151,6 +151,38 @@ const C = {
   "act.activer":           { fr: "Activer", en: "Activate" },
   "act.recharger":         { fr: "Recharger", en: "Reload" },
 
+  /* ---------- LIBELLÉS RESTÉS HORS CATALOGUE JUSQU'AU 2026-11-01 ----------
+
+     Quatorze intitulés de la page n'avaient aucune clé : en anglais, ils
+     restaient en français. Le biologiste en a signalé deux — « Ce qu'il
+     apporte » et l'avertissement du pied de page —, et le compteur de
+     français visible, affûté pour les trouver, en a sorti douze autres.
+
+     Tous ont le même profil : ils ne portent NI ACCENT ni l'un des quinze
+     mots-outils que le détecteur cherchait. « Code du laboratoire »,
+     « Pays (ISO 3 lettres) », « Tests biochimiques » — du français que rien
+     ne distingue de l'anglais pour une expression régulière. Voir
+     outils/verifier-langues.py, qui mesure désormais autrement.  */
+  "champ.valideur":        { fr: "Biologiste validateur / laboratoire",
+                             en: "Validating biologist / laboratory" },
+  "champ.optionnel":       { fr: "(optionnel)", en: "(optional)" },
+  "enc.gram":              { fr: "Coloration de Gram &amp; morphologie",
+                             en: "Gram stain &amp; morphology" },
+  "enc.biochimie":         { fr: "Tests biochimiques", en: "Biochemical tests" },
+  "enc.registre":          { fr: "Registre local", en: "Local register" },
+  "enc.cumulatif":         { fr: "Antibiogramme cumulatif",
+                             en: "Cumulative antibiogram" },
+  "enc.parservice":        { fr: "Par service demandeur", en: "By requesting ward" },
+  "ap.apporte.titre":      { fr: "Ce qu'il apporte", en: "What it brings" },
+  "pied.avert.titre":      { fr: "Outil d'aide et de formation — validation biologique requise.",
+                             en: "A decision-support and training tool — biological validation required." },
+  "surv.labo":             { fr: "Code du laboratoire", en: "Laboratory code" },
+  "surv.pays":             { fr: "Pays (ISO 3 lettres)", en: "Country (3-letter ISO)" },
+  "surv.patient":          { fr: "N° patient anonyme", en: "Anonymous patient no." },
+  "surv.origine":          { fr: "Origine du patient", en: "Patient origin" },
+  "surv.service":          { fr: "Service demandeur", en: "Requesting ward" },
+  "opt.externe":           { fr: "Consultation externe", en: "Outpatient" },
+
   /* ---------- avertissement ---------- */
   "avert.titre":           { fr: "Avertissement", en: "Warning" },
   "avert.chapeau":         { fr: "Outil d'aide et de formation — pas un dispositif médical de diagnostic in vitro.",
@@ -282,6 +314,9 @@ const C = {
   "attr.cleLicence":      { fr: "Collez votre clé de licence", en: "Paste your licence key" },
   "attr.aRetenir":        { fr: "Point clé que l'étudiant doit mémoriser.",
                             en: "The key point the student should remember." },
+  "attr.plusTard":        { fr: "Plus tard", en: "Later" },
+  "attr.fermer":          { fr: "Fermer", en: "Close" },
+  "attr.supprimer":       { fr: "Supprimer", en: "Delete" },
 
   /* ---------- vague 5 : les modes d'entraînement ----------
      Ces trois-là n'ont ni accent ni mot-outil français : le compteur de
