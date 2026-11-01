@@ -3772,7 +3772,8 @@ function bpHint(group,k){
   // Annoncer la ZIT avant la saisie : le biologiste sait alors à quelle
   // valeur sa mesure deviendra douteuse, au lieu de le découvrir après.
   const z = zitPour(group,k);
-  return z===null ? base : base + ` · ${T("ZIT","ATU")} ${fmt(z)}`;
+  // La ZIT peut être une plage (« ≤ 0,125 ») : fmt() ne sait pas la dire.
+  return z===null ? base : base + ` · ${T("ZIT","ATU")} ${_M.zitTexte(z)}`;
 }
 function fmt(x){ return (Math.round(x*1000)/1000).toString(); }
 

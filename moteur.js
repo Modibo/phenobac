@@ -1896,9 +1896,9 @@ function finalize(A, r) {
       // Sans cela, un diamètre serait annoncé en milligrammes par litre.
       const u = z.unite || "mg/L";
       A.alerts.push({ lvl: "warn",
-        txt: tr(`${nom} à ${z.mic} ${u} : valeur en zone d'incertitude technique (ZIT ${z.valeur} ${u}). `
+        txt: tr(`${nom} à ${z.mic} ${u} : valeur en zone d'incertitude technique (ZIT ${zitTexte(z.valeur)} ${u}). `
               + `La catégorie « ${z.cat || "—"} » n'est pas reproductible à cette valeur — la traiter comme incertaine.`,
-                `${nom} at ${z.mic} ${u}: the value falls in the area of technical uncertainty (ATU ${z.valeur} ${u}). `
+                `${nom} at ${z.mic} ${u}: the value falls in the area of technical uncertainty (ATU ${zitTexte(z.valeur)} ${u}). `
               + `The category "${z.cat || "—"}" is not reproducible at this value — treat it as uncertain.`) });
     });
     A.rules.push({ k: "≈", txt: tr("Conduite à tenir : répéter le test si une erreur technique est plausible ; recourir à une autre méthode (CMI par microdilution, test génotypique) ; signaler l'incertitude sur le compte rendu.",
@@ -4063,11 +4063,79 @@ function zitPour(bpOverride, group, k, ctx) {
   return (z === undefined) ? null : z;
 }
 
+/* UNE ZIT N'EST PAS TOUJOURS UNE VALEUR : ELLE PEUT ÊTRE UNE PLAGE.
+   ============================================================
+
+   Jusqu'au 2026-11-01, la ZIT était un nombre, et « être en ZIT » voulait
+   dire « mesurer exactement ce nombre ». C'est vrai de la plupart : la
+   colistine de Pseudomonas a sa ZIT à 4, la vancomycine de S. aureus à 2.
+
+   Le CA-SFM 2026 en publie une d'une autre forme. Page 72, pénicilline G de
+   S. aureus : colonne S « Note », R > 0,125, et ZIT « ≤ 0,125 ». La page 11
+   du document des différences dit pourquoi :
+
+     « une CMI de pénicilline G > 0,125 mg/L permet de confirmer la présence
+       de pénicillinase et une CMI ≤ 0,125 mg/L NE PERMET PAS D'EXCLURE la
+       présence d'une pénicillinase »
+
+   Ce n'est pas une valeur douteuse, c'est TOUTE LA PLAGE BASSE qui l'est :
+   le comité refuse de conclure « sensible » sur la seule CMI et renvoie au
+   disque, que l'EUCAST lui-même tient pour plus fiable sur ce couple.
+
+   Deux formes sont donc admises dans la colonne « zit » de la base :
+
+     4            la ZIT est cette valeur, et elle seule (forme historique)
+     "<=0.125"    toute mesure inférieure ou égale est en ZIT
+
+   CE QUI N'EST PAS ADMIS LÈVE. Une chaîne mal écrite qui rendrait
+   discrètement « pas de ZIT » désarmerait l'avertissement sans que rien ne
+   le dise — et un avertissement qui disparaît en silence est pire que pas
+   d'avertissement du tout, parce qu'on compte dessus. */
+function zitBorne(z) {
+  if (z === null || z === undefined) return null;
+  if (typeof z === "number") return { type: "exacte", v: z };
+  const m = /^<=\s*([0-9]*\.?[0-9]+)$/.exec(String(z).trim());
+  if (m) return { type: "basse", v: parseFloat(m[1]) };
+  throw new Error("ZIT illisible : " + JSON.stringify(z)
+    + " — attendu un nombre, ou « <=x » pour une plage basse.");
+}
+
+/* La ZIT telle qu'on l'écrit à l'écran et au compte rendu.
+
+   DEUX RÔLES, DEUX FONCTIONS, et les confondre a cassé un banc.
+
+   zitBorne() LIT le sens d'une ZIT de CMI : il n'admet que deux formes et
+   lève sur tout le reste, parce qu'une ZIT mal écrite qu'on prendrait pour
+   « pas de ZIT » désarmerait l'avertissement en silence.
+
+   zitTexte() AFFICHE, et doit survivre à tout ce que le code produit — y
+   compris la ZIT des DIAMÈTRES, qui n'a pas la même forme : elle est mise en
+   forme à la source, « 18–20 » pour un intervalle, « 19 » pour une valeur.
+   Lui appliquer le lecteur strict faisait lever l'alerte elle-même sur un
+   diamètre parfaitement normal — un afficheur qui refuse d'afficher.
+
+   Un lecteur ne doit pas deviner ; un afficheur ne doit pas casser. */
+function zitTexte(z) {
+  if (z === null || z === undefined) return "";
+  if (typeof z === "number") return (Math.round(z * 1000) / 1000).toString();
+  const t = String(z).trim();
+  const m = /^<=\s*([0-9]*\.?[0-9]+)$/.exec(t);
+  if (m) return "≤ " + (Math.round(parseFloat(m[1]) * 1000) / 1000).toString();
+  return t;                       // déjà mise en forme : « 18–20 », « 19 »
+}
+
 function enZit(str, bpOverride, group, k, ctx) {
-  const z = zitPour(bpOverride, group, k, ctx);
-  if (z === null) return false;
+  const b = zitBorne(zitPour(bpOverride, group, k, ctx));
+  if (!b) return false;
   const p = parseMic(str);
-  if (!p || p.v !== z) return false;
+  if (!p) return false;
+  if (b.type === "basse") {
+    // « < 0,125 » est franchement en dessous — donc DANS la plage basse.
+    // « > 0,125 » est franchement au-dessus : hors plage.
+    if (p.op === ">") return false;
+    return p.v <= b.v;
+  }
+  if (p.v !== b.v) return false;
   // « > 0,5 » est franchement au-dessus, « < 0,5 » franchement en dessous.
   return p.op !== ">" && p.op !== "<";
 }
@@ -4713,6 +4781,7 @@ const MOTEUR = {
   catFromMic, catFromDiam, parseMic, parseDiam,
   getBP, getDZ, disquePour, zitPour, zitZonePour, enZit, enZitZone,
   horsEucast, depistageSeuil, estCasfm, seuilEcoff, ECOFF, cadrer,
+  zitBorne, zitTexte,
   fixerLangue, langueCourante,
   // exporté POUR ÊTRE VÉRIFIÉ : le banc s'en sert pour exiger que chaque
   // phrase de résistance naturelle présente dans ORG sache se traduire.

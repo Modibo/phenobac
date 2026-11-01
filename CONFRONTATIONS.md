@@ -382,8 +382,13 @@ Le premier passage a crié **32 divergences**. Aucune n'en était une :
   V1.0 septembre 2026, 178 pages** — les TABLES COMPLÈTES, et non le document
   des différences
 - **tables** : ZIT, ZIT_CASFM
-- **empreinte** : 9127c6a5b2cd1c8911ad2510299faf472a5fb51255dc6fcc94db5b5a2860a106
-- **date** : 2026-10-25
+- **empreinte** : 26083b44169f21e985921bfe4e01faf62ea360982d3715d34662fe38d0f96656
+- **date** : 2026-10-25, empreinte reprise le 2026-11-01
+- **pourquoi l'empreinte a bougé sans nouvelle confrontation** : `ZIT_CASFM` a
+  gagné **une** entrée, lue sur la page 72 du communiqué — la pénicilline G de
+  *S. aureus*, ZIT « ≤ 0,125 ». Rien du côté EUCAST n'a changé, et le classeur
+  n'a pas été rouvert : il reste inaccessible. La confrontation complète des
+  ZIT reste due.
 - **résultat** : **les deux moitiés faites**. EUCAST : 7 ATU sur 7 retenues.
   CA-SFM : 10 ZIT en CMI confrontées — **10 identiques, 0 divergente,
   0 manquante, 0 en trop**.
@@ -696,7 +701,7 @@ laboratoire : « la plupart des techniques automatisées ne permettent pas de
 mesurer des CMI < 0,06 mg/L », et un seuil à 0,03 imposerait le recours
 systématique au disque.
 
-### Page 11 — trois notes, et un écart ouvert
+### Page 11 — trois notes, et un écart désormais porté
 
 **Confirmé** : la vancomycine de *S. aureus* à **1 mg/L avec ZIT à 2** —
 PhénoBac l'applique déjà, et la page 11 en donne la raison (les prérequis
@@ -747,10 +752,35 @@ Trois façons de le corriger, et aucune n'est neutre :
    réserve du comité en commentaire. Le moins invasif, mais la catégorie
    rendue reste celle que le CA-SFM refuse.
 
-> `comparer-casfm.py` ne compte plus cette ligne comme une lacune de l'outil :
-> elle est déclarée, avec sa source et sa citation. **Une ignorance qu'on sait
-> nommer n'est plus une ignorance** — mais ce n'est pas non plus une
-> correction.
+#### Porté le 2026-11-01 : la solution 2, la ZIT à borne ouverte
+
+**Décision du biologiste.** La ligne du delta ne porte **que la ZIT** —
+`["casfm","staph","PEN","cmi","standard", …, "<=0.125", …]`. Pas de S ni de R :
+la valeur reste celle de l'EUCAST (0,125 / 0,125), et c'est l'**incertitude**
+qui est propre au CA-SFM. La solution 1 aurait rendu « I » toute la plage
+basse, et « I » se lit « sensible à forte posologie ».
+
+| CMI | EUCAST | CA-SFM |
+|---|---|---|
+| 0,03 · 0,06 · 0,125 | S | **S + ZIT** |
+| 0,25 · 1 | R | R |
+
+> *Pénicilline G à 0,06 mg/L : valeur en zone d'incertitude technique
+> (ZIT ≤ 0,125 mg/L). La catégorie « S » n'est pas reproductible à cette
+> valeur — la traiter comme incertaine.*
+
+**La ZIT accepte désormais deux formes** : un nombre (la valeur exacte, forme
+historique) et `"<=x"` (toute la plage basse). `zitBorne()` n'en admet pas
+d'autre et **lève** sur le reste : une ZIT mal écrite qu'on prendrait pour
+« pas de ZIT » désarmerait l'avertissement en silence. Vérifié — `"0.125"`,
+`"<=abc"`, `"≤0.125"` et `""` lèvent tous.
+
+> **Et un banc a attrapé la faute que j'allais livrer.** J'avais appliqué le
+> lecteur strict à l'affichage, y compris à la ZIT des **diamètres**, qui a
+> une autre forme — « 18–20 », mise en forme à la source. L'alerte levait donc
+> sur un diamètre parfaitement normal : un afficheur qui refuse d'afficher.
+> Deux rôles, deux fonctions : `zitBorne()` **lit** et ne devine pas,
+> `zitTexte()` **affiche** et ne casse pas.
 
 ## La page 6 du document des différences, lue le 2026-11-01
 

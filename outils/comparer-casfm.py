@@ -445,9 +445,10 @@ def main():
             "« une CMI de pénicilline G > 0,125 mg/L permet de confirmer la "
             "présence de pénicillinase et une CMI ≤ 0,125 mg/L NE PERMET PAS "
             "D'EXCLURE la présence d'une pénicillinase ». Le comité refuse donc "
-            "de conclure « sensible » sur la seule CMI. PhénoBac rend « S » : "
-            "écart ouvert, il demande une décision de modèle (voir "
-            "CONFRONTATIONS.md).",
+            "de conclure « sensible » sur la seule CMI. PORTÉ le 2026-11-01 "
+            "sous forme de ZIT à borne ouverte « <=0.125 » : la catégorie reste "
+            "celle de l'EUCAST, et toute mesure de la plage basse est signalée "
+            "incertaine, avec renvoi au disque.",
     }
 
     PORTEE_EUCAST = {

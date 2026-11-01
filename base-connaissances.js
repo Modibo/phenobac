@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.28";
+const BASE_VERSION = "2026.29";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -73,6 +73,29 @@ const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "z
    et outils/verifier-comptes.py existe pour cela. Le compte se lit sur
    REGLES.length. */
 const REGLES = [
+/* LA PÉNICILLINE G DE S. AUREUS : UNE ZIT SUR TOUTE LA PLAGE BASSE.
+   Décision du biologiste du 2026-11-01.
+
+   Page 72 du communiqué : colonne S « Note », R > 0,125, ZIT « ≤ 0,125 ».
+   Page 11 du document des différences :
+
+     « une CMI de pénicilline G > 0,125 mg/L permet de confirmer la présence
+       de pénicillinase et une CMI ≤ 0,125 mg/L NE PERMET PAS D'EXCLURE la
+       présence d'une pénicillinase »
+
+   PhénoBac rendait « S » sans réserve à 0,06 mg/L. Le comité ne refuse pas
+   la valeur : il refuse de CONCLURE sur la seule CMI, et renvoie au disque —
+   que l'EUCAST lui-même tient pour plus fiable sur ce couple.
+
+   LA LIGNE NE PORTE DONC QUE LA ZIT. Pas de S ni de R : la valeur reste
+   celle de l'EUCAST (0,125 / 0,125), et c'est l'INCERTITUDE qui est propre
+   au CA-SFM. Mettre « S: null » aurait rendu « I » toute la plage basse, et
+   « I » se lit « sensible à forte posologie » : un clinicien aurait pu
+   prescrire de la pénicilline à forte dose sur une souche productrice de
+   pénicillinase. Le remède aurait été pire que le mal.
+
+   C'est la première ZIT à borne ouverte de la base ; zitBorne() dans
+   moteur.js dit la forme admise et lève sur tout le reste. */
 /* « casfm / ngono / GEN 16-16 » : RETIRÉE PUIS REMISE, LE 2026-10-31.
 
    Le balayage en sens inverse de comparer-casfm.py l'a signalée — le
@@ -372,6 +395,7 @@ const REGLES = [
 ["casfm","staph","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","NIT","disque","urinaire",13,13,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","PEN","cmi","standard",undefined,undefined,undefined,"<=0.125",undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","SXT","disque","standard",24,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
