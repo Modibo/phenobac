@@ -281,13 +281,26 @@ if (!BASE || !BASE.regles)
 const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
       BP_MENINGE_CASFM = {},
       DZ = {}, DZ_MENINGE = {}, DZ_URIN = {}, DZ_CASFM = {}, DZ_CASFM_URIN = {},
-      DZ_TEMOIN = {}, DZ_CASFM_ESPECE = {}, ECOFF = {},
-      // Le même objet sous un nom exact : la colonne « espece » de la base se
-      // remplit quel que soit le référentiel, et l'EUCAST en a désormais
-      // besoin (nitrofurantoïne chez E. coli, triméthoprime chez E. coli et
-      // Klebsiella). Un second TABLEAU aurait fini par diverger du premier ;
-      // un second NOM ne le peut pas.
-      ESPECE_LIMITE = DZ_CASFM_ESPECE,
+      DZ_TEMOIN = {}, ECOFF = {},
+      /* DEUX TABLES DE RESTRICTION D'ESPÈCE, ET IL EN FALLAIT DEUX.
+         Jusqu'au 2026-11-01 il n'y en avait qu'une, partagée par les deux
+         référentiels sous deux noms. Elle marchait tant que les restrictions
+         venaient toutes de l'EUCAST ; elle avait deux défauts dormants :
+
+         — LA DERNIÈRE LIGNE LUE ÉCRASAIT LA PRÉCÉDENTE. Un couple restreint
+           des deux côtés n'en gardait qu'une restriction, choisie par
+           l'ordre du fichier ;
+         — UNE RESTRICTION DU CA-SFM AURAIT VALU SOUS EUCAST, et
+           réciproquement. Or le CA-SFM donne l'oxacilline à 2 mg/L pour
+           S. aureus, S. lugdunensis, S. saprophyticus et S. pettenkoferi,
+           et à 0,25 pour les autres : une restriction qui n'existe que de
+           son côté.
+
+         La restriction appartient à la LIGNE, donc au référentiel de la
+         ligne. especeAutorisee() reçoit désormais celui qui a fourni la
+         valeur, et ne consulte que sa table — sans repli sur l'autre, qui
+         ferait revenir le mélange qu'on vient de défaire. */
+      ESPECE_EUCAST = {}, ESPECE_CASFM = {},
       DISQUE = {}, DISQUE_CASFM = {},
       ZIT = {}, ZIT_CASFM = {}, ZIT_ZONE = {}, ZIT_ZONE_CASFM = {},
       HORS_EUCAST = {}, CASFM_COUVRE = {}, CASFM_COUVRE_ESPECE = {},
@@ -337,7 +350,8 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
           r.groupe, r.abx, r.zit);
     if (r.temoin !== undefined) met(DZ_TEMOIN, r.groupe, r.abx, r.temoin);
     if (r.dep !== undefined)    met(r.ref === "casfm" ? DEPISTAGE_CASFM : DEPISTAGE, r.groupe, r.abx, r.dep);
-    if (r.espece !== undefined) DZ_CASFM_ESPECE[r.groupe + ":" + r.abx] = r.espece;
+    if (r.espece !== undefined)
+      (r.ref === "casfm" ? ESPECE_CASFM : ESPECE_EUCAST)[r.groupe + ":" + r.abx] = r.espece;
     if (r.ecoff) ECOFF[r.groupe + ":" + r.abx] = true;
     if (r.conv) dans(HORS_EUCAST, r.groupe, r.abx);
     if (r.couv !== undefined) {
@@ -4068,8 +4082,15 @@ function getBP(bpOverride, group, k, ctx) {
     if (BP_MENINGE[group] && BP_MENINGE[group][k]) return BP_MENINGE[group][k];
   }
   if (estCasfm()) {
-    if (c.urin === "Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]) return BP_CASFM_URIN[group][k];
-    if (BP_CASFM[group] && BP_CASFM[group][k]) return BP_CASFM[group][k];
+    /* LA RESTRICTION D'ESPÈCE VAUT AUSSI EN CMI SOUS CA-SFM, et elle n'y
+       était pas : seules les branches EUCAST la consultaient. Le CA-SFM
+       donne l'oxacilline à 2 mg/L pour quatre espèces de staphylocoques et
+       à 0,25 pour les autres ; sans ce contrôle, le 2 se serait appliqué à
+       tout le groupe « scn », S. epidermidis compris. */
+    if (c.urin === "Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]
+        && especeAutorisee(group, k, "casfm")) return BP_CASFM_URIN[group][k];
+    if (BP_CASFM[group] && BP_CASFM[group][k]
+        && especeAutorisee(group, k, "casfm")) return BP_CASFM[group][k];
   }
   // L'EUCAST a lui aussi des seuils propres à la cystite simple : le
   // pivmécillinam, le céfixime, la nitrofurantoïne et le triméthoprime n'y
@@ -4080,7 +4101,7 @@ function getBP(bpOverride, group, k, ctx) {
   // valait d'abord que pour le disque, et la nitrofurantoïne se trouvait
   // catégorisée en CMI chez Klebsiella alors que l'EUCAST ne la valide que
   // chez E. coli — un chiffre juste au mauvais endroit.
-  if (c.urin === "Oui" && BP_URIN[group] && BP_URIN[group][k] && especeAutorisee(group, k))
+  if (c.urin === "Oui" && BP_URIN[group] && BP_URIN[group][k] && especeAutorisee(group, k, "eucast"))
     return BP_URIN[group][k];
   /* Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas.
      Cette ligne est une ceinture par-dessus des bretelles, et l'épreuve par
@@ -4347,7 +4368,7 @@ function getDZ(dzOverride, group, k, ctx) {
     // dans la boucle de traduction, pour ne pas rendre « R » ce que le
     // CA-SFM refuse de trancher au disque.
     if (DEPISTAGE_CASFM[group] && DEPISTAGE_CASFM[group][k]) return null;
-    const limite = DZ_CASFM_ESPECE[group + ":" + k];
+    const limite = ESPECE_CASFM[group + ":" + k];
     if (!limite || (_activeId && limite.indexOf(_activeId) !== -1)) {
       const d = dzCasfm(group, k, c);
       if (d) return d;
@@ -4377,7 +4398,7 @@ function getDZ(dzOverride, group, k, ctx) {
   // Klebsiella. Appliquer ces seuils ailleurs donnerait un chiffre juste au
   // mauvais endroit, le défaut le plus difficile à repérer.
   if (c.urin === "Oui" && DZ_URIN[group] && DZ_URIN[group][k]
-      && especeAutorisee(group, k)) return DZ_URIN[group][k];
+      && especeAutorisee(group, k, "eucast")) return DZ_URIN[group][k];
   // Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas :
   // ne pas retomber sur un seuil d'une autre indication.
   if (DZ_URIN[group] && DZ_URIN[group][k] && !(DZ[group] && DZ[group][k])) return null;
@@ -4387,8 +4408,13 @@ function getDZ(dzOverride, group, k, ctx) {
 /* La restriction d'espèce d'un seuil, s'il en porte une. Sert aux seuils
    urinaires de l'EUCAST comme à ceux du CA-SFM : une seule règle, une seule
    place où elle peut être oubliée. */
-function especeAutorisee(group, k) {
-  const limite = ESPECE_LIMITE[group + ":" + k];
+function especeAutorisee(group, k, ref) {
+  /* « ref » est le référentiel QUI A FOURNI LA VALEUR, et non le référentiel
+     actif : c'est la ligne employée qui porte — ou ne porte pas — sa
+     restriction. Pas de repli sur l'autre table, sinon une restriction de
+     l'EUCAST s'appliquerait encore à une valeur du CA-SFM qui, elle, ne
+     restreint rien. */
+  const limite = (ref === "casfm" ? ESPECE_CASFM : ESPECE_EUCAST)[group + ":" + k];
   if (!limite) return true;
   return !!_activeId && limite.indexOf(_activeId) !== -1;
 }
@@ -4447,7 +4473,8 @@ function catFromDiam(str, dz) {
 /* Les espèces auxquelles un seuil est restreint, nommées comme le biologiste
    les lit. Sans cela le message citerait des identifiants (« ecoli »). */
 function especesDites(group, k) {
-  const limite = ESPECE_LIMITE[group + ":" + k] || [];
+  const limite = (ESPECE_CASFM[group + ":" + k]
+                  || ESPECE_EUCAST[group + ":" + k] || []);
   const noms = limite.map(function (id) {
     return (ORG[id] && ORG[id].args && ORG[id].args.species) || id;
   });
@@ -4480,7 +4507,7 @@ function raisonSansDisque(group, k, ctx) {
     // urinaire, les deux raisons valent — mais seule la première est
     // RÉPARABLE par l'utilisateur, et l'annoncer serait lui faire cocher une
     // question qui ne changera rien.
-    if (urinaire && !especeAutorisee(group, k))
+    if (urinaire && !especeAutorisee(group, k, "eucast"))
       return tr("l'EUCAST ne chiffre ce couple que pour ", "EUCAST sets this breakpoint only for ")
            + especesDites(group, k)
            + tr(" — pour les autres espèces du groupe, le document renvoie à une note "
@@ -4498,7 +4525,7 @@ function raisonSansDisque(group, k, ctx) {
       : tr("l'EUCAST ne reconnaît pas la méthode des disques pour ce couple — une CMI est nécessaire",
            "EUCAST does not accept disk diffusion for this pair — an MIC is required");
   }
-  if (!especeAutorisee(group, k))
+  if (!especeAutorisee(group, k, "eucast"))
     return tr("l'EUCAST ne chiffre ce couple que pour ", "EUCAST sets this breakpoint only for ")
          + especesDites(group, k)
          + tr(" — pour les autres espèces du groupe, le document ne donne aucun seuil",
@@ -4708,7 +4735,8 @@ const MOTEUR = {
   // tables, pour l'affichage des seuils et des aides de saisie
   REFERENTIELS, ORG, ABXNAME, ABXNAME_EN, nomAbx,
   BP, BP_MENINGE, BP_URIN, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
-  DZ, DZ_MENINGE, DZ_URIN, DZ_CASFM, DZ_CASFM_URIN, DZ_CASFM_ESPECE, DZ_TEMOIN,
+  DZ, DZ_MENINGE, DZ_URIN, DZ_CASFM, DZ_CASFM_URIN, DZ_TEMOIN,
+  ESPECE_EUCAST, ESPECE_CASFM,
   DISQUE, DISQUE_CASFM, OXA_PNEUMO, DEPISTAGE, DEPISTAGE_CASFM,
   ZIT, ZIT_CASFM, ZIT_ZONE, ZIT_ZONE_CASFM,
   HORS_EUCAST, CASFM_COUVRE, CASFM_COUVRE_ESPECE,

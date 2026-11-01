@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.26";
+const BASE_VERSION = "2026.27";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -272,6 +272,8 @@ const REGLES = [
 ["casfm","entero","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","entero","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","entero","FOS","disque","standard",21,21,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","FOX","disque","standard",18,18,"30",undefined,undefined,undefined,undefined,undefined,["ecoli"]],
 ["casfm","entero","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -282,6 +284,8 @@ const REGLES = [
 ["casfm","morganella","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","morganella","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","morganella","FOS","disque","standard",21,21,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -306,12 +310,17 @@ const REGLES = [
    laboratoire croit travailler en CA-SFM et reçoit l'EUCAST, en silence.
    Trouvé par outils/comparer-casfm.py le 25 octobre 2026, vérifié dans le
    document, porté sur décision du biologiste. */
+["casfm","pneumo","AMP","cmi","meninge",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pneumo","AMX","cmi","meninge",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pseudo","COL","cmi","standard",2,2,undefined,4,undefined,undefined,undefined,undefined,undefined],
+["casfm","pseudo","FOS","cmi","standard",128,128,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","pseudo","FOS","disque","standard",12,12,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pseudo","LVX","cmi","standard",null,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","FOS","disque","standard",21,21,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","NIT","disque","urinaire",11,11,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -322,6 +331,7 @@ const REGLES = [
 ["casfm","salmonella","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","disque","standard",null,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","scn","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,["ssaprophyticus","slugdunensis"]],
 ["casfm","scn","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","disque","standard",24,19,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
@@ -330,6 +340,8 @@ const REGLES = [
 ["casfm","serratia","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","FOS","disque","standard",21,21,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","NIT","disque","urinaire",11,11,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -342,6 +354,7 @@ const REGLES = [
 ["casfm","serratia","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","disque","standard",null,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","NIT","disque","urinaire",13,13,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

@@ -649,8 +649,8 @@ ensemble, jamais l'un sans l'autre.
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM
-- **empreinte** : 81eafcee070e2fa4e07446016e4d7b73bba056e3f449d70f31ccf519945a39fa
-- **date** : 2026-10-31, le communiqué ET le document des différences sous les yeux
+- **empreinte** : 1710d1402689cf73b1941e514f0ada6b2f7783fd5b84b8346ef731fba162844e
+- **date** : 2026-11-01, le communiqué ET le document des différences sous les yeux
 - **portée du registre élargie le même jour** : l'empreinte ne couvrait que
   `BP_CASFM`. La passe des autres sites ayant rendu `BP_CASFM_URIN` et
   `BP_MENINGE_CASFM` comparables, quatorze lignes urinaires ont pu être
@@ -679,6 +679,90 @@ ensemble, jamais l'un sans l'autre.
   sous-tableau « *Salmonella* spp. » — les sous-titres ne sont pas encore
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
   pénicilline G), et 20 lignes de dépistage ou d'endocardite.
+
+## Les trois dernières questions, tranchées le 2026-11-01
+
+Elles attendaient le classeur EUCAST ; le biologiste a tranché sans lui, sur
+le CA-SFM.
+
+### 1 — Oxacilline : appliquer le CA-SFM
+
+Page 72, le communiqué donne **trois** lignes :
+
+```
+Oxacilline (dépistage), S. intermedius, S. pseudintermedius        NA / NA
+Oxacilline, S. aureus, S. lugdunensis, S. saprophyticus
+            et S. pettenkoferi                                      2 / 2
+Oxacilline, autres espèces                                       0,25 / 0,25
+```
+
+`staph` (*S. aureus*) avait reçu 2 / 2 la veille. Restaient *S. lugdunensis*
+et *S. saprophyticus*, qui vivent dans le groupe `scn` de PhénoBac aux côtés
+de *S. epidermidis* et *S. haemolyticus*, lesquels relèvent du 0,25.
+
+**Le modèle ne savait pas l'exprimer, et le dire a demandé une correction du
+moteur.** `ESPECE_LIMITE` était une table unique, partagée par les deux
+référentiels sous deux noms, avec deux défauts dormants :
+
+- **la dernière ligne lue écrasait la précédente** — un couple restreint des
+  deux côtés n'en gardait qu'une restriction, choisie par l'ordre du fichier ;
+- **une restriction du CA-SFM aurait valu sous EUCAST**, et réciproquement.
+
+La restriction appartient à la **ligne**, donc au référentiel de la ligne.
+`especeAutorisee()` reçoit maintenant celui qui a fourni la valeur et ne
+consulte que sa table, sans repli. Et `getBP()` l'honore enfin **en CMI sous
+CA-SFM** : seules les branches EUCAST la consultaient, si bien que le 2 mg/L
+se serait appliqué à tout `scn`, *S. epidermidis* compris.
+
+Vérifié, CMI 1 mg/L (souche sauvage) :
+
+| espèce | EUCAST | CA-SFM |
+|---|---|---|
+| *S. aureus*, *S. lugdunensis*, *S. saprophyticus* | R | **S** |
+| *S. epidermidis*, *S. haemolyticus* | R | R |
+
+### 2 — Ampicilline du pneumocoque en LCR
+
+`casfm pneumo AMP cmi meninge 0,5 / 0,5`, alignée sur l'amoxicilline portée
+la veille. PhénoBac portait `0,06` — la valeur de la **pénicilline G** — pour
+les trois β-lactamines. Les deux interchangeables disent désormais la même
+chose, et le dépistage de la page 85 cesse de diverger : **20 chiffres de
+dépistage identiques au seuil appliqué, 0 différent.**
+
+### 3 — Fosfomycine, site ordinaire
+
+La question d'ouverture de la série, close. Le CA-SFM chiffre la fosfomycine
+intraveineuse hors urine, là où l'EUCAST renvoie à une note :
+
+| groupe | page | CMI | disque |
+|---|---|---|---|
+| entérobactéries (4 groupes) | 54 | 32 / 32 | 200 µg · 21 / 21 |
+| *Pseudomonas* | 61 | 128 / 128 | 200 µg · 12 / 12 |
+| *S. aureus* | 77 | 32 / 32 | *Note* — pas de disque |
+
+*S. saprophyticus* n'en reçoit pas : PhénoBac lui connaît une résistance
+naturelle à la fosfomycine, et `scn` n'est pas `staph`.
+
+### L'état du delta, au terme de la série
+
+| | |
+|---|---|
+| couples confrontés, site ordinaire | 274 — **255 d'accord, 0 écart** |
+| sites urinaire et méningé | **59 d'accord, 0 écart**, 1 couple absent |
+| dépistage | **20 identiques, 0 différent**, 8 couples absents |
+| couples à plusieurs lignes | **0** |
+| endocardite et autres, non traités | **0** |
+
+Tout ce que l'outil sait lire est confronté, et rien ne diverge.
+
+**Une question neuve, née de la correction du moteur** : maintenant que les
+restrictions d'espèce sont séparées par référentiel, on voit que le CA-SFM
+n'en pose aucune là où l'EUCAST en pose. `entero NIT` est restreint à
+*E. coli* et `entero TMP` à *E. coli*, *K. pneumoniae* et *K. oxytoca* —
+restrictions EUCAST, qui continuent de valoir sous CA-SFM alors que la
+page 54 donne les deux molécules à tout le chapitre. C'est la même décision
+que celle du 31 octobre, appliquée aux groupes voisins mais pas à `entero`
+lui-même. Elle concerne *Enterobacter*, *Citrobacter* et *Shigella*.
 
 ## Le second document du CA-SFM, lu le 2026-10-31
 
