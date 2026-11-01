@@ -541,6 +541,87 @@ dire("\nLa catégorie que le document fait reprendre à un autre agent");
         "… et rien n'est dit quand les deux concordent");
 })();
 
+/* ---------- 12. LES PÉNICILLINES DE MORAXELLA CATARRHALIS ----------
+
+   AUCUN DES DEUX COMITÉS NE LES CHIFFRE, et aucun ne se tait pour autant.
+
+   EUCAST v16.1, feuille M.catarrhalis : pénicilline G, ampicilline et
+   amoxicilline portent « – » dans les quatre colonnes — « the agent is
+   unsuitable for treatment… IF INCLUDED, REPORT RESISTANT WITHOUT PRIOR
+   TESTING ».
+
+   CA-SFM 2026, p110, note 1/A : l'amoxicilline porte « Note », et le comité
+   pose DEUX conditions pour la rendre sensible — « Les souches NON
+   productrices de β-lactamase, SENSIBLES À L'AMOXICILLINE-ACIDE
+   CLAVULANIQUE, doivent être catégorisées "sensibles" aux pénicillines. »
+   La seconde se perd facilement : le comité l'a écrite parce que l'enzyme
+   est produite lentement et que son propre test peut être faiblement
+   positif.
+
+   PhénoBac appliquait avant cela amoxicilline 2/2, ampicilline 1/1 et
+   pénicilline G 0,06/0,25 — des chiffres sans source dans l'un ou l'autre
+   document. Une souche de cette espèce, dont ≈ 99 % produisent l'enzyme,
+   pouvait sortir « amoxicilline sensible ». */
+dire("\nMoraxella : les pénicillines, que personne ne chiffre");
+(function () {
+  function sir(ref, res, ctx) {
+    return E.runInterpretation({ organism: "moraxella", ref: ref, mode: "sir",
+                                 results: res, ctx: ctx || {} });
+  }
+  function rendu(o) {
+    return (o.interpretation.rendu || []).map(function (x) {
+      return x.abx + " " + x.brut + "→" + x.rendu; }).join(", ");
+  }
+
+  /* 1. Les trois lignes sans source ont disparu. */
+  ["PEN", "AMP", "AMX"].forEach(function (k) {
+    verif(!(E.BP.moraxella && E.BP.moraxella[k]),
+          k + " : plus de seuil — aucun des deux documents n'en donne");
+  });
+  verif(E.BP.moraxella.AMC && E.BP.moraxella.AMC.S === 1,
+        "… tandis que l'amoxicilline-acide clavulanique garde les siens (1/1), "
+        + "que les DEUX comités chiffrent, et identiquement");
+
+  /* 2. EUCAST : le tiret ne laisse pas le choix. */
+  var e = sir("eucast", { AMX: "S", AMC: "S" });
+  verif(e.categories.AMX === "R",
+        "EUCAST : amoxicilline rendue R — « report resistant without prior testing »");
+  verif(/S→R/.test(rendu(e)),
+        "… et la lecture de paillasse est conservée à côté (" + rendu(e) + ")");
+  verif(sir("eucast", { AMC: "S" }).categories.AMX === undefined,
+        "… mais une molécule non testée ne reçoit rien : on ne rend pas résistant "
+        + "un antibiotique que personne n'a posé");
+
+  /* 3. CA-SFM : les deux conditions, et pas une. */
+  verif(sir("casfm", { AMX: "S", AMC: "S" }, { blac: "Positif" }).categories.AMX === "R",
+        "CA-SFM, test positif : amoxicilline résistante");
+  verif(sir("casfm", { AMX: "R", AMC: "S" }, { blac: "Négatif" }).categories.AMX === "S",
+        "CA-SFM, test négatif ET association sensible : amoxicilline sensible");
+  /* LA VÉRIFICATION QUI COMPTE : la seconde condition. */
+  verif(sir("casfm", { AMX: "R", AMC: "R" }, { blac: "Négatif" }).categories.AMX === "R",
+        "CA-SFM, test négatif mais association RÉSISTANTE : la catégorie n'est PAS "
+        + "rendue sensible — le comité exige les deux conditions");
+  verif(/ne suffit pas/.test((sir("casfm", { AMX: "S", AMC: "R" }, { blac: "Négatif" })
+          .interpretation.alerts || []).map(function (a) { return a.txt; }).join(" ")),
+        "… et on dit pourquoi, au lieu de réclamer un test déjà fait");
+  verif(sir("casfm", { AMX: "S", AMC: "S" }).categories.AMX === "S",
+        "CA-SFM, test non fait : la catégorie reste celle de la paillasse");
+  verif(/DEUX conditions/.test((sir("casfm", { AMX: "S", AMC: "S" })
+          .interpretation.alerts || []).map(function (a) { return a.txt; }).join(" ")),
+        "… et l'on dit que ce n'est pas celle du référentiel, en nommant les "
+        + "deux conditions");
+
+  /* 4. LA COPIE DÉFENSIVE. Trois bancs ont trouvé, le 2026-11-01, que le mode
+     S/I/R partageait l'objet de l'appelant : la première interprétation
+     réécrivait la saisie, la seconde partait du résultat modifié. */
+  var saisie = { AMX: "S", AMC: "S" };
+  sir("eucast", saisie);
+  verif(saisie.AMX === "S",
+        "une interprétation ne réécrit pas l'objet de résultats qu'on lui passe");
+  verif(sir("eucast", saisie).categories.AMX === "R",
+        "… et deux interprétations de la même saisie rendent la même chose");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : une mesure ne devient une catégorie que"
                     + " lorsqu'elle la détermine."));

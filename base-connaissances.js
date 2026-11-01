@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.36";
+const BASE_VERSION = "2026.37";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -1446,10 +1446,39 @@ const REGLES = [
 ["eucast","listeria","SXT","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","listeria","SXT","disque","standard",29,29,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","listeria","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
+/* LES PÉNICILLINES DE MORAXELLA : AUCUN DES DEUX COMITÉS NE LES CHIFFRE.
+   Les trois lignes retirées le 2026-11-01.
+
+   EUCAST v16.1, feuille M.catarrhalis — pénicilline G, ampicilline et
+   amoxicilline portent « – » dans les QUATRE colonnes (CMI et disque). Le
+   classeur définit ce tiret ainsi : « the agent is unsuitable for treatment…
+   testing and clinical use should be avoided. If included, report resistant
+   without prior testing. » Et sa note : « Beta-lactamase producers should be
+   reported resistant to penicillins and aminopenicillins without inhibitors. »
+
+   CA-SFM 2026, p110, chapitre 5.20 — l'amoxicilline porte « Note » dans les
+   quatre colonnes, et la note 1/A dit la conduite :
+
+     « La très grande majorité (≈ 99 %) des souches de M. catarrhalis
+       produisent une β-lactamase. […] Les souches productrices de
+       β-lactamase doivent être catégorisées « résistantes » aux pénicillines
+       (sans inhibiteurs de β-lactamase). Les souches non productrices de
+       β-lactamase, SENSIBLES À L'AMOXICILLINE-ACIDE CLAVULANIQUE, doivent
+       être catégorisées « sensibles » aux pénicillines. »
+
+   PhénoBac appliquait pourtant amoxicilline 2/2, ampicilline 1/1 et
+   pénicilline G 0,06/0,25, les trois marquées « convention de laboratoire ».
+   Le drapeau disait vrai — l'EUCAST ne chiffre pas — et taisait que le
+   document, lui, ne se tait pas : il prescrit une CONDUITE. Une souche de
+   M. catarrhalis, dont 99 % produisent une β-lactamase, pouvait ainsi sortir
+   « amoxicilline sensible » sur un chiffre sans source.
+
+   La conduite des deux comités est portée dans le moteur
+   (penicillinesMoraxella), où elle a sa place : ce n'est pas un seuil.
+   L'amoxicilline-acide clavulanique, elle, GARDE ses chiffres — les deux
+   comités la chiffrent, et identiquement (1/1, disque 2-1 µg, 19/19).  */
 ["eucast","moraxella","AMC","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","moraxella","AMC","disque","standard",19,19,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","moraxella","AMP","cmi","standard",1,1,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","moraxella","AMX","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","moraxella","AZM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","moraxella","CAF","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","moraxella","CIP","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -1465,7 +1494,6 @@ const REGLES = [
 ["eucast","moraxella","MIN","disque","standard",25,25,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","moraxella","MXF","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","moraxella","MXF","disque","standard",26,26,"5",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","moraxella","PEN","cmi","standard",0.06,0.25,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","moraxella","RD","cmi","standard",1,1,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","moraxella","SXT","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","moraxella","SXT","disque","standard",15,15,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],

@@ -175,11 +175,26 @@ dire("\nLes règles que le CA-SFM ajoute, et que l'EUCAST ne porte pas");
           casfm("ecloacae", { AMX: "R", AMC: "R", CTX: "R", MEM: "S", FEP: "S" })),
         "… ni sur Enterobacter");
 
-  // Moraxella : chercher la β-lactamase avant de rendre une aminopénicilline S.
-  verif(/β-lactamase par test chromogénique/i.test(casfm("moraxella", { AMX: "S", PEN: "S" })),
-        "Moraxella, amoxicilline rendue S : le CA-SFM veut le test chromogénique d'abord");
-  verif(!/chromogénique/i.test(casfm("moraxella", { AMX: "R", PEN: "R" })),
-        "… et pas quand l'amoxicilline est résistante : il n'y a plus de doute à lever");
+  /* MORAXELLA : LE MESSAGE DISAIT LA MÊME CHOSE DANS LES TROIS CAS.
+     Il réclamait « rechercher la β-lactamase par test chromogénique » même à
+     un laboratoire qui venait de le faire, et il taisait la SECONDE
+     condition du comité. Le CA-SFM (p110, note 1/A) en pose deux :
+
+       « Les souches NON productrices de β-lactamase, SENSIBLES À
+         L'AMOXICILLINE-ACIDE CLAVULANIQUE, doivent être catégorisées
+         "sensibles" aux pénicillines. »
+
+     La seconde se perd facilement, et le comité l'a écrite pour une raison :
+     l'enzyme est produite lentement, et son propre test peut être faiblement
+     positif. L'association sert alors de contrôle. */
+  verif(/DEUX conditions/.test(casfm("moraxella", { AMX: "S", AMC: "S" })),
+        "Moraxella, test non fait : on nomme les DEUX conditions du comité");
+  verif(/ne suffit pas/.test(
+          casfm("moraxella", { AMX: "S", AMC: "R" }, { blac: "Négatif" })),
+        "… test négatif mais association résistante : on dit que la première "
+        + "condition ne suffit pas, au lieu de réclamer un test déjà fait");
+  verif(!/chromogénique|DEUX conditions/i.test(casfm("moraxella", { AMX: "R", PEN: "R" })),
+        "… et rien quand les pénicillines sont résistantes : il n'y a plus de doute à lever");
 
   // Acinetobacter et Stenotrophomonas : valeurs adaptées du CLSI.
   verif(/CLSI M100/i.test(casfm("acineto", { IPM: "S", CAZ: "S", CIP: "S", GEN: "S" })),

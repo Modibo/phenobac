@@ -27,11 +27,13 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : 8fd4a3cbef6720fee0967d1f04bb823c776fe0155a58751ff13855bc1ff5be10
-- **date** : **2026-11-01, le classeur en main, troisième passage** (sha256 `5de6f4a097f7f655…`)
+- **empreinte** : ff351fb04245a0c7ed2ac8fe92c0a673aaff4d9ccde09b2d5d0eefd41c128b98
+- **date** : **2026-11-01, le classeur en main, quatrième passage** (sha256 `5de6f4a097f7f655…`)
 - **résultat** : **517 seuils confrontés — 517 identiques, 0 différent**,
-  0 drapeau incohérent, 0 à arbitrer, **87** non comparés (91 au passage
-  précédent : les quatre lignes empruntées au pneumocoque ont été retirées). Diamètres :
+  0 drapeau incohérent, 0 à arbitrer, **84** non comparés. Le nombre descend
+  à chaque lecture de note : 91, puis 87 (quatre lignes empruntées au
+  pneumocoque retirées), puis 84 (les trois pénicillines de *Moraxella*, que
+  ni l'un ni l'autre comité ne chiffre). Diamètres :
   **445 identiques, 0 différent, 0 à arbitrer, 0 non comparé** — la colonne
   « à arbitrer » est vide pour la première fois. Méningé : **24 identiques,
   0 différent**.
@@ -406,7 +408,7 @@ Sans rien conclure, voici ce qui saute aux yeux et demande un arbitrage :
 | *Campylobacter* · doxycycline | 4 / 8 | « Susceptibility to doxycycline can be **inferred from tetracycline**. » |
 | *N. gonorrhoeae* · ampicilline, amoxicilline | 1/1 et 2/2 | « **Infer** the susceptibility to ampicillin and amoxicillin **from the benzylpenicillin MIC** (do not report benzylpenicillin susceptibility). » |
 | streptocoques viridans · linézolide | 2 / 2 | « When excluded, the isolate should be reported "devoid of linezolid resistance mechanisms", **but not as susceptible to linezolid**. » |
-| *Moraxella* · ampicilline, amoxicilline | 1/1 et 2/2 | la cellule porte « **–** », que l'EUCAST définit comme « the agent is unsuitable… If included, **report resistant without prior testing** ». Le document des différences, p15, le confirme. |
+| *Moraxella* · ampicilline, amoxicilline | 1/1 et 2/2 | la cellule porte « **–** » — **vérifié et corrigé le 2026-11-01, voir ci-dessous.** |
 | *Haemophilus* · azithromycine | 0,25 / 0,5 | la note ne donne que l'**ECOFF**, 4 mg/L. D'où viennent 0,25 et 0,5 ? |
 | streptocoques A/C/G et B · amoxicilline, céfotaxime | 0,5 / 2 | **aucune note ne nomme ces agents**. Ces valeurs sont celles du chapitre *S. pneumoniae* — **vérifié et corrigé le 2026-11-01, voir ci-dessous.** |
 | *Enterobacterales* · azithromycine | 16 / 16 | **confirmé** : « isolates with MICs above **16 mg/L** … are likely to have azithromycin resistance mechanisms ». |
@@ -474,6 +476,70 @@ sortait « amoxicilline sensible » sur un chiffre emprunté à une autre espèc
 Quinze contrôles au banc (`essai-categorisation.js`, section 11), sous les deux
 référentiels : le CA-SFM écrit lui aussi « Note » en face de l'amoxicilline de
 ces groupes, et son delta ne porte rien.
+
+## Les pénicillines de *Moraxella catarrhalis*
+
+**Aucun des deux comités ne les chiffre, et aucun ne se tait pour autant.**
+Corrigé le 2026-11-01, deuxième résultat de `--notes`.
+
+**EUCAST v16.1, feuille M.catarrhalis** — pénicilline G, ampicilline et
+amoxicilline portent « **–** » dans les quatre colonnes (CMI et disque). Le
+classeur définit ce tiret : *« the agent is unsuitable for treatment… testing
+and clinical use should be avoided. **If included, report resistant without
+prior testing.** »* Sa note ajoute : *« Beta-lactamase producers should be
+reported resistant to penicillins and aminopenicillins without inhibitors. »*
+
+**CA-SFM 2026, p110, note 1/A** — l'amoxicilline porte « Note », et le comité
+pose **deux** conditions :
+
+> « La très grande majorité (≈ 99 %) des souches de *M. catarrhalis*
+> produisent une β-lactamase. La détection […] peut être détectée par une
+> technique chromogénique, **mais sa production à bas niveau peut entraîner
+> des résultats faiblement positifs**. Les souches productrices de
+> β-lactamase doivent être catégorisées « résistantes » aux pénicillines
+> (sans inhibiteurs de β-lactamase). Les souches **non productrices de
+> β-lactamase, SENSIBLES À L'AMOXICILLINE-ACIDE CLAVULANIQUE**, doivent être
+> catégorisées « sensibles » aux pénicillines. »
+
+La seconde condition se perd facilement, et le comité l'a écrite pour une
+raison : l'enzyme est produite lentement, son propre test peut être faiblement
+positif, et l'association sert alors de contrôle.
+
+**PhénoBac appliquait** amoxicilline 2/2, ampicilline 1/1 et pénicilline G
+0,06/0,25 — trois chiffres **sans source dans l'un ou l'autre document**,
+marqués « convention de laboratoire ». Le drapeau disait vrai sur l'absence de
+seuil et taisait que le document, lui, prescrit une conduite. Une souche de
+cette espèce, dont ≈ 99 % produisent l'enzyme, pouvait sortir « amoxicilline
+sensible ».
+
+| | avant | après |
+|---|---|---|
+| EUCAST, amoxicilline lue S | « S » | **R**, lecture de paillasse conservée à côté |
+| CA-SFM, test + | « S » | **R** |
+| CA-SFM, test − **et** association S | « S » | **S**, et c'est maintenant fondé |
+| CA-SFM, test − mais association **R** | « S » | **pas de catégorie du référentiel**, et l'on dit pourquoi |
+| CA-SFM, test non fait | « S » muet | « S » de la paillasse, **avec les deux conditions nommées** |
+
+L'amoxicilline-acide clavulanique **garde** ses chiffres : les deux comités la
+chiffrent, et identiquement (1/1, disque 2-1 µg, 19/19).
+
+> **Et l'alerte disait la même chose dans les trois cas.** Elle réclamait
+> « rechercher la β-lactamase par test chromogénique » même à un laboratoire
+> qui venait de le faire, et elle taisait la seconde condition. Elle distingue
+> désormais le test non fait du test négatif insuffisant.
+
+### Trois bancs ont trouvé un défaut que je venais d'écrire
+
+Le mode S/I/R passait au moteur **l'objet de résultats de l'appelant**, sans
+copie. Tant que les règles se contentaient de LIRE, c'était sans conséquence.
+Dès qu'elles y ont ÉCRIT — la conduite ci-dessus, la reprise de catégorie des
+streptocoques —, la première interprétation réécrivait la saisie du client et
+la seconde partait du résultat modifié.
+
+Aucun banc ne cherchait cela, et c'est bien pour cette raison qu'ils l'ont
+trouvé : `essai-voies` a vu « l'interprétation diffère » là où rien n'avait
+changé, `essai-contexte` a accusé deux questions d'être du code mort, et
+`essai-regles` est tombé sur un libellé. Trois symptômes, une cause.
 
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
@@ -780,7 +846,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : bc35a70a9345120d66efe0b24b96733ebe0878c9deab71e2a61694a087d7ed17
+- **empreinte** : 082b98a59abdd82b50c8c46dfbf57eaea721cb831d82c9e8a8a1ffe6e0f7b0ca
 - **date** : **2026-11-01, le classeur en main** — 409 règles attendues sur 22 tables, **0 manque, 0 excédent**
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et

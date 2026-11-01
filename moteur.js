@@ -877,8 +877,19 @@ function reglesCasfm(A, r) {
   if (id === "nmeningitidis" && ["PEN", "AMX", "AMP"].some(k => r[k] === "S" || r[k] === "I")) {
     A.alerts.push({ lvl: "warn", txt: "CA-SFM : rechercher une β-lactamase par test chromogénique avant de rendre la pénicilline G ou une aminopénicilline sensible — ces souches réémergent." });
   }
-  if (id === "moraxella" && ["AMX", "AMP"].some(k => r[k] === "S" || r[k] === "I")) {
-    A.alerts.push({ lvl: "warn", txt: "CA-SFM : rechercher la β-lactamase par test chromogénique. Les souches non productrices (< 1 %) peuvent être rendues sensibles aux aminopénicillines ; les autres sont résistantes." });
+  /* MORAXELLA : L'ALERTE DISAIT LA MÊME CHOSE DANS LES TROIS CAS.
+     Elle réclamait le test chromogénique même à un laboratoire qui venait de
+     le faire, et elle taisait la SECONDE condition du comité. Depuis que
+     penicillinesMoraxella() tranche les cas décidables, il ne reste ici que
+     les deux cas qui ne le sont pas — et ils ne se disent pas pareil. */
+  if (id === "moraxella" && PENI_MORAXELLA.some(k => r[k] === "S" || r[k] === "I")) {
+    const blac = _ctx && _ctx.blac;
+    if (blac === "Négatif") {
+      // Le test est négatif : il manque la sensibilité à l'association.
+      A.alerts.push({ lvl: "warn", txt: "CA-SFM p110 : un test à la β-lactamase négatif ne suffit pas à rendre les pénicillines sensibles — le comité exige AUSSI que l'amoxicilline-acide clavulanique soit sensible, parce qu'une production lente de l'enzyme donne des tests faiblement positifs. Ici l'association ne l'est pas : les pénicillines restent sans catégorie du référentiel." });
+    } else {
+      A.alerts.push({ lvl: "warn", txt: "CA-SFM p110 : ≈ 99 % des souches de M. catarrhalis produisent une β-lactamase, et le comité ne chiffre pas les pénicillines. Pour les rendre sensibles il faut DEUX conditions : un test chromogénique négatif ET une amoxicilline-acide clavulanique sensible. Sans cela, la catégorie affichée est celle de la paillasse, pas celle du référentiel." });
+    }
   }
 
   // p. 11 — S. saprophyticus : le dépistage à l'ampicilline ne suffit pas.
@@ -2168,6 +2179,25 @@ function finalize(A, r) {
       A.alerts.push({ lvl: "info",
         txt: tr(`${nomAbx(d.abx)} : ${d.valeur} mm non catégorisé — ${d.raison}.`,
                 `${nomAbx(d.abx)}: ${d.valeur} mm not categorised — ${d.raison}.`) });
+    });
+  }
+
+  /* Moraxella : ce qui a été décidé sur les pénicillines. Quand le
+     laboratoire avait lu une catégorie, on la conserve À CÔTÉ de celle qui
+     est rendue — même exigence que la lecture interprétative : on ne contredit
+     jamais la paillasse en silence. */
+  if (_moraxella.length) {
+    A.moraxella = _moraxella.slice();
+    _moraxella.forEach(d => {
+      if (d.brut && d.brut !== d.cat) {
+        A.rendu = A.rendu || [];
+        if (!A.rendu.some(x => x.abx === d.abx))
+          A.rendu.push({ abx: d.abx, brut: d.brut, rendu: d.cat, motif: d.motif });
+      } else {
+        A.rules.push({ k: d.cat === "R" ? "→R" : "✚",
+          txt: tr(`${nomAbx(d.abx)} rendue « ${d.cat} » : ${d.motif}`,
+                  `${nomAbx(d.abx)} reported \u0022${d.cat}\u0022: ${d.motif}`) });
+      }
     });
   }
 
@@ -5129,8 +5159,100 @@ const CAT_DEDUITE = {
 // Les reprises effectivement faites, pour que le compte rendu les dise.
 let _deduites = [];
 
+/* ------------------------------------------------------------
+   LES PÉNICILLINES DE MORAXELLA CATARRHALIS
+
+   AUCUN DES DEUX COMITÉS NE LES CHIFFRE, et aucun des deux ne se tait pour
+   autant : les deux prescrivent une CONDUITE, et ce ne sont pas les mêmes.
+
+   EUCAST v16.1, feuille M.catarrhalis — pénicilline G, ampicilline et
+   amoxicilline portent « – » dans les quatre colonnes. Le classeur définit
+   ce tiret : « the agent is unsuitable for treatment… testing and clinical
+   use should be avoided. IF INCLUDED, REPORT RESISTANT WITHOUT PRIOR
+   TESTING. » Sa note ajoute : « Beta-lactamase producers should be reported
+   resistant to penicillins and aminopenicillins without inhibitors. »
+
+   CA-SFM 2026, p110, note 1/A — l'amoxicilline porte « Note », et :
+
+     « La très grande majorité (≈ 99 %) des souches de M. catarrhalis
+       produisent une β-lactamase. La détection […] peut être détectée par
+       une technique chromogénique, mais sa production à bas niveau peut
+       entraîner des résultats faiblement positifs. Les souches productrices
+       de β-lactamase doivent être catégorisées « résistantes » aux
+       pénicillines (sans inhibiteurs de β-lactamase). Les souches NON
+       productrices de β-lactamase, SENSIBLES À L'AMOXICILLINE-ACIDE
+       CLAVULANIQUE, doivent être catégorisées « sensibles » aux pénicillines. »
+
+   Les deux conditions du CA-SFM comptent, et la seconde se perd facilement :
+   un test à la β-lactamase négatif NE SUFFIT PAS, il faut aussi que
+   l'amoxicilline-acide clavulanique soit sensible. Le comité le dit parce
+   que son propre test peut être faiblement positif — l'enzyme est produite
+   lentement — et que l'association sert alors de contrôle.
+
+   PhénoBac appliquait avant cela amoxicilline 2/2, ampicilline 1/1 et
+   pénicilline G 0,06/0,25, chiffres sans source dans l'un ou l'autre
+   document. Une souche de cette espèce, dont 99 % produisent l'enzyme,
+   pouvait sortir « amoxicilline sensible ».
+   ------------------------------------------------------------ */
+const PENI_MORAXELLA = ["PEN", "AMP", "AMX"];
+// Ce qui a été décidé pour ces molécules, pour que le compte rendu le dise.
+let _moraxella = [];
+
 const OXA_PNEUMO = 20;
 const BETALACT_PNEUMO = ["PEN", "AMX", "CTX"];
+
+/* La conduite des deux comités sur les pénicillines de Moraxella.
+
+   Appelée AVANT le moteur d'espèce, comme le dépistage du pneumocoque : la
+   catégorie doit être posée avant qu'on raisonne sur le phénotype. Ce qui
+   est décidé est enregistré dans _moraxella, et finalize() en fait des
+   lignes de compte rendu — une catégorie qui ne vient pas d'une mesure est
+   une conclusion, et le biologiste doit pouvoir la refaire. */
+function penicillinesMoraxella(group, results, ctx, posee) {
+  _moraxella = [];
+  if (group !== "moraxella") return;
+  const blac = (ctx && ctx.blac) || null;
+  const amc = results.AMC;
+
+  PENI_MORAXELLA.forEach(k => {
+    if (!posee(k)) return;                       // molécule non testée : on se tait
+    const brut = results[k];
+    let cat = null, motif = null;
+
+    if (!estCasfm()) {
+      /* L'EUCAST ne laisse pas le choix : « report resistant without prior
+         testing ». Il n'y a pas de condition à vérifier, et c'est tout
+         l'intérêt du tiret. */
+      cat = "R";
+      motif = tr("EUCAST : « – » pour ce couple — molécule inadaptée au traitement, "
+               + "à rendre résistante sans test préalable (99 % des souches produisent "
+               + "une β-lactamase).",
+                 "EUCAST: \u0022–\u0022 for this pair — the agent is unsuitable for treatment "
+               + "and is reported resistant without prior testing (99 % of isolates "
+               + "produce a beta-lactamase).");
+    } else if (blac === "Positif") {
+      cat = "R";
+      motif = tr("CA-SFM p110 : souche productrice de β-lactamase — résistante aux "
+               + "pénicillines sans inhibiteur.",
+                 "CA-SFM p110: a beta-lactamase producer — resistant to penicillins "
+               + "without an inhibitor.");
+    } else if (blac === "Négatif" && amc === "S") {
+      /* LES DEUX CONDITIONS, ET PAS UNE. Le test seul ne suffit pas : le
+         comité exige aussi que l'association soit sensible, parce que son
+         propre test peut être faiblement positif. */
+      cat = "S";
+      motif = tr("CA-SFM p110 : souche non productrice de β-lactamase ET sensible à "
+               + "l'amoxicilline-acide clavulanique — catégorisée sensible aux pénicillines.",
+                 "CA-SFM p110: not a beta-lactamase producer AND susceptible to "
+               + "amoxicillin-clavulanic acid — reported susceptible to penicillins.");
+    } else {
+      return;                                    // rien de tranché : voir l'alerte
+    }
+
+    results[k] = cat;
+    _moraxella.push({ abx: k, brut: brut, cat: cat, motif: motif });
+  });
+}
 
 // Renvoie ses messages au lieu de les poser : le dépistage doit remplir les
 // catégories AVANT que le moteur ne raisonne sur le phénotype, alors que les
@@ -5276,7 +5398,20 @@ function runInterpretation(input) {
     // reconnaissance du phénotype a besoin.
     _depistage = depistagePneumo(org.bpGroup, dia, results);
   } else {
-    results = input.results || {};
+    /* UNE COPIE, ET NON L'OBJET DE L'APPELANT.
+       Tant que le mode S/I/R se contentait de LIRE, partager l'objet était
+       sans conséquence. Depuis que des règles y ÉCRIVENT — la conduite des
+       pénicillines de Moraxella, la reprise de catégorie des streptocoques —,
+       le partage réécrivait la saisie du client : deux interprétations du
+       même antibiogramme ne rendaient pas la même chose, la seconde partant
+       du résultat modifié par la première.
+
+       Trois bancs l'ont dit le même jour, chacun à sa façon : essai-voies
+       voyait « l'interprétation diffère » là où rien n'avait changé,
+       essai-contexte accusait deux questions de contexte d'être du code
+       mort, essai-regles tombait sur un libellé. Aucun ne cherchait cela —
+       c'est bien pour cette raison qu'ils l'ont trouvé. */
+    results = Object.assign({}, input.results || {});
   }
 
   /* LA REPRISE SE FAIT ICI : après la traduction des mesures — il faut que
@@ -5286,6 +5421,21 @@ function runInterpretation(input) {
      Elle n'écrase jamais une catégorie déjà rendue par un seuil : si un
      jour le document chiffre l'amoxicilline de ces groupes, la ligne de la
      base l'emportera et la reprise se taira d'elle-même. */
+  /* « posée » : la molécule a-t-elle été saisie ou mesurée ? Les deux règles
+     ci-dessous s'en servent — on ne conclut jamais sur un antibiotique que
+     le laboratoire n'a pas posé sur la boîte. */
+  const posee = function (k) {
+    if (input.mode === "mic")
+      return !!(input.mic && input.mic[k] !== undefined && String(input.mic[k]).trim() !== "");
+    if (input.mode === "diam")
+      return !!(input.diam && input.diam[k] !== undefined && String(input.diam[k]).trim() !== "");
+    return !!(input.results && input.results[k]);
+  };
+
+  // Moraxella : la conduite des deux comités sur les pénicillines, qu'aucun
+  // des deux ne chiffre. Avant la reprise de catégorie et avant le moteur.
+  penicillinesMoraxella(org.bpGroup, results, input.ctx || {}, posee);
+
   _deduites = [];
   const deduit = CAT_DEDUITE[org.bpGroup];
   if (deduit) {
@@ -5297,12 +5447,7 @@ function runInterpretation(input) {
       // On ne déduit que si la molécule a été TESTÉE : déduire pour une
       // molécule que le laboratoire n'a pas posée sur la boîte remplirait le
       // compte rendu d'antibiotiques dont personne n'a parlé.
-      const posee = (input.mode === "mic" && input.mic && input.mic[k] !== undefined
-                       && String(input.mic[k]).trim() !== "")
-                 || (input.mode === "diam" && input.diam && input.diam[k] !== undefined
-                       && String(input.diam[k]).trim() !== "")
-                 || (input.mode === "sir" && input.results && input.results[k]);
-      if (!posee) return;
+      if (!posee(k)) return;
       results[k] = c;
       _deduites.push({ abx: k, source: source, cat: c });
     });
