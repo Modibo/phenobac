@@ -460,6 +460,87 @@ dire("\nLa restriction d'espèce porte sur une méthode, et l'oubli doit lever")
         "… et le 20/14 du méropénème vaut toujours pour P. aeruginosa");
 })();
 
+/* ---------- 11. LA CATÉGORIE REPRISE D'UN AUTRE AGENT ----------
+
+   LE DÉFAUT CORRIGÉ LE 2026-11-01, trouvé par comparer-eucast.py --notes.
+
+   Feuille « Streptococcus A,B,C,G » du classeur v16.1 : l'amoxicilline et la
+   céfotaxime portent « Note / Note » — aucun chiffre. PhénoBac appliquait
+   pourtant 0,5 / 2 aux deux, c'est-à-dire, mot pour mot, la ligne
+   « Cefotaxime (indications other than endocarditis and meningitis) » de la
+   feuille S. PNEUMONIAE. Une valeur juste pour une espèce, appliquée à sa
+   voisine — et marquée « convention de laboratoire », ce qui était honnête
+   sur l'absence de seuil et muet sur la provenance du chiffre.
+
+   Ce que le document dit à la place :
+
+     « The susceptibility of streptococcus groups A, B, C and G to
+       penicillins / cephalosporins / carbapenems is inferred from the
+       benzylpenicillin susceptibility. »
+
+   La catégorie ne se calcule pas : elle se REPREND. */
+dire("\nLa catégorie que le document fait reprendre à un autre agent");
+(function () {
+  function m(org, mic, ref) {
+    return E.runInterpretation({ organism: org, ref: ref || "eucast", mode: "mic",
+                                 mic: mic, ctx: {} });
+  }
+  /* 1. Les quatre lignes empruntées ont disparu de la base. */
+  verif(!(E.BP.strepacg && E.BP.strepacg.AMX) && !(E.BP.strepacg && E.BP.strepacg.CTX),
+        "streptocoques A/C/G : plus de seuil propre pour l'amoxicilline ni la céfotaxime");
+  verif(!(E.BP.strepb && E.BP.strepb.AMX) && !(E.BP.strepb && E.BP.strepb.CTX),
+        "streptocoques B : idem");
+  /* Et la pénicilline G, elle, garde le sien — sinon il n'y aurait plus rien
+     à reprendre, et le banc comparerait deux silences. */
+  verif(E.BP.strepacg.PEN && E.BP.strepacg.PEN.S === 0.03,
+        "… tandis que la pénicilline G garde le sien (0,03 pour A/C/G)");
+  verif(E.BP.strepb.PEN && E.BP.strepb.PEN.S === 0.125,
+        "… et 0,125 pour le groupe B, qui n'est pas le même chiffre");
+
+  /* 2. La reprise se fait, dans les deux sens et sous les deux référentiels. */
+  ["eucast", "casfm"].forEach(function (ref) {
+    var s = m("spyogenes", { PEN: "0.016", AMX: "1", CTX: "1" }, ref).categories;
+    verif(s.AMX === "S" && s.CTX === "S",
+          ref + " : pénicilline G sensible → amoxicilline et céfotaxime sensibles");
+    var r = m("sagalactiae", { PEN: "0.5", AMX: "0.25" }, ref).categories;
+    verif(r.PEN === "R" && r.AMX === "R",
+          ref + " : pénicilline G résistante → amoxicilline résistante, "
+          + "même avec une CMI basse — c'est le sens de « inferred from »");
+  });
+
+  /* 3. ELLE SE DIT. Une catégorie qui ne vient pas d'une mesure est une
+     conclusion : le compte rendu doit permettre de la refaire. */
+  var a = m("spyogenes", { PEN: "0.016", AMX: "1" }).interpretation;
+  verif((a.deduites || []).length === 1 && a.deduites[0].source === "PEN",
+        "… et la reprise est enregistrée, avec l'agent dont elle vient");
+  verif((a.rules || []).some(function (x) { return /reprise de/.test(x.txt); }),
+        "… et dite au compte rendu");
+
+  /* 4. ON NE DÉDUIT PAS POUR UNE MOLÉCULE QUE PERSONNE N'A POSÉE. */
+  var seul = m("spyogenes", { PEN: "0.016" }).categories;
+  verif(seul.AMX === undefined && seul.CTX === undefined,
+        "une molécule non testée ne reçoit pas de catégorie déduite : le compte "
+        + "rendu ne parle pas d'antibiotiques qu'on n'a pas posés");
+
+  /* 5. SANS SOURCE, PAS DE REPRISE. */
+  verif(m("spyogenes", { AMX: "1" }).categories.AMX === undefined,
+        "amoxicilline seule, sans pénicilline G : aucune catégorie — il n'y a "
+        + "rien à reprendre, et l'application ne l'invente pas");
+
+  /* 6. LE DÉSACCORD SAISI SE DIT, SANS ÊTRE RÉÉCRIT. On ne réécrit pas la
+     paillasse en silence ; on signale que le document ne sépare pas les deux. */
+  var d = E.runInterpretation({ organism: "spyogenes", ref: "eucast", mode: "sir",
+                                results: { PEN: "S", AMX: "R" }, ctx: {} });
+  verif(d.categories.AMX === "R",
+        "une catégorie saisie n'est pas réécrite par la reprise");
+  verif((d.interpretation.alerts || []).some(function (x) { return /déduit sa catégorie/.test(x.txt); }),
+        "… mais le désaccord avec la pénicilline G est signalé");
+  var ok = E.runInterpretation({ organism: "spyogenes", ref: "eucast", mode: "sir",
+                                 results: { PEN: "S", AMX: "S" }, ctx: {} });
+  verif(!(ok.interpretation.alerts || []).some(function (x) { return /déduit sa catégorie/.test(x.txt); }),
+        "… et rien n'est dit quand les deux concordent");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : une mesure ne devient une catégorie que"
                     + " lorsqu'elle la détermine."));

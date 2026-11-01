@@ -1063,6 +1063,31 @@ function seuilEcoff(group, k) { return !!ECOFF[group + ":" + k]; }
 function coherence(A, r, org, c) {
   const ajoute = (lvl, txt) => A.alerts.push({ lvl: lvl, txt: txt });
 
+  /* --- 0 ter. Une catégorie SAISIE qui contredit celle dont le document la
+     fait déduire.
+
+     Chez les streptocoques A, B, C et G, l'EUCAST déduit la sensibilité des
+     pénicillines, céphalosporines et carbapénèmes de celle de la pénicilline
+     G. Quand le laboratoire a saisi les deux en S/I/R, PhénoBac garde ce
+     qu'il a saisi — on ne réécrit pas la paillasse en silence — mais il doit
+     DIRE que le document ne les sépare pas. Taire le désaccord laisserait
+     rendre un compte rendu que le référentiel contredit, sans que personne
+     ne l'ait décidé. */
+  if (org && org.bpGroup && CAT_DEDUITE[org.bpGroup]) {
+    const t = CAT_DEDUITE[org.bpGroup];
+    Object.keys(t).forEach(function (k) {
+      const source = t[k];
+      if (!r[k] || !r[source] || r[k] === r[source]) return;
+      ajoute("warn", tr(
+        `${nomAbx(k)} rendue « ${r[k]} » alors que ${nomAbx(source)} est « ${r[source]} ». `
+        + `L'EUCAST ne chiffre pas ${nomAbx(k)} pour ce groupe : il déduit sa catégorie de `
+        + `celle de ${nomAbx(source)}, et les deux ne devraient donc pas différer. Vérifier la saisie.`,
+        `${nomAbx(k)} reported "${r[k]}" while ${nomAbx(source)} is "${r[source]}". `
+        + `EUCAST gives no breakpoint for ${nomAbx(k)} in this group: it infers the category from `
+        + `${nomAbx(source)}, so the two should not differ. Check the data entry.`));
+    });
+  }
+
   /* --- 0 bis. Les seuils fondés sur l'ECOFF ---
      La parenthèse est celle de l'EUCAST. Sous CA-SFM, c'est le seuil français
      qui s'applique, et le comité y a ses propres choix : joindre la réserve de
@@ -2143,6 +2168,23 @@ function finalize(A, r) {
       A.alerts.push({ lvl: "info",
         txt: tr(`${nomAbx(d.abx)} : ${d.valeur} mm non catégorisé — ${d.raison}.`,
                 `${nomAbx(d.abx)}: ${d.valeur} mm not categorised — ${d.raison}.`) });
+    });
+  }
+
+  /* Les catégories reprises d'un autre agent. Le compte rendu doit le DIRE :
+     un « sensible » qui ne vient pas d'une mesure est une conclusion, et le
+     biologiste doit pouvoir la refaire. C'est la même exigence que pour la
+     lecture interprétative, dans l'autre sens. */
+  if (_deduites.length) {
+    A.deduites = _deduites.slice();
+    _deduites.forEach(d => {
+      A.rules.push({ k: "=", txt: tr(
+        `${nomAbx(d.abx)} : catégorie reprise de ${nomAbx(d.source)} (${d.cat}). `
+        + `L'EUCAST ne chiffre pas ce couple et prescrit de déduire la sensibilité `
+        + `des pénicillines, céphalosporines et carbapénèmes de celle de la pénicilline G.`,
+        `${nomAbx(d.abx)}: category taken from ${nomAbx(d.source)} (${d.cat}). `
+        + `EUCAST gives no breakpoint for this pair and directs that susceptibility to `
+        + `penicillins, cephalosporins and carbapenems be inferred from benzylpenicillin.`) });
     });
   }
 
@@ -5052,6 +5094,41 @@ function raisonSansDisque(group, k, ctx) {
    surtout pas « résistant » — un dépistage positif signale une PLP modifiée,
    pas une résistance clinique, et beaucoup de ces souches restent traitables
    à forte posologie. */
+/* ------------------------------------------------------------
+   LES CATÉGORIES QUE LE DOCUMENT FAIT DÉDUIRE D'UN AUTRE AGENT
+
+   L'EUCAST ne chiffre pas tout : pour certains couples il écrit « Note » et
+   dit, dans cette note, DE QUELLE AUTRE MOLÉCULE la catégorie se reprend.
+   Feuille « Streptococcus A,B,C,G », v16.1 :
+
+     « The susceptibility of streptococcus groups A, B, C and G to
+       penicillins is inferred from the benzylpenicillin susceptibility […].
+       The susceptibility […] to cephalosporins is inferred from the
+       benzylpenicillin susceptibility. […] to carbapenems is inferred from
+       the benzylpenicillin susceptibility. »
+
+   PhénoBac appliquait à la place 0,5 / 2 à l'amoxicilline et à la
+   céfotaxime de ces groupes — la ligne du PNEUMOCOQUE, empruntée à une
+   autre feuille et marquée « convention de laboratoire ». La convention
+   disait vrai sur l'absence de seuil EUCAST et taisait la provenance du
+   chiffre.
+
+   CE N'EST PAS UN SEUIL, C'EST UNE REPRISE. La catégorie de l'amoxicilline
+   EST celle de la pénicilline G ; il n'y a rien à calculer. D'où une table
+   à part, et non une ligne de plus dans la base : écrire une déduction
+   comme un seuil reconduirait exactement le défaut qu'on corrige.
+
+   La reprise vaut sous les DEUX référentiels : le CA-SFM écrit lui aussi
+   « Note » en face de l'amoxicilline des groupes A, B, C et G, et son delta
+   ne porte rien pour ces couples.
+   ------------------------------------------------------------ */
+const CAT_DEDUITE = {
+  strepacg: { AMX: "PEN", CTX: "PEN" },
+  strepb:   { AMX: "PEN", CTX: "PEN" }
+};
+// Les reprises effectivement faites, pour que le compte rendu les dise.
+let _deduites = [];
+
 const OXA_PNEUMO = 20;
 const BETALACT_PNEUMO = ["PEN", "AMX", "CTX"];
 
@@ -5200,6 +5277,35 @@ function runInterpretation(input) {
     _depistage = depistagePneumo(org.bpGroup, dia, results);
   } else {
     results = input.results || {};
+  }
+
+  /* LA REPRISE SE FAIT ICI : après la traduction des mesures — il faut que
+     la pénicilline G ait sa catégorie — et AVANT le moteur d'espèce, qui
+     raisonne sur les catégories.
+
+     Elle n'écrase jamais une catégorie déjà rendue par un seuil : si un
+     jour le document chiffre l'amoxicilline de ces groupes, la ligne de la
+     base l'emportera et la reprise se taira d'elle-même. */
+  _deduites = [];
+  const deduit = CAT_DEDUITE[org.bpGroup];
+  if (deduit) {
+    Object.keys(deduit).forEach(k => {
+      const source = deduit[k];
+      if (results[k] !== undefined) return;        // déjà catégorisé : on ne touche pas
+      const c = results[source];
+      if (c !== "S" && c !== "I" && c !== "R") return;
+      // On ne déduit que si la molécule a été TESTÉE : déduire pour une
+      // molécule que le laboratoire n'a pas posée sur la boîte remplirait le
+      // compte rendu d'antibiotiques dont personne n'a parlé.
+      const posee = (input.mode === "mic" && input.mic && input.mic[k] !== undefined
+                       && String(input.mic[k]).trim() !== "")
+                 || (input.mode === "diam" && input.diam && input.diam[k] !== undefined
+                       && String(input.diam[k]).trim() !== "")
+                 || (input.mode === "sir" && input.results && input.results[k]);
+      if (!posee) return;
+      results[k] = c;
+      _deduites.push({ abx: k, source: source, cat: c });
+    });
   }
 
   _activeOrg = org; _activeId = organism;      // fixés juste avant le calcul (synchrone)

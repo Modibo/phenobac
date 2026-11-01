@@ -27,10 +27,11 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : a3542a751df1ddeb3f283fe7f2c7ab83d93ee1dff1df16bfc20341873b83d957
-- **date** : **2026-11-01, le classeur en main, deuxième passage** (sha256 `5de6f4a097f7f655…`)
+- **empreinte** : 8fd4a3cbef6720fee0967d1f04bb823c776fe0155a58751ff13855bc1ff5be10
+- **date** : **2026-11-01, le classeur en main, troisième passage** (sha256 `5de6f4a097f7f655…`)
 - **résultat** : **517 seuils confrontés — 517 identiques, 0 différent**,
-  0 drapeau incohérent, 0 à arbitrer, 91 non comparés. Diamètres :
+  0 drapeau incohérent, 0 à arbitrer, **87** non comparés (91 au passage
+  précédent : les quatre lignes empruntées au pneumocoque ont été retirées). Diamètres :
   **445 identiques, 0 différent, 0 à arbitrer, 0 non comparé** — la colonne
   « à arbitrer » est vide pour la première fois. Méningé : **24 identiques,
   0 différent**.
@@ -407,7 +408,7 @@ Sans rien conclure, voici ce qui saute aux yeux et demande un arbitrage :
 | streptocoques viridans · linézolide | 2 / 2 | « When excluded, the isolate should be reported "devoid of linezolid resistance mechanisms", **but not as susceptible to linezolid**. » |
 | *Moraxella* · ampicilline, amoxicilline | 1/1 et 2/2 | la cellule porte « **–** », que l'EUCAST définit comme « the agent is unsuitable… If included, **report resistant without prior testing** ». Le document des différences, p15, le confirme. |
 | *Haemophilus* · azithromycine | 0,25 / 0,5 | la note ne donne que l'**ECOFF**, 4 mg/L. D'où viennent 0,25 et 0,5 ? |
-| streptocoques A/C/G et B · amoxicilline, céfotaxime | 0,5 / 2 | **aucune note ne nomme ces agents**. Ces valeurs sont celles du chapitre *S. pneumoniae* — à vérifier, c'est la confusion de chapitre déjà rencontrée le 2026-10-31. |
+| streptocoques A/C/G et B · amoxicilline, céfotaxime | 0,5 / 2 | **aucune note ne nomme ces agents**. Ces valeurs sont celles du chapitre *S. pneumoniae* — **vérifié et corrigé le 2026-11-01, voir ci-dessous.** |
 | *Enterobacterales* · azithromycine | 16 / 16 | **confirmé** : « isolates with MICs above **16 mg/L** … are likely to have azithromycin resistance mechanisms ». |
 
 Les quatre premiers cas sont des **dérivations** : le document ne donne pas de
@@ -419,6 +420,60 @@ demande donc d'étendre le mécanisme, pas seulement d'écrire une ligne.
 **Aucun de ces huit points n'a été porté dans le code.** Changer un seuil — et
 plus encore rendre « résistant sans test » — est une décision de biologiste.
 L'outil montre, il ne tranche pas.
+
+## L'amoxicilline et la céfotaxime des streptocoques bêta-hémolytiques
+
+**Elles portaient les valeurs du pneumocoque.** Corrigé le 2026-11-01, premier
+résultat de `--notes`.
+
+Feuille « Streptococcus A,B,C,G » du classeur v16.1 : *Amoxicillin* et
+*Cefotaxime* portent **« Note / Note »** — aucun chiffre. PhénoBac appliquait
+pourtant **0,5 / 2** aux deux, pour les groupes A/C/G **et** B — et 0,5 / 2
+est, mot pour mot, la ligne « Cefotaxime (indications other than endocarditis
+and meningitis) » de la feuille ***S. pneumoniae***. Les deux lignes portaient
+le drapeau « convention de laboratoire » : honnête sur l'absence de seuil
+EUCAST, muet sur la provenance du chiffre. C'est la **confusion de chapitre**
+déjà rencontrée le 2026-10-31 avec les voies d'administration — une valeur
+juste pour une espèce, appliquée à sa voisine.
+
+### Ce que le document dit à la place
+
+> « The susceptibility of streptococcus groups A, B, C and G **to penicillins
+> is inferred from the benzylpenicillin susceptibility** […]. The
+> susceptibility […] **to cephalosporins is inferred from the benzylpenicillin
+> susceptibility**. […] **to carbapenems is inferred from the benzylpenicillin
+> susceptibility**. »
+
+La catégorie **ne se calcule pas : elle se reprend.** Les quatre lignes sont
+retirées de la base et le moteur porte une table `CAT_DEDUITE` — une déduction
+n'est pas un seuil, et l'écrire comme un seuil reconduirait le défaut qu'on
+corrige.
+
+| | avant | après |
+|---|---|---|
+| pénicilline G sensible, amoxicilline CMI 1 | « I » (0,5 / 2) | **S**, reprise de la pénicilline G |
+| pénicilline G résistante, amoxicilline CMI 0,25 | « S » | **R**, reprise de la pénicilline G |
+| amoxicilline seule, sans pénicilline G | « I » | **aucune catégorie** — il n'y a rien à reprendre |
+
+Le second cas est celui qui comptait : une souche résistante à la pénicilline G
+sortait « amoxicilline sensible » sur un chiffre emprunté à une autre espèce.
+
+### Trois garde-fous
+
+- **La reprise se dit.** Une catégorie qui ne vient pas d'une mesure est une
+  conclusion : le compte rendu nomme l'agent dont elle est tirée. Même exigence
+  que pour la lecture interprétative, dans l'autre sens.
+- **On ne déduit pas pour une molécule que personne n'a posée.** Sinon le
+  compte rendu parlerait d'antibiotiques dont le laboratoire n'a pas parlé.
+- **Une catégorie SAISIE n'est pas réécrite.** Si le laboratoire entre
+  « pénicilline G S » et « amoxicilline R », PhénoBac garde les deux — on ne
+  réécrit pas la paillasse en silence — et signale que le document ne les
+  sépare pas. Taire le désaccord laisserait rendre un compte rendu que le
+  référentiel contredit, sans que personne ne l'ait décidé.
+
+Quinze contrôles au banc (`essai-categorisation.js`, section 11), sous les deux
+référentiels : le CA-SFM écrit lui aussi « Note » en face de l'amoxicilline de
+ces groupes, et son delta ne porte rien.
 
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
@@ -725,7 +780,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 2218bc0fc71dd1ef9ac66d3bc94d3ca4341088c1ae79deafac6bb3c7e3df6318
+- **empreinte** : bc35a70a9345120d66efe0b24b96733ebe0878c9deab71e2a61694a087d7ed17
 - **date** : **2026-11-01, le classeur en main** — 409 règles attendues sur 22 tables, **0 manque, 0 excédent**
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et

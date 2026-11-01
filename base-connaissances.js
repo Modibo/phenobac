@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.35";
+const BASE_VERSION = "2026.36";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -1783,8 +1783,37 @@ const REGLES = [
 ["eucast","steno","SXT","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","steno","SXT","disque","standard",null,16,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","steno","TZP","cmi","standard",16,16,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","strepacg","AMX","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","strepacg","CTX","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
+/* L'AMOXICILLINE ET LA CÉFOTAXIME DES STREPTOCOQUES BÊTA-HÉMOLYTIQUES
+   PORTAIENT LES VALEURS DU PNEUMOCOQUE. Retirées le 2026-11-01.
+
+   Trouvé par comparer-eucast.py --notes, qui lit enfin ce que le classeur
+   met en note. Feuille « Streptococcus A,B,C,G » :
+
+       Amoxicillin    Note / Note
+       Cefotaxime     Note / Note
+
+   AUCUN chiffre. PhénoBac appliquait pourtant 0,5 / 2 aux deux — et 0,5 / 2
+   est, mot pour mot, la ligne « Cefotaxime (indications other than
+   endocarditis and meningitis) » de la feuille S. PNEUMONIAE. Les deux
+   lignes étaient marquées « convention de laboratoire », ce qui était
+   honnête sur l'absence de seuil EUCAST et muet sur la provenance du
+   chiffre. C'est la confusion de chapitre déjà rencontrée le 2026-10-31
+   avec les voies d'administration : une valeur juste pour une espèce,
+   appliquée à sa voisine.
+
+   CE QUE LE DOCUMENT DIT À LA PLACE, et qui vaut mieux qu'un chiffre :
+
+     « The susceptibility of streptococcus groups A, B, C and G to
+       penicillins is inferred from the benzylpenicillin susceptibility,
+       with the exception of phenoxymethylpenicillin and isoxazolylpenicillins
+       for streptococcus group B […]. The susceptibility […] to cephalosporins
+       is inferred from the benzylpenicillin susceptibility. […] to
+       carbapenems is inferred from the benzylpenicillin susceptibility. »
+
+   La catégorie ne se calcule donc pas : elle se REPREND à la pénicilline G.
+   C'est porté dans le moteur, table CAT_DEDUITE, et non ici — une déduction
+   n'est pas un seuil, et l'écrire comme un seuil serait reconduire le
+   défaut qu'on corrige.  */
 ["eucast","strepacg","DA","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","strepacg","DA","disque","standard",17,17,"2",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","strepacg","E","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -1802,8 +1831,6 @@ const REGLES = [
 ["eucast","strepacg","TEC","disque","standard",15,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","strepacg","VA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","strepacg","VA","disque","standard",13,13,"5",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","strepb","AMX","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","strepb","CTX","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","strepb","DA","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","strepb","DA","disque","standard",17,17,"2",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","strepb","E","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
