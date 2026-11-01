@@ -1841,6 +1841,8 @@ const ABX = {
   CIP:{n:"Ciprofloxacine",code:"CIP"},
   GEN:{n:"Gentamicine",code:"GEN"},
   AMK:{n:"Amikacine",code:"AMK"},
+  TOB:{n:"Tobramycine",code:"TOB"},
+  KAN:{n:"Kanamycine",code:"KAN"},
   SXT:{n:"Cotrimoxazole",code:"SXT"},
   FOS:{n:"Fosfomycine",code:"FOS"},
   COL:{n:"Colistine",code:"COL"},
@@ -2120,7 +2122,7 @@ const PRESENTATION = {
     panel:[
       {t:"Détection SARM",abx:["FOX"]},
       {t:"β-lactamines / MLS",abx:["PEN","E","DA"]},
-      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","AZM","VA","TEC","DAP","LZD","RD","SXT","TMP","TET","DOX","MIN"]}
+      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","TOB","AZM","VA","TEC","DAP","LZD","RD","SXT","TMP","TET","DOX","MIN"]}
     ],
     
     ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
@@ -2132,7 +2134,7 @@ const PRESENTATION = {
     panel:[
       {t:"Détection méti-R",abx:["FOX","OXA"]},
       {t:"β-lactamines / MLS",abx:["PEN","E","DA"]},
-      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","AZM","VA","TEC","LZD","RD","SXT","TMP","NIT","TET","DOX","MIN"]}
+      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","TOB","AZM","VA","TEC","LZD","RD","SXT","TMP","NIT","TET","DOX","MIN"]}
     ],
     
     ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
@@ -2144,7 +2146,7 @@ const PRESENTATION = {
     panel:[
       {t:"Détection méti-R",abx:["FOX","OXA"]},
       {t:"β-lactamines / MLS",abx:["PEN","E","DA"]},
-      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","AZM","VA","TEC","LZD","RD","SXT","TMP","NIT","TET","DOX","MIN"]}
+      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","TOB","AZM","VA","TEC","LZD","RD","SXT","TMP","NIT","TET","DOX","MIN"]}
     ],
     
     ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
@@ -2156,7 +2158,7 @@ const PRESENTATION = {
     panel:[
       {t:"Détection méti-R",abx:["FOX","OXA"]},
       {t:"β-lactamines / MLS",abx:["PEN","E","DA"]},
-      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","AZM","VA","TEC","LZD","RD","SXT","TMP","NIT","TET","DOX","MIN"]}
+      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","TOB","AZM","VA","TEC","LZD","RD","SXT","TMP","NIT","TET","DOX","MIN"]}
     ],
     
     ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
@@ -2168,7 +2170,7 @@ const PRESENTATION = {
     panel:[
       {t:"Détection méti-R",abx:["FOX","OXA"]},
       {t:"β-lactamines / MLS",abx:["PEN","E","DA"]},
-      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","AZM","VA","TEC","LZD","RD","SXT","TMP","NIT","TET","DOX","MIN"]}
+      {t:"Autres familles",abx:["CIP","LVX","MXF","GEN","AMK","TOB","AZM","VA","TEC","LZD","RD","SXT","TMP","NIT","TET","DOX","MIN"]}
     ],
     
     ctx:[{id:"dtest",q:"D-test (antagonisme érythromycine → clindamycine) ?",
@@ -2962,7 +2964,20 @@ function libelleHors(){ return "hors " + referentiel().nom; }
 
 /* Molécules que le CA-SFM ajoute au panel d'une espèce. */
 const CASFM_PANEL = {
-  ngonorrhoeae: { t: "Ajout CA-SFM", abx: ["GEN"] }
+  ngonorrhoeae: { t: "Ajout CA-SFM", abx: ["GEN"] },
+  /* LA KANAMYCINE N'EXISTE QUE SOUS CA-SFM. L'EUCAST l'a retirée de ses
+     tableaux en v14.0 (2024) ; le CA-SFM la conserve « en précisant bien
+     qu'il s'agit d'un test de dépistage permettant de rendre l'amikacine »,
+     le dépistage de la résistance à l'amikacine étant plus performant par la
+     kanamycine (différences CA-SFM/EUCAST 2026, p11). Sa place est donc ici,
+     et non dans le panel commun : en mode EUCAST elle n'aurait aucun seuil,
+     et proposer une saisie qu'on ne sait pas catégoriser est une fausse
+     promesse. */
+  saureus:        { t: "Ajout CA-SFM", abx: ["KAN"] },
+  sepidermidis:   { t: "Ajout CA-SFM", abx: ["KAN"] },
+  ssaprophyticus: { t: "Ajout CA-SFM", abx: ["KAN"] },
+  slugdunensis:   { t: "Ajout CA-SFM", abx: ["KAN"] },
+  shaemolyticus:  { t: "Ajout CA-SFM", abx: ["KAN"] }
 };
 
 /* ============================================================

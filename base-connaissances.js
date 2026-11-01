@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.29";
+const BASE_VERSION = "2026.30";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -370,6 +370,8 @@ const REGLES = [
 ["casfm","salmonella","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","disque","standard",null,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","scn","KAN","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","scn","KAN","disque","standard",22,22,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,["ssaprophyticus","slugdunensis"]],
 ["casfm","scn","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -392,6 +394,8 @@ const REGLES = [
 ["casfm","staph","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","disque","standard",null,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","KAN","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","staph","KAN","disque","standard",18,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","NIT","disque","urinaire",13,13,"100",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -960,6 +964,8 @@ const REGLES = [
 ["eucast","scn","TMP","disque","urinaire",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Trimethoprim (uncomplicated UTI only)
 
 // --- serratia (1) ---
+["eucast","scn","TOB","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Tobramycin, Coagulase-negative staphylococci  ⟨valeur entre parenthèses⟩
+["eucast","scn","TOB","disque","standard",20,20,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","serratia","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
 
 // --- staph (9) ---
@@ -974,6 +980,8 @@ const REGLES = [
 ["eucast","staph","TMP","disque","urinaire",19,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Trimethoprim (uncomplicated UTI only)
 
 // --- strepacg (10) ---
+["eucast","staph","TOB","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Tobramycin, S. aureus  ⟨valeur entre parenthèses⟩
+["eucast","staph","TOB","disque","standard",18,18,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["eucast","strepacg","AZM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Azithromycin
 ["eucast","strepacg","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Daptomycin
 ["eucast","strepacg","DOX","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Doxycycline

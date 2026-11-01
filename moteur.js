@@ -66,6 +66,7 @@ const ABXNAME = {
   TZP: "Pipéracilline + tazobactam", FOX: "Céfoxitine", CTX: "Céfotaxime (C3G)",
   CAZ: "Ceftazidime (C3G)", FEP: "Céfépime (C4G)", ETP: "Ertapénème", IPM: "Imipénème",
   MEM: "Méropénème", CIP: "Ciprofloxacine", GEN: "Gentamicine", AMK: "Amikacine",
+  TOB: "Tobramycine", KAN: "Kanamycine",
   SXT: "Cotrimoxazole", FOS: "Fosfomycine", COL: "Colistine", PEN: "Pénicilline G",
   E: "Érythromycine", DA: "Clindamycine", VA: "Vancomycine", TEC: "Teicoplanine",
   RD: "Rifampicine", LZD: "Linézolide", HLG: "Gentamicine haut niveau",
@@ -100,6 +101,7 @@ const ABXNAME_EN = {
   TZP: "Piperacillin-tazobactam", FOX: "Cefoxitin", CTX: "Cefotaxime (3GC)",
   CAZ: "Ceftazidime (3GC)", FEP: "Cefepime (4GC)", ETP: "Ertapenem", IPM: "Imipenem",
   MEM: "Meropenem", CIP: "Ciprofloxacin", GEN: "Gentamicin", AMK: "Amikacin",
+  TOB: "Tobramycin", KAN: "Kanamycin",
   SXT: "Trimethoprim-sulfamethoxazole", FOS: "Fosfomycin", COL: "Colistin",
   PEN: "Benzylpenicillin", E: "Erythromycin", DA: "Clindamycin", VA: "Vancomycin",
   TEC: "Teicoplanin", RD: "Rifampicin", LZD: "Linezolid",
@@ -1779,6 +1781,63 @@ function renduCible(A, r, ctx, org, actif) {
   };
 }
 
+/* ------------------------------------------------------------
+   LE BLOC AMINOSIDES DES STAPHYLOCOQUES — CA-SFM 2026, page 74.
+
+   Le communiqué y donne six lignes et trois notes, et les notes sont des
+   RÈGLES DE RENDU, pas des remarques :
+
+     note 2 : « Les souches résistantes à la gentamicine sont résistantes à
+               TOUS les aminosides. »
+     note 3 : tobramycine, S. aureus — « Interprétation valable pour
+               l'amikacine. »
+     note 4 : tobramycine, SCN — « Les souches résistantes à la tobramycine
+               sont résistantes à la kanamycine et à l'amikacine. »
+
+   AUCUNE DES TROIS N'ÉTAIT APPLIQUÉE, et la première coûtait le plus : un
+   S. aureus gentamicine R dont l'amikacine était lue S sortait « amikacine
+   sensible », sous les deux référentiels. L'aminoside de recours était rendu
+   actif sur une souche que le comité tient pour résistante à tous.
+
+   ON NE DÉDUIT QUE DANS LE SENS « R ». La note 3 dit l'interprétation
+   « valable » dans les deux sens, mais rendre « sensible » une molécule
+   qu'on n'a pas testée serait inventer une catégorie, ce que PhénoBac ne
+   fait jamais. Le sens R est celui que les notes 2 et 4 écrivent
+   explicitement, et c'est le sens qui protège.
+
+   Posé dans finalize(), appelé par TOUTES les branches du moteur staph :
+   la règle ne dépend pas du phénotype reconnu, seulement du résultat de la
+   gentamicine et de la tobramycine. L'accrocher à une branche l'aurait
+   rendue muette dans les autres — le défaut qui a laissé la règle des
+   carbapénémases hors d'atteinte quand les carbapénèmes sortent sensibles.
+   ------------------------------------------------------------ */
+function aminosidesCasfm(A, r, org) {
+  if (!estCasfm()) return;
+  const g = (org && org.bpGroup) || "";
+  if (g !== "staph" && g !== "scn") return;
+
+  if (isR(r.GEN)) {
+    rendreR(A, r, ["KAN", "TOB", "AMK"],
+      tr("Gentamicine résistante — CA-SFM 2026, page 74, note 2.",
+         "Gentamicin resistant — CA-SFM 2026, page 74, note 2."));
+    A.rules.push({ k: "→R", txt: tr(
+      "CA-SFM : une souche résistante à la gentamicine est résistante à TOUS les aminosides.",
+      "CA-SFM: a gentamicin-resistant isolate is resistant to ALL aminoglycosides.") });
+  } else if (isR(r.TOB)) {
+    // La gentamicine prime : si elle est R, tout est déjà rendu R ci-dessus.
+    const vises = (g === "scn") ? ["KAN", "AMK"] : ["AMK"];
+    rendreR(A, r, vises,
+      tr("Tobramycine résistante — CA-SFM 2026, page 74, notes 3 et 4.",
+         "Tobramycin resistant — CA-SFM 2026, page 74, notes 3 and 4."));
+    A.rules.push({ k: "→R", txt: (g === "scn")
+      ? tr("CA-SFM : chez les staphylocoques à coagulase négative, une souche résistante à la tobramycine est résistante à la kanamycine et à l'amikacine.",
+           "CA-SFM: in coagulase-negative staphylococci, a tobramycin-resistant isolate is resistant to kanamycin and amikacin.")
+      : tr("CA-SFM : chez S. aureus, l'interprétation de la tobramycine vaut pour l'amikacine.",
+           "CA-SFM: in S. aureus, the tobramycin result applies to amikacin.") });
+  }
+}
+
+
 function finalize(A, r) {
   const org = _activeOrg;
   if (org && org.intrinsic) {
@@ -1795,6 +1854,7 @@ function finalize(A, r) {
     _depistage.alerts.forEach(x => A.alerts.push(x));
     if (_depistage.sev && A.sev === "wild") A.sev = _depistage.sev;
   }
+  aminosidesCasfm(A, r, org);
   coherence(A, r, org, _ctx);
   // § 9 : les conditions de réalisation déclarées, confrontées au référentiel.
   conditionsTechniques(A, org, _ctx, _mode);

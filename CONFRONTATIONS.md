@@ -27,7 +27,7 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : 39bb978582383749a51dc09be7c2a8cf99e161f9fa36150e1f4cb57efafc652e
+- **empreinte** : 58c872d69fe3030280b51ae799a8afe5126febdcb82772223df773ba61d9c9a1
 - **date** : 2026-10-25, empreinte reprise le 2026-10-31
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : le
   2026-10-31, trois lignes ont été **retirées** de BP —
@@ -303,7 +303,7 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : DZ, DZ_URIN
-- **empreinte** : 728e9d87927ddfd7589fa08d7c7ed5a55650f9b8b9275586c383701e13cda609
+- **empreinte** : e74f66e1c8a3fe9c14da77f5b9d6d85fc0c7a7ea001f72f7f7f3a5fdc278c9dc
 - **date** : 2026-10-25
 - **résultat** : **435** diamètres confrontés — **435 identiques, 0 différent**,
   0 non comparé, 2 à arbitrer (les deux concordent). Dans l'autre sens : aucune
@@ -505,7 +505,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 49702c4f2256e896d9996fa5e7cf5b323872d474dea2afee643d6509f4b13be5
+- **empreinte** : 572b9cbe448773f17d3bec5bf8b40809cbaea276e22c65377e5bf8c8104f28ee
 - **date** : 2026-10-25, empreinte reprise le 2026-10-31
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et
@@ -654,7 +654,7 @@ ensemble, jamais l'un sans l'autre.
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM
-- **empreinte** : 4f29620dab18b9663c73489d21684cdc5de740e4194977b26e1897996ba5121b
+- **empreinte** : fa11160eacde1da3f8db926ba9995506f44c426db6c9c02a3219980790bff5ab
 - **date** : 2026-11-01, le communiqué ET le document des différences sous les yeux
 - **portée du registre élargie le même jour** : l'empreinte ne couvrait que
   `BP_CASFM`. La passe des autres sites ayant rendu `BP_CASFM_URIN` et
@@ -684,6 +684,73 @@ ensemble, jamais l'un sans l'autre.
   sous-tableau « *Salmonella* spp. » — les sous-titres ne sont pas encore
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
   pénicilline G), et 20 lignes de dépistage ou d'endocardite.
+
+## Le bloc aminosides des staphylocoques, porté le 2026-11-01
+
+Sur décision du biologiste : **d'un seul tenant**, plutôt que la kanamycine
+seule. La page 74 du communiqué donne six lignes et trois notes, et les notes
+sont des **règles de rendu**, pas des remarques.
+
+### Deux molécules au panel
+
+| molécule | EUCAST v16.1 | CA-SFM 2026 | où |
+|---|---|---|---|
+| **tobramycine** | *S. aureus* (2)/(2) · disque (18)/(18) ; SCN (2)/(2) · (20)/(20) — **entre parenthèses** (p38) | mêmes valeurs (p74) | panel commun |
+| **kanamycine** | **retirée en v14.0** | *S. aureus* 8/8 · disque 18/18 ; SCN 8/8 · 22/22 (p74) | **ajout CA-SFM** |
+
+La kanamycine ne va pas dans le panel commun : en mode EUCAST elle n'aurait
+aucun seuil, et proposer une saisie qu'on ne sait pas catégoriser est une
+fausse promesse. `CASFM_PANEL` existe pour cela.
+
+Les quatre lignes de tobramycine portent le drapeau `ecoff` — la convention
+de PhénoBac pour les valeurs que l'EUCAST met entre parenthèses, comme la
+gentamicine et l'amikacine qui l'encadrent. Le compte passe de 29 à 31
+couples, et `essai-regles.js` le dit avec sa raison.
+
+### Trois déductions, dont une qui manquait depuis toujours
+
+```
+note 2 : « Les souches résistantes à la gentamicine sont résistantes à TOUS
+          les aminosides. »
+note 3 : tobramycine, S. aureus — « Interprétation valable pour l'amikacine. »
+note 4 : tobramycine, SCN — « Les souches résistantes à la tobramycine sont
+          résistantes à la kanamycine et à l'amikacine. »
+```
+
+**Aucune des trois n'était appliquée.** La première coûtait le plus : un
+*S. aureus* gentamicine **R** dont l'amikacine était lue **S** sortait
+« amikacine sensible », sous les deux référentiels — l'aminoside de recours
+rendu actif sur une souche que le comité tient pour résistante à tous.
+
+Vérifié, CA-SFM (sous EUCAST, rien ne bouge) :
+
+| cas | gentamicine | tobramycine | kanamycine | amikacine |
+|---|---|---|---|---|
+| *S. aureus*, GEN R | R | S → **R** | S → **R** | S → **R** |
+| *S. aureus*, TOB R seule | S | R | S | S → **R** |
+| *S. epidermidis*, TOB R seule | S | R | S → **R** | S → **R** |
+| tout sensible | S | S | S | S |
+
+**On ne déduit que dans le sens « R ».** La note 3 dit l'interprétation
+« valable » dans les deux sens, mais rendre *sensible* une molécule qu'on n'a
+pas testée serait inventer une catégorie — ce que PhénoBac ne fait jamais. Le
+sens R est celui que les notes 2 et 4 écrivent explicitement, et c'est le sens
+qui protège.
+
+> **La règle est posée dans `finalize()`, pas dans une branche du moteur.**
+> Elle ne dépend pas du phénotype reconnu, seulement du résultat de la
+> gentamicine et de la tobramycine. L'accrocher à une branche l'aurait rendue
+> muette dans les autres — exactement le défaut qui laisse la règle des
+> carbapénémases hors d'atteinte quand les carbapénèmes sortent sensibles
+> (page 8, plus haut).
+
+### Empreintes EUCAST reprises, et cette fois le document était là
+
+`BP`, `BP_URIN`, `DZ`, `DZ_URIN` et `ECOFF` ont bougé : quatre lignes de
+tobramycine ajoutées, **lues sur la page 38 du classeur v16.1** que le
+biologiste a déposé le jour même. Les confrontations complètes restent dues —
+les outils attendent le **xlsx**, et c'est un PDF — mais les valeurs ajoutées,
+elles, viennent bien du document.
 
 ## Le classeur EUCAST v16.1, reçu le 2026-11-01
 

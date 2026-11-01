@@ -433,7 +433,11 @@ dire("\nLa parenthèse de l'EUCAST est une réserve, pas une coquetterie");
   // pouvait pas les voir : PhénoBac n'a de seuil que AU DISQUE pour ces
   // couples, et un comparateur qui part de ce que l'application porte ne
   // visite jamais ce qu'elle ne porte pas.
-  verif(Object.keys(E.ECOFF).length === 29,
+  // 31 le 1er novembre 2026 : la TOBRAMYCINE des staphylocoques et des SCN,
+  // ajoutée avec le bloc aminosides. L'EUCAST la met entre parenthèses en
+  // CMI comme au disque (v16.1, p38), au même titre que la gentamicine et
+  // l'amikacine qui l'encadrent.
+  verif(Object.keys(E.ECOFF).length === 31,
         Object.keys(E.ECOFF).length + " couples portent la réserve, lus dans la base");
   verif(E.seuilEcoff("entero", "COL") && !E.seuilEcoff("entero", "CTX"),
         "la colistine des entérobactéries est visée, la céfotaxime non");
