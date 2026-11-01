@@ -110,7 +110,7 @@ def main():
     lues = CC.lignes_casfm(sys.argv[1])
     # (groupe, code) -> { voie: (S, R, page) }
     par = {}
-    for chapitre, agent, sC, rC, page, hors in lues:
+    for chapitre, agent, sC, rC, page, hors, sous in lues:
         groupes = CZ.CHAPITRE_GROUPES.get(chapitre) or []
         if not groupes:
             continue
@@ -139,6 +139,8 @@ def main():
         # écrivant cet outil. La leçon tient en une phrase : un couple du
         # CA-SFM n'est pas (groupe, molécule) — c'est (groupe, molécule,
         # site, voie), et toute clé plus courte écrase quelque chose.
+        if sous:
+            groupes = [g for g in groupes if g in sous]
         for g in CZ.groupes_vises(chapitre, agent, groupes):
             cle = (g, code, AF.site(agent))
             if v in par.setdefault(cle, {}):

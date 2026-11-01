@@ -831,6 +831,68 @@ Reste ouvert, du même ordre : `scn NIT` est restreint par l'EUCAST à
 chapitre des staphylocoques. Lever cette restriction-là concernerait
 *S. epidermidis*, *S. lugdunensis* et *S. haemolyticus*.
 
+### Les sous-titres et le dépistage, 2026-11-01 : plus rien n'échappe à la confrontation
+
+**Les sous-titres.** Le communiqué ouvre parfois un sous-tableau au milieu
+d'un chapitre : page 52, « *Salmonella* spp. » centré, suivi du dépistage à
+l'acide nalidixique et à la péfloxacine, puis d'une ciprofloxacine à
+0,06 / 0,06 — la valeur propre aux salmonelles, là où la ligne générale dit
+0,25 / 0,5. Sans le voir, l'outil rangeait les deux dans le même seau et
+déclarait le couple « à plusieurs lignes, décision de modèle ».
+
+Sur les pages 47 à 124, **il y en a exactement un**. Deux fausses pistes
+avant d'y arriver, et les deux valent d'être écrites :
+
+- *réemployer `CHAPITRES` pour les reconnaître* — « Salmonella » n'y est pas
+  et ne peut pas y être : c'est un GROUPE de PhénoBac, pas un chapitre du
+  document. Réemployer la table d'à côté parce qu'elle ressemble ne
+  détectait rien du tout ;
+- *détecter sur toute la page* — un sous-titre ne vaut que pour ce qui le
+  SUIT. Posée au-dessus de la boucle, la détection appliquait « Salmonella »
+  à la page 52 entière, ligne générale comprise, et les deux lignes
+  devenaient salmonelles. **Un titre est une frontière, pas une étiquette de
+  page.**
+
+Et une portée mal bornée : `sous` ne se remettait à zéro qu'au chapitre
+suivant, si bien que le sous-tableau de la page 52 scopait encore les pages
+53 à 57 — neuf couples perdus d'un coup, le bilan tombé de 271 à 262 **sans
+que rien ne crie**. Il se remet à zéro à chaque page : le document répète ses
+en-têtes de colonnes, un sous-tableau qui continuerait répéterait son titre,
+et s'il ne le faisait pas le couple reviendrait dans « plusieurs lignes » —
+visible, pas silencieux.
+
+**Résultat : 0 couple à plusieurs lignes**, contre neuf le matin.
+
+**Le dépistage.** Vingt-huit lignes portent « (dépistage) », et le communiqué
+les met dans la même colonne « S ≤ » que les autres. PhénoBac n'a pas de
+mécanique de dépistage en CMI — la colonne `dep` ne sert qu'au disque — mais
+elle porte des seuils **cliniques** de l'EUCAST pour les mêmes couples. On
+les confronte donc en disant ce qu'on compare : **19 chiffres identiques, 1
+différent, 8 couples absents.**
+
+| | page | dépistage CA-SFM | seuil appliqué |
+|---|---|---|---|
+| pneumocoque · ampicilline (LCR) | 85 | 0,5 / 0,5 | 0,06 / 0,06 |
+
+C'est le même couple de chiffres que l'amoxicilline méningée portée la
+veille, et le même fil : PhénoBac porte `0,06` au site méningé pour la
+pénicilline G, l'ampicilline **et** l'amoxicilline. L'amoxicilline est
+corrigée ; l'ampicilline ne peut pas l'être sur ce document, qui n'en donne
+qu'un seuil de dépistage. Il faut le classeur EUCAST.
+
+> Un dépistage a lui aussi son site. Le pneumocoque en porte deux page 85, et
+> les comparer tous deux au seuil ordinaire annonçait un écart qui n'existait
+> pas. Le dépistage prime pour dire CE QUE LA LIGNE EST ; il n'efface pas le
+> site où elle s'applique.
+
+Les huit couples absents sont des molécules que PhénoBac n'a pas pour ces
+groupes : tétracycline chez *Acinetobacter*, les entérobactéries et les
+viridans ; ampicilline et ertapénème chez *Campylobacter*.
+
+**Le compte est désormais clos : « endocardite et autres, non traités ici :
+0 ».** Les quatre passes — site ordinaire, urinaire, méningé, dépistage —
+couvrent toutes les lignes que l'outil sait lire.
+
 ### La passe des autres sites, faite le 2026-10-31
 
 Les lignes de cystite et de LCR étaient **comptées, jamais comparées** — un

@@ -252,6 +252,42 @@ CHAPITRES = [
 ]
 
 
+# LES SOUS-TITRES, UN CRAN SOUS LES CHAPITRES.
+#
+# Le communiqué ouvre parfois un sous-tableau au milieu d'un chapitre : page
+# 52, « Salmonella spp. » centré, suivi du dépistage à l'acide nalidixique et
+# à la péfloxacine, puis d'une ciprofloxacine à 0,06 / 0,06 — la valeur propre
+# aux salmonelles, là où la ligne générale dit 0,25 / 0,5.
+#
+# J'ai d'abord cru pouvoir réemployer CHAPITRES pour les reconnaître. Non :
+# « Salmonella » n'y est pas, et ne peut pas y être — c'est un GROUPE de
+# PhénoBac, pas un chapitre du document. Réemployer la table d'à côté parce
+# qu'elle ressemble était une économie fausse, et elle ne détectait rien.
+#
+# Une entrée ne vaut que si elle RESTREINT le chapitre en cours : le
+# sous-titre nomme une partie de ce que le chapitre couvre, jamais autre
+# chose. Sur les pages 47 à 124, il y en a exactement un.
+SOUS_CHAPITRES = [
+    ('Salmonella', ['salmonella'],
+     "p52, au milieu des entérobactéries : dépistage acide nalidixique / "
+     "péfloxacine, puis ciprofloxacine 0,06 propre aux salmonelles."),
+]
+
+
+def sous_chapitre_de(titre):
+    """Les groupes qu'un sous-titre vise, ou None si la ligne n'en est pas un."""
+    t = (titre or '').strip()
+    for motif, groupes, _quoi in SOUS_CHAPITRES:
+        # Le sous-titre est le titre ENTIER de sa ligne, « Salmonella spp. » —
+        # pas un mot au milieu d'une phrase, sinon chaque note qui cite le
+        # genre ouvrirait un sous-tableau.
+        if t == motif or t.startswith(motif + ' '):
+            reste = t[len(motif):].strip().rstrip('.')
+            if reste in ('', 'spp', 'spp.', 'complex'):
+                return groupes
+    return None
+
+
 def verifier_chapitres():
     """Une ligne muette est une ligne qu'on ne peut pas relire. Lève."""
     for ligne in CHAPITRES:
@@ -261,6 +297,10 @@ def verifier_chapitres():
                 "C'est précisément ce silence qui a envoyé le pneumocoque chez "
                 "les streptocoques A/C/G et la mélioïdose chez B. cepacia."
                 % (ligne[0] if ligne else ligne,))
+    for ligne in SOUS_CHAPITRES:
+        if len(ligne) != 3 or not str(ligne[2]).strip():
+            raise SystemExit("SOUS_CHAPITRES : la ligne %r ne dit pas ce qu'elle "
+                             "couvre." % (ligne[0] if ligne else ligne,))
     return len(CHAPITRES)
 
 

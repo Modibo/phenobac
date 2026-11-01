@@ -104,7 +104,7 @@ def lignes_casfm(chemin):
     data = open(chemin, 'rb').read()
     objs = pdfpos.objets(data)
     pages = pdfpos.pages(data, objs)
-    out, chapitre, sautes = [], '?', set()
+    out, chapitre, sautes, sous = [], '?', set(), None
     for num, p in enumerate(pages, 1):
         lg = pdfpos.lignes(pdfpos.extraire(pdfpos.contenu(objs, p),
                                            pdfpos.polices(objs, p), 'latin-1'))
@@ -130,8 +130,23 @@ def lignes_casfm(chemin):
             # clé venue : « Streptococcus pneumoniae » n'est pas « Streptococcus ».
             c = CZ.chapitre_de(titre)
             chapitre = c if c else ('? ' + titre[:30])
+            sous = None                       # un nouveau chapitre efface le sous-tableau
             if not c:
                 sautes.add(titre[:46])
+        # UN SOUS-TABLEAU NE DÉBORDE PAS SUR LA PAGE SUIVANTE.
+        #
+        # Ma première version ne remettait « sous » à zéro qu'au chapitre
+        # suivant : « Salmonella spp. », ouvert au bas de la page 52, scopait
+        # encore les pages 53 à 57 — neuf couples perdus d'un coup, et la
+        # nitrofurantoïne de Proteus avec. Le bilan passait de 271 à 262 sans
+        # que rien ne crie.
+        #
+        # Le document répète ses en-têtes de colonnes à chaque page ; un
+        # sous-tableau qui continuerait répéterait son titre, comme les
+        # chapitres le font. Et s'il ne le faisait pas, le couple
+        # reviendrait dans « plusieurs lignes » — visible, pas silencieux.
+        # Une erreur qui se voit vaut mieux qu'une portée qui s'étend.
+        sous = None
         entetes = []
         for y, fr in lg:
             z = [x for x, s in fr if s.strip() == 'ZIT']
@@ -193,6 +208,40 @@ def lignes_casfm(chemin):
                             and not miette(s.strip())).strip()
 
         for i, (y, fr) in enumerate(lg):
+            # UN SOUS-TABLEAU À L'INTÉRIEUR D'UN CHAPITRE.
+            #
+            # Page 52, au milieu des entérobactéries, un titre centré
+            # « Salmonella spp. » ouvre un bloc : acide nalidixique et
+            # péfloxacine en dépistage, puis ciprofloxacine 0,06 / 0,06 — la
+            # valeur propre aux salmonelles. Sans le voir, l'outil rangeait
+            # cette ligne avec la ciprofloxacine générale (0,25 / 0,5) et
+            # déclarait le couple « à plusieurs lignes, décision de modèle »,
+            # alors que le document les sépare par un titre.
+            #
+            # LA DÉTECTION EST ICI, dans la boucle des lignes, et non dans une
+            # passe sur la page : un sous-titre ne vaut que pour ce qui le
+            # SUIT. Posée au-dessus, ma première version appliquait
+            # « Salmonella » à toute la page 52, la ligne générale comprise —
+            # les deux lignes devenaient salmonelles et le couple restait
+            # indécidable. Un titre est une frontière, pas une étiquette de
+            # page.
+            #
+            # LE VOCABULAIRE EST DÉCLARÉ, dans CZ.SOUS_CHAPITRES, et chaque
+            # entrée dit ce qu'elle couvre. J'ai d'abord cru pouvoir réemployer
+            # CHAPITRES : « Salmonella » n'y est pas et ne peut pas y être —
+            # c'est un GROUPE de PhénoBac, pas un chapitre du document.
+            # Réemployer la table d'à côté parce qu'elle ressemble était une
+            # économie fausse, et elle ne détectait rien.
+            t_ = re.sub(r'\s+', ' ', ' '.join(x for _, x in fr)).strip()
+            xs_ = [x for x, v in fr if v.strip()]
+            if t_ and len(t_) <= 34 and not re.search(r'\d', t_) and xs_ and min(xs_) >= 150:
+                vise = CZ.sous_chapitre_de(t_)
+                if vise:
+                    dedans = [g for g in vise
+                              if g in (CZ.CHAPITRE_GROUPES.get(chapitre) or [])]
+                    if dedans:
+                        sous = dedans
+                        continue
             amont = [e for e in entetes if e[0] > y]
             if not amont:
                 continue
@@ -281,7 +330,7 @@ def lignes_casfm(chemin):
                 recolles += 1
                 k += 1
             out.append((chapitre, agent, nb(s_[0]) if s_ else None,
-                        nb(r_[0]) if r_ else None, num, hors_echelle))
+                        nb(r_[0]) if r_ else None, num, hors_echelle, sous))
     # UN SILENCE QU'ON N'AFFICHE PAS SE CONFOND AVEC UNE CONCORDANCE. Les
     # chapitres sautés sont ceux dont AUCUNE ligne n'a été confrontée : tant
     # que « Streptocoques des groupes A, B, C ou G » y figurait, le bilan
@@ -398,7 +447,7 @@ def main():
     # les retire des lignes générales du même couple. C'est la lecture
     # ordinaire d'un tableau : la ligne précise prime sur la ligne générale.
     reclames = {}
-    for chapitre, agent, sC, rC, page, hors in lues:
+    for chapitre, agent, sC, rC, page, hors, sous in lues:
         g0 = CZ.CHAPITRE_GROUPES.get(chapitre)
         if not g0:
             continue
@@ -409,7 +458,9 @@ def main():
         if v and len(v) < len(g0):
             reclames.setdefault((chapitre, code), set()).update(v)
 
-    def vises(chapitre, agent, code, groupes):
+    def vises(chapitre, agent, code, groupes, sous=None):
+        if sous:
+            groupes = [g for g in groupes if g in sous]
         v = CZ.groupes_vises(chapitre, agent, groupes)
         if v and len(v) == len(groupes):          # ligne générale
             pris = reclames.get((chapitre, code), set())
@@ -419,7 +470,7 @@ def main():
     # gardait qu'une — celle que l'ordre de lecture lui donnait en dernier.
     # On les recense d'abord, pour ne comparer que les couples à ligne unique.
     par_couple = {}
-    for chapitre, agent, sC, rC, page, hors in lues:
+    for chapitre, agent, sC, rC, page, hors, sous in lues:
         groupes0 = CZ.CHAPITRE_GROUPES.get(chapitre)
         if not groupes0:
             continue
@@ -437,14 +488,15 @@ def main():
         #
         # Ce qui reste après ce changement est ce qui MÉRITE une décision :
         # deux lignes qui visent le MÊME groupe de PhénoBac.
-        for g in vises(chapitre, agent, code, groupes0):
+        for g in vises(chapitre, agent, code, groupes0, sous):
             par_couple.setdefault((g, code), set()).add((sC, rC))
     plusieurs = {k for k, v in par_couple.items() if len(v) > 1}
     autres_sites = 0
     sites_ecarts, sites_sans, sites_ok = [], [], {}
+    dep_ecarts, dep_sans, dep_ok = [], [], 0
     vus = set()
 
-    for chapitre, agent, sC, rC, page, hors in lues:
+    for chapitre, agent, sC, rC, page, hors, sous in lues:
         groupes = CZ.CHAPITRE_GROUPES.get(chapitre, [])
         if not groupes:
             continue
@@ -497,7 +549,7 @@ def main():
             # ordinaire — PhénoBac les range par site — mais il se compare
             # TRÈS BIEN au seuil du même site, et personne ne le faisait :
             # quarante-neuf lignes du communiqué étaient simplement comptées.
-            for g in vises(chapitre, agent, code, groupes):
+            for g in vises(chapitre, agent, code, groupes, sous):
                 a_c = applique(site_ligne, g, code, "casfm")
                 if a_c is None:
                     sites_sans.append((site_ligne, g, code, page, sC, rC))
@@ -508,6 +560,43 @@ def main():
                 sites_ecarts.append((site_ligne, g, code, page, sC, rC,
                                      a_c.get("S"), a_c.get("R"),
                                      delta_du_site(site_ligne, g, code) is not None))
+            continue
+        if site_ligne == "depistage":
+            # LA PASSE DU DÉPISTAGE, la dernière jamais faite.
+            #
+            # Ces lignes portent « (dépistage) » et le communiqué les met dans
+            # la même colonne « S ≤ » que les autres. Elles ne disent pourtant
+            # pas la même chose : un seuil de dépistage dit « cette souche
+            # mérite une CMI » ou « on peut en déduire telle autre molécule »,
+            # pas « ce traitement marchera ».
+            #
+            # PhénoBac n'a pas de mécanique de dépistage en CMI — la colonne
+            # « dep » ne sert qu'au disque, et deux lignes seulement s'en
+            # servent. Elle porte en revanche des seuils CLINIQUES de l'EUCAST
+            # pour les mêmes couples. On les confronte donc, en disant ce
+            # qu'on compare : un chiffre de dépistage français contre un seuil
+            # clinique européen. Qu'ils coïncident est une bonne nouvelle, pas
+            # une équivalence.
+            # UN DÉPISTAGE A LUI AUSSI SON SITE. Le pneumocoque en porte deux
+            # page 85 : « Ampicilline (dépistage) » 0,5 / 1 et « Ampicilline
+            # (dépistage - méningites et endocardites) » 0,5 / 0,5. Les
+            # comparer tous deux au seuil ORDINAIRE annonçait un écart sur le
+            # second — alors qu'il faut le confronter au seuil du LCR. Le
+            # dépistage prime pour dire CE QUE LA LIGNE EST ; il n'efface pas
+            # le site où elle s'applique.
+            n_ = AF.norme(agent)
+            site_dep = ("meninge" if "meningite" in n_
+                        else "urinaire" if ("cystite" in n_ or "urinaire" in n_)
+                        else "standard")
+            for g in vises(chapitre, agent, code, groupes, sous):
+                a_c = applique(site_dep, g, code, "casfm")
+                if a_c is None:
+                    dep_sans.append((g, code, page, sC, rC))
+                elif a_c.get("S") == sC and a_c.get("R") == rC:
+                    dep_ok += 1
+                else:
+                    dep_ecarts.append((g, code, page, sC, rC,
+                                       a_c.get("S"), a_c.get("R")))
             continue
         if site_ligne != "standard":
             autres_sites += 1
@@ -555,11 +644,11 @@ def main():
         # distinguer la voie d'administration, ou une espèce à l'intérieur
         # d'un chapitre, est une décision de modèle qui appartient au
         # biologiste, pas à l'extracteur.
-        if any((g, code) in plusieurs for g in vises(chapitre, agent, code, groupes)):
+        if any((g, code) in plusieurs for g in vises(chapitre, agent, code, groupes, sous)):
             multiples.setdefault((chapitre, code), []).append(
                 (agent[:46], sC, rC, page))
             continue
-        for g in vises(chapitre, agent, code, groupes):
+        for g in vises(chapitre, agent, code, groupes, sous):
             vus.add((g, code))
             if (g, code) in DEPISTAGE_SEULEMENT:
                 depistage_seul.add((g, code))
@@ -684,7 +773,7 @@ def main():
     # concernées : elles n'affirment aucun seuil.
     orphelines = []
     par_doc = {}
-    for chapitre, agent, sC, rC, page, hors in lues:
+    for chapitre, agent, sC, rC, page, hors, sous in lues:
         g0 = CZ.CHAPITRE_GROUPES.get(chapitre)
         if not g0:
             continue
@@ -726,6 +815,24 @@ def main():
         print("page. Vérifier les deux documents avant de retirer quoi que ce soit.")
         for o in orphelines:
             print("  " + o)
+    if dep_ecarts:
+        print("\n=== DÉPISTAGE : LE CHIFFRE DU CA-SFM ET LE SEUIL APPLIQUÉ DIFFÈRENT (%d) ==="
+              % len(set(dep_ecarts)))
+        print("Attention à ce qu'on compare : à gauche un seuil de DÉPISTAGE —")
+        print("« cette souche mérite une CMI » — à droite le seuil CLINIQUE que")
+        print("PhénoBac applique, venu de l'EUCAST. Un écart ici n'est pas")
+        print("forcément une correction à porter : c'est deux choses différentes")
+        print("qui se trouvaient jusqu'ici dans la même colonne.")
+        for g, k, page, sC, rC, sA, rA in sorted(set(dep_ecarts), key=str):
+            print("  %-10s %-5s p%-4d dépistage S<=%-7s R>%-7s   appliqué : S<=%-7s R>%s"
+                  % (g, k, page, "aucune" if sC is None else sC, rC,
+                     "aucune" if sA is None else sA, rA))
+    if dep_sans:
+        print("\n=== DÉPISTAGE : PHÉNOBAC N'A PAS CE COUPLE (%d) ===" % len(set(dep_sans)))
+        for g, k, page, sC, rC in sorted(set(dep_sans), key=str):
+            print("  %-10s %-5s p%-4d dépistage S<=%-7s R>%s"
+                  % (g, k, page, "aucune" if sC is None else sC, rC))
+
     if depistage_seul:
         print("\n=== LIGNES DU TABLEAU QUI NE SONT QUE DU DÉPISTAGE (%d) ===" % len(depistage_seul))
         print("Elles ressemblent à un seuil clinique et n'en sont pas. Le tableau")
@@ -744,7 +851,9 @@ def main():
     print("  seuil dépendant de la voie  : %d (non comparés)" % len(voies))
     print("  site urinaire et méningé : %d d'accord, %d écarts, %d couples absents"
           % (sum(sites_ok.values()), len(set(sites_ecarts)), len(set(sites_sans))))
-    print("  dépistage et endocardite, non traités ici : %d" % autres_sites)
+    print("  dépistage : %d chiffres identiques au seuil appliqué, %d différents, "
+          "%d couples absents" % (dep_ok, len(set(dep_ecarts)), len(set(dep_sans))))
+    print("  endocardite et autres, non traités ici : %d" % autres_sites)
     print("  lignes qui ne sont que du dépistage : %d (déclarées, avec leur source)"
           % len(depistage_seul))
     print("\nAucun fichier n'a été modifié. Toute correction doit être validée")
