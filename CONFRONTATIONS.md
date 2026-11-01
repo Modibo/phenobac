@@ -680,6 +680,68 @@ ensemble, jamais l'un sans l'autre.
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
   pénicilline G), et 20 lignes de dépistage ou d'endocardite.
 
+## La page 6 du document des différences, lue le 2026-11-01
+
+Elle porte sur le cotrimoxazole et le triméthoprime, et elle a été lue avant
+de toucher à la restriction d'espèce d'`entero` — qui était l'étape suivante.
+**Elle l'a arrêtée.**
+
+### Quatre valeurs confirmées, rien à changer
+
+| ce que la page 6 affirme | ce que PhénoBac applique |
+|---|---|
+| l'EUCAST donne à *Serratia* un seuil SXT plus élevé (2 vs 0,5) « associé à un rendu minimal *sensible à forte posologie* » | EUCAST `S: null, R: 2` — aucune catégorie S, I jusqu'à 2 ✓ |
+| le CA-SFM a adopté le seuil S de l'EUCAST pour les infections systémiques (0,5) | CA-SFM 0,5 / 0,5 ✓ |
+| le CA-SFM propose 2 mg/L pour les infections urinaires sans signes de gravité | CA-SFM urinaire 2 / 2 ✓ |
+| le CA-SFM conserve un rendu « sensible à forte posologie » jusqu'à 2 mg/L pour *Acinetobacter* | CA-SFM `0,5 / 2` ✓ |
+
+### Un désaccord entre les deux textes du CA-SFM
+
+La page 6 écrit « **pour *Acinetobacter* uniquement** ». Or la page 77 du
+communiqué donne aux staphylocoques exactement la même ligne :
+
+```
+Triméthoprime-sulfaméthoxazole (autres infections)   0,5 / 2   disque 24 / 19
+```
+
+Le même intervalle intermédiaire, pour un chapitre dont la prose dit qu'il ne
+l'a pas. **Rien n'a été changé** : le tableau fait foi pour les valeurs,
+PhénoBac le suit, et le comparateur annonce zéro écart. Choisir la prose
+contre la table reviendrait à préférer la source la plus faible. C'est écrit
+ici pour que la question ne se reperde pas.
+
+### Et la restriction d'espèce d'`entero` reste ouverte
+
+C'était l'étape suivante, et elle ne se fera pas sans décision. Les deux
+textes tirent en sens contraire :
+
+- **le communiqué, page 54** : « Nitrofurantoïne (cystites) 64 / 64 » et
+  « Triméthoprime (cystites) 2 / 2 », sans aucun qualificatif d'espèce — donc
+  pour tout le chapitre des entérobactéries ;
+- **le document des différences, page 6** : « pour le triméthoprime
+  (*Enterobacterales* et staphylocoques) […] le CA-SFM a adopté les
+  modifications de *breakpoints* proposées par l'EUCAST en 2026 » — et
+  l'EUCAST, lui, restreint le triméthoprime à *E. coli*, *K. pneumoniae* et
+  *K. oxytoca*.
+
+« Adopter les *breakpoints* » parle des **valeurs** ; la restriction est une
+**portée**. Les deux ne se déduisent pas l'une de l'autre, et aucune des deux
+lectures n'est absurde.
+
+Vérifié, pour que la décision se prenne sur des faits : **aucune espèce du
+groupe `entero` ne porte de résistance naturelle déclarée** à la
+nitrofurantoïne ni au triméthoprime — la règle du 31 octobre (« lever, sauf
+là où PhénoBac sait que l'espèce est résistante ») ne tranche donc pas ce
+cas-ci. Ce qu'elle laisserait passer, en revanche, est nommable : lever la
+restriction donnerait une catégorie **nitrofurantoïne à *Klebsiella***, que
+l'EUCAST écarte — non par résistance naturelle, mais pour activité
+insuffisante.
+
+> Et la question remonte d'un cran : si le CA-SFM suit l'EUCAST sur le
+> triméthoprime, les trois lignes `morganella`, `salmonella` et `serratia`
+> portées le 31 octobre sont elles aussi à revoir. Le même doute, dans
+> l'autre sens.
+
 ## Les trois dernières questions, tranchées le 2026-11-01
 
 Elles attendaient le classeur EUCAST ; le biologiste a tranché sans lui, sur
