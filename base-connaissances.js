@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.27";
+const BASE_VERSION = "2026.28";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -120,15 +120,35 @@ const REGLES = [
    l'EUCAST — si bien qu'un laboratoire en mode CA-SFM ne recevait aucune
    catégorie là où le comité français en donne une.
 
-   Sept sont portés (cystite, CMI et diamètre) :
+   Sept ont été portés le 2026-10-31 ; QUATRE SUBSISTENT, et ce sont les
+   quatre de la nitrofurantoïne :
 
      salmonella NIT  p54   64 / 64   disque 100 µg  11 / 11
      serratia   NIT  p54   64 / 64   disque 100 µg  11 / 11
      staph      NIT  p77   64 / 64   disque 100 µg  13 / 13
      strepacg   NIT  p93   64 / 64   disque 100 µg  15 / 15
-     morganella TMP  p54    2 / 2    disque   5 µg  15 / 15
-     salmonella TMP  p54    2 / 2    disque   5 µg  15 / 15
-     serratia   TMP  p54    2 / 2    disque   5 µg  15 / 15
+
+   LES TROIS DU TRIMÉTHOPRIME ONT ÉTÉ RETIRÉS LE 2026-11-01, sur décision du
+   biologiste, après lecture de la page 6 du document des différences :
+
+     « pour le triméthoprime (Enterobacterales et staphylocoques) […] le
+       CA-SFM a adopté les modifications de breakpoints proposées par
+       l'EUCAST en 2026 »
+
+   Le CA-SFM suit donc l'EUCAST sur cette molécule, et l'EUCAST ne la chiffre
+   que pour E. coli, K. pneumoniae et K. oxytoca. La ligne « Triméthoprime
+   (cystites) » de la page 54, qui ne nomme aucune espèce, ne vaut pas
+   extension du périmètre : elle donne la VALEUR, la portée reste celle de
+   l'EUCAST. Morganella, Salmonella et Serratia n'ont donc pas de
+   triméthoprime, sous aucun des deux référentiels.
+
+   LA NITROFURANTOÏNE N'EST PAS CONCERNÉE : le document des différences n'en
+   parle nulle part, et rien n'indique que le CA-SFM s'aligne sur la portée
+   de l'EUCAST pour elle. Les quatre lignes restent.
+
+   « Adopter les breakpoints » parle des VALEURS ; une restriction d'espèce
+   est une PORTÉE. Les deux ne se déduisent pas l'une de l'autre, et c'est
+   pour cela que la question a été posée plutôt que tranchée par l'outil.
 
    LE HUITIÈME NE L'EST PAS, ET CE N'EST PAS UNE PRUDENCE : « morganella NIT »
    couvre Proteus mirabilis, P. vulgaris, Morganella morganii et Providencia,
@@ -290,8 +310,6 @@ const REGLES = [
 ["casfm","morganella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["casfm","morganella","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["casfm","morganella","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","ngono","GEN","cmi","standard",16,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","nmening","AMX","cmi","meninge",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 /* LA COLISTINE DE PSEUDOMONAS SOUS CA-SFM.
@@ -327,8 +345,6 @@ const REGLES = [
 ["casfm","salmonella","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["casfm","salmonella","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["casfm","salmonella","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","CIP","disque","standard",null,24,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","scn","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,["ssaprophyticus","slugdunensis"]],
@@ -350,8 +366,6 @@ const REGLES = [
 ["casfm","serratia","SXT","disque","urinaire",14,14,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","TEM","cmi","urinaire",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","TEM","disque","urinaire",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["casfm","serratia","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["casfm","serratia","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","cmi","standard",null,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","CIP","disque","standard",null,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","staph","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

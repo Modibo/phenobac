@@ -649,7 +649,7 @@ ensemble, jamais l'un sans l'autre.
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM
-- **empreinte** : 1710d1402689cf73b1941e514f0ada6b2f7783fd5b84b8346ef731fba162844e
+- **empreinte** : 4f29620dab18b9663c73489d21684cdc5de740e4194977b26e1897996ba5121b
 - **date** : 2026-11-01, le communiqué ET le document des différences sous les yeux
 - **portée du registre élargie le même jour** : l'empreinte ne couvrait que
   `BP_CASFM`. La passe des autres sites ayant rendu `BP_CASFM_URIN` et
@@ -710,7 +710,34 @@ PhénoBac le suit, et le comparateur annonce zéro écart. Choisir la prose
 contre la table reviendrait à préférer la source la plus faible. C'est écrit
 ici pour que la question ne se reperde pas.
 
-### Et la restriction d'espèce d'`entero` reste ouverte
+### Tranché le 2026-11-01 : garder la restriction
+
+**Décision du biologiste : la restriction d'espèce de l'EUCAST vaut aussi
+sous CA-SFM pour le triméthoprime, et les trois lignes du 31 octobre sont
+retirées.**
+
+`morganella`, `salmonella` et `serratia` perdent leur triméthoprime
+urinaire — CMI et diamètre, six lignes. Le résultat est que le triméthoprime
+se comporte désormais **à l'identique sous les deux référentiels** :
+
+| espèce | EUCAST | CA-SFM |
+|---|---|---|
+| *E. coli*, *K. pneumoniae*, *K. oxytoca*, *S. aureus* | S | S |
+| *Enterobacter*, *Proteus*, *Salmonella*, *Serratia* | aucune | aucune |
+
+**La nitrofurantoïne n'est pas concernée** : le document des différences n'en
+parle nulle part, rien n'indique que le CA-SFM s'aligne sur la portée de
+l'EUCAST pour elle, et les quatre lignes du 31 octobre restent —
+`salmonella`, `serratia`, `staph`, `strepacg`.
+
+Les quatre couples que PhénoBac ne porte **pas par décision** sont déclarés
+dans `comparer-casfm.py` avec leur raison, et comptés à part : sans cela ils
+reviendraient à chaque passage comme une question déjà tranchée, et une
+question qui revient finit par ne plus être lue.
+
+### Le raisonnement, pour mémoire
+
+Les deux textes tiraient en sens contraire :
 
 C'était l'étape suivante, et elle ne se fera pas sans décision. Les deux
 textes tirent en sens contraire :
@@ -726,7 +753,8 @@ textes tirent en sens contraire :
 
 « Adopter les *breakpoints* » parle des **valeurs** ; la restriction est une
 **portée**. Les deux ne se déduisent pas l'une de l'autre, et aucune des deux
-lectures n'est absurde.
+lectures n'est absurde — c'est pourquoi la question a été posée au lieu
+d'être tranchée par l'outil.
 
 Vérifié, pour que la décision se prenne sur des faits : **aucune espèce du
 groupe `entero` ne porte de résistance naturelle déclarée** à la
@@ -737,10 +765,9 @@ restriction donnerait une catégorie **nitrofurantoïne à *Klebsiella***, que
 l'EUCAST écarte — non par résistance naturelle, mais pour activité
 insuffisante.
 
-> Et la question remonte d'un cran : si le CA-SFM suit l'EUCAST sur le
-> triméthoprime, les trois lignes `morganella`, `salmonella` et `serratia`
-> portées le 31 octobre sont elles aussi à revoir. Le même doute, dans
-> l'autre sens.
+> Et la question remontait d'un cran : si le CA-SFM suit l'EUCAST sur le
+> triméthoprime, les trois lignes portées le 31 octobre étaient elles aussi à
+> revoir. C'est ce qui a été décidé, et elles sont retirées.
 
 ## Les trois dernières questions, tranchées le 2026-11-01
 

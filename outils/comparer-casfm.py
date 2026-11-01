@@ -422,6 +422,30 @@ def main():
     #
     # Chaque entrée porte sa source. Ce n'est pas une liste pour faire taire
     # l'outil : c'est la part du CA-SFM qui vit dans l'autre document.
+    # DES COUPLES QUE PHÉNOBAC N'A PAS, ET C'EST UNE DÉCISION.
+    #
+    # Le communiqué chiffre la molécule pour tout un chapitre ; la portée,
+    # elle, peut rester celle de l'EUCAST. « Adopter les breakpoints » parle
+    # des VALEURS ; une restriction d'espèce est une PORTÉE, et les deux ne
+    # se déduisent pas l'une de l'autre.
+    #
+    # Sans cette liste, ces couples reviendraient à chaque passage comme une
+    # question déjà tranchée — et une question qui revient finit par ne plus
+    # être lue.
+    PORTEE_EUCAST = {
+        ("morganella", "TMP"): "différences CA-SFM/EUCAST 2026 p6 : « pour le "
+            "triméthoprime (Enterobacterales et staphylocoques) le CA-SFM a adopté "
+            "les modifications de breakpoints proposées par l'EUCAST » — qui ne le "
+            "chiffre que pour E. coli, K. pneumoniae et K. oxytoca. Décision du "
+            "biologiste du 2026-11-01 : garder la restriction.",
+        ("salmonella", "TMP"): "idem morganella TMP (p6).",
+        ("serratia", "TMP"): "idem morganella TMP (p6).",
+        ("morganella", "NIT"): "Proteus, P. vulgaris, M. morganii et Providencia "
+            "portent la résistance naturelle à la nitrofurantoïne (EUCAST, "
+            "phénotypes résistants attendus v1.2, règles 1.10/1.12/1.14). Décision "
+            "du biologiste du 2026-10-31 : ne pas porter.",
+    }
+
     DEPISTAGE_SEULEMENT = {
         ("viridans", "PEN"):
             "document des différences CA-SFM/EUCAST 2026, p13 : « le CA-SFM ne "
@@ -494,6 +518,7 @@ def main():
     autres_sites = 0
     sites_ecarts, sites_sans, sites_ok = [], [], {}
     dep_ecarts, dep_sans, dep_ok = [], [], 0
+    portee_dite = set()
     vus = set()
 
     for chapitre, agent, sC, rC, page, hors, sous in lues:
@@ -552,7 +577,10 @@ def main():
             for g in vises(chapitre, agent, code, groupes, sous):
                 a_c = applique(site_ligne, g, code, "casfm")
                 if a_c is None:
-                    sites_sans.append((site_ligne, g, code, page, sC, rC))
+                    if (g, code) in PORTEE_EUCAST:
+                        portee_dite.add((g, code))
+                    else:
+                        sites_sans.append((site_ligne, g, code, page, sC, rC))
                     continue
                 if a_c.get("S") == sC and a_c.get("R") == rC:
                     sites_ok[site_ligne] = sites_ok.get(site_ligne, 0) + 1
@@ -833,6 +861,13 @@ def main():
             print("  %-10s %-5s p%-4d dépistage S<=%-7s R>%s"
                   % (g, k, page, "aucune" if sC is None else sC, rC))
 
+    if portee_dite:
+        print("\n=== COUPLES ABSENTS PAR DÉCISION, PAS PAR OUBLI (%d) ===" % len(portee_dite))
+        print("Le communiqué les chiffre ; PhénoBac ne les porte pas, et la raison")
+        print("est écrite. Ils ne sont pas comptés parmi les couples absents.")
+        for g, k in sorted(portee_dite):
+            print("  %-10s %-5s : %s" % (g, k, PORTEE_EUCAST[(g, k)]))
+
     if depistage_seul:
         print("\n=== LIGNES DU TABLEAU QUI NE SONT QUE DU DÉPISTAGE (%d) ===" % len(depistage_seul))
         print("Elles ressemblent à un seuil clinique et n'en sont pas. Le tableau")
@@ -851,6 +886,7 @@ def main():
     print("  seuil dépendant de la voie  : %d (non comparés)" % len(voies))
     print("  site urinaire et méningé : %d d'accord, %d écarts, %d couples absents"
           % (sum(sites_ok.values()), len(set(sites_ecarts)), len(set(sites_sans))))
+    print("  absents par décision, avec leur raison : %d" % len(portee_dite))
     print("  dépistage : %d chiffres identiques au seuil appliqué, %d différents, "
           "%d couples absents" % (dep_ok, len(set(dep_ecarts)), len(set(dep_sans))))
     print("  endocardite et autres, non traités ici : %d" % autres_sites)
