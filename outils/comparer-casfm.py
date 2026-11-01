@@ -432,6 +432,24 @@ def main():
     # Sans cette liste, ces couples reviendraient à chaque passage comme une
     # question déjà tranchée — et une question qui revient finit par ne plus
     # être lue.
+    # UNE COLONNE « S ≤ » QUI PORTE UN MOT, ET CE MOT A UN SENS.
+    #
+    # L'outil signalait depuis trois jours « la colonne S n'a pas été lue
+    # (elle porte un mot, non un nombre) » et le comptait comme une LACUNE DE
+    # L'OUTIL. Ce n'en est pas une : le mot est « Note », et la page 11 du
+    # document des différences dit ce qu'il veut dire. Une ignorance qu'on
+    # sait nommer n'est plus une ignorance.
+    MOT_EN_COLONNE_S = {
+        ("Staphylococcus", "Pénicilline G"):
+            "la colonne S porte « Note ». Différences CA-SFM/EUCAST 2026 p11 : "
+            "« une CMI de pénicilline G > 0,125 mg/L permet de confirmer la "
+            "présence de pénicillinase et une CMI ≤ 0,125 mg/L NE PERMET PAS "
+            "D'EXCLURE la présence d'une pénicillinase ». Le comité refuse donc "
+            "de conclure « sensible » sur la seule CMI. PhénoBac rend « S » : "
+            "écart ouvert, il demande une décision de modèle (voir "
+            "CONFRONTATIONS.md).",
+    }
+
     PORTEE_EUCAST = {
         ("morganella", "TMP"): "différences CA-SFM/EUCAST 2026 p6 : « pour le "
             "triméthoprime (Enterobacterales et staphylocoques) le CA-SFM a adopté "
@@ -518,7 +536,7 @@ def main():
     autres_sites = 0
     sites_ecarts, sites_sans, sites_ok = [], [], {}
     dep_ecarts, dep_sans, dep_ok = [], [], 0
-    portee_dite = set()
+    portee_dite, mots_dits = set(), []
     vus = set()
 
     for chapitre, agent, sC, rC, page, hors, sous in lues:
@@ -557,10 +575,18 @@ def main():
         if sC is None and not hors:
             if rC is None:
                 continue              # pas de cellule : rien à apprendre
-            aveugles.append("p%d %s / « %s » : la colonne S n'a pas été lue "
-                            "(elle porte un mot, non un nombre) — R > %s a bien "
-                            "été lu. À relire sur la page avant toute conclusion."
-                            % (page, chapitre, agent[:44], rC))
+            dit_mot = None
+            for (ch_, ag_), pourquoi in MOT_EN_COLONNE_S.items():
+                if chapitre == ch_ and agent.strip().startswith(ag_):
+                    dit_mot = pourquoi
+                    break
+            if dit_mot:
+                mots_dits.append("p%d %s / « %s » : %s" % (page, chapitre, agent[:34], dit_mot))
+            else:
+                aveugles.append("p%d %s / « %s » : la colonne S n'a pas été lue "
+                                "(elle porte un mot, non un nombre) — R > %s a bien "
+                                "été lu. À relire sur la page avant toute conclusion."
+                                % (page, chapitre, agent[:44], rC))
             continue
         # Un seuil de cystite, de méningite ou de dépistage ne se compare pas
         # au seuil ordinaire : PhénoBac les range par SITE, et les confondre
@@ -861,6 +887,11 @@ def main():
             print("  %-10s %-5s p%-4d dépistage S<=%-7s R>%s"
                   % (g, k, page, "aucune" if sC is None else sC, rC))
 
+    if mots_dits:
+        print("\n=== LA COLONNE S PORTE UN MOT, ET ON SAIT LEQUEL (%d) ===" % len(mots_dits))
+        for m in mots_dits:
+            print("  " + m)
+
     if portee_dite:
         print("\n=== COUPLES ABSENTS PAR DÉCISION, PAS PAR OUBLI (%d) ===" % len(portee_dite))
         print("Le communiqué les chiffre ; PhénoBac ne les porte pas, et la raison")
@@ -882,6 +913,7 @@ def main():
     print("  écart périmé                : %d" % len(perimes))
     print("  non lus par l'outil         : %d" % len(set(muets)))
     print("  colonne S non lue           : %d" % len(set(aveugles)))
+    print("  colonne S portant un mot expliqué : %d" % len(mots_dits))
     print("  couples à plusieurs lignes  : %d (non comparés)" % len(multiples))
     print("  seuil dépendant de la voie  : %d (non comparés)" % len(voies))
     print("  site urinaire et méningé : %d d'accord, %d écarts, %d couples absents"

@@ -680,6 +680,78 @@ ensemble, jamais l'un sans l'autre.
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
   pénicilline G), et 20 lignes de dépistage ou d'endocardite.
 
+## Les pages 11 et 12 du document des différences, lues le 2026-11-01
+
+### Page 12 — quatre valeurs confirmées, rien à changer
+
+| ce que la page 12 affirme | PhénoBac |
+|---|---|
+| l'EUCAST ne donne **aucun** seuil à la daptomycine des entérocoques (mention « IE ») | la ligne EUCAST porte le drapeau `conv` — convention de laboratoire assumée ✓ |
+| le CA-SFM propose **2 mg/L avec une ZIT à 4** | CA-SFM 2 / 2, ZIT 4 ✓ |
+| l'EUCAST propose **0,03** pour les streptocoques A/C/G et **0,125** pour le B | EUCAST 0,03 et 0,125 ✓ |
+| le CA-SFM retient **0,06** pour A/C/G et garde 0,125 pour le B | CA-SFM 0,06 et 0,125 ✓ |
+
+Page lue, aucune action. La justification du 0,06 vaut d'être connue du
+laboratoire : « la plupart des techniques automatisées ne permettent pas de
+mesurer des CMI < 0,06 mg/L », et un seuil à 0,03 imposerait le recours
+systématique au disque.
+
+### Page 11 — trois notes, et un écart ouvert
+
+**Confirmé** : la vancomycine de *S. aureus* à **1 mg/L avec ZIT à 2** —
+PhénoBac l'applique déjà, et la page 11 en donne la raison (les prérequis
+PK/PD ne sont pas atteints à 2 mg/L, et le risque d'échec est documenté).
+
+**Hors panel, et c'est à décider un jour** : le CA-SFM **conserve la
+kanamycine**, que l'EUCAST a supprimée en v14.0, « en précisant bien qu'il
+s'agit d'un test de dépistage permettant de rendre l'amikacine » — le
+dépistage de la résistance à l'amikacine étant plus performant par la
+kanamycine. PhénoBac n'a pas la kanamycine au panel. Ajouter une molécule
+est une évolution, pas une correction.
+
+**Hors modèle** : le CA-SFM propose un seuil d'oxacilline à 2 mg/L pour
+*S. pettenkoferi* (au lieu de 0,25), parce que des souches à 0,5 et 1 mg/L
+sont dépourvues du gène *mec*. PhénoBac ne modélise pas cette espèce.
+
+#### L'écart ouvert : la pénicilline G de *S. aureus*
+
+C'est l'explication de la ligne que `comparer-casfm.py` signalait depuis
+trois jours sous « la colonne S n'a pas été lue (elle porte un mot) ».
+**Le mot est « Note », et la page 11 dit ce qu'il signifie :**
+
+> « une CMI de pénicilline G **> 0,125 mg/L** permet en effet de confirmer la
+> présence de pénicillinase et qu'une CMI **≤ 0,125 mg/L ne permet pas
+> d'exclure** la présence d'une pénicillinase »
+
+Le comité refuse donc de conclure « sensible » sur la seule CMI. Le tableau
+de la page 72 le dit à sa façon : colonne S = *Note*, R > 0,125, et une
+**ZIT à « ≤ 0,125 »** — toute la plage basse est incertaine.
+
+**PhénoBac rend « S », sans la moindre réserve.** Vérifié : *S. aureus*,
+pénicilline G à 0,06 mg/L, référentiel CA-SFM, β-lactamase non renseignée ou
+déclarée négative → **S**, aucune alerte, aucun commentaire.
+
+Trois façons de le corriger, et aucune n'est neutre :
+
+1. **`S: null, R: 0,125`** — plus aucune catégorie « sensible ». Une CMI
+   ≤ 0,125 deviendrait **I**. C'est fidèle au refus du comité, mais « I » se
+   lit « sensible à forte posologie » : un clinicien pourrait prescrire de la
+   pénicilline à forte dose sur une souche productrice de pénicillinase. **Le
+   remède serait pire que le mal.**
+2. **Étendre la ZIT à une borne ouverte.** Aujourd'hui `enZit()` ne reconnaît
+   qu'une valeur exacte (`p.v !== z`) ; il faudrait une forme « ≤ x » pour
+   couvrir toute la plage basse. La mesure serait alors signalée incertaine,
+   avec renvoi au disque — ce que le comité demande. C'est la lecture la plus
+   fidèle, et elle demande une évolution du moteur.
+3. **Une alerte sans changement de seuil** : garder « S » et ajouter la
+   réserve du comité en commentaire. Le moins invasif, mais la catégorie
+   rendue reste celle que le CA-SFM refuse.
+
+> `comparer-casfm.py` ne compte plus cette ligne comme une lacune de l'outil :
+> elle est déclarée, avec sa source et sa citation. **Une ignorance qu'on sait
+> nommer n'est plus une ignorance** — mais ce n'est pas non plus une
+> correction.
+
 ## La page 6 du document des différences, lue le 2026-11-01
 
 Elle porte sur le cotrimoxazole et le triméthoprime, et elle a été lue avant
