@@ -4,3 +4,14 @@ node_modules/
 public/
 .DS_Store
 __pycache__/
+
+# Copies de conflit OneDrive : le dossier est synchronisé, et OneDrive y
+# dépose des doubles nommés « fichier 2.ext » quand deux machines écrivent.
+# L'une d'elles est entrée dans un commit le 2026-11-01, avec des traces de
+# débogage que le fichier courant n'avait plus. Un double de code source est
+# au mieux du bruit, au pire une version périmée qu'on relit par erreur.
+* 2.py
+* 2.js
+* 2.html
+* 2.md
+* 2.json

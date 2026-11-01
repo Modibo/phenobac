@@ -714,11 +714,6 @@ def main():
                                 if re.search(motif, nom)
                                 and not re.search(r'(other than|except)\s+' + motif,
                                                   nom, re.I)}
-                    import sys as _s
-                    if code == "MEM":
-                        _s.stderr.write("DEBUG declare=%r\n" % (declare,))
-                        for x in cands:
-                            _s.stderr.write("DEBUG cand %r -> %r\n" % (x[0][:90], citees(x[0])))
                     vise = [x for x in cands if citees(x[0]) == set(declare)]
                     if len(vise) == 1:
                         cands = vise
