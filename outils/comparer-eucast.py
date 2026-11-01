@@ -197,7 +197,12 @@ def seuils_phenobac(racine):
     MP = importlib.util.module_from_spec(s)
     s.loader.exec_module(MP)
     tables = MP.tables(["BP", "BP_URIN", "BP_MENINGE", "HORS_EUCAST", "ECOFF",
-                        "DZ", "DZ_URIN", "DZ_TEMOIN", "DEPISTAGE"])
+                        "DZ", "DZ_URIN", "DZ_TEMOIN", "DEPISTAGE",
+                        # La restriction d'espèce que la base DÉCLARE : elle
+                        # permet de trancher les couples « à arbitrer ».
+                        "ESPECE_EUCAST"])
+    globals()["ESPECE_EUCAST"] = tables.get("ESPECE_EUCAST") or {}
+
     globals()["DZ_TEMOIN"] = tables.get("DZ_TEMOIN") or {}
     globals()["DEPISTAGE"] = tables.get("DEPISTAGE") or {}
     globals()["ECOFF"] = tables.get("ECOFF") or {}
@@ -316,6 +321,14 @@ ESPECE_ID = {
     r'S\. epidermidis': 'sepidermidis', r'S\. lugdunensis': 'slugdunensis',
     r'S\. haemolyticus': 'shaemolyticus',
     r'S\. agalactiae': 'sagalactiae', r'S\. pyogenes': 'spyogenes',
+    # P. AERUGINOSA MANQUAIT, et l'absence s'est vue le 2026-11-01 : le
+    # méropénème restait « à arbitrer » alors que la base nommait l'espèce
+    # de la ligne retenue. L'outil cherchait « P. aeruginosa » dans un
+    # vocabulaire qui ne le contenait pas, trouvait zéro espèce des deux
+    # côtés, et ne pouvait donc pas trancher. C'est le même défaut que la
+    # tobramycine absente de AGENTS : une table de vocabulaire incomplète
+    # ne se trompe pas, elle se tait.
+    r'P\. aeruginosa': 'paeru',
 }
 
 
@@ -670,6 +683,67 @@ def main():
                     return True
                 reste = [x for x in cands if garder(x[0])]
                 if reste: cands = reste
+
+            # LA DÉCLARATION DE LA BASE TRANCHE L'AMBIGUÏTÉ.
+            #
+            # Quand le document donne deux lignes pour le même couple parce
+            # qu'il sépare les espèces — vancomycine de l'entérocoque,
+            # méropénème de Pseudomonas —, l'outil ne savait que le dire :
+            # « 2 lignes possibles », et l'arbitrage restait dans un tableau
+            # de prose que rien ne relisait. Depuis le 2026-11-01 la base
+            # NOMME l'espèce de la ligne qu'elle retient ; l'outil la lit et
+            # confronte la bonne. L'arbitrage devient vérifiable, et un
+            # changement d'avis non porté dans la base se verrait.
+            if len(cands) > 1:
+                declare = ESPECE_EUCAST.get(
+                    "%s:%s:%s" % (groupe, code, "disque" if DIAMETRE else "cmi"))
+                if declare:
+                    # restriction() ne convient PAS ici : elle rend None dès
+                    # que la ligne nomme tout le groupe, et c'est justement le
+                    # cas — le groupe « enteroc » n'a que E. faecalis et
+                    # E. faecium, que la ligne nomme tous deux. Ce qu'il faut
+                    # est la liste BRUTE des espèces citées.
+                    def citees(nom):
+                        # « Pseudomonas OTHER THAN P. aeruginosa » cite
+                        # P. aeruginosa pour l'EXCLURE. Prise au mot, la
+                        # ligne des autres Pseudomonas se présentait comme
+                        # celle de P. aeruginosa, et les deux candidates
+                        # concordaient — l'arbitrage restait ouvert en
+                        # paraissant résolu des deux côtés.
+                        return {i for motif, i in ESPECE_ID.items()
+                                if re.search(motif, nom)
+                                and not re.search(r'(other than|except)\s+' + motif,
+                                                  nom, re.I)}
+                    import sys as _s
+                    if code == "MEM":
+                        _s.stderr.write("DEBUG declare=%r\n" % (declare,))
+                        for x in cands:
+                            _s.stderr.write("DEBUG cand %r -> %r\n" % (x[0][:90], citees(x[0])))
+                    vise = [x for x in cands if citees(x[0]) == set(declare)]
+                    if len(vise) == 1:
+                        cands = vise
+                    else:
+                        # UN VOCABULAIRE INCOMPLET NE SE TROMPE PAS : IL SE
+                        # TAIT. Si la base nomme l'espèce et que l'outil ne
+                        # sait pas la reconnaître dans le document, il ne
+                        # tranche pas — et sans cette ligne il ne dirait pas
+                        # POURQUOI. P. aeruginosa manquait à ESPECE_ID, et le
+                        # méropénème restait « à arbitrer » en donnant
+                        # l'impression d'une vraie ambiguïté du document.
+                        #
+                        # La vérification est posée ICI, et non à l'ouverture
+                        # du fichier : une première version refusait de
+                        # démarrer dès qu'une espèce déclarée manquait au
+                        # vocabulaire, et elle arrêtait l'outil pour quatre
+                        # entérobactéries dont AUCUNE ligne ambiguë n'a
+                        # jamais eu besoin. Un garde-fou qui bloque une
+                        # marche correcte finit désarmé.
+                        manquantes = [sp for sp in declare
+                                      if sp not in set(ESPECE_ID.values())]
+                        if manquantes:
+                            print("    (ESPECE_ID ne sait pas reconnaître %s dans "
+                                  "le document : l'arbitrage ne peut pas être "
+                                  "tranché automatiquement)" % ", ".join(manquantes))
 
             # Plusieurs lignes portant la MÊME valeur ne constituent pas une
             # ambiguïté : il n'y a rien à arbitrer. Sans cette réduction, un

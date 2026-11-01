@@ -303,6 +303,42 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
          valeur, et ne consulte que sa table — sans repli sur l'autre, qui
          ferait revenir le mélange qu'on vient de défaire. */
       ESPECE_EUCAST = {}, ESPECE_CASFM = {},
+      /* LES SEUILS QUE LE DOCUMENT ÉCRIT PAR ESPÈCE À L'INTÉRIEUR D'UN
+         CHAPITRE, quand il donne AUSSI une ligne « autres espèces ».
+
+         Jusqu'au 2026-11-01, PhénoBac savait RESTREINDRE un seuil à des
+         espèces, pas en donner DEUX. Les tables s'indexent par groupe, et
+         une seconde ligne écrasait la première en silence.
+
+         L'oxacilline des staphylocoques a montré ce qu'il en coûte. EUCAST
+         v16.1, feuille Staphylococcus, note 4 des pénicillines :
+
+           « S. aureus, S. lugdunensis and S. saprophyticus with oxacillin
+             MIC values > 2 mg/L are mostly methicillin resistant […] For
+             coagulase-negative staphylococci other than S. saprophyticus
+             and S. lugdunensis, the oxacillin MIC in methicillin resistant
+             isolates is > 0,25 mg/L. »
+
+         et le CA-SFM publie le même partage en toutes lettres (p72 :
+         « Oxacilline, S. aureus, S. lugdunensis, S. saprophyticus et
+         S. pettenkoferi » 2/2 ; « Oxacilline, autres espèces » 0,25/0,25).
+
+         PhénoBac appliquait 0,25 À TOUT LE MONDE sous EUCAST. Un
+         S. aureus sensible à la méticilline dont la CMI d'oxacilline vaut
+         0,5 ou 2 mg/L — ce que l'EUCAST appelle une BORSA, et dont il dit
+         expressément de NE PAS la rechercher systématiquement — sortait
+         « R », donc méticillino-résistant, donc résistant à TOUTES les
+         β-lactamines : le moteur raye la classe entière sur ce seul
+         résultat. Un SASM rendu SARM.
+
+         La règle de lecture est celle du document :
+
+           une ligne qui NOMME des espèces, à côté d'une ligne qui n'en
+           nomme aucune, est une EXCEPTION à celle-ci ;
+           une ligne qui nomme des espèces et qu'aucune ligne générale
+           n'accompagne est une RESTRICTION (comportement d'avant, inchangé
+           pour les quatorze couples qui en vivent).  */
+      SEUIL_ESPECE = {},
       DISQUE = {}, DISQUE_CASFM = {},
       ZIT = {}, ZIT_CASFM = {}, ZIT_ZONE = {}, ZIT_ZONE_CASFM = {},
       HORS_EUCAST = {}, CASFM_COUVRE = {}, CASFM_COUVRE_ESPECE = {},
@@ -332,6 +368,17 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
     "casfm:disque:standard":  DZ_CASFM, "casfm:disque:urinaire":  DZ_CASFM_URIN
   };
 
+  /* Quels couples possèdent une ligne SANS restriction d'espèce ? C'est
+     cela, et cela seul, qui distingue une exception d'une restriction. Le
+     calcul se fait AVANT la boucle : l'ordre des lignes dans le fichier ne
+     doit rien décider. */
+  const aUneLigneGenerale = {};
+  BASE.regles.forEach(function (r) {
+    if (r.S === undefined && r.R === undefined) return;
+    if (r.espece !== undefined) return;
+    aUneLigneGenerale[[r.ref, r.meth, r.site, r.groupe, r.abx].join(":")] = true;
+  });
+
   BASE.regles.forEach(function (r) {
     if (r.S !== undefined || r.R !== undefined) {
       const t = SEUILS[r.ref + ":" + r.meth + ":" + r.site];
@@ -342,7 +389,28 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
       if (!t) throw new Error(
         "base-connaissances : aucune table pour « " + r.ref + ":" + r.meth + ":" + r.site
         + " » (" + r.groupe + "/" + r.abx + "). Le seuil serait ignoré sans rien dire.");
-      met(t, r.groupe, r.abx, { S: r.S, R: r.R });
+      const coord = [r.ref, r.meth, r.site, r.groupe, r.abx].join(":");
+      if (r.espece !== undefined && aUneLigneGenerale[coord]) {
+        // Exception nominative : elle ne touche PAS la table du groupe.
+        r.espece.forEach(function (sp) {
+          const cle = coord + ":" + sp;
+          if (SEUIL_ESPECE[cle]) throw new Error(
+            "base-connaissances : deux seuils pour « " + cle + " ». "
+            + "Le second écraserait le premier sans rien dire.");
+          SEUIL_ESPECE[cle] = { S: r.S, R: r.R };
+        });
+      } else {
+        /* DEUX LIGNES GÉNÉRALES POUR LE MÊME COUPLE SONT UNE FAUTE, et
+           elle était muette : la seconde écrasait la première, et le
+           fichier donnait à lire un seuil que l'application n'appliquait
+           pas. */
+        if (r.espece === undefined && t[r.groupe] && t[r.groupe][r.abx] !== undefined)
+          throw new Error(
+            "base-connaissances : deux lignes générales pour « " + coord + " ». "
+            + "La seconde écraserait la première sans rien dire ; si elles "
+            + "diffèrent par l'espèce, nommez-la.");
+        met(t, r.groupe, r.abx, { S: r.S, R: r.R });
+      }
     }
     if (r.charge !== undefined)
       met(r.ref === "casfm" ? DISQUE_CASFM : DISQUE, r.groupe, r.abx, r.charge);
@@ -371,7 +439,11 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
        especeAutorisee() LÈVE si on l'appelle sans méthode, et
        verifier-fratries.py exige que chaque ligne d'un couple restreint soit
        tranchée. */
-    if (r.espece !== undefined)
+    /* La restriction ne s'enregistre que si AUCUNE ligne générale ne
+       couvre le couple : sinon ce n'est pas une restriction, c'est une
+       exception, et les autres espèces ont leur propre valeur. */
+    if (r.espece !== undefined
+        && !aUneLigneGenerale[[r.ref, r.meth, r.site, r.groupe, r.abx].join(":")])
       (r.ref === "casfm" ? ESPECE_CASFM : ESPECE_EUCAST)[r.groupe + ":" + r.abx + ":" + r.meth] = r.espece;
     if (r.ecoff) ECOFF[r.groupe + ":" + r.abx] = true;
     if (r.conv) dans(HORS_EUCAST, r.groupe, r.abx);
@@ -4423,7 +4495,13 @@ function getBP(bpOverride, group, k, ctx) {
   const c = ctx || {};
   // Le contexte méningé l'emporte sur tout le reste : un LCR n'est pas une urine.
   if (c.mening === "Oui") {
-    if (estCasfm() && BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return BP_MENINGE_CASFM[group][k];
+    if (estCasfm()) {
+      const e = seuilEspece("casfm", "cmi", "meninge", group, k);
+      if (e) return e;
+      if (BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return BP_MENINGE_CASFM[group][k];
+    }
+    const e = seuilEspece("eucast", "cmi", "meninge", group, k);
+    if (e) return e;
     if (BP_MENINGE[group] && BP_MENINGE[group][k]) return BP_MENINGE[group][k];
   }
   if (estCasfm()) {
@@ -4432,8 +4510,14 @@ function getBP(bpOverride, group, k, ctx) {
        donne l'oxacilline à 2 mg/L pour quatre espèces de staphylocoques et
        à 0,25 pour les autres ; sans ce contrôle, le 2 se serait appliqué à
        tout le groupe « scn », S. epidermidis compris. */
-    if (c.urin === "Oui" && BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]
-        && especeAutorisee(group, k, "casfm", "cmi")) return BP_CASFM_URIN[group][k];
+    if (c.urin === "Oui") {
+      const e = seuilEspece("casfm", "cmi", "urinaire", group, k);
+      if (e) return e;
+      if (BP_CASFM_URIN[group] && BP_CASFM_URIN[group][k]
+          && especeAutorisee(group, k, "casfm", "cmi")) return BP_CASFM_URIN[group][k];
+    }
+    const eC = seuilEspece("casfm", "cmi", "standard", group, k);
+    if (eC) return eC;
     if (BP_CASFM[group] && BP_CASFM[group][k]
         && especeAutorisee(group, k, "casfm", "cmi")) return BP_CASFM[group][k];
   }
@@ -4446,8 +4530,12 @@ function getBP(bpOverride, group, k, ctx) {
   // valait d'abord que pour le disque, et la nitrofurantoïne se trouvait
   // catégorisée en CMI chez Klebsiella alors que l'EUCAST ne la valide que
   // chez E. coli — un chiffre juste au mauvais endroit.
-  if (c.urin === "Oui" && BP_URIN[group] && BP_URIN[group][k] && especeAutorisee(group, k, "eucast", "cmi"))
-    return BP_URIN[group][k];
+  if (c.urin === "Oui") {
+    const e = seuilEspece("eucast", "cmi", "urinaire", group, k);
+    if (e) return e;
+    if (BP_URIN[group] && BP_URIN[group][k] && especeAutorisee(group, k, "eucast", "cmi"))
+      return BP_URIN[group][k];
+  }
   /* Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas.
      Cette ligne est une ceinture par-dessus des bretelles, et l'épreuve par
      mutation l'a montré : la retirer ne change rien, puisque le retour final
@@ -4468,6 +4556,8 @@ function getBP(bpOverride, group, k, ctx) {
      Une restriction écrite dans la base et ignorée par le moteur est pire
      qu'une restriction absente : elle donne à relire une garantie qui
      n'existe pas. */
+  const eE = seuilEspece("eucast", "cmi", "standard", group, k);
+  if (eE) return eE;
   if (BP[group] && BP[group][k] && !especeAutorisee(group, k, "eucast", "cmi")) return null;
   return (BP[group] && BP[group][k]) || null;
 }
@@ -4727,6 +4817,8 @@ function getDZ(dzOverride, group, k, ctx) {
     // dans la boucle de traduction, pour ne pas rendre « R » ce que le
     // CA-SFM refuse de trancher au disque.
     if (DEPISTAGE_CASFM[group] && DEPISTAGE_CASFM[group][k]) return null;
+    const eC = seuilEspece("casfm", "disque", c.urin === "Oui" ? "urinaire" : "standard", group, k);
+    if (eC) return eC;
     const limite = ESPECE_CASFM[group + ":" + k + ":disque"];
     if (!limite || (_activeId && limite.indexOf(_activeId) !== -1)) {
       const d = dzCasfm(group, k, c);
@@ -4747,6 +4839,8 @@ function getDZ(dzOverride, group, k, ctx) {
     // référentiel. Le CA-SFM ne donne aucun diamètre méningé : il renvoie
     // à une note et demande la CMI. L'absence est une consigne, pas un
     // oubli à combler avec la valeur d'à côté.
+    const eM = seuilEspece("eucast", "disque", "meninge", group, k);
+    if (eM) return eM;
     if (DZ_MENINGE[group] && DZ_MENINGE[group][k]) return DZ_MENINGE[group][k];
     if (BP_MENINGE[group] && BP_MENINGE[group][k]) return null;
     if (estCasfm() && BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return null;
@@ -4756,13 +4850,19 @@ function getDZ(dzOverride, group, k, ctx) {
   // nitrofurantoïne chez E. coli, le triméthoprime chez E. coli et
   // Klebsiella. Appliquer ces seuils ailleurs donnerait un chiffre juste au
   // mauvais endroit, le défaut le plus difficile à repérer.
-  if (c.urin === "Oui" && DZ_URIN[group] && DZ_URIN[group][k]
-      && especeAutorisee(group, k, "eucast", "disque")) return DZ_URIN[group][k];
+  if (c.urin === "Oui") {
+    const e = seuilEspece("eucast", "disque", "urinaire", group, k);
+    if (e) return e;
+    if (DZ_URIN[group] && DZ_URIN[group][k]
+        && especeAutorisee(group, k, "eucast", "disque")) return DZ_URIN[group][k];
+  }
   // Hors cystite, une molécule qui n'a QUE des seuils urinaires n'en a pas :
   // ne pas retomber sur un seuil d'une autre indication.
   if (DZ_URIN[group] && DZ_URIN[group][k] && !(DZ[group] && DZ[group][k])) return null;
   // Symétrique de getBP : au disque comme en CMI, la restriction d'espèce
   // du site ordinaire était écrite et non lue.
+  const eD = seuilEspece("eucast", "disque", "standard", group, k);
+  if (eD) return eD;
   if (DZ[group] && DZ[group][k] && !especeAutorisee(group, k, "eucast", "disque")) return null;
   return (DZ[group] && DZ[group][k]) || null;
 }
@@ -4770,6 +4870,19 @@ function getDZ(dzOverride, group, k, ctx) {
 /* La restriction d'espèce d'un seuil, s'il en porte une. Sert aux seuils
    urinaires de l'EUCAST comme à ceux du CA-SFM : une seule règle, une seule
    place où elle peut être oubliée. */
+/* Le seuil nominatif de l'espèce en cours, s'il en existe un.
+
+   Il se consulte AVANT la table du groupe, dans chaque branche, parce que
+   le document le pose ainsi : « Oxacillin, S. aureus… » vient avant
+   « Oxacillin, other staphylococci ». L'oublier dans une branche ne lève
+   pas — la valeur du groupe sortirait, et elle est plausible. C'est
+   essai-categorisation.js qui tient ce bout-là : il exige que CHAQUE clé de
+   SEUIL_ESPECE soit réellement rendue à l'espèce qu'elle nomme. */
+function seuilEspece(ref, meth, site, group, k) {
+  if (!_activeId) return null;
+  return SEUIL_ESPECE[[ref, meth, site, group, k, _activeId].join(":")] || null;
+}
+
 function especeAutorisee(group, k, ref, meth) {
   /* « meth » EST OBLIGATOIRE, ET L'OUBLI LÈVE. Une méthode absente donnerait
      une clé qui ne trouve rien, donc « aucune restriction », donc un seuil
@@ -5143,6 +5256,9 @@ const MOTEUR = {
      l'appelle sans méthode. Depuis que la clé porte la méthode, un appel qui
      l'oublie ouvrirait le seuil au lieu de le fermer, et se tairait. */
   especeAutorisee,
+  // Exportée pour que le banc exige que CHAQUE exception nominative soit
+  // réellement rendue à l'espèce qu'elle nomme.
+  SEUIL_ESPECE,
   // Exportée pour que le banc confronte chaque note à la feuille du classeur.
   LECTURE_DISQUE,
   DISQUE, DISQUE_CASFM, OXA_PNEUMO, DEPISTAGE, DEPISTAGE_CASFM,

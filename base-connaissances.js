@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.34";
+const BASE_VERSION = "2026.35";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -1654,7 +1654,14 @@ const REGLES = [
 ["eucast","scn","MIN","disque","standard",23,23,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","MXF","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","MXF","disque","standard",28,28,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+/* Les coagulase négative : la ligne GÉNÉRALE à 0,25, et l'EXCEPTION
+   nominative à 2 pour S. saprophyticus et S. lugdunensis, que la note 4
+   nomme avec S. aureus. Deux lignes pour un même couple, la seconde
+   l'emportant pour les espèces qu'elle nomme — voir SEUIL_ESPECE dans
+   moteur.js. Le CA-SFM nomme une quatrième espèce, S. pettenkoferi, que
+   PhénoBac ne porte pas : rien à écrire tant qu'elle n'y est pas.  */
 ["eucast","scn","OXA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,true,undefined,undefined],
+["eucast","scn","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,["ssaprophyticus","slugdunensis"]],
 ["eucast","scn","PEN","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,["slugdunensis"]],
 ["eucast","scn","PEN","disque","standard",26,26,"1 unit",undefined,undefined,undefined,undefined,undefined,["slugdunensis"]],
 ["eucast","scn","RD","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -1722,7 +1729,40 @@ const REGLES = [
 ["eucast","staph","MIN","disque","standard",23,23,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","staph","MXF","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","staph","MXF","disque","standard",25,25,"5",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","staph","OXA","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,true,undefined,undefined],
+/* L'OXACILLINE DES STAPHYLOCOQUES — DEUX VALEURS, ET PHÉNOBAC N'EN
+   APPLIQUAIT QU'UNE. Corrigé le 2026-11-01.
+
+   L'EUCAST ne donne AUCUNE concentration critique clinique d'oxacilline :
+   sa table écrit « Note » (feuille Staphylococcus, « Oxacillin, other
+   staphylococci »), et renvoie la détection de la méticillino-résistance à
+   la CÉFOXITINE. Le chiffre existe pourtant, dans la note 4 des
+   pénicillines :
+
+     « S. aureus, S. lugdunensis and S. saprophyticus with oxacillin MIC
+       values > 2 mg/L are mostly methicillin resistant due to the presence
+       of the mecA or mecC gene. Occasionally oxacillin MIC values are high
+       in S. aureus in absence of mec-gene mediated resistance. These
+       isolates have been called BORSA […]. EUCAST does not recommend
+       systematic screening for BORSA. For coagulase-negative staphylococci
+       other than S. saprophyticus and S. lugdunensis, the oxacillin MIC in
+       methicillin resistant isolates is > 0,25 mg/L. »
+
+   Le CA-SFM publie le même partage en table (p72) : « Oxacilline, S. aureus,
+   S. lugdunensis, S. saprophyticus et S. pettenkoferi » 2/2, « Oxacilline,
+   autres espèces » 0,25/0,25. LES DEUX COMITÉS DISENT LA MÊME CHOSE.
+
+   PhénoBac appliquait 0,25 à TOUT LE MONDE sous EUCAST, S. aureus compris.
+   Conséquence : un staphylocoque doré SENSIBLE à la méticilline dont la CMI
+   d'oxacilline vaut 0,5 ou 2 mg/L sortait « R » ; le moteur en déduit la
+   méticillino-résistance (staphInterpret : « mrsa = isRI(r.FOX) ||
+   isRI(r.OXA) ») et raye ALORS TOUTES LES β-LACTAMINES. Un SASM rendu SARM,
+   sur un seul chiffre, et précisément dans la plage que l'EUCAST nomme
+   BORSA en disant de ne pas la rechercher.
+
+   Le « conv » reste : la table de l'EUCAST ne chiffre pas ce couple, et
+   l'interface doit continuer de le dire. Ce qui change est la valeur, et sa
+   provenance est maintenant écrite.  */
+["eucast","staph","OXA","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","staph","PEN","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","staph","PEN","disque","standard",26,26,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","staph","RD","cmi","standard",0.06,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

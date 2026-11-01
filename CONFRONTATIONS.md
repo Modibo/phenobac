@@ -27,13 +27,13 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : e08194906a6285e8066e07cf8b7946221ee04c6971dc3228280f5ee7b5cfc65f
-- **date** : **2026-11-01, le classeur en main** (sha256 `5de6f4a097f7f655…`)
-- **résultat** : **511 seuils confrontés — 511 identiques, 0 différent**,
-  0 drapeau incohérent, 91 non comparés. Diamètres : **437 identiques, 0
-  différent**, 2 arbitrés **et liés le 2026-11-01** (vancomycine de
-  l'entérocoque, méropénème de *Pseudomonas* : deux lignes possibles, celle
-  de l'espèce couverte retenue et désormais déclarée comme telle). Méningé : **24 identiques, 0 différent**.
+- **empreinte** : a3542a751df1ddeb3f283fe7f2c7ab83d93ee1dff1df16bfc20341873b83d957
+- **date** : **2026-11-01, le classeur en main, deuxième passage** (sha256 `5de6f4a097f7f655…`)
+- **résultat** : **517 seuils confrontés — 517 identiques, 0 différent**,
+  0 drapeau incohérent, 0 à arbitrer, 91 non comparés. Diamètres :
+  **445 identiques, 0 différent, 0 à arbitrer, 0 non comparé** — la colonne
+  « à arbitrer » est vide pour la première fois. Méningé : **24 identiques,
+  0 différent**.
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : le
   2026-10-31, trois lignes ont été **retirées** de BP —
   `morganella/salmonella/serratia · FOS · cmi · standard 8-8`. Aucune
@@ -273,6 +273,108 @@ seule la première est réparable par l'utilisateur :
 
 ---
 
+## L'oxacilline des staphylocoques, corrigée le 2026-11-01
+
+**C'est le défaut le plus lourd rencontré dans ce dépôt, et aucun outil ne
+pouvait le voir.**
+
+La table de l'EUCAST ne chiffre PAS l'oxacilline : feuille *Staphylococcus*,
+« Oxacillin, other staphylococci » → **Note / Note**. Le comité renvoie la
+détection de la méticillino-résistance à la **céfoxitine**. Le chiffre existe
+pourtant, dans la note 4 des pénicillines :
+
+> « *S. aureus*, *S. lugdunensis* and *S. saprophyticus* with oxacillin MIC
+> values **> 2 mg/L** are mostly methicillin resistant due to the presence of
+> the mecA or mecC gene. Occasionally oxacillin MIC values are high in
+> *S. aureus* in absence of mec-gene mediated resistance. These isolates have
+> been called **BORSA**. **EUCAST does not recommend systematic screening for
+> BORSA.** For coagulase-negative staphylococci other than *S. saprophyticus*
+> and *S. lugdunensis*, the oxacillin MIC in methicillin resistant isolates is
+> **> 0,25 mg/L**. »
+
+Le CA-SFM publie le même partage, lui en table (p72) : « Oxacilline,
+*S. aureus*, *S. lugdunensis*, *S. saprophyticus* et *S. pettenkoferi* » 2/2 ;
+« Oxacilline, autres espèces » 0,25/0,25. **Les deux comités disent la même
+chose.**
+
+PhénoBac appliquait **0,25 à tout le monde sous EUCAST**, *S. aureus* compris.
+
+| | avant | après |
+|---|---|---|
+| *S. aureus* · EUCAST | 0,25 | **2** |
+| *S. saprophyticus*, *S. lugdunensis* · EUCAST | 0,25 | **2** |
+| *S. epidermidis*, *S. haemolyticus* · EUCAST | 0,25 | 0,25 |
+| les mêmes · CA-SFM | déjà justes | inchangés |
+
+**Ce que cela produisait.** Un *S. aureus* **sensible à la méticilline** dont
+la CMI d'oxacilline vaut 0,5, 1 ou 2 mg/L sortait « R ». Le moteur en déduit
+la méticillino-résistance (`mrsa = isRI(r.FOX) || isRI(r.OXA)`) et **raye
+alors toutes les β-lactamines**. Un SASM rendu SARM, sur un seul chiffre, et
+précisément dans la plage que l'EUCAST nomme BORSA en disant de **ne pas** la
+rechercher. Le banc l'énonce maintenant à l'endroit : « un *S. aureus* à
+1 mg/L d'oxacilline n'est plus rendu SARM ».
+
+### Pourquoi aucun contrôle ne le voyait
+
+`comparer-eucast.py` confronte ce que le document CHIFFRE. Pour l'oxacilline
+la cellule dit « Note » : le couple est classé **« écarté — sans valeur
+chiffrée »** et n'est jamais comparé. Le comparateur est muet **exactement là
+où PhénoBac a dû inventer**.
+
+> **Dette nommée : 21 couples sont dans ce cas.** Ils portent un seuil que
+> PhénoBac applique et que rien ne confronte, parce que la cellule du
+> classeur renvoie à une note. L'oxacilline montre que les notes contiennent
+> parfois le chiffre exact. Lire les notes est la dernière zone aveugle de la
+> confrontation EUCAST.
+
+### Il a fallu un mécanisme : deux valeurs pour un couple
+
+PhénoBac savait **restreindre** un seuil à des espèces ; il ne savait pas en
+donner **deux**. Les tables s'indexent par groupe, et une seconde ligne
+écrasait la première en silence. Or le groupe `scn` doit porter 2 mg/L pour
+*S. saprophyticus* et *S. lugdunensis* et 0,25 pour les autres.
+
+D'où `SEUIL_ESPECE`, et une règle de lecture qui est celle du document :
+
+- une ligne qui **nomme des espèces à côté d'une ligne qui n'en nomme aucune**
+  est une **exception** à celle-ci ;
+- une ligne qui nomme des espèces **seule** est une **restriction** —
+  comportement inchangé pour les quatorze couples qui en vivent.
+
+Le loader LÈVE désormais sur deux lignes générales pour un même couple : c'était
+jusqu'ici un écrasement muet. `verifier-tables.py` et `verifier-fratries.py`
+ont appris la même distinction — ils ont tous deux crié, à juste titre, avant
+de l'apprendre. Et `essai-categorisation.js` exige que **chaque** clé de
+`SEUIL_ESPECE` soit réellement rendue à l'espèce qu'elle nomme : le moteur la
+consulte dans neuf branches, en oublier une ne lève pas, et la valeur du
+groupe qui sortirait à la place est plausible — c'est même celle d'hier.
+Éprouvé par mutation.
+
+### Et l'arbitrage des diamètres est devenu vérifiable
+
+La base nommant maintenant l'espèce de la ligne qu'elle retient,
+`comparer-eucast.py --diametres` **tranche** les couples que le document donne
+en deux lignes, au lieu d'imprimer « 2 lignes possibles » et de laisser
+l'arbitrage dans un tableau de prose. Résultat : **445 identiques, 0 différent,
+0 à arbitrer, 0 non comparé**.
+
+> **Deux lectures fausses ont dû être corrigées pour y arriver.** La première :
+> « *Pseudomonas* **other than** *P. aeruginosa* » cite *P. aeruginosa* pour
+> l'exclure — prise au mot, la ligne des autres *Pseudomonas* se présentait
+> comme celle de *P. aeruginosa*. La seconde, plus instructive :
+> **`ESPECE_ID` ne contenait pas *P. aeruginosa***. L'outil cherchait dans le
+> document un nom qu'il ne savait pas reconnaître, ne trouvait rien des deux
+> côtés, et ne pouvait pas trancher — sans le dire. C'est le même défaut que
+> la tobramycine absente de `AGENTS` : **une table de vocabulaire incomplète
+> ne se trompe pas, elle se tait.** L'outil annonce désormais l'espèce qu'il
+> ne sait pas lire.
+>
+> Un premier garde-fou refusait de démarrer dès qu'une espèce déclarée
+> manquait au vocabulaire. Il arrêtait l'outil pour quatre entérobactéries
+> dont aucune ligne ambiguë n'a jamais eu besoin. Il a été déplacé au point
+> de défaillance : **un garde-fou qui bloque une marche correcte finit
+> désarmé.**
+
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
@@ -309,10 +411,13 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : DZ, DZ_URIN
 - **empreinte** : 016d9cba32aafc429ec2ee880cb1e5115620ae3ba5347ca579f1fbd4aded864e
-- **date** : 2026-10-25
-- **résultat** : **435** diamètres confrontés — **435 identiques, 0 différent**,
-  0 non comparé, 2 arbitrés **et liés le 2026-11-01** (les deux concordent ;
-  la ligne retenue porte maintenant sa restriction d'espèce). Dans l'autre sens : aucune
+- **date** : **2026-11-01, le classeur en main**
+- **résultat** : **445** diamètres confrontés — **445 identiques, 0 différent,
+  0 à arbitrer, 0 non comparé**. Les deux couples qui restaient « à arbitrer »
+  — vancomycine de l'entérocoque, méropénème de *Pseudomonas* — sont tranchés
+  par l'outil lui-même : la base NOMME désormais l'espèce de la ligne qu'elle
+  retient, et le comparateur la lit au lieu de s'en remettre à un tableau de
+  prose. L'arbitrage est devenu vérifiable. Dans l'autre sens : aucune
   molécule du panel n'est privée de son diamètre ; il reste 2 couples hors
   panel, faute de charge de disque dans le document, et 6 absences expliquées
   par un témoin ou un écran.
@@ -575,8 +680,8 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 60256cc034ef90c4f3ae22f98931a81d240415a4d72837d0981acf221898e8ce
-- **date** : 2026-10-25, empreinte reprise le 2026-10-31
+- **empreinte** : 2218bc0fc71dd1ef9ac66d3bc94d3ca4341088c1ae79deafac6bb3c7e3df6318
+- **date** : **2026-11-01, le classeur en main** — 409 règles attendues sur 22 tables, **0 manque, 0 excédent**
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et
   une PORTÉE à rappeler : la liste `TABLES` de cet outil ne contient que

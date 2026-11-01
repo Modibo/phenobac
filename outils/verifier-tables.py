@@ -194,10 +194,23 @@ def main():
     def met(n, g, a, v):
         attendu[n].setdefault(g, {})[a] = v
 
+    # UNE LIGNE QUI NOMME DES ESPÈCES, À CÔTÉ D'UNE LIGNE QUI N'EN NOMME
+    # AUCUNE, N'ENTRE PAS DANS LA TABLE DU GROUPE : c'est une exception
+    # nominative, et le moteur la range dans SEUIL_ESPECE. La règle est celle
+    # de moteur.js, et elle se recalcule ici plutôt que de se recopier — un
+    # contrôle qui postule ce qu'il vérifie ne vérifie rien.
+    generales = set()
+    for r in regles:
+        if ("S" in r or "R" in r) and "espece" not in r:
+            generales.add((r["ref"], r["meth"], r["site"], r["groupe"], r["abx"]))
+
     for r in regles:
         cle = (r["ref"], r["meth"], r["site"])
         if "S" in r or "R" in r:
-            if cle in SEUILS:
+            coord = (r["ref"], r["meth"], r["site"], r["groupe"], r["abx"])
+            if "espece" in r and coord in generales:
+                pass                      # exception nominative : hors table de groupe
+            elif cle in SEUILS:
                 met(SEUILS[cle], r["groupe"], r["abx"], {"S": r.get("S"), "R": r.get("R")})
         if "charge" in r:
             met("DISQUE_CASFM" if r["ref"] == "casfm" else "DISQUE", r["groupe"], r["abx"], r["charge"])

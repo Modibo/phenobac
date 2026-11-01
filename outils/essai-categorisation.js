@@ -384,6 +384,70 @@ dire("\nLa restriction d'espèce porte sur une méthode, et l'oubli doit lever")
           : "UN SEUIL RESTREINT A ÉTÉ RENDU À UNE ESPÈCE EXCLUE : " + ouverts.join(" ; "));
   verif(fermes > 0, "… et le balayage a bien visité quelque chose (" + fermes + " cas)");
 
+  /* 4 bis. L'EXCEPTION NOMINATIVE EST-ELLE RÉELLEMENT RENDUE ?
+
+     Depuis le 2026-11-01, une ligne de la base peut donner un seuil À UNE
+     ESPÈCE à côté d'une ligne générale qui le donne aux autres :
+     l'oxacilline des staphylocoques, 2 mg/L pour S. aureus, S. lugdunensis
+     et S. saprophyticus, 0,25 pour les autres — EUCAST note 4 des
+     pénicillines, CA-SFM p72.
+
+     Le moteur doit consulter cette table AVANT celle du groupe, dans
+     CHACUNE des neuf branches de getBP et getDZ. En oublier une ne lève
+     pas : la valeur du groupe sortirait, et elle est plausible — c'est
+     même celle qui était rendue hier. Le banc exige donc que chaque clé de
+     SEUIL_ESPECE soit atteinte par l'espèce qu'elle nomme, et avec SA
+     valeur, et non celle du groupe. */
+  var jamais = [], atteintes = 0;
+  Object.keys(E.SEUIL_ESPECE).forEach(function (cle) {
+    var p = cle.split(":");            // ref:meth:site:groupe:abx:espece
+    var ref = p[0], meth = p[1], site = p[2], abx = p[4], id = p[5];
+    var attendu = E.SEUIL_ESPECE[cle];
+    var ctx = site === "urinaire" ? { urin: "Oui" }
+            : site === "meninge"  ? { mening: "Oui" } : {};
+    E.cadrer(ref, id);
+    var lu = meth === "cmi" ? E.getBP({}, E.ORG[id].bpGroup, abx, ctx)
+                            : E.getDZ({}, E.ORG[id].bpGroup, abx, ctx);
+    if (!lu || lu.S !== attendu.S || lu.R !== attendu.R)
+      jamais.push(cle + " : attendu " + JSON.stringify(attendu)
+        + ", rendu " + JSON.stringify(lu));
+    else atteintes++;
+  });
+  verif(jamais.length === 0,
+        jamais.length === 0
+          ? "les " + atteintes + " exceptions nominatives sont toutes rendues à "
+            + "l'espèce qu'elles nomment"
+          : "EXCEPTION NOMINATIVE NON RENDUE — la valeur du groupe sort à sa "
+            + "place, et elle est plausible : " + jamais.join(" ; "));
+
+  /* 4 ter. L'oxacilline, nommément : c'est elle qui a fait naître la table,
+     et le défaut qu'elle corrige est le plus lourd rencontré jusqu'ici. Un
+     S. aureus MÉTICILLINO-SENSIBLE dont la CMI d'oxacilline vaut 1 mg/L
+     sortait « R » sous EUCAST ; le moteur en déduisait la
+     méticillino-résistance et rayait TOUTES les β-lactamines. */
+  ["eucast", "casfm"].forEach(function (ref) {
+    verif(categ("saureus", { OXA: "1" }, {}, ref).OXA === "S",
+          ref + " : S. aureus, oxacilline 1 mg/L → S (le seuil est 2, pas 0,25)");
+    verif(categ("saureus", { OXA: "4" }, {}, ref).OXA === "R",
+          ref + " : … et 4 mg/L → R, le seuil sépare toujours");
+    verif(categ("ssaprophyticus", { OXA: "1" }, {}, ref).OXA === "S"
+          && categ("slugdunensis", { OXA: "1" }, {}, ref).OXA === "S",
+          ref + " : S. saprophyticus et S. lugdunensis suivent S. aureus — "
+          + "les trois espèces que la note 4 nomme ensemble");
+    verif(categ("sepidermidis", { OXA: "1" }, {}, ref).OXA === "R"
+          && categ("shaemolyticus", { OXA: "1" }, {}, ref).OXA === "R",
+          ref + " : … tandis que S. epidermidis et S. haemolyticus restent à 0,25");
+  });
+  /* Et le phénotype qui en découle : c'est là que se mesure le dégât. */
+  (function () {
+    var a = E.runInterpretation({ organism: "saureus", ref: "eucast", mode: "mic",
+      mic: { OXA: "1" }, ctx: {} });
+    verif(!/SARM|méticillino-rés/i.test((a.interpretation.name || "")
+            + (a.interpretation.comment || "")),
+          "un S. aureus à 1 mg/L d'oxacilline n'est plus rendu SARM : "
+          + "« " + (a.interpretation.name || "sans nom") + " »");
+  })();
+
   /* 5. Les espèces couvertes, elles, gardent leur seuil. Un contrôle qui
      ferme tout passerait les quatre précédents. */
   verif(categ("efaecalis", { VA: "2" }).VA === "S" && categ("efaecium", { VA: "2" }).VA === "S",

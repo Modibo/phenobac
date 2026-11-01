@@ -268,10 +268,26 @@ def main():
     # ------------------------------------------------------------------
     # SECONDE PASSE : au sein d'un couple, chaque méthode est-elle tranchée ?
     # ------------------------------------------------------------------
+    # UNE EXCEPTION NOMMÉE N'EST PAS UNE RESTRICTION, et confondre les deux
+    # faisait crier ce contrôle sur l'oxacilline du 2026-11-01. Quand un
+    # couple porte À LA FOIS une ligne générale et une ligne qui nomme des
+    # espèces, la seconde ne restreint rien : elle fait exception à la
+    # première, et les autres espèces gardent la valeur générale. Il n'y a
+    # alors aucune méthode à couvrir. La règle est celle du moteur, et elle
+    # se recalcule ici au lieu de se recopier.
+    generales = set()
+    for r in lignes:
+        if r.get("espece", "undefined") in ("undefined", "null"):
+            generales.add((r["ref"], r["groupe"], r["abx"], r.get("site", "?"),
+                           r.get("meth", "?")))
+
     couples = {}
     for r in lignes:
         cle = (r["ref"], r["groupe"], r["abx"], r.get("site", "?"))
         esp = r.get("espece", "undefined")
+        if esp not in ("undefined", "null") \
+           and cle + (r.get("meth", "?"),) in generales:
+            continue                      # exception nominative, pas restriction
         couples.setdefault(cle, []).append(
             (r.get("meth", "?"), "" if esp in ("undefined", "null") else esp))
 
