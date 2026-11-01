@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.31";
+const BASE_VERSION = "2026.32";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -431,6 +431,10 @@ const REGLES = [
 ["eucast","acineto","MIN","cmi","standard",null,2,undefined,undefined,undefined,undefined,true,true,undefined],
 ["eucast","acineto","SXT","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","acineto","SXT","disque","standard",16,16,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","acineto","TOB","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","acineto","TOB","cmi","urinaire",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","acineto","TOB","disque","standard",17,17,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","acineto","TOB","disque","urinaire",17,17,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","acineto","TZP","cmi","standard",16,16,undefined,undefined,undefined,undefined,true,true,undefined],
 ["eucast","bfragilis","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","bfragilis","DA","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
@@ -515,6 +519,14 @@ const REGLES = [
 //
 // Plusieurs couples n'ont qu'un seuil AU DISQUE : l'EUCAST y renvoie à une
 // note pour la CMI. C'est fidèle — la lecture au disque conclut, la CMI non.
+["eucast","entero","TOB","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","entero","TOB","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","entero","TOB","disque","standard",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","entero","TOB","disque","urinaire",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","TOB","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","morganella","TOB","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","morganella","TOB","disque","standard",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","morganella","TOB","disque","urinaire",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","prevotella","PEN","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","prevotella","PEN","disque","standard",20,20,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","prevotella","AMP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -945,12 +957,20 @@ const REGLES = [
 ["eucast","pseudo","LVX","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
 
 // --- salmonella (4) ---
+["eucast","pseudo","TOB","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","pseudo","TOB","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","pseudo","TOB","disque","standard",18,18,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","pseudo","TOB","disque","urinaire",18,18,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","salmonella","FDC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Cefiderocol
 ["eucast","salmonella","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
 ["eucast","salmonella","MXF","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Moxifloxacin, Enterobacterales except Morganella morganii, Proteus spp
 ["eucast","salmonella","MXF","disque","standard",22,22,"5",undefined,undefined,undefined,undefined,undefined,undefined],   // Moxifloxacin, Enterobacterales except Morganella morganii, Proteus spp
 
 // --- scn (11) ---
+["eucast","salmonella","TOB","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","salmonella","TOB","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","salmonella","TOB","disque","standard",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","salmonella","TOB","disque","urinaire",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","scn","AMK","cmi","standard",16,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Amikacin, Coagulase-negative staphylococci  ⟨valeur entre parenthèses⟩
 ["eucast","scn","AZM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Azithromycin
 ["eucast","scn","CIP","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Ciprofloxacin, Coagulase-negative staphylococci  ⟨valeur entre parenth
@@ -969,6 +989,10 @@ const REGLES = [
 ["eucast","serratia","LVX","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Levofloxacin
 
 // --- staph (9) ---
+["eucast","serratia","TOB","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","serratia","TOB","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["eucast","serratia","TOB","disque","standard",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined,true],
+["eucast","serratia","TOB","disque","urinaire",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","staph","AMK","cmi","standard",16,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Amikacin, S. aureus  ⟨valeur entre parenthèses⟩
 ["eucast","staph","AZM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],   // Azithromycin
 ["eucast","staph","CIP","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],   // Ciprofloxacin, S. aureus  ⟨valeur entre parenthèses⟩

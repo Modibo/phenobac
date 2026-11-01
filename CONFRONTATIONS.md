@@ -27,7 +27,7 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : 58c872d69fe3030280b51ae799a8afe5126febdcb82772223df773ba61d9c9a1
+- **empreinte** : e08194906a6285e8066e07cf8b7946221ee04c6971dc3228280f5ee7b5cfc65f
 - **date** : **2026-11-01, le classeur en main** (sha256 `5de6f4a097f7f655…`)
 - **résultat** : **511 seuils confrontés — 511 identiques, 0 différent**,
   0 drapeau incohérent, 91 non comparés. Diamètres : **437 identiques, 0
@@ -307,7 +307,7 @@ déjà la valeur méningée, ce qui arrive quand le document ne donne qu'une lig
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : DZ, DZ_URIN
-- **empreinte** : e74f66e1c8a3fe9c14da77f5b9d6d85fc0c7a7ea001f72f7f7f3a5fdc278c9dc
+- **empreinte** : 016d9cba32aafc429ec2ee880cb1e5115620ae3ba5347ca579f1fbd4aded864e
 - **date** : 2026-10-25
 - **résultat** : **435** diamètres confrontés — **435 identiques, 0 différent**,
   0 non comparé, 2 à arbitrer (les deux concordent). Dans l'autre sens : aucune
@@ -509,7 +509,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 572b9cbe448773f17d3bec5bf8b40809cbaea276e22c65377e5bf8c8104f28ee
+- **empreinte** : 60256cc034ef90c4f3ae22f98931a81d240415a4d72837d0981acf221898e8ce
 - **date** : 2026-10-25, empreinte reprise le 2026-10-31
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et
@@ -720,12 +720,33 @@ valeur parfaitement fixée.
 > désormais elle aussi, quoique l'EUCAST l'ait retirée en v14.0 : c'est ainsi
 > que l'outil peut le **constater** plutôt que de l'ignorer.
 
-### Et une couverture à étendre, nommée
+### La couverture étendue aux six autres groupes, le même jour
 
-L'EUCAST chiffre la tobramycine (entre parenthèses) pour **six groupes de
-plus** que PhénoBac ne porte pas : `acineto`, `entero`, `morganella`,
-`pseudo`, `salmonella`, `serratia`. Le bloc du 2026-11-01 ne visait que les
-staphylocoques, qui sont le chapitre du CA-SFM. L'extension est à décider.
+L'EUCAST chiffre la tobramycine pour six groupes de plus que PhénoBac ne
+portait pas. Sur décision du biologiste, ils sont ajoutés — et le classeur
+donne **deux lignes** par groupe, que PhénoBac distingue par le site :
+
+| groupe | systémique (entre parenthèses) | urinaire (sans) |
+|---|---|---|
+| `entero`, `morganella`, `salmonella`, `serratia` | 2 / 2 · disque 16 / 16 | 2 / 2 · disque 16 / 16 |
+| `pseudo` | 2 / 2 · disque 18 / 18 | 2 / 2 · disque 18 / 18 |
+| `acineto` | 4 / 4 · disque 17 / 17 | 4 / 4 · disque 17 / 17 |
+
+Seule la ligne systémique porte la réserve « entre parenthèses » (`ecoff`) ;
+le compte passe de 31 à 37 couples, et `essai-regles.js` le dit avec sa
+raison. Vérifié : un *E. coli* à 1 mg/L de tobramycine reçoit désormais la
+règle « EUCAST : Tobramycine, Gentamicine — seuil donné entre parenthèses,
+fondé sur l'ECOFF ».
+
+**`shigella` et `salmonella` ne reçoivent pas la molécule au panel**, et ce
+n'est pas un oubli : leur panel ne porte **aucun aminoside**, parce que ces
+molécules sont inactives sur les salmonelloses et shigelloses
+intra-cellulaires. Les seuils existent dans la base — le groupe est celui des
+entérobactéries — mais la saisie ne les propose pas, et c'est la bonne
+façon : offrir une case qu'on ne devrait pas remplir est une invitation.
+
+Après extension : **517 concentrations critiques identiques, 0 différente ;
+443 diamètres identiques, 0 différent.**
 
 ## Les restrictions d'espèce du site ordinaire, 2026-11-01
 

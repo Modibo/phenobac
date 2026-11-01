@@ -437,7 +437,12 @@ dire("\nLa parenthèse de l'EUCAST est une réserve, pas une coquetterie");
   // ajoutée avec le bloc aminosides. L'EUCAST la met entre parenthèses en
   // CMI comme au disque (v16.1, p38), au même titre que la gentamicine et
   // l'amikacine qui l'encadrent.
-  verif(Object.keys(E.ECOFF).length === 31,
+  // 37 le même jour : la tobramycine étendue aux six groupes que le classeur
+  // chiffre aussi — entero, morganella, salmonella, serratia, pseudo,
+  // acineto. L'EUCAST y donne DEUX lignes, « systemic infections » entre
+  // parenthèses et « infections originating from the urinary tract » sans ;
+  // seule la première porte la réserve, et c'est elle qu'on compte.
+  verif(Object.keys(E.ECOFF).length === 37,
         Object.keys(E.ECOFF).length + " couples portent la réserve, lus dans la base");
   verif(E.seuilEcoff("entero", "COL") && !E.seuilEcoff("entero", "CTX"),
         "la colistine des entérobactéries est visée, la céfotaxime non");
