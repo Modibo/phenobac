@@ -4,6 +4,8 @@ comparer-eucast.py — confronte les seuils de PhénoBac au tableau EUCAST offic
 
     python3 outils/comparer-eucast.py chemin/vers/v_16.1_Breakpoint_Tables.xlsx
     python3 outils/comparer-eucast.py …xlsx --meninge   (seuils de méningite)
+    python3 outils/comparer-eucast.py …xlsx --notes     (ce que disent les notes
+                                        des couples que le document ne chiffre pas)
 
 Ne modifie RIEN. Produit un rapport à valider par un biologiste : pour chaque
 seuil de l'application, la ou les lignes EUCAST correspondantes et leurs valeurs.
@@ -260,6 +262,24 @@ def nombre(txt):
 
 
 MENINGE = False
+# --notes : la dernière zone aveugle de cette confrontation.
+#
+# L'outil compare ce que le document CHIFFRE. Quand la cellule dit « Note »
+# ou « IE », le couple est classé « écarté — sans valeur chiffrée » et n'est
+# jamais confronté : l'outil est muet EXACTEMENT LÀ OÙ PHÉNOBAC A DÛ
+# INVENTER. Trente et un couples sont dans ce cas.
+#
+# Ce n'est pas une petite dette. L'oxacilline de S. aureus y a vécu : la
+# table dit « Note », PhénoBac appliquait 0,25 mg/L à la place de 2, et un
+# staphylocoque doré sensible à la méticilline sortait SARM. Le chiffre
+# juste était dans la note 4, que personne ne lisait.
+#
+# Ce mode affiche, pour chacun de ces couples, les phrases des notes de la
+# feuille qui NOMMENT l'agent. Il n'extrait aucun chiffre et ne conclut
+# rien : une note est une phrase, et c'est un biologiste qui la lit. Ce
+# qu'il apporte, c'est que les trente et une phrases tiennent désormais sur
+# un écran, au lieu d'être à chercher dans un classeur de quarante feuilles.
+NOTES = False
 
 # LES DIAMÈTRES N'ÉTAIENT CONFRONTÉS À RIEN.
 #
@@ -422,6 +442,30 @@ def excuse_absence(groupe, code):
     return None
 
 
+def notes_nommant(c, feuille, motif):
+    """Les phrases des notes de la feuille qui nomment l'agent.
+
+    On balaie TOUTES les cellules un peu longues : les notes de l'EUCAST ne
+    vivent pas dans une colonne fixe — « I » sur les entérobactéries, « E »
+    sur le gonocoque —, et s'attacher à une colonne, c'est ne rien lire sur
+    la feuille suivante."""
+    vues, out = set(), []
+    for lg in c.lignes(feuille):
+        for v in lg.values():
+            t = re.sub(r"\s+", " ", str(v or ""))
+            if len(t) < 60 or not re.search(motif, t, re.I):
+                continue
+            for ph in re.split(r"(?<=[.;]) ", t):
+                ph = ph.strip()
+                if len(ph) < 15 or not re.search(motif, ph, re.I):
+                    continue
+                if ph in vues:
+                    continue
+                vues.add(ph)
+                out.append(ph)
+    return out
+
+
 def hors_echelle():
     """La valeur par laquelle l'EUCAST écrit « aucune catégorie sensible » :
     0,001 mg/L en CMI, 50 mm au disque. Note 13 du classeur."""
@@ -433,6 +477,8 @@ def main():
     MENINGE = "--meninge" in sys.argv
     DIAMETRE = "--diametres" in sys.argv
     PROPOSER = "--proposer" in sys.argv
+    global NOTES
+    NOTES = "--notes" in sys.argv
     if MENINGE and DIAMETRE:
         sys.exit("« --meninge » et « --diametres » ne se combinent pas : "
                  "les diamètres méningés n'ont pas de table à part dans PhénoBac.")
@@ -844,6 +890,23 @@ def main():
                     concorde = "  <- concorde" if (sE == sA and rE == rA) else ""
                     print("            %-58s %s%-7s %s%s%s"
                           % (nom[:58], gauche, sE, droite, rE, concorde))
+            # Le couple que le document ne chiffre pas, mais dont PhénoBac
+            # applique un seuil : on donne à lire la note, puisque c'est tout
+            # ce que le document en dit.
+            if NOTES and etat == 'absent' and motif:
+                # LES MOTIFS D'AGENT SONT ANCRÉS SUR « ^ », parce qu'ils
+                # servent à reconnaître le DÉBUT d'un libellé de ligne. Une
+                # note, elle, nomme l'agent au milieu d'une phrase : avec
+                # l'ancre, le lecteur ne trouvait RIEN nulle part, et
+                # annonçait trente et une fois « aucune note » — un silence
+                # qui ressemblait à un constat.
+                phrases = notes_nommant(c, feuille, motif.lstrip("^"))
+                if phrases:
+                    for ph in phrases[:3]:
+                        print("            » " + ph[:230])
+                else:
+                    print("            » AUCUNE note ne nomme cet agent sur cette "
+                          "feuille. D'où vient le seuil appliqué ?")
 
     if non_comparables:
         print("\n=== groupes NON COMPARABLES : ils couvrent plusieurs feuilles EUCAST ===")

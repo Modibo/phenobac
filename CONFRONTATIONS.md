@@ -321,11 +321,12 @@ la cellule dit « Note » : le couple est classé **« écarté — sans valeur
 chiffrée »** et n'est jamais comparé. Le comparateur est muet **exactement là
 où PhénoBac a dû inventer**.
 
-> **Dette nommée : 21 couples sont dans ce cas.** Ils portent un seuil que
-> PhénoBac applique et que rien ne confronte, parce que la cellule du
-> classeur renvoie à une note. L'oxacilline montre que les notes contiennent
-> parfois le chiffre exact. Lire les notes est la dernière zone aveugle de la
-> confrontation EUCAST.
+> **Dette nommée : 53 couples sont dans ce cas** — j'avais d'abord écrit 21,
+> compté sur un affichage tronqué ; le relevé exact est plus haut, dans « Les
+> notes du classeur ». Ils portent un seuil que PhénoBac applique et que rien
+> ne confronte, parce que la cellule du classeur renvoie à une note.
+> L'oxacilline montre que les notes contiennent parfois le chiffre exact.
+> Depuis le 2026-11-01, `comparer-eucast.py --notes` les donne à lire.
 
 ### Il a fallu un mécanisme : deux valeurs pour un couple
 
@@ -374,6 +375,50 @@ l'arbitrage dans un tableau de prose. Résultat : **445 identiques, 0 différent
 > dont aucune ligne ambiguë n'a jamais eu besoin. Il a été déplacé au point
 > de défaillance : **un garde-fou qui bloque une marche correcte finit
 > désarmé.**
+
+## Les notes du classeur, lues pour la première fois le 2026-11-01
+
+La correction de l'oxacilline a laissé une dette nommée : **le comparateur est
+muet exactement là où PhénoBac a dû inventer.** Il confronte ce que le document
+CHIFFRE ; quand la cellule dit « Note », « IE » ou « – », le couple est écarté
+et n'est jamais relu. L'oxacilline de *S. aureus* a vécu là trois ans.
+
+`comparer-eucast.py --notes` donne à lire ces couples. Pour chacun, il affiche
+les phrases des notes de la feuille qui **nomment l'agent**. Il n'extrait aucun
+chiffre et ne conclut rien — une note est une phrase, et c'est un biologiste
+qui la lit. Ce qu'il apporte, c'est que ces phrases tiennent désormais sur un
+écran au lieu d'être à chercher dans un classeur de quarante feuilles.
+
+> **Le chiffre annoncé le 2026-11-01 était faux : j'avais dit 21, ils sont 53.**
+> Le compte venait d'un `grep -c` sur un affichage tronqué. Le vrai relevé :
+> **53 couples écartés** (Note, IE, « – » ou dépistage), dont **27 ont au moins
+> une phrase de note qui les nomme** et **26 n'en ont aucune**. S'y ajoutent
+> **38 couples absents de la feuille** — un autre cas, et une autre dette.
+
+### Ce que la première lecture fait apparaître
+
+Sans rien conclure, voici ce qui saute aux yeux et demande un arbitrage :
+
+| couple | PhénoBac applique | ce que dit la note |
+|---|---|---|
+| *Campylobacter* · azithromycine | 0,5 / 0,5 | « Susceptibility to azithromycin and clarithromycin can be **inferred from erythromycin**. » |
+| *Campylobacter* · doxycycline | 4 / 8 | « Susceptibility to doxycycline can be **inferred from tetracycline**. » |
+| *N. gonorrhoeae* · ampicilline, amoxicilline | 1/1 et 2/2 | « **Infer** the susceptibility to ampicillin and amoxicillin **from the benzylpenicillin MIC** (do not report benzylpenicillin susceptibility). » |
+| streptocoques viridans · linézolide | 2 / 2 | « When excluded, the isolate should be reported "devoid of linezolid resistance mechanisms", **but not as susceptible to linezolid**. » |
+| *Moraxella* · ampicilline, amoxicilline | 1/1 et 2/2 | la cellule porte « **–** », que l'EUCAST définit comme « the agent is unsuitable… If included, **report resistant without prior testing** ». Le document des différences, p15, le confirme. |
+| *Haemophilus* · azithromycine | 0,25 / 0,5 | la note ne donne que l'**ECOFF**, 4 mg/L. D'où viennent 0,25 et 0,5 ? |
+| streptocoques A/C/G et B · amoxicilline, céfotaxime | 0,5 / 2 | **aucune note ne nomme ces agents**. Ces valeurs sont celles du chapitre *S. pneumoniae* — à vérifier, c'est la confusion de chapitre déjà rencontrée le 2026-10-31. |
+| *Enterobacterales* · azithromycine | 16 / 16 | **confirmé** : « isolates with MICs above **16 mg/L** … are likely to have azithromycin resistance mechanisms ». |
+
+Les quatre premiers cas sont des **dérivations** : le document ne donne pas de
+seuil propre, il dit de lire la molécule sur une autre. PhénoBac a le mécanisme
+(`temoin`, qui fait lire l'amoxicilline sur le disque d'ampicilline), mais il
+ne vaut que pour les DISQUES ; la note du gonocoque parle de la CMI. Les porter
+demande donc d'étendre le mécanisme, pas seulement d'écrire une ligne.
+
+**Aucun de ces huit points n'a été porté dans le code.** Changer un seuil — et
+plus encore rendre « résistant sans test » — est une décision de biologiste.
+L'outil montre, il ne tranche pas.
 
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
