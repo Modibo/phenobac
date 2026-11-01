@@ -658,7 +658,7 @@ ensemble, jamais l'un sans l'autre.
 - **document** : CA-SFM, recommandations 2026 V1.0 septembre 2026 (178 pages),
   confronté au classeur EUCAST v16.1 par l'intermédiaire de la table BP
 - **tables** : BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM
-- **empreinte** : fa11160eacde1da3f8db926ba9995506f44c426db6c9c02a3219980790bff5ab
+- **empreinte** : 639b7198a583324768f94ada3a202178f83e6368c3cb937081a3fdbfd07a5507
 - **date** : 2026-11-01, le communiqué ET le document des différences sous les yeux
 - **portée du registre élargie le même jour** : l'empreinte ne couvrait que
   `BP_CASFM`. La passe des autres sites ayant rendu `BP_CASFM_URIN` et
@@ -829,16 +829,38 @@ politique, deux ont du contenu opérationnel.
 
 ### Deux trouvailles qui demandent une décision
 
-**Le céfidérocol au disque (p5).** Le CA-SFM « recommande de **ne pas
-utiliser la méthode des disques** » pour les *Enterobacterales*, et pour
-*Pseudomonas* ne l'admet que comme dépistage — « en dessous de 27 mm, le
-CA-SFM recommande de tester la CMI ». PhénoBac applique un diamètre dans les
-deux cas :
+**Le céfidérocol au disque (p5) — PORTÉ le 2026-11-01.** Le CA-SFM
+« recommande de **ne pas utiliser la méthode des disques** » pour les
+*Enterobacterales*, à cause des défauts de corrélation entre diamètres et
+CMI « observés plus particulièrement avec les souches multi-résistantes pour
+lesquelles le testing du céfidérocol peut s'avérer utile » — c'est-à-dire
+que **le disque ment précisément là où l'on a besoin de lui**. Les tables du
+communiqué le disent aussi : p50, colonne disque « Note », note 5/A
+« déterminer la CMI par microdilution en milieu liquide ».
 
-| | PhénoBac, sous CA-SFM | ce que dit le CA-SFM |
+Pour *Pseudomonas*, le comité est moins catégorique : p59, « disque 30 µg ·
+27 », et « si le diamètre est < 27 mm, déterminer la CMI ». Le disque ne
+catégorise pas, il **dépiste**.
+
+| | avant, sous CA-SFM | après |
 |---|---|---|
-| *Enterobacterales* · FDC | disque 23 / 23 | pas de disque du tout |
-| *Pseudomonas* · FDC | disque 22 / 22 | dépistage seulement, CMI en dessous de 27 mm |
+| entérobactéries ×4 · FDC | disque 23 / 23 | **aucun diamètre** |
+| *Pseudomonas* · FDC | disque 22 / 22 | **dépistage à 27 mm** — ≥ 27 « sensible », en dessous aucune catégorie et renvoi à la CMI |
+
+Les deux mécanismes existaient déjà dans le moteur : `dzCasfmDivergent()`
+pour le refus du disque, la colonne `dep` pour le dépistage. **Les quatre
+lignes de CMI CA-SFM ajoutées ne changent aucune valeur** — elles redisent
+le 2 / 2 de l'EUCAST — mais c'est leur EXISTENCE qui retire le diamètre.
+`comparer-casfm.py` les comptait « périmées » à bon droit ; elles lui sont
+déclarées, avec la raison.
+
+> **Et la consigne du dépistage nommait la mauvaise molécule.** « Le disque
+> de *pénicilline G* ne sert ici qu'à reconnaître les souches sensibles » —
+> écrit quand `strepacg PEN` était le seul dépistage CA-SFM au disque. Un
+> résultat de céfidérocol s'expliquait par une phrase sur la pénicilline G.
+> Elle nomme désormais la molécule testée. Une consigne qui nomme la
+> mauvaise molécule est pire qu'une consigne générale : le biologiste croit
+> avoir mal lu son propre écran.
 
 **La recherche de pénicillinase chez *Pasteurella* (p15).** Le CA-SFM
 « recommande de rechercher la production de β-lactamase par un test

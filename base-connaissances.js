@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.32";
+const BASE_VERSION = "2026.33";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -315,6 +315,33 @@ const REGLES = [
 ["casfm","entero","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+/* LE CÉFIDÉROCOL AU DISQUE : LE CA-SFM N'EN VEUT PAS, OU PRESQUE.
+   Décision du biologiste du 2026-11-01.
+
+   Communiqué p50, entérobactéries : « Céfidérocol  S ≤ 2  R > 2 », colonne
+   disque « Note », et la note 5/A dit « Déterminer la CMI du céfidérocol par
+   microdilution en milieu liquide ». Document des différences p5 : « pour
+   les Enterobacterales, le CA-SFM recommande de NE PAS UTILISER la méthode
+   des disques », à cause des défauts de corrélation entre diamètres et CMI,
+   « observés plus particulièrement avec les souches multi-résistantes pour
+   lesquelles le testing du céfidérocol peut s'avérer utile ». C'est-à-dire :
+   le disque ment précisément là où l'on a besoin de lui.
+
+   PhénoBac appliquait un diamètre de 23 mm sous CA-SFM comme sous EUCAST.
+
+   LA LIGNE CMI CI-DESSOUS N'EST PAS UN DOUBLON. Sa valeur est celle de
+   l'EUCAST, et elle ne change aucune catégorie en CMI. Elle existe parce que
+   c'est elle qui fait répondre « vrai » à dzCasfmDivergent() — « le CA-SFM
+   chiffre ce couple en CMI et ne lui donne aucun diamètre » — et qui retire
+   donc le disque sous CA-SFM. Le mécanisme a été écrit pour cela.
+
+   Pour PSEUDOMONAS, le comité est moins catégorique : p59, « Céfidérocol
+   S ≤ 2 · R > 2 · disque 30 µg · 27 », et la note « si le diamètre est
+   < 27 mm, déterminer la CMI du céfidérocol ». Le disque ne CATÉGORISE pas :
+   il DÉPISTE. C'est la colonne « dep », et sa règle est déjà celle du
+   moteur — au-dessus du seuil il conclut « sensible », en dessous il ne
+   conclut pas et renvoie à la CMI. */
+["casfm","entero","FDC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","FOS","disque","standard",21,21,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","entero","FOX","disque","standard",18,18,"30",undefined,undefined,undefined,undefined,undefined,["ecoli"]],
@@ -327,6 +354,7 @@ const REGLES = [
 ["casfm","morganella","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","morganella","FDC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","FOS","disque","standard",21,21,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","morganella","SXT","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -354,12 +382,14 @@ const REGLES = [
 ["casfm","pneumo","AMP","cmi","meninge",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pneumo","AMX","cmi","meninge",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pseudo","COL","cmi","standard",2,2,undefined,4,undefined,undefined,undefined,undefined,undefined],
+["casfm","pseudo","FDC","disque","standard",undefined,undefined,undefined,undefined,undefined,27,undefined,undefined,undefined],
 ["casfm","pseudo","FOS","cmi","standard",128,128,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pseudo","FOS","disque","standard",12,12,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","pseudo","LVX","cmi","standard",null,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","salmonella","FDC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","FOS","disque","standard",21,21,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","salmonella","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -381,6 +411,7 @@ const REGLES = [
 ["casfm","serratia","AMC","cmi","urinaire",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","AMC","disque","urinaire",16,16,"20-10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","AMX","disque","standard",19,19,"20",undefined,undefined,undefined,undefined,undefined,undefined],
+["casfm","serratia","FDC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","FOS","cmi","standard",32,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","FOS","disque","standard",21,21,"200",undefined,undefined,undefined,undefined,undefined,undefined],
 ["casfm","serratia","NIT","cmi","urinaire",64,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

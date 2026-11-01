@@ -1974,11 +1974,19 @@ function finalize(A, r) {
            + `individually, or reported resistant. A screen concludes in one direction only — above `
            + `the cut-off it says "susceptible"; below it, it says no more than "this needs looking at".`)) });
     });
+    /* LA PHRASE NOMMAIT LA PÉNICILLINE G, parce qu'elle était le seul
+       dépistage CA-SFM au disque quand elle a été écrite. Le 2026-11-01, le
+       céfidérocol de Pseudomonas en est devenu un second, et un résultat de
+       céfidérocol s'expliquait par une phrase sur la pénicilline G. Une
+       consigne qui nomme la mauvaise molécule est pire qu'une consigne
+       générale : le biologiste croit avoir mal lu son propre écran. */
+    const molDep = _depistageEchoue.map(d => nomAbx(d.abx))
+                     .filter((v, i, t) => t.indexOf(v) === i).join(", ");
     A.rules.push({ k: "≈", txt: casfm
-      ? tr("CA-SFM : le disque de pénicilline G ne sert ici qu'à reconnaître les souches sensibles. "
-         + "En dessous du seuil, il faut une CMI — le disque ne tranche pas.",
-           "CA-SFM: here the benzylpenicillin disk serves only to recognise susceptible isolates. "
-         + "Below the cut-off an MIC is required — the disk does not decide.")
+      ? tr("CA-SFM : le disque — " + molDep + " — ne sert ici qu'à reconnaître les souches sensibles. "
+         + "En dessous du seuil, il faut une CMI : le disque ne tranche pas.",
+           "CA-SFM: here the disk — " + molDep + " — serves only to recognise susceptible isolates. "
+         + "Below the cut-off an MIC is required: the disk does not decide.")
       : tr("EUCAST : ce disque est un ÉCRAN, pas un seuil clinique. Au-dessus, il autorise à rendre "
          + "la classe sensible sans autre test ; en dessous, il faut tester chaque molécule ou la "
          + "rendre résistante.",

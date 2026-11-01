@@ -451,6 +451,25 @@ def main():
             "incertaine, avec renvoi au disque.",
     }
 
+    # DES LIGNES DU DELTA QUI NE PORTENT AUCUNE DIFFÉRENCE DE VALEUR, ET QUI
+    # SONT POURTANT NÉCESSAIRES.
+    #
+    # Normalement, un delta qui redit la valeur de l'EUCAST est une règle
+    # sans source, et l'outil a raison de crier « périmé ». Il existe un cas
+    # où c'est faux : quand la ligne n'est pas là pour la VALEUR mais pour ce
+    # que son existence DÉCLENCHE.
+    #
+    # Le céfidérocol des entérobactéries : le CA-SFM donne la même CMI que
+    # l'EUCAST (2 / 2) et REFUSE le disque — « Note » dans la colonne, et la
+    # note 5/A demande la microdilution en milieu liquide. Dans PhénoBac,
+    # c'est la présence d'une CMI CA-SFM SANS diamètre CA-SFM qui fait
+    # répondre « vrai » à dzCasfmDivergent() et retire le disque. Retirer ces
+    # lignes au motif qu'elles ne changent pas de valeur rendrait le disque.
+    DELTA_SANS_ECART = {
+        ("entero", "FDC"), ("morganella", "FDC"),
+        ("salmonella", "FDC"), ("serratia", "FDC"),
+    }
+
     PORTEE_EUCAST = {
         ("morganella", "TMP"): "différences CA-SFM/EUCAST 2026 p6 : « pour le "
             "triméthoprime (Enterobacterales et staphylocoques) le CA-SFM a adopté "
@@ -537,7 +556,7 @@ def main():
     autres_sites = 0
     sites_ecarts, sites_sans, sites_ok = [], [], {}
     dep_ecarts, dep_sans, dep_ok = [], [], 0
-    portee_dite, mots_dits = set(), []
+    portee_dite, mots_dits, delta_voulu = set(), [], set()
     vus = set()
 
     for chapitre, agent, sC, rC, page, hors, sous in lues:
@@ -714,8 +733,10 @@ def main():
                 continue              # PhénoBac n'a pas ce couple sous EUCAST non plus
             memes = (e.get("S") == sC and e.get("R") == rC)
             if memes:
-                if porte is not None:
+                if porte is not None and (g, code) not in DELTA_SANS_ECART:
                     perimes.append((g, code, page, sC, rC))
+                elif porte is not None:
+                    delta_voulu.add((g, code))
                 else:
                     identiques += 1
             else:
@@ -797,6 +818,13 @@ def main():
         for g, k, page, sC, rC, sP, rP in sorted(set(divergents), key=_cle):
             print("  %-12s %-5s  CA-SFM p%-4d S<=%-7s R>%-7s   PhénoBac : S<=%-7s R>%s"
                   % (g, k, page, sC, rC, sP, rP))
+    if delta_voulu:
+        print("\n=== DELTA SANS ÉCART DE VALEUR, ET C'EST VOULU (%d) ===" % len(delta_voulu))
+        print("La ligne redit la valeur de l'EUCAST, mais son EXISTENCE retire le")
+        print("diamètre : le CA-SFM chiffre la CMI et refuse le disque.")
+        for g, k in sorted(delta_voulu):
+            print("  %-10s %-5s" % (g, k))
+
     if perimes:
         print("\n=== PHÉNOBAC PORTE UN ÉCART QUE LE DOCUMENT NE DONNE PLUS (%d) ==="
               % len(perimes))
@@ -912,6 +940,7 @@ def main():
     print("  ÉCART PERDU                 : %d" % len(perdus))
     print("  écart à une autre valeur    : %d" % len(divergents))
     print("  écart périmé                : %d" % len(perimes))
+    print("  delta sans écart, voulu     : %d" % len(delta_voulu))
     print("  non lus par l'outil         : %d" % len(set(muets)))
     print("  colonne S non lue           : %d" % len(set(aveugles)))
     print("  colonne S portant un mot expliqué : %d" % len(mots_dits))
