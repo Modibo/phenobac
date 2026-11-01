@@ -685,6 +685,102 @@ ensemble, jamais l'un sans l'autre.
   lus), 6 dépendant de la voie, 1 colonne S portant le mot « Note » (p72,
   pénicilline G), et 20 lignes de dépistage ou d'endocardite.
 
+## Le classeur EUCAST v16.1, reçu le 2026-11-01
+
+Déposé par le biologiste — **en PDF**, 123 pages, sha256 `925098e165792fed…`.
+`comparer-eucast.py` et `verifier-couverture-eucast.py` attendent le
+**classeur xlsx** et ne savent pas le lire ; les deux confrontations
+complètes restent donc dues. Mais le PDF se lit par position, comme le
+CA-SFM, et **les deux questions qui l'attendaient sont tranchées**.
+
+### L'oxacilline des staphylocoques : pas d'erreur, une convention déclarée
+
+EUCAST v16.1, page 35, ne donne **aucune** concentration critique clinique
+d'oxacilline pour *S. aureus* :
+
+```
+Oxacillin (screen only), S. pseudintermedius, S. intermedius,
+                         S. schleiferi, S. coagulans      NA / NA · 1 µg · 20/20
+Oxacillin, other staphylococci                            Note / Note / Note / Note
+```
+
+La méticillino-résistance se détecte à la **céfoxitine (screen only)**. Les
+lignes `staph OXA 0,25` et `scn OXA 0,25` de PhénoBac portent déjà le drapeau
+`conv` — convention de laboratoire assumée, que l'interface annonce. **Rien à
+corriger**, et le soupçon d'erreur EUCAST était infondé.
+
+### Les trois β-lactamines du pneumocoque en LCR : pas une recopie
+
+EUCAST v16.1, page 51 :
+
+```
+Benzylpenicillin (endocarditis and meningitis)   0,06 / 0,06
+Ampicillin iv   (endocarditis and meningitis)    0,06 / 0,06
+Amoxicillin iv  (endocarditis and meningitis)    0,06 / 0,06
+```
+
+**Les trois partagent réellement la valeur.** Mon soupçon — « trois
+β-lactamines à la valeur de la pénicilline G ressemblent à une recopie » —
+était faux. PhénoBac est juste côté EUCAST ; c'est le CA-SFM qui monte
+l'amoxicilline et l'ampicilline à 0,5, et c'est déjà porté.
+
+### Mais une trouvaille, à la même page
+
+```
+Benzylpenicillin, S. aureus        0,125 / 0,125
+Benzylpenicillin, S. lugdunensis   0,125 / 0,125
+Benzylpenicillin, other staphylococci   Note / Note / Note / Note
+```
+
+PhénoBac applique **0,125 à tout le groupe `scn`** — *S. epidermidis*,
+*S. haemolyticus*, *S. saprophyticus* — là où l'EUCAST écrit « Note ». Et
+contrairement à l'oxacilline, **cette ligne ne porte pas le drapeau `conv`** :
+elle se présente comme une valeur du référentiel. La même forme que tout le
+reste de la série : une valeur juste pour une espèce, appliquée à un groupe.
+
+## Les pages 8 et 9 du document des différences, lues le 2026-11-01
+
+### Page 9 — rien à porter, et c'est vérifié
+
+- **acide nalidixique** : l'EUCAST n'en donne plus, le CA-SFM en garde « mais
+  le résultat ne permet en aucun cas d'en déduire la sensibilité ou la
+  résistance des autres fluoroquinolones ». PhénoBac ne l'a pas au panel et
+  n'en déduit rien. Le document conclut lui-même : « **absence d'impact sur
+  les résultats des fluoroquinolones entre les deux référentiels** » ;
+- **dépistage des carbapénémases** : l'EUCAST propose le seul disque de
+  méropénème à 28 mm, le CA-SFM un logigramme à plusieurs disques (annexe 6).
+  Les deux sont **en amont** de PhénoBac, qui demande au laboratoire le
+  résultat de son propre test ;
+- ***Pseudomonas*, lévofloxacine** : seuil à 0,5 **et** le commentaire
+  « forte posologie au minimum ; activité inférieure à celle de la
+  ciprofloxacine » — les deux sont déjà en place.
+
+### Page 8 — la règle est implémentée, et elle ne peut pas atteindre le cas qu'elle nomme
+
+Le CA-SFM 2026 « recommande désormais d'interpréter les résultats bruts
+**S ou SFP** comme « résistant » aux carbapénèmes pour les souches
+productrices de carbapénémase, et ce **quel que soit le type d'enzyme
+produite et les CMI des carbapénèmes** ».
+
+PhénoBac porte cette règle, citation comprise, avec la sous-règle OXA-48 pour
+céfotaxime et ceftriaxone. **Vérifié, et elle marche** :
+
+| *E. coli*, OXA-48 confirmée | EUCAST | CA-SFM |
+|---|---|---|
+| ETP lu **I**, IPM et MEM lus S | I · S · S | **R · R · R** (+ CTX R) |
+| ETP, IPM, MEM **tous lus S** | S · S · S | **S · S · S** |
+
+La seconde ligne est le défaut. La branche « carbapénémase » n'est atteinte
+que si **un carbapénème est déjà lu R ou I** ; une souche à carbapénémase
+confirmée dont les trois carbapénèmes sortent sensibles ne la traverse
+jamais. Or c'est exactement le cas que la règle nomme — « quel que soit les
+CMI » — et le plus dangereux : les producteurs d'OXA-48 ont souvent des CMI
+de carbapénèmes basses.
+
+> Une règle juste, citée, testée, et qui ne peut pas s'appliquer là où son
+> propre texte la réclame. Ce n'est pas une décision à prendre : c'est une
+> porte d'entrée manquante.
+
 ## Les pages 11 et 12 du document des différences, lues le 2026-11-01
 
 ### Page 12 — quatre valeurs confirmées, rien à changer
@@ -707,12 +803,44 @@ systématique au disque.
 PhénoBac l'applique déjà, et la page 11 en donne la raison (les prérequis
 PK/PD ne sont pas atteints à 2 mg/L, et le risque d'échec est documenté).
 
-**Hors panel, et c'est à décider un jour** : le CA-SFM **conserve la
-kanamycine**, que l'EUCAST a supprimée en v14.0, « en précisant bien qu'il
-s'agit d'un test de dépistage permettant de rendre l'amikacine » — le
-dépistage de la résistance à l'amikacine étant plus performant par la
-kanamycine. PhénoBac n'a pas la kanamycine au panel. Ajouter une molécule
-est une évolution, pas une correction.
+**Hors panel** : le CA-SFM **conserve la kanamycine**, que l'EUCAST a
+supprimée en v14.0, « en précisant bien qu'il s'agit d'un test de dépistage
+permettant de rendre l'amikacine ».
+
+**Demandée le 2026-11-01, et NON ajoutée — parce qu'elle n'est pas seule.**
+La page 74 du communiqué donne un bloc « Aminosides » cohérent, et la
+kanamycine n'en est qu'une ligne :
+
+```
+Gentamicine, S. aureus             2 / 2   disque 10 µg  18/18
+Gentamicine, SCN                   2 / 2   disque 10 µg  22/22
+Kanamycine (dépistage), S. aureus  8 / 8   disque 30 µg  18/18
+Kanamycine (dépistage), SCN        8 / 8   disque 30 µg  22/22
+Tobramycine, S. aureus             2 / 2   disque 10 µg  18/18
+Tobramycine, SCN                   2 / 2   disque 10 µg  20/20
+
+note 2 : « Les souches résistantes à la gentamicine sont résistantes à TOUS
+          les aminosides. »
+note 3 : « Interprétation valable pour l'amikacine. »
+note 4 : « Les souches résistantes à la tobramycine sont résistantes à la
+          kanamycine et à l'amikacine. »
+```
+
+État de PhénoBac : **la tobramycine manque aussi**, et **aucune des trois
+déductions n'est appliquée**. Vérifié — un *S. aureus* gentamicine **R** dont
+l'amikacine est lue **S** sort « amikacine S », sous les deux référentiels,
+chez *S. aureus* comme chez *S. epidermidis* :
+
+| | gentamicine | amikacine lue | amikacine rendue |
+|---|---|---|---|
+| *S. aureus*, EUCAST et CA-SFM | **R** | S | **S** |
+| *S. epidermidis*, EUCAST et CA-SFM | **R** | S | **S** |
+
+> **C'est un écart plus lourd que la kanamycine absente, et il porte sur une
+> molécule que PhénoBac rend déjà.** Ajouter la kanamycine dans un réseau de
+> déductions qui en compte deux manquantes serait poser une brique dans un
+> mur troué — la forme exacte du défaut que cette série passe son temps à
+> corriger. Le bloc aminosides se fait d'un seul tenant, ou pas.
 
 **Hors modèle** : le CA-SFM propose un seuil d'oxacilline à 2 mg/L pour
 *S. pettenkoferi* (au lieu de 0,25), parce que des souches à 0,5 et 1 mg/L
