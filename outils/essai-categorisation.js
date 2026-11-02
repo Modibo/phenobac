@@ -783,6 +783,85 @@ dire("\nCampylobacter et gonocoque : ce que le document fait déduire");
         "… et rien si elle n'a pas été testée");
 })();
 
+/* ---------- 15. UNE CMI MESURÉE NE DISPARAÎT PAS ----------
+
+   LE TROU TROUVÉ LE 2026-11-02, en retirant la lévofloxacine des autres
+   streptocoques.
+
+   « _sansDisque » existe depuis longtemps : un diamètre mesuré que le moteur
+   ne sait pas traduire est NOMMÉ, avec sa raison, parce que le taire le
+   ferait passer pour un antibiotique non testé. LA MÊME CHOSE EN CMI NE
+   DISAIT RIEN. Un laboratoire pouvait saisir « moxifloxacine 0,25 mg/L » sur
+   un streptocoque viridans et ne rien lire du tout : ni catégorie, ni motif,
+   exactement comme s'il n'avait rien tapé.
+
+   Le trou n'était pas visible tant que les couples sans seuil portaient une
+   « convention de laboratoire » — il y avait toujours un chiffre pour
+   répondre. Il s'est ouvert au fur et à mesure qu'on retirait ces chiffres
+   inventés : retirer la lévofloxacine SANS ceci l'aurait fait disparaître en
+   silence, ce qui est pire que le seuil inventé. */
+dire("\nUne CMI mesurée ne disparaît jamais sans un mot");
+(function () {
+  function m(org, mic, ctx, ref) {
+    return E.runInterpretation({ organism: org, ref: ref || "eucast", mode: "mic",
+                                 mic: mic, ctx: ctx || {} });
+  }
+  function dits(o) {
+    return (o.interpretation.alerts || []).map(function (x) { return x.txt; }).join(" || ");
+  }
+
+  /* 1. La lévofloxacine des autres streptocoques n'existe dans aucun des deux
+     documents : EUCAST la marque « IE », le CA-SFM ne lui donne pas de ligne. */
+  verif(!(E.BP.viridans && E.BP.viridans.LVX),
+        "la lévofloxacine des autres streptocoques n'a plus de seuil");
+  var l = m("sviridans", { LVX: "1" });
+  verif(l.categories.LVX === undefined, "… une CMI de 1 mg/L ne reçoit aucune catégorie");
+  verif(/Lévofloxacine : 1 mg\/L non catégorisé/.test(dits(l)),
+        "… et la mesure est NOMMÉE, avec sa valeur : elle ne disparaît pas");
+  verif(/ne chiffre pas ce couple/.test(dits(l)), "… et la raison est donnée");
+
+  /* 2. Le motif s'adapte au cas — et dans le BON ORDRE. Un motif unique pour
+     trois situations différentes vaudrait à peine mieux qu'un silence.
+
+     L'ESPÈCE PASSE AVANT LE CONTEXTE, et mon premier banc l'avait écrit à
+     l'envers. Sur une Klebsiella hors contexte urinaire les deux raisons
+     valent, mais seule la seconde serait RÉPARABLE par l'utilisateur :
+     annoncer « répondez à la question du contexte » à quelqu'un dont
+     l'espèce n'est de toute façon pas couverte, c'est lui faire cocher une
+     case qui ne changera rien. Le moteur le fait déjà dans le bon ordre
+     pour les diamètres ; il le fait aussi pour les CMI. */
+  verif(/que pour E\. coli/.test(dits(m("kpneu", { NIT: "32" }))),
+        "nitrofurantoïne chez Klebsiella : on dit l'espèce, qui n'est pas réparable");
+  verif(/que pour E\. coli/.test(dits(m("kpneu", { NIT: "32" }, { urin: "Oui" }))),
+        "… y compris en contexte urinaire : répondre à la question n'y changerait rien");
+  verif(/infection urinaire/.test(dits(m("ecoli", { NIT: "32" }))),
+        "… tandis que chez E. coli, hors contexte urinaire, on dit que répondre "
+        + "à la question du contexte suffirait");
+
+  /* 3. CE QUI EST CATÉGORISÉ NE DOIT PAS ÊTRE ANNONCÉ « NON CATÉGORISÉ ».
+     C'est le même invariant que pour les diamètres, qui avait attrapé une
+     chaîne if/else traversée le 2026-11-01. On le balaie ici aussi. */
+  var contradictions = 0, examines = 0;
+  Object.keys(E.ORG).forEach(function (id) {
+    var g = E.ORG[id].bpGroup;
+    if (!g || !E.BP[g]) return;
+    Object.keys(E.BP[g]).forEach(function (abx) {
+      ["0.002", "1024"].forEach(function (v) {
+        var mic = {}; mic[abx] = v;
+        var o = m(id, mic);
+        examines++;
+        var muet = (o.interpretation.sansCmi || []).some(function (x) { return x.abx === abx; });
+        if (o.categories[abx] !== undefined && muet) contradictions++;
+      });
+    });
+  });
+  verif(examines > 1000, examines + " CMI balayées sur toutes les espèces");
+  verif(contradictions === 0,
+        contradictions === 0
+          ? "aucune CMI ne reçoit à la fois une catégorie et un « non catégorisé »"
+          : contradictions + " contradictions dans le compte rendu");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : une mesure ne devient une catégorie que"
                     + " lorsqu'elle la détermine."));

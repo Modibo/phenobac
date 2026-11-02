@@ -739,6 +739,16 @@ let _activeId = null;
 // Couples tombant dans la zone d'incertitude technique pour la requête en cours.
 let _zit = [];
 let _sansDisque = [];
+/* ET SON JUMEAU POUR LES CMI, qui manquait.
+   _sansDisque existe depuis longtemps : un diamètre mesuré que le moteur ne
+   sait pas traduire est NOMMÉ, avec sa raison, parce que le taire le ferait
+   passer pour un antibiotique non testé. La même chose en CMI ne disait
+   rien. Un laboratoire pouvait saisir « moxifloxacine 0,25 mg/L » sur un
+   streptocoque viridans et ne rien lire du tout : ni catégorie, ni motif,
+   comme s'il n'avait rien tapé. Trouvé le 2026-11-02, en retirant la
+   lévofloxacine de ce même chapitre — la retirer sans ceci l'aurait fait
+   disparaître en silence. */
+let _sansCmi = [];
 /* ------------------------------------------------------------
    LES NOTES DE LECTURE DU DISQUE — ce que le classeur écrit À CÔTÉ du
    chiffre, et qui peut le contredire.
@@ -2279,6 +2289,18 @@ function finalize(A, r) {
       A.alerts.push({ lvl: "warn",
         txt: tr(`${nomAbx(d.abx)}, ${d.mm} mm — ${d.note.fr}`,
                 `${nomAbx(d.abx)}, ${d.mm} mm — ${d.note.en}`) });
+    });
+  }
+
+  /* Les CMI mesurées que le moteur n'a pas traduites. Le jumeau de
+     « sansDisque » : taire une mesure revient à présenter comme non testé un
+     antibiotique que le laboratoire a bel et bien posé. */
+  if (_sansCmi.length) {
+    A.sansCmi = _sansCmi.slice();
+    _sansCmi.forEach(d => {
+      A.alerts.push({ lvl: "info",
+        txt: tr(`${nomAbx(d.abx)} : ${d.valeur} mg/L non catégorisé — ${d.raison}.`,
+                `${nomAbx(d.abx)}: ${d.valeur} mg/L not categorised — ${d.raison}.`) });
     });
   }
 
@@ -5123,6 +5145,35 @@ function especesDites(group, k, meth) {
   return noms.length ? noms.join(", ") : "certaines espèces seulement";
 }
 
+/* Pourquoi cette CMI n'a pas pu être traduite. Mêmes exigences que pour les
+   diamètres : un refus sans motif passerait pour une panne, alors que chacun
+   de ces cas est une décision du référentiel. */
+function raisonSansCmi(group, k, ctx) {
+  const c = ctx || {};
+  if (c.mening === "Oui" && !(BP_MENINGE[group] && BP_MENINGE[group][k])
+      && BP[group] && BP[group][k])
+    return tr("le référentiel ne donne pas de seuil méningé pour ce couple — et le seuil "
+            + "ordinaire ne vaut pas dans un liquide céphalo-rachidien",
+              "the standard sets no meningeal breakpoint for this pair — and the ordinary "
+            + "breakpoint does not apply in cerebrospinal fluid");
+  const urinaire = BP_URIN[group] && BP_URIN[group][k];
+  if (urinaire && !especeAutorisee(group, k, "eucast", "cmi"))
+    return tr("l'EUCAST ne chiffre ce couple que pour ", "EUCAST sets this breakpoint only for ")
+         + especesDites(group, k, "cmi");
+  if (urinaire && c.urin !== "Oui")
+    return tr("l'EUCAST ne chiffre ce couple que pour l'infection urinaire — répondre à la "
+            + "question du contexte, en haut de la page, suffit à le catégoriser",
+              "EUCAST sets this breakpoint for urinary tract infection only — answering the "
+            + "context question at the top of the page is enough to categorise it");
+  if (BP[group] && BP[group][k] && !especeAutorisee(group, k, "eucast", "cmi"))
+    return tr("l'EUCAST ne chiffre ce couple que pour ", "EUCAST sets this breakpoint only for ")
+         + especesDites(group, k, "cmi");
+  return tr("le référentiel ne chiffre pas ce couple : il ne se catégorise pas, et "
+          + "l'absence est elle-même une indication",
+            "the standard gives no breakpoint for this pair: it cannot be categorised, and "
+          + "that absence is itself informative");
+}
+
 function raisonSansDisque(group, k, ctx) {
   const c = ctx || {};
   if (estCasfm() && dzCasfmDivergent(group, k, c))
@@ -5473,6 +5524,7 @@ function runInterpretation(input) {
   let results = {};
   _zit = [];
   _sansDisque = [];
+  _sansCmi = [];
   _lectureDisque = [];
   _exclusions = [];
   _depistage = null;
@@ -5496,6 +5548,12 @@ function runInterpretation(input) {
       }
       const cat = catFromMic(mic[k], getBP(input.bpOverride || {}, org.bpGroup, k, input.ctx || {}));
       if (cat) results[k] = cat;
+      /* Une CMI saisie que le moteur ne peut pas traduire ne doit PAS
+         disparaître : le biologiste croirait l'antibiotique non testé alors
+         qu'il l'a mesuré. Même règle que pour les diamètres. */
+      else if (String(mic[k] === undefined ? "" : mic[k]).trim() !== "" && parseMic(mic[k]))
+        _sansCmi.push({ abx: k, valeur: String(mic[k]).slice(0, 12),
+                        raison: raisonSansCmi(org.bpGroup, k, input.ctx || {}) });
       // La ZIT porte sur une valeur mesurée : en mode S/I/R il n'y en a pas,
       // et c'est correct — sans CMI, il n'y a rien à situer.
       if (enZit(mic[k], input.bpOverride || {}, org.bpGroup, k, input.ctx || {})) {

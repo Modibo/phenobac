@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.39";
+const BASE_VERSION = "2026.40";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -1933,7 +1933,34 @@ const REGLES = [
 ["eucast","viridans","DA","disque","standard",19,19,"2",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","viridans","E","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","viridans","FEP","disque","standard",25,25,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","viridans","LVX","cmi","standard",null,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
+/* LA LÉVOFLOXACINE DES AUTRES STREPTOCOQUES N'EXISTE DANS AUCUN DES DEUX
+   DOCUMENTS. Ligne retirée le 2026-11-02.
+
+   EUCAST v16.1, feuille « Viridans group streptococci », bloc
+   Fluoroquinolones :
+
+       Ciprofloxacin    «  –  »     (à rendre résistant sans test)
+       Levofloxacin     «  IE  »    dans les quatre colonnes
+       Moxifloxacin     « Note »    (CMI > 0,5 ; diamètre < 21 mm)
+       Norfloxacin      «  –  »
+       Ofloxacin        «  –  »
+
+   CA-SFM 2026, chapitre 5.11 « Autres streptocoques », p96 : le tableau des
+   fluoroquinolones ne porte QUE la délafloxacine (groupe S. anginosus) et la
+   moxifloxacine, avec la note 1/B — « Pour la moxifloxacine, une CMI
+   ≤ 0,5 mg/L (ECOFF) [ou un diamètre ≥ 21 mm] permet de distinguer les
+   souches sauvages de celles ayant acquis un mécanisme de résistance ». La
+   lévofloxacine n'y a pas de ligne du tout.
+
+   PhénoBac appliquait « null / 2 ». L'écriture empêchait de rendre
+   « sensible » — ce qui était prudent — mais rendait « I » toute la plage
+   basse, et 2 n'est le chiffre d'aucune des deux notes. Un seuil prudent
+   reste un seuil inventé.
+
+   Ce que le laboratoire obtient désormais : aucune catégorie, et la raison,
+   grâce au jumeau de « sansDisque » posé le même jour pour les CMI. Sans
+   lui, retirer cette ligne aurait fait disparaître la lévofloxacine en
+   silence — ce qui aurait été pire que le seuil inventé.  */
 /* LE LINÉZOLIDE DES STREPTOCOQUES VIRIDANS N'A PAS DE SEUIL CLINIQUE, et le
    2 mg/L qui était écrit ici n'en est pas un. Ligne retirée le 2026-11-01.
 

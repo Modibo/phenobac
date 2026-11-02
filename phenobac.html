@@ -9316,7 +9316,16 @@ if ("serviceWorker" in navigator) {
     majDernier = t;
     if (!navigator.serviceWorker.getRegistration) return;
     navigator.serviceWorker.getRegistration().then(function (r) {
-      if (r && r.update) r.update();
+      /* LE « catch » DE LA CHAÎNE NE COUVRE PAS update(). Il est attaché à
+         getRegistration(), et update() rend sa PROPRE promesse : quand
+         l'enregistrement a disparu entre-temps — l'utilisateur a vidé les
+         données du site, ou un autre onglet l'a désinscrit —, le rejet
+         remontait non capturé et s'affichait en console (« InvalidStateError:
+         Failed to update a ServiceWorker »). Une erreur non capturée dans la
+         console d'une application médicale n'est pas anodine : elle masque
+         celles qui comptent. Trouvé le 2026-11-02, en vidant le cache du
+         navigateur pour vérifier une livraison. */
+      if (r && r.update) r.update().catch(function () {});
     }).catch(function () {});
   }
   setInterval(majVerifier, MAJ_PERIODE);

@@ -27,10 +27,10 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : 23c0b40246f6ad4f6e6a21c978b91601bf4833f8074dd0d6488f675cfbf7c44d
-- **date** : **2026-11-02, le classeur en main, sixième passage** (sha256 `5de6f4a097f7f655…`)
+- **empreinte** : e0f3e29ae7ff65f27d67f9bc28314aa6f45514d58d98fcd0a42c24c4151c9074
+- **date** : **2026-11-02, le classeur en main, septième passage** (sha256 `5de6f4a097f7f655…`)
 - **résultat** : **517 seuils confrontés — 517 identiques, 0 différent**,
-  0 drapeau incohérent, 0 à arbitrer, **79** non comparés. Le nombre descend
+  0 drapeau incohérent, 0 à arbitrer, **78** non comparés. Le nombre descend
   à chaque note lue : 91, puis 87 (quatre lignes empruntées au pneumocoque),
   puis 84 (les trois pénicillines de *Moraxella*), puis 83 (le linézolide des
   viridans), puis 79 (les deux dérivations de *Campylobacter* et les deux
@@ -590,12 +590,7 @@ y entre, sa place est dans cette table.
 
 ### Ce qui reste ouvert dans le même chapitre
 
-`viridans LVX null / 2` est marqué « convention de laboratoire » et n'a pas
-non plus de source : la feuille porte *Levofloxacin* **IE**, et la note
-d'exclusion nomme la **moxifloxacine** (CMI > 0,5 ; diamètre < 21 mm), pas la
-lévofloxacine. L'écriture `null / 2` empêche au moins de rendre « sensible »,
-mais elle rend « I », et 2 n'est le chiffre d'aucune des deux notes. **À
-arbitrer.**
+`viridans LVX null / 2` : **retiré le 2026-11-02, voir ci-dessous.**
 
 ## Les dérivations de *Campylobacter* et du gonocoque
 
@@ -654,6 +649,57 @@ défend de la rendre telle quelle. C'est maintenant écrit sur le compte rendu.
 > règle du référentiel. Les deux ne se confondent pas, et mélanger les deux
 > mécanismes ferait disparaître du compte rendu une molécule pour la mauvaise
 > raison.
+
+## La lévofloxacine des autres streptocoques, et le trou qu'elle a révélé
+
+Retirée le 2026-11-02. **Elle n'existe dans aucun des deux documents.**
+
+EUCAST v16.1, feuille « Viridans group streptococci », bloc Fluoroquinolones :
+
+| | CMI | disque |
+|---|---|---|
+| Ciprofloxacin | « – » | « – » |
+| **Levofloxacin** | **IE** | **IE** |
+| Moxifloxacin | Note (> 0,5 mg/L ; < 21 mm) | Note |
+| Norfloxacin, Ofloxacin | « – » | « – » |
+
+CA-SFM 2026, chapitre 5.11 « Autres streptocoques », p96 : le tableau des
+fluoroquinolones ne porte **que** la délafloxacine (groupe *S. anginosus*) et
+la moxifloxacine, avec la note 1/B — « une CMI ≤ 0,5 mg/L (ECOFF) [ou un
+diamètre ≥ 21 mm] permet de distinguer les souches sauvages de celles ayant
+acquis un mécanisme de résistance ». **La lévofloxacine n'y a pas de ligne du
+tout.**
+
+PhénoBac appliquait `null / 2`. L'écriture empêchait de rendre « sensible » —
+ce qui était prudent — mais rendait « I » toute la plage basse, et 2 n'est le
+chiffre d'aucune des deux notes. **Un seuil prudent reste un seuil inventé.**
+
+### Et une CMI mesurée pouvait disparaître sans un mot
+
+`_sansDisque` existe depuis longtemps : un **diamètre** mesuré que le moteur
+ne sait pas traduire est nommé, avec sa raison, parce que le taire le ferait
+passer pour un antibiotique non testé. **La même chose en CMI ne disait
+rien.** Un laboratoire pouvait saisir « moxifloxacine 0,25 mg/L » sur un
+streptocoque viridans et ne rien lire du tout : ni catégorie, ni motif,
+exactement comme s'il n'avait rien tapé.
+
+Le trou n'était pas visible tant que les couples sans seuil portaient une
+« convention de laboratoire » — il y avait toujours un chiffre pour répondre.
+**Il s'est ouvert au fur et à mesure qu'on retirait ces chiffres inventés** :
+retirer la lévofloxacine sans le combler l'aurait fait disparaître en silence,
+ce qui est pire que le seuil inventé. Les douze lignes retirées depuis hier
+auraient toutes ouvert la même trappe.
+
+Le motif s'adapte au cas, et **dans le bon ordre** : l'espèce avant le
+contexte. Sur une *Klebsiella* hors contexte urinaire les deux raisons valent,
+mais seule la seconde serait réparable par l'utilisateur — annoncer
+« répondez à la question du contexte » à quelqu'un dont l'espèce n'est de
+toute façon pas couverte, c'est lui faire cocher une case qui ne changera
+rien. (Mon premier banc l'avait écrit à l'envers et accusait le moteur ; c'est
+le moteur qui avait raison.)
+
+Balayage : **1 764 CMI** sur toutes les espèces, aucune ne reçoit à la fois une
+catégorie et un « non catégorisé ».
 
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
@@ -960,7 +1006,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : c36be5b4a7d20a8cd934e498cfa88a67c9fb8812249c62d39854fe34de9fae21
+- **empreinte** : d727afd98ab307122b96293926c6efad0b1e9872e11abe13958759b2c316c747
 - **date** : **2026-11-01, le classeur en main** — 409 règles attendues sur 22 tables, **0 manque, 0 excédent**
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et
