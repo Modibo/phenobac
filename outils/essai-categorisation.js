@@ -622,6 +622,90 @@ dire("\nMoraxella : les pénicillines, que personne ne chiffre");
         "… et deux interprétations de la même saisie rendent la même chose");
 })();
 
+/* ---------- 13. « DÉPOURVUE DE MÉCANISME DE RÉSISTANCE ACQUISE » ----------
+
+   UN TROISIÈME RENDU, QUI N'EST NI S NI I NI R.
+
+   EUCAST v16.1, feuille « Viridans group streptococci », note 1 — la ligne
+   Linezolid porte « IE / IE », et la note dit :
+
+     « There are no clinical breakpoints but acquired resistance (indicated
+       by MIC > 2 mg/L) should be excluded. When excluded, the isolate should
+       be reported "devoid of linezolid resistance mechanisms", BUT NOT AS
+       SUSCEPTIBLE to linezolid. »
+
+   2 mg/L n'est donc pas la frontière entre sensible et résistant : c'est
+   celle entre « résistance acquise présente » et « exclue ».
+
+   LES DEUX ÉCRITURES DISPONIBLES NE SAVAIENT PAS LE DIRE, et c'est ce qui
+   rend ce banc nécessaire :
+
+     2 / 2      rendait « S » toute la plage basse — ce que la note interdit,
+                et ce que PhénoBac faisait ;
+     null / 2   la convention « ne jamais rendre sensible » rendrait « I ».
+                Mais « I » est une catégorie de SENSIBILITÉ — sensible à
+                forte exposition —, que le document refuse tout autant. Le
+                piège est là : l'écriture paraît prudente et ne l'est pas. */
+dire("\nLe rendu qui n'est ni S, ni I, ni R");
+(function () {
+  function mic(v, org) {
+    return E.runInterpretation({ organism: org || "sviridans", ref: "eucast",
+                                 mode: "mic", mic: { LZD: v }, ctx: {} });
+  }
+  function textes(o) {
+    return (o.interpretation.rules || []).map(function (x) { return x.txt; })
+      .concat((o.interpretation.alerts || []).map(function (x) { return x.txt; })).join(" || ");
+  }
+
+  verif(!(E.BP.viridans && E.BP.viridans.LZD),
+        "le linézolide des viridans n'a plus de seuil : le document n'en donne pas");
+
+  /* En dessous du seuil : AUCUNE catégorie, et surtout pas « S » ni « I ». */
+  ["0.25", "1", "2"].forEach(function (v) {
+    var o = mic(v);
+    verif(o.categories.LZD === undefined,
+          "CMI " + v + " mg/L : aucune catégorie — ni S, ni I");
+  });
+  verif(/dépourvue de mécanisme de résistance acquise/.test(textes(mic("1"))),
+        "… et la phrase que le comité demande d'écrire est rendue");
+  verif(/NON « sensible »/.test(textes(mic("1"))),
+        "… avec l'interdiction, en toutes lettres");
+
+  /* Au-dessus : résistance acquise. */
+  verif(mic("4").categories.LZD === "R",
+        "CMI 4 mg/L : au-dessus du seuil, résistance acquise — rendu R");
+  verif(/résistance ACQUISE/.test(textes(mic("4"))),
+        "… et l'on dit que c'est une résistance ACQUISE, pas une catégorie clinique");
+  verif(mic(">4").categories.LZD === "R",
+        "une CMI « > 4 » est aussi au-dessus du seuil");
+
+  /* UNE MOLÉCULE MESURÉE NE DOIT PAS DISPARAÎTRE. Sans la phrase, une
+     molécule sans catégorie se lit comme non testée. */
+  verif((mic("1").interpretation.exclusions || []).length === 1,
+        "la conclusion est enregistrée, et non seulement affichée");
+
+  /* En S/I/R, on ne réécrit pas la paillasse — on dit que le référentiel ne
+     soutient pas ce « sensible ». */
+  var sir = E.runInterpretation({ organism: "sviridans", ref: "eucast", mode: "sir",
+                                  results: { LZD: "S", PEN: "S" }, ctx: {} });
+  verif(sir.categories.LZD === "S", "une catégorie saisie n'est pas réécrite");
+  verif(/AUCUNE concentration critique clinique/.test(textes(sir)),
+        "… mais on dit que le document ne la soutient pas");
+  var sirR = E.runInterpretation({ organism: "sviridans", ref: "eucast", mode: "sir",
+                                   results: { LZD: "R", PEN: "S" }, ctx: {} });
+  verif(!/AUCUNE concentration critique clinique/.test(textes(sirR)),
+        "… et rien quand elle est rendue résistante : il n'y a plus de doute à lever");
+
+  /* LA RÈGLE NE DÉBORDE PAS. Le linézolide des entérocoques, lui, A un seuil
+     clinique (4 mg/L) : la confondre le ferait disparaître du compte rendu. */
+  verif(E.BP.enteroc && E.BP.enteroc.LZD && E.BP.enteroc.LZD.S === 4,
+        "le linézolide des entérocoques garde son seuil clinique (4 mg/L)");
+  verif(E.runInterpretation({ organism: "efaecalis", ref: "eucast", mode: "mic",
+                              mic: { LZD: "2" }, ctx: {} }).categories.LZD === "S",
+        "… et un entérocoque à 2 mg/L reste sensible : la règle des viridans "
+        + "ne déborde pas sur lui");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : une mesure ne devient une catégorie que"
                     + " lorsqu'elle la détermine."));

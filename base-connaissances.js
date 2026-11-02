@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.37";
+const BASE_VERSION = "2026.38";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -1898,7 +1898,28 @@ const REGLES = [
 ["eucast","viridans","E","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","viridans","FEP","disque","standard",25,25,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","viridans","LVX","cmi","standard",null,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","viridans","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
+/* LE LINÉZOLIDE DES STREPTOCOQUES VIRIDANS N'A PAS DE SEUIL CLINIQUE, et le
+   2 mg/L qui était écrit ici n'en est pas un. Ligne retirée le 2026-11-01.
+
+   EUCAST v16.1, feuille « Viridans group streptococci » : la ligne Linezolid
+   porte « IE / IE » — insufficient evidence. Le chiffre existe, dans la
+   note 1, mais il ne dit pas ce qu'un seuil dit :
+
+     « Linezolid has been used in oral follow-up treatment of endocarditis
+       caused by viridans group streptococci. THERE ARE NO CLINICAL
+       BREAKPOINTS but acquired resistance (indicated by MIC > 2 mg/L) should
+       be excluded. When excluded, the isolate should be reported "DEVOID OF
+       LINEZOLID RESISTANCE MECHANISMS", BUT NOT AS SUSCEPTIBLE TO LINEZOLID. »
+
+   2 mg/L n'est donc pas la frontière entre « sensible » et « résistant » :
+   c'est le seuil au-dessus duquel une résistance ACQUISE est présente. En
+   dessous, le document interdit explicitement de conclure « sensible ».
+
+   Écrit comme un seuil — 2 / 2 —, il rendait « S » tout ce qui est en
+   dessous. Écrit « null / 2 », la convention « ne jamais rendre sensible »
+   du dépôt, il rendrait « I » : une catégorie de sensibilité, que le
+   document refuse tout autant. Il fallait un TROISIÈME rendu, qui n'est ni
+   S ni I ni R, et c'est ce que porte EXCLUSION_ACQUISE dans le moteur.  */
 ["eucast","viridans","PEN","cmi","standard",0.25,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","viridans","PEN","disque","standard",21,12,"1 unit",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","viridans","TEC","disque","standard",16,16,"30",undefined,undefined,undefined,undefined,undefined,undefined],

@@ -1074,6 +1074,31 @@ function seuilEcoff(group, k) { return !!ECOFF[group + ":" + k]; }
 function coherence(A, r, org, c) {
   const ajoute = (lvl, txt) => A.alerts.push({ lvl: lvl, txt: txt });
 
+  /* --- 0 quater. Une catégorie SAISIE pour une molécule dont le document
+     INTERDIT de rendre « sensible ».
+
+     Le linézolide des streptocoques viridans n'a pas de seuil clinique : la
+     mesure ne sert qu'à exclure une résistance acquise, et le comité écrit
+     « but not as susceptible ». En mode S/I/R, le laboratoire a déjà
+     catégorisé et PhénoBac ne réécrit pas la paillasse — mais il doit dire
+     que le référentiel ne soutient pas ce « S ». */
+  if (org && org.bpGroup && EXCLUSION_ACQUISE[org.bpGroup] && _mode === "sir") {
+    const t = EXCLUSION_ACQUISE[org.bpGroup];
+    Object.keys(t).forEach(function (k) {
+      if (r[k] !== "S" && r[k] !== "I") return;
+      ajoute("warn", tr(
+        `${nomAbx(k)} rendue « ${r[k]} » : l'EUCAST ne donne AUCUNE concentration `
+        + `critique clinique pour ce couple (${t[k].page}). Une CMI permet d'exclure `
+        + `une résistance acquise au-dessus de ${t[k].cmi} mg/L, et le comité demande `
+        + `alors de rendre « dépourvue de mécanisme de résistance acquise » — et non `
+        + `« sensible ».`,
+        `${nomAbx(k)} reported "${r[k]}": EUCAST gives NO clinical breakpoint for this `
+        + `pair (${t[k].page}). An MIC excludes acquired resistance above ${t[k].cmi} mg/L, `
+        + `and the committee then asks for "devoid of resistance mechanisms" — not `
+        + `"susceptible".`));
+    });
+  }
+
   /* --- 0 ter. Une catégorie SAISIE qui contredit celle dont le document la
      fait déduire.
 
@@ -2179,6 +2204,33 @@ function finalize(A, r) {
       A.alerts.push({ lvl: "info",
         txt: tr(`${nomAbx(d.abx)} : ${d.valeur} mm non catégorisé — ${d.raison}.`,
                 `${nomAbx(d.abx)}: ${d.valeur} mm not categorised — ${d.raison}.`) });
+    });
+  }
+
+  /* « Dépourvue de mécanisme de résistance acquise » — le troisième rendu.
+     Il n'existe que s'il se DIT : une molécule sans catégorie et sans phrase
+     se lit comme non testée, alors que le laboratoire l'a mesurée et que la
+     mesure, elle, apprend quelque chose. */
+  if (_exclusions.length) {
+    A.exclusions = _exclusions.slice();
+    _exclusions.forEach(d => {
+      if (d.acquise) {
+        A.rules.push({ k: "→R", txt: tr(
+          `${nomAbx(d.abx)} ${d.mic} mg/L : au-dessus de ${d.seuil} mg/L, l'EUCAST `
+          + `indique une résistance ACQUISE (${d.page}). Rendu résistant.`,
+          `${nomAbx(d.abx)} ${d.mic} mg/L: above ${d.seuil} mg/L EUCAST indicates `
+          + `ACQUIRED resistance (${d.page}). Reported resistant.`) });
+      } else {
+        A.rules.push({ k: "⟨⟩", txt: tr(
+          `${nomAbx(d.abx)} ${d.mic} mg/L : l'EUCAST ne donne AUCUNE concentration critique `
+          + `clinique pour ce couple. La mesure permet seulement d'exclure une résistance `
+          + `acquise (seuil ${d.seuil} mg/L) : rendre « dépourvue de mécanisme de résistance `
+          + `acquise à ${nomAbx(d.abx).toLowerCase()} », et NON « sensible » (${d.page}).`,
+          `${nomAbx(d.abx)} ${d.mic} mg/L: EUCAST gives NO clinical breakpoint for this pair. `
+          + `The measurement only excludes acquired resistance (cut-off ${d.seuil} mg/L): report `
+          + `"devoid of ${nomAbx(d.abx).toLowerCase()} resistance mechanisms", NOT "susceptible" `
+          + `(${d.page}).`) });
+      }
     });
   }
 
@@ -5194,6 +5246,49 @@ let _deduites = [];
    document. Une souche de cette espèce, dont 99 % produisent l'enzyme,
    pouvait sortir « amoxicilline sensible ».
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   « DÉPOURVUE DE MÉCANISME DE RÉSISTANCE ACQUISE » — UN TROISIÈME RENDU
+
+   L'EUCAST emploie, pour quelques molécules de relais oral dans
+   l'endocardite, une formule qui n'est NI un seuil NI un silence :
+
+     « There are no clinical breakpoints but acquired resistance (indicated
+       by MIC > 2 mg/L) should be excluded. When excluded, the isolate should
+       be reported "devoid of linezolid resistance mechanisms", BUT NOT AS
+       SUSCEPTIBLE to linezolid. »
+       — v16.1, feuille Viridans group streptococci, note 1
+
+   Le chiffre sépare donc « résistance acquise présente » de « résistance
+   acquise exclue » — et non « résistant » de « sensible ». En dessous, le
+   document INTERDIT de conclure « sensible ».
+
+   LES DEUX ÉCRITURES QUI EXISTAIENT DÉJÀ NE SAVENT PAS DIRE CELA :
+
+     2 / 2        rend « S » tout ce qui est en dessous — c'est ce que
+                  PhénoBac faisait, et c'est précisément ce que la note
+                  interdit ;
+     null / 2     la convention « ne jamais rendre sensible » du dépôt, qui
+                  rend « I » la plage basse. Mais « I » est une catégorie de
+                  SENSIBILITÉ — sensible à forte exposition —, et le document
+                  la refuse tout autant.
+
+   D'où un troisième rendu : AUCUNE catégorie, et une phrase qui dit ce que
+   la mesure permet d'affirmer. C'est exactement ce que le comité demande
+   d'écrire sur le compte rendu.
+
+   La même formule gouverne trois autres couples du classeur — rifampicine et
+   moxifloxacine des viridans, moxifloxacine d'E. faecalis. PhénoBac n'en
+   porte aucun : ni ligne de base, ni molécule au panel. Le jour où l'un d'eux
+   y entre, sa place est ici.
+   ------------------------------------------------------------ */
+const EXCLUSION_ACQUISE = {
+  viridans: {
+    LZD: { cmi: 2, page: "feuille Viridans group streptococci, note 1" }
+  }
+};
+// Ce qui a été conclu, pour que le compte rendu le dise.
+let _exclusions = [];
+
 const PENI_MORAXELLA = ["PEN", "AMP", "AMX"];
 // Ce qui a été décidé pour ces molécules, pour que le compte rendu le dise.
 let _moraxella = [];
@@ -5333,11 +5428,26 @@ function runInterpretation(input) {
   _zit = [];
   _sansDisque = [];
   _lectureDisque = [];
+  _exclusions = [];
   _depistage = null;
   _depistageEchoue = [];
   if (input.mode === "mic") {
     const mic = input.mic || {};
     Object.keys(mic).forEach(k => {
+      /* La molécule dont le document exclut la résistance acquise au lieu de
+         la catégoriser : elle ne passe PAS par getBP, qui n'a rien pour elle,
+         et ne reçoit jamais « S » ni « I ». */
+      const exc = (EXCLUSION_ACQUISE[org.bpGroup] || {})[k];
+      if (exc && exc.cmi !== undefined) {
+        const p = parseMic(mic[k]);
+        if (p) {
+          const acquise = p.op === ">" ? p.v >= exc.cmi : p.v > exc.cmi;
+          if (acquise) results[k] = "R";
+          _exclusions.push({ abx: k, mic: String(mic[k]).slice(0, 24),
+                             seuil: exc.cmi, acquise: acquise, page: exc.page });
+        }
+        return;
+      }
       const cat = catFromMic(mic[k], getBP(input.bpOverride || {}, org.bpGroup, k, input.ctx || {}));
       if (cat) results[k] = cat;
       // La ZIT porte sur une valeur mesurée : en mode S/I/R il n'y en a pas,

@@ -27,13 +27,13 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : ff351fb04245a0c7ed2ac8fe92c0a673aaff4d9ccde09b2d5d0eefd41c128b98
-- **date** : **2026-11-01, le classeur en main, quatrième passage** (sha256 `5de6f4a097f7f655…`)
+- **empreinte** : 5aee1cb6f77c2e93b4192cbfde151e5b8645dbcc5cce85a00659d4decbfbf87e
+- **date** : **2026-11-02, le classeur en main, cinquième passage** (sha256 `5de6f4a097f7f655…`)
 - **résultat** : **517 seuils confrontés — 517 identiques, 0 différent**,
-  0 drapeau incohérent, 0 à arbitrer, **84** non comparés. Le nombre descend
-  à chaque lecture de note : 91, puis 87 (quatre lignes empruntées au
-  pneumocoque retirées), puis 84 (les trois pénicillines de *Moraxella*, que
-  ni l'un ni l'autre comité ne chiffre). Diamètres :
+  0 drapeau incohérent, 0 à arbitrer, **83** non comparés. Le nombre descend
+  à chaque note lue : 91, puis 87 (quatre lignes empruntées au pneumocoque),
+  puis 84 (les trois pénicillines de *Moraxella*), puis 83 (le linézolide des
+  viridans). Chacune portait un chiffre que rien ne confrontait. Diamètres :
   **445 identiques, 0 différent, 0 à arbitrer, 0 non comparé** — la colonne
   « à arbitrer » est vide pour la première fois. Méningé : **24 identiques,
   0 différent**.
@@ -407,7 +407,7 @@ Sans rien conclure, voici ce qui saute aux yeux et demande un arbitrage :
 | *Campylobacter* · azithromycine | 0,5 / 0,5 | « Susceptibility to azithromycin and clarithromycin can be **inferred from erythromycin**. » |
 | *Campylobacter* · doxycycline | 4 / 8 | « Susceptibility to doxycycline can be **inferred from tetracycline**. » |
 | *N. gonorrhoeae* · ampicilline, amoxicilline | 1/1 et 2/2 | « **Infer** the susceptibility to ampicillin and amoxicillin **from the benzylpenicillin MIC** (do not report benzylpenicillin susceptibility). » |
-| streptocoques viridans · linézolide | 2 / 2 | « When excluded, the isolate should be reported "devoid of linezolid resistance mechanisms", **but not as susceptible to linezolid**. » |
+| streptocoques viridans · linézolide | 2 / 2 | « but not as susceptible to linezolid » — **vérifié et corrigé le 2026-11-02, voir ci-dessous.** |
 | *Moraxella* · ampicilline, amoxicilline | 1/1 et 2/2 | la cellule porte « **–** » — **vérifié et corrigé le 2026-11-01, voir ci-dessous.** |
 | *Haemophilus* · azithromycine | 0,25 / 0,5 | la note ne donne que l'**ECOFF**, 4 mg/L. D'où viennent 0,25 et 0,5 ? |
 | streptocoques A/C/G et B · amoxicilline, céfotaxime | 0,5 / 2 | **aucune note ne nomme ces agents**. Ces valeurs sont celles du chapitre *S. pneumoniae* — **vérifié et corrigé le 2026-11-01, voir ci-dessous.** |
@@ -540,6 +540,60 @@ Aucun banc ne cherchait cela, et c'est bien pour cette raison qu'ils l'ont
 trouvé : `essai-voies` a vu « l'interprétation diffère » là où rien n'avait
 changé, `essai-contexte` a accusé deux questions d'être du code mort, et
 `essai-regles` est tombé sur un libellé. Trois symptômes, une cause.
+
+## Le linézolide des streptocoques viridans : un troisième rendu
+
+**Ni S, ni I, ni R.** Corrigé le 2026-11-02, troisième résultat de `--notes`.
+
+Feuille « Viridans group streptococci » : la ligne *Linezolid* porte
+**« IE / IE »** — *insufficient evidence*. Le chiffre existe, dans la note 1,
+mais il ne dit pas ce qu'un seuil dit :
+
+> « Linezolid has been used in oral follow-up treatment of endocarditis
+> caused by viridans group streptococci. **There are no clinical breakpoints**
+> but acquired resistance (indicated by **MIC > 2 mg/L**) should be excluded.
+> When excluded, the isolate should be reported **"devoid of linezolid
+> resistance mechanisms", but NOT as susceptible to linezolid.** »
+
+2 mg/L n'est pas la frontière entre « sensible » et « résistant » : c'est
+celle entre **résistance acquise présente** et **exclue**.
+
+### Les deux écritures disponibles ne savaient pas le dire
+
+| écriture | ce qu'elle rend en dessous de 2 | verdict |
+|---|---|---|
+| `2 / 2` — ce que PhénoBac avait | **S** | ce que la note interdit |
+| `null / 2` — la convention « jamais sensible » du dépôt | **I** | « sensible à forte exposition » reste une catégorie de sensibilité : refusée aussi |
+
+Le piège est là : la seconde écriture **paraît** prudente et ne l'est pas.
+D'où `EXCLUSION_ACQUISE`, et un troisième rendu — **aucune catégorie**, plus
+la phrase que le comité demande d'écrire.
+
+| entrée | rendu |
+|---|---|
+| CMI ≤ 2 mg/L | **aucune catégorie** + « dépourvue de mécanisme de résistance acquise au linézolide — et NON "sensible" » |
+| CMI > 2 mg/L | **R** + « au-dessus de 2 mg/L, l'EUCAST indique une résistance ACQUISE » |
+| « S » saisi en S/I/R | la saisie est gardée, et l'on dit que le document ne la soutient pas |
+| mesuré au disque | aucune catégorie — l'EUCAST ne donne pas de diamètre, une CMI est nécessaire |
+
+La même formule gouverne trois autres couples du classeur — rifampicine et
+moxifloxacine des viridans, moxifloxacine d'*E. faecalis*. **PhénoBac n'en
+porte aucun** : ni ligne de base, ni molécule au panel. Le jour où l'un d'eux
+y entre, sa place est dans cette table.
+
+> **Et la règle ne déborde pas.** Le linézolide des *entérocoques*, lui, A un
+> seuil clinique — 4 mg/L — et le banc l'exige : une souche à 2 mg/L y reste
+> sensible. Confondre les deux chapitres aurait fait disparaître le linézolide
+> du compte rendu des entérocoques, là où il est un traitement de recours.
+
+### Ce qui reste ouvert dans le même chapitre
+
+`viridans LVX null / 2` est marqué « convention de laboratoire » et n'a pas
+non plus de source : la feuille porte *Levofloxacin* **IE**, et la note
+d'exclusion nomme la **moxifloxacine** (CMI > 0,5 ; diamètre < 21 mm), pas la
+lévofloxacine. L'écriture `null / 2` empêche au moins de rendre « sensible »,
+mais elle rend « I », et 2 n'est le chiffre d'aucune des deux notes. **À
+arbitrer.**
 
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
@@ -846,7 +900,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 082b98a59abdd82b50c8c46dfbf57eaea721cb831d82c9e8a8a1ffe6e0f7b0ca
+- **empreinte** : 60555e1f5fb4b332515a464f353a4e06790b203bea4eedbf0626febbd2f57a60
 - **date** : **2026-11-01, le classeur en main** — 409 règles attendues sur 22 tables, **0 manque, 0 excédent**
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et
