@@ -756,6 +756,62 @@ l'ancienne valeur unique effaçait.
 > laisse la citation faire l'attribution. C'est la troisième fois en deux
 > jours qu'une phrase écrite pour un chapitre se trouve servie dans un autre.
 
+## Les 38 couples absents de leur feuille, et ce qu'ils cachaient
+
+Examinés le 2026-11-02. **Les 38 sont marqués « convention de laboratoire »**,
+ce qui est honnête : PhénoBac ne prétend pas que l'EUCAST les chiffre. Ils se
+répartissent en familles nettes — *B. cepacia* (10), *S. maltophilia* (6),
+*Corynebacterium* (6), *C. difficile* (6), *Listeria* (4), *B. fragilis* (3),
+et quatre isolés.
+
+Mais le drapeau disait seulement « l'EUCAST ne chiffre pas ». Il ne disait pas
+que, pour **quatorze** d'entre eux, **PhénoBac affirme ailleurs le contraire de
+ce que le seuil permet de rendre.**
+
+### La contradiction se lit sans ouvrir aucun document
+
+PhénoBac dit deux choses sur un même couple, dans deux tables :
+
+| | |
+|---|---|
+| `ORG[espèce].intrinsic[molécule]` | « naturellement résistante », avec la règle EUCAST qui le justifie |
+| `BP[groupe][molécule]` | un seuil, qui peut rendre « **S** » |
+
+Le moteur lève bien une alerte de cohérence quand le résultat sort « S » —
+mais **il le sort quand même**, et le compte rendu porte alors un « sensible »
+sur une molécule que l'application déclare inactive par nature.
+
+| espèce | molécules | ce que PhénoBac déclare par ailleurs |
+|---|---|---|
+| *S. maltophilia* | AMK, GEN, IPM, MEM, TZP | L1 métallo-β-lactamase ; aminosides et carbapénèmes inactifs |
+| *B. cepacia* | AMK, GEN, COL, TZP | mêmes familles ; **et le CA-SFM a supprimé ce chapitre en 2026** |
+| *Listeria* | **CTX** | « céphalosporines naturellement inactives (toutes, dont C3G) », règle 4.11 |
+| *C. freundii*, *E. cloacae*, *K. aerogenes*, *Serratia* | **FOX** | céphalosporinase naturelle ; l'EUCAST ne donne la céfoxitine que comme **écran** — « Cefoxitin (screen only) », sans seuil thérapeutique |
+
+La *Listeria* est le cas le plus lourd : rendre une céfotaxime « sensible »
+oriente vers un traitement qui ne marchera pas.
+
+### Le contrôle, et ce qu'il a fallu lui apprendre
+
+`verifier-naturelles.py` gagne un quatrième contrôle. Il ne demande **aucun
+document** : c'est la base confrontée à elle-même.
+
+> **Sa première version accusait trente couples justes.** Elle refusait tout
+> seuil posé sur une molécule déclarée naturellement inactive. Or le
+> référentiel chiffre lui-même la colistine des entérobactéries, alors que
+> *Serratia*, *Proteus* et *Providencia* y sont naturellement résistants : le
+> document porte les **deux** faits sans se contredire, et la mesure tombera
+> normalement du côté « R ». **La contradiction n'existe que si le seuil est
+> une convention** — quand le référentiel ne chiffre rien et que PhénoBac a mis
+> un chiffre quand même.
+
+Resserré sur les conventions, il a sorti **quatre couples que je n'avais pas
+vus** : la céfoxitine des quatre producteurs d'AmpC. Les quatorze sont
+déclarés dans `CONTRADICTIONS_CONNUES`, avec leur raison — **ce n'est pas un
+acquit** : la résolution appartient au biologiste, et un couple ajouté sans
+figurer là fait tomber la chaîne. Éprouvé en retirant la *Listeria* de la
+liste : le contrôle la nomme.
+
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)

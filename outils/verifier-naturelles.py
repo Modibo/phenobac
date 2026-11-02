@@ -10,12 +10,14 @@ cohérence : le biologiste lit « incohérence » devant un résultat juste, et
 finit par ne plus croire l'outil. C'est le pire défaut possible pour cette
 fonction — pire qu'une alerte manquante, qui ne fait que laisser passer.
 
-Trois contrôles :
+Quatre contrôles :
   1. le moteur et le client déclarent la même chose ;
   2. les deux correspondent à outils/naturelles.py, transcription du document
      EUCAST « Expected Resistant Phenotypes » v1.2 ;
   3. les valeurs citées en toutes lettres dans les textes du moteur existent
-     bien dans une table de seuils.
+     bien dans une table de seuils ;
+  4. AUCUN SEUIL NE CONTREDIT UNE RÉSISTANCE NATURELLE DÉCLARÉE — ajouté le
+     2026-11-02, voir plus bas.
 
 Attention au piège qui m'a fait signaler deux fausses erreurs : certains codes
 d'antibiotiques ne font qu'UNE lettre (E pour érythromycine). Un motif qui
@@ -27,6 +29,55 @@ et ses NOTES comptent autant que son tableau : la règle 2.8 coche
 « tétracyclines » pour S. maltophilia, mais la note précise que la sensibilité
 à la doxycycline varie.
 """
+# ---------------------------------------------------------------------------
+# LE QUATRIÈME CONTRÔLE : UN SEUIL QUI CONTREDIT UNE RÉSISTANCE NATURELLE
+#
+# PhénoBac dit deux choses sur un même couple, dans deux tables différentes :
+#
+#   ORG[espèce].intrinsic[molécule]   « naturellement résistante », avec la
+#                                     règle EUCAST qui le justifie ;
+#   BP[groupe][molécule]              un seuil, qui peut rendre « S ».
+#
+# Les deux ne peuvent pas être vraies ensemble. Le moteur lève bien une alerte
+# de cohérence quand le résultat sort « S » — mais il le sort quand même, et
+# le compte rendu porte alors un « sensible » sur une molécule que
+# l'application déclare inactive par nature.
+#
+# LE CONTRÔLE NE DEMANDE AUCUN DOCUMENT : c'est la base confrontée à
+# elle-même. Il a trouvé DIX couples, tous marqués « convention de
+# laboratoire » — le drapeau disait vrai sur l'absence de seuil EUCAST, et
+# taisait que l'application affirme ailleurs le contraire de ce que le seuil
+# permet de rendre.
+#
+# Ils sont listés ci-dessous pour que le contrôle passe au vert aujourd'hui,
+# et pour qu'ils ne puissent pas se multiplier. CE N'EST PAS UN ACQUIT : la
+# résolution — retirer le seuil, ou le rendre incapable de conclure
+# « sensible » — appartient au biologiste, et chacun de ces couples attend sa
+# décision. Un couple ajouté sans figurer ici fera tomber la chaîne.
+CONTRADICTIONS_CONNUES = {
+    # Stenotrophomonas maltophilia — L1 métallo-β-lactamase, aminosides et
+    # carbapénèmes inactifs. Le classeur EUCAST ne porte aucun de ces couples
+    # sur sa feuille ; PhénoBac les chiffre par convention.
+    ("steno", "AMK"), ("steno", "GEN"), ("steno", "IPM"),
+    ("steno", "MEM"), ("steno", "TZP"),
+    # Burkholderia cepacia — mêmes familles, même absence de la feuille. Et le
+    # CA-SFM a SUPPRIMÉ ce chapitre en 2026 (déjà signalé par reglesCasfm).
+    ("burk", "AMK"), ("burk", "GEN"), ("burk", "COL"), ("burk", "TZP"),
+    # Listeria monocytogenes — « céphalosporines naturellement inactives
+    # (toutes, dont C3G) », règle 4.11 du document EUCAST. C'est le couple le
+    # plus lourd des quatorze : rendre une céfotaxime « sensible » sur une
+    # Listeria oriente vers un traitement qui ne marchera pas.
+    ("listeria", "CTX"),
+    # LA CÉFOXITINE DES PRODUCTEURS D'AmpC — quatre couples que je n'avais pas
+    # vus, et que ce contrôle a sortis dès qu'il a su se restreindre aux
+    # conventions. C. freundii, E. cloacae, K. aerogenes et Serratia portent
+    # une céphalosporinase naturelle ; l'EUCAST, lui, ne donne la céfoxitine
+    # que comme ÉCRAN — « Cefoxitin (screen only) » —, sans seuil
+    # thérapeutique. PhénoBac en a fait un seuil de 8 mg/L, qui peut rendre
+    # « sensible » une molécule que l'espèce hydrolyse par construction.
+    ("entero", "FOX"), ("serratia", "FOX"),
+}
+
 import os, re, sys, importlib.util
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -150,6 +201,47 @@ def main():
         if n not in tables and n.rstrip('0').rstrip('.') not in tables:
             orphelines.append(c)
 
+    # --- 4. aucun seuil ne contredit une résistance naturelle déclarée ---
+    # LA PREMIÈRE VERSION DE CE CONTRÔLE ACCUSAIT TRENTE COUPLES JUSTES.
+    # Elle refusait tout seuil posé sur une molécule déclarée naturellement
+    # inactive. Or le référentiel chiffre lui-même la colistine des
+    # entérobactéries, alors que Serratia, Proteus et Providencia y sont
+    # naturellement résistants : le document porte les DEUX faits sans se
+    # contredire, et la mesure tombera normalement du côté « R ».
+    #
+    # LA CONTRADICTION N'EXISTE QUE SI LE SEUIL EST UNE CONVENTION — c'est-à-
+    # dire quand le référentiel ne chiffre RIEN et que PhénoBac a mis un
+    # chiffre quand même, sur une molécule qu'il déclare par ailleurs
+    # inactive par nature. Là, les deux affirmations sont toutes deux de
+    # PhénoBac, et elles se contredisent.
+    seuils = MP.tables(['BP', 'BP_MENINGE', 'BP_URIN', 'BP_CASFM',
+                        'BP_CASFM_URIN', 'BP_MENINGE_CASFM'])
+    conventions = MP.tables(['HORS_EUCAST']).get('HORS_EUCAST') or {}
+    groupes = {}
+    for m in re.finditer(r'^\s{2}(\w+):\s*\{.*?bpGroup:\s*"(\w+)"', s, re.M | re.S):
+        groupes.setdefault(m.group(1), m.group(2))
+    contradictions, declarees = [], 0
+    for germe, molecules in sorted(a.items()):
+        grp = groupes.get(germe)
+        if not grp:
+            continue
+        for k in sorted(molecules):
+            porte = any((tbl.get(grp) or {}).get(k) for tbl in seuils.values())
+            if not porte:
+                continue
+            # Seuil du référentiel : les deux faits coexistent dans le
+            # document, il n'y a rien à trancher.
+            if k not in (conventions.get(grp) or {}):
+                continue
+            if (grp, k) in CONTRADICTIONS_CONNUES:
+                declarees += 1
+            else:
+                contradictions.append("%s (%s) / %s : déclarée naturellement "
+                                      "résistante ET chiffrée" % (germe, grp, k))
+
+    if contradictions:
+        ecarts.extend(contradictions)
+
     if ecarts or orphelines:
         print("Des déclarations DIVERGENT :")
         for e in ecarts:
@@ -163,6 +255,9 @@ def main():
     print("Conformes au document EUCAST « Expected Resistant Phenotypes » v1.2.")
     print("La page ne les redéclare pas : elle les emprunte au moteur.")
     print("Les %d valeurs citées dans les textes existent dans les tables." % len(set(re.findall(r'\d+(?:[,.]\d+)?\s*mg/L', prose))))
+    print("Aucun seuil ne contredit une résistance naturelle, hors les %d "
+          "contradictions déclarées — qui attendent un arbitrage, pas un "
+          "classement." % declarees)
     return 0
 
 
