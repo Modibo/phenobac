@@ -6,6 +6,8 @@ comparer-eucast.py — confronte les seuils de PhénoBac au tableau EUCAST offic
     python3 outils/comparer-eucast.py …xlsx --meninge   (seuils de méningite)
     python3 outils/comparer-eucast.py …xlsx --notes     (ce que disent les notes
                                         des couples que le document ne chiffre pas)
+    python3 outils/comparer-eucast.py …xlsx --conventions  (le tri des seuils
+                                        marqués « convention de laboratoire »)
 
 Ne modifie RIEN. Produit un rapport à valider par un biologiste : pour chaque
 seuil de l'application, la ou les lignes EUCAST correspondantes et leurs valeurs.
@@ -280,6 +282,28 @@ MENINGE = False
 # qu'il apporte, c'est que les trente et une phrases tiennent désormais sur
 # un écran, au lieu d'être à chercher dans un classeur de quarante feuilles.
 NOTES = False
+# --conventions : le tri des seuils que PhénoBac pose là où le référentiel ne
+# pose rien.
+#
+# Soixante-quinze couples portent le drapeau « convention de laboratoire ».
+# Le drapeau dit vrai — l'EUCAST ne les chiffre pas — et c'est tout ce qu'il
+# dit. Il ne distingue pas :
+#
+#   la convention FONDÉE, reprise d'un autre comité et déclarée comme telle
+#     (le CA-SFM adapte quatre valeurs du CLSI pour Acinetobacter, p18) ;
+#   la convention que le document CONTREDIT, parce qu'il écrit « – » —
+#     « the agent is unsuitable for treatment… report resistant without prior
+#     testing » ;
+#   la convention posée là où le document donne une NOTE qui dit quoi faire —
+#     c'est ce que --notes a sorti, et ce qui a coûté seize lignes en deux
+#     jours ;
+#   la convention sur un couple ABSENT de la feuille, qui peut venir d'un
+#     autre chapitre ;
+#   le DÉPISTAGE, qui n'est pas un seuil thérapeutique.
+#
+# Ce mode range les soixante-quinze dans ces cinq cases. Il ne conclut pas :
+# il donne la carte de ce qui reste à arbitrer, au lieu d'un nombre.
+CONVENTIONS = False
 
 # LES DIAMÈTRES N'ÉTAIENT CONFRONTÉS À RIEN.
 #
@@ -477,8 +501,11 @@ def main():
     MENINGE = "--meninge" in sys.argv
     DIAMETRE = "--diametres" in sys.argv
     PROPOSER = "--proposer" in sys.argv
-    global NOTES
+    global NOTES, CONVENTIONS
     NOTES = "--notes" in sys.argv
+    CONVENTIONS = "--conventions" in sys.argv
+    if CONVENTIONS:
+        NOTES = True            # on veut aussi lire les notes de chaque couple
     if MENINGE and DIAMETRE:
         sys.exit("« --meninge » et « --diametres » ne se combinent pas : "
                  "les diamètres méningés n'ont pas de table à part dans PhénoBac.")
@@ -489,6 +516,9 @@ def main():
     bp = seuils_phenobac(racine)
 
     total = {'identique': 0, 'different': 0, 'arbitrer': 0, 'absent': 0}
+    # --conventions : chaque couple « convention de laboratoire », rangé selon
+    # ce que le document en dit RÉELLEMENT.
+    rangs = {}
     non_comparables = []
     drapeaux = []
     entre_parentheses = set()
@@ -881,6 +911,20 @@ def main():
                 drapeaux.append((groupe, code, "non marqué, alors que le document "
                                  "ne donne aucun chiffre pour ce couple"))
             total[etat] += 1
+            if CONVENTIONS and conv:
+                if 'dépistage' in detail:
+                    case = "DÉPISTAGE — écran, pas seuil thérapeutique"
+                elif '(-)' in detail:
+                    case = "TIRET « – » — le document dit de rendre résistant sans tester"
+                elif '(Note)' in detail or '(IE)' in detail:
+                    case = "NOTE / IE — le document dit quoi faire, à lire"
+                elif 'ne porte pas ce couple' in detail:
+                    case = "ABSENT de la feuille — d'où vient le chiffre ?"
+                elif etat == 'identique':
+                    case = "CHIFFRÉ par le document — le drapeau est faux"
+                else:
+                    case = "autre"
+                rangs.setdefault(case, []).append("%s/%s" % (groupe, code))
             marque = {'identique': ' ok ', 'different': '!!!!', 'arbitrer': ' ?? ', 'absent': ' -- '}[etat]
             gauche, droite = ("S>=", "R<") if DIAMETRE else ("S<=", "R>")
             print("  [%s] %-4s application %s%-7s %s%-7s  %s"
@@ -1068,6 +1112,18 @@ def main():
     print("  identiques         : %d" % total['identique'])
     print("  DIFFÉRENTS         : %d   <- à corriger après validation" % total['different'])
     print("  à arbitrer         : %d   <- plusieurs voies/indications possibles" % total['arbitrer'])
+    if CONVENTIONS:
+        n = sum(len(v) for v in rangs.values())
+        print()
+        print("=== les %d seuils « convention de laboratoire », rangés ===" % n)
+        print("Le drapeau dit « l'EUCAST ne chiffre pas ». C'est vrai, et ce n'est")
+        print("pas tout ce que le document dit. Voici ce qu'il dit vraiment :")
+        for case in sorted(rangs, key=lambda c: -len(rangs[c])):
+            print()
+            print("  %3d  %s" % (len(rangs[case]), case))
+            couples = sorted(rangs[case])
+            for i in range(0, len(couples), 6):
+                print("       " + "  ".join("%-14s" % c for c in couples[i:i+6]))
     print("  non comparés       : %d" % total['absent'])
     print("  drapeau incohérent : %d   <- « convention » qui ne dit plus vrai" % len(drapeaux))
     if drapeaux:

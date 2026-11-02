@@ -812,6 +812,45 @@ acquit** : la résolution appartient au biologiste, et un couple ajouté sans
 figurer là fait tomber la chaîne. Éprouvé en retirant la *Listeria* de la
 liste : le contrôle la nomme.
 
+## Les 75 « conventions de laboratoire », rangées
+
+`comparer-eucast.py --conventions`, écrit le 2026-11-02. **Le drapeau disait
+« l'EUCAST ne chiffre pas ». C'est vrai, et ce n'est pas tout ce que le
+document dit** — seize lignes retirées en deux jours l'ont montré. Ce mode
+range les 75 selon ce que le document dit *réellement*.
+
+| | ce que le document dit |
+|---|---|
+| **38** | **absent de la feuille** — d'où vient le chiffre ? (examinés le 2026-11-02 : 14 contredisent une résistance naturelle déclarée) |
+| **16** | **note / IE** — le document dit quoi faire, à lire. C'est la veine où les seize corrections ont été prises |
+| **10** | **dépistage** — écran, pas seuil thérapeutique |
+| **9** | **tiret « – »** — « the agent is unsuitable… report resistant without prior testing » |
+| **2** | autre (indication particulière) |
+
+### Les neuf « – », tranchés un par un
+
+C'est la case la plus nette : le document ne se tait pas, il **interdit**.
+Vérification faite, chapitre par chapitre, dans les deux référentiels :
+
+| couple | verdict |
+|---|---|
+| `acineto` CAZ, FEP | **fondés.** Le CA-SFM adapte ces valeurs du CLSI M100 (p18), et PhénoBac porte en plus les lignes delta CA-SFM (`null / 8`). La convention a sa source. |
+| `nmening` CAF | **mal rangé.** Le CA-SFM chiffre le chloramphénicol du méningocoque à **2 / 2** (p109) — exactement ce que PhénoBac applique. C'est une valeur CA-SFM portée comme convention EUCAST : elle a sa place dans le delta, pas ici. |
+| `moraxella` RD · `ngono` AMC, CAF, RD, SXT · `nmening` AMC, SXT · `steno` CAZ | **sans source.** Vérifié : le chapitre CA-SFM du gonocoque (p108) ne porte aucune de ces quatre molécules ; celui du méningocoque (p109) donne la pénicilline G, l'amoxicilline, la céfotaxime, la ceftriaxone, le chloramphénicol, la ciprofloxacine et la rifampicine — **ni AMC ni SXT** ; celui de *Moraxella* (p110) ne liste pas la rifampicine ; la liste CLSI du CA-SFM (p18) couvre pour *Stenotrophomonas* la lévofloxacine et la minocycline, **pas la ceftazidime**. |
+
+**Aucun n'est porté dans le code.** Les sept derniers retireraient chacun une
+possibilité de rendre « sensible » : c'est une décision de biologiste, et
+l'outil montre, il ne tranche pas. La forme serait celle de *Moraxella* —
+pas de catégorie du référentiel, et la phrase qui dit pourquoi.
+
+> **Ce que la carte apprend sur les deux jours écoulés.** Les seize
+> corrections sont toutes sorties de la case « note / IE », qui en contient
+> encore seize. Les deux autres grandes cases — « absent de la feuille » et
+> « dépistage » — n'ont jamais été ouvertes autrement que pour y compter. Le
+> drapeau `conv` n'était pas un mensonge : c'était une case où l'on rangeait
+> ce qu'on ne savait pas lire, et qui a grossi jusqu'à contenir un quart des
+> seuils du dépôt.
+
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
