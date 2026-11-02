@@ -696,6 +696,42 @@ dire("\nLe rendu qui n'est ni S, ni I, ni R");
   verif(!/AUCUNE concentration critique clinique/.test(textes(sirR)),
         "… et rien quand elle est rendue résistante : il n'y a plus de doute à lever");
 
+  /* L'AZITHROMYCINE DES BACTÉRIES EXIGEANTES : trois chapitres portaient le
+     MÊME chiffre inventé — 0,25 / 0,5 pour Haemophilus, le gonocoque et le
+     méningocoque, les trois marqués « convention de laboratoire ». Aucun
+     des deux documents ne porte ces chiffres pour aucune des trois.
+
+     EUCAST, feuille H.influenzae, note 1/A : les quatre macrolides portent
+     « Note », « the ECOFFs should be used to detect strains with acquired
+     resistance… azithromycin 4 mg/L ». Le CA-SFM ne donne aucune ligne de
+     macrolide pour cette espèce.
+
+     Gonocoque : les deux comités, le même chiffre — ECOFF 1 mg/L.
+
+     Méningocoque : EUCAST écrit « – », et le panel n'offre pas la molécule.
+     Ligne morte, simplement retirée. */
+  function azm(org, v, ref) {
+    return E.runInterpretation({ organism: org, ref: ref || "eucast", mode: "mic",
+                                 mic: { AZM: v }, ctx: {} });
+  }
+  ["haemo", "ngono", "nmening"].forEach(function (g) {
+    verif(!(E.BP[g] && E.BP[g].AZM), g + " : plus de seuil inventé pour l'azithromycine");
+  });
+  verif(azm("haemophilus", "4").categories.AZM === undefined
+        && azm("haemophilus", "8").categories.AZM === "R",
+        "Haemophilus : l'ECOFF est 4 mg/L — 4 ne conclut pas, 8 est une résistance acquise");
+  verif(azm("ngonorrhoeae", "1").categories.AZM === undefined
+        && azm("ngonorrhoeae", "2").categories.AZM === "R",
+        "gonocoque : l'ECOFF est 1 mg/L, et ce n'est pas le même que celui d'Haemophilus");
+  verif(azm("ngonorrhoeae", "2", "casfm").categories.AZM === "R",
+        "… et la règle vaut sous CA-SFM aussi : le comité donne le même chiffre (p108)");
+  /* L'ATTRIBUTION. Le message nommait « l'EUCAST » en dur ; sous CA-SFM il
+     prêtait donc à un comité la règle de l'autre, alors que la citation,
+     elle, est juste. */
+  verif(!/EUCAST/.test((azm("ngonorrhoeae", "2", "casfm").interpretation.rules || [])
+          .map(function (x) { return x.txt; }).join(" ")),
+        "… sans attribuer la règle à l'EUCAST quand on est sous CA-SFM");
+
   /* LA RÈGLE NE DÉBORDE PAS. Le linézolide des entérocoques, lui, A un seuil
      clinique (4 mg/L) : la confondre le ferait disparaître du compte rendu. */
   verif(E.BP.enteroc && E.BP.enteroc.LZD && E.BP.enteroc.LZD.S === 4,

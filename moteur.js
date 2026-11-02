@@ -1097,12 +1097,12 @@ function coherence(A, r, org, c) {
     Object.keys(t).forEach(function (k) {
       if (r[k] !== "S" && r[k] !== "I") return;
       ajoute("warn", tr(
-        `${nomAbx(k)} rendue « ${r[k]} » : l'EUCAST ne donne AUCUNE concentration `
+        `${nomAbx(k)} rendue « ${r[k]} » : le référentiel ne donne AUCUNE concentration `
         + `critique clinique pour ce couple (${t[k].page}). Une CMI permet d'exclure `
         + `une résistance acquise au-dessus de ${t[k].cmi} mg/L, et le comité demande `
         + `alors de rendre « dépourvue de mécanisme de résistance acquise » — et non `
         + `« sensible ».`,
-        `${nomAbx(k)} reported "${r[k]}": EUCAST gives NO clinical breakpoint for this `
+        `${nomAbx(k)} reported "${r[k]}": the standard gives NO clinical breakpoint for this `
         + `pair (${t[k].page}). An MIC excludes acquired resistance above ${t[k].cmi} mg/L, `
         + `and the committee then asks for "devoid of resistance mechanisms" — not `
         + `"susceptible".`));
@@ -2226,17 +2226,17 @@ function finalize(A, r) {
     _exclusions.forEach(d => {
       if (d.acquise) {
         A.rules.push({ k: "→R", txt: tr(
-          `${nomAbx(d.abx)} ${d.mic} mg/L : au-dessus de ${d.seuil} mg/L, l'EUCAST `
+          `${nomAbx(d.abx)} ${d.mic} mg/L : au-dessus de ${d.seuil} mg/L, le référentiel `
           + `indique une résistance ACQUISE (${d.page}). Rendu résistant.`,
-          `${nomAbx(d.abx)} ${d.mic} mg/L: above ${d.seuil} mg/L EUCAST indicates `
+          `${nomAbx(d.abx)} ${d.mic} mg/L: above ${d.seuil} mg/L the standard indicates `
           + `ACQUIRED resistance (${d.page}). Reported resistant.`) });
       } else {
         A.rules.push({ k: "⟨⟩", txt: tr(
-          `${nomAbx(d.abx)} ${d.mic} mg/L : l'EUCAST ne donne AUCUNE concentration critique `
-          + `clinique pour ce couple. La mesure permet seulement d'exclure une résistance `
+          `${nomAbx(d.abx)} ${d.mic} mg/L : le référentiel ne donne AUCUNE concentration `
+          + `critique clinique pour ce couple. La mesure permet seulement d'exclure une résistance `
           + `acquise (seuil ${d.seuil} mg/L) : rendre « dépourvue de mécanisme de résistance `
           + `acquise à ${nomAbx(d.abx).toLowerCase()} », et NON « sensible » (${d.page}).`,
-          `${nomAbx(d.abx)} ${d.mic} mg/L: EUCAST gives NO clinical breakpoint for this pair. `
+          `${nomAbx(d.abx)} ${d.mic} mg/L: the standard gives NO clinical breakpoint for this pair. `
           + `The measurement only excludes acquired resistance (cut-off ${d.seuil} mg/L): report `
           + `"devoid of ${nomAbx(d.abx).toLowerCase()} resistance mechanisms", NOT "susceptible" `
           + `(${d.page}).`) });
@@ -5381,6 +5381,29 @@ let _deduites = [];
 const EXCLUSION_ACQUISE = {
   viridans: {
     LZD: { cmi: 2, page: "feuille Viridans group streptococci, note 1" }
+  },
+  /* Les macrolides d'Haemophilus : quatre lignes « Note », et la note 1/A
+     donne les ECOFF — « Clinical evidence for the efficacy of macrolides in
+     H. influenzae respiratory infections is CONFLICTING due to high
+     spontaneous cure rates. Should there be a need to test any macrolide
+     against this species, the epidemiological cut-offs (ECOFFs) should be
+     used to detect strains with acquired resistance. The ECOFFs for each
+     agent are: azithromycin 4 mg/L… » Le CA-SFM ne donne aucune ligne de
+     macrolide pour cette espèce : seulement la même mise en garde (p107).
+     PhénoBac n'a l'azithromycine au panel que pour cette espèce-là ; la
+     clarithromycine (32) et l'érythromycine (16) auraient leur place ici le
+     jour où elles y entreraient. */
+  haemo: {
+    AZM: { cmi: 4, page: "feuille H.influenzae, note 1/A" }
+  },
+  /* Le gonocoque : les DEUX comités disent la même chose, et le même
+     chiffre. EUCAST — « For testing purposes with the aim of detecting
+     acquired resistance mechanisms, the ECOFF is 1 mg/L. » CA-SFM p108,
+     note 2 — « Pour l'azithromycine et la gentamicine, l'ECOFF permet de
+     distinguer les souches sauvages (CMI ≤ 1 mg/L pour l'azithromycine […])
+     de celles ayant acquis un mécanisme de résistance. » */
+  ngono: {
+    AZM: { cmi: 1, page: "feuille N.gonorrhoeae, note 1 ; CA-SFM p108, note 2" }
   }
 };
 // Ce qui a été conclu, pour que le compte rendu le dise.

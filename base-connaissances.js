@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.40";
+const BASE_VERSION = "2026.41";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -1420,12 +1420,51 @@ const REGLES = [
    « ne jamais rendre sensible » ; PhénoBac ne porte pas ces deux espèces, et
    l'absence de diamètre est, pour elles aussi, le comportement juste. */
 ["eucast","enteroc","VA","disque","standard",12,12,"5",undefined,undefined,undefined,undefined,undefined,["efaecalis","efaecium"]],
+/* L'AZITHROMYCINE DES BACTÉRIES EXIGEANTES : TROIS CHAPITRES, LE MÊME
+   CHIFFRE INVENTÉ. Les trois lignes retirées le 2026-11-02.
+
+   PhénoBac appliquait 0,25 / 0,5 à Haemophilus, au gonocoque ET au
+   méningocoque, les trois marquées « convention de laboratoire ». Aucun des
+   deux documents ne porte ces chiffres pour aucune des trois espèces.
+
+   Ce que les documents disent, chapitre par chapitre :
+
+   HAEMOPHILUS — EUCAST v16.1, feuille H.influenzae : les quatre macrolides
+   portent « Note » dans les quatre colonnes, et la note 1/A dit pourquoi :
+
+     « Clinical evidence for the efficacy of macrolides in H. influenzae
+       respiratory infections is CONFLICTING due to high spontaneous cure
+       rates. Should there be a need to test any macrolide against this
+       species, THE EPIDEMIOLOGICAL CUT-OFFS (ECOFFs) SHOULD BE USED TO
+       DETECT STRAINS WITH ACQUIRED RESISTANCE. The ECOFFs for each agent
+       are: azithromycin 4 mg/L, clarithromycin 32 mg/L and erythromycin
+       16 mg/L. »
+
+     Le CA-SFM ne donne AUCUNE ligne de macrolide pour cette espèce : son
+     bloc ne contient qu'une phrase — « La corrélation entre les CMI des
+     macrolides et l'efficacité clinique est faible pour H. influenzae »
+     (p107). Rien à contredire, donc.
+
+   GONOCOQUE — les deux comités disent la même chose, et le même chiffre.
+   EUCAST : « Azithromycin » Note / Note, et « For testing purposes with the
+   aim of detecting acquired resistance mechanisms, the ECOFF is 1 mg/L. »
+   CA-SFM p108, note 2 : « Pour l'azithromycine et la gentamicine, l'ECOFF
+   permet de distinguer les souches sauvages (CMI ≤ 1 mg/L pour
+   l'azithromycine […]) de celles ayant acquis un mécanisme de résistance. »
+
+   MÉNINGOCOQUE — EUCAST écrit « – » : molécule inadaptée. Et le panel du
+   méningocoque, dans PhénoBac, n'offre PAS l'azithromycine. La ligne ne
+   pouvait donc rien catégoriser : elle est simplement retirée, comme
+   l'ampicilline du gonocoque hier.
+
+   Les deux premières passent dans EXCLUSION_ACQUISE, le mécanisme écrit la
+   veille pour le linézolide des viridans : un ECOFF n'est pas un seuil
+   clinique, et en dessous il ne permet pas de conclure « sensible ».  */
 ["eucast","haemo","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","haemo","AMC","disque","standard",15,15,"2-1",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","haemo","AMP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","haemo","AMP","disque","standard",18,18,"2",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","haemo","AMX","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","haemo","AZM","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","haemo","CAF","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","haemo","CAF","disque","standard",28,28,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","haemo","CIP","cmi","standard",0.03,0.03,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -1577,7 +1616,6 @@ const REGLES = [
    et que le document défend de la rendre telle quelle — c'est porté dans le
    moteur.  */
 ["eucast","ngono","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","ngono","AZM","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","ngono","CAF","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","ngono","CIP","cmi","standard",0.03,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","ngono","CTX","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -1588,7 +1626,6 @@ const REGLES = [
 ["eucast","nmening","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","nmening","AMP","cmi","standard",0.125,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","nmening","AMX","cmi","standard",0.125,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","nmening","AZM","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","nmening","CAF","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","nmening","CIP","cmi","standard",0.016,0.016,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","nmening","CTX","cmi","standard",0.125,0.125,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

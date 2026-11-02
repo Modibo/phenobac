@@ -27,10 +27,10 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : e0f3e29ae7ff65f27d67f9bc28314aa6f45514d58d98fcd0a42c24c4151c9074
-- **date** : **2026-11-02, le classeur en main, septième passage** (sha256 `5de6f4a097f7f655…`)
+- **empreinte** : f270a58834f6d7fbdc26fecef82222403626a1e6aa9539caaa08b3c47a0e6ad9
+- **date** : **2026-11-02, le classeur en main, huitième passage** (sha256 `5de6f4a097f7f655…`)
 - **résultat** : **517 seuils confrontés — 517 identiques, 0 différent**,
-  0 drapeau incohérent, 0 à arbitrer, **78** non comparés. Le nombre descend
+  0 drapeau incohérent, 0 à arbitrer, **75** non comparés. Le nombre descend
   à chaque note lue : 91, puis 87 (quatre lignes empruntées au pneumocoque),
   puis 84 (les trois pénicillines de *Moraxella*), puis 83 (le linézolide des
   viridans), puis 79 (les deux dérivations de *Campylobacter* et les deux
@@ -411,7 +411,7 @@ Sans rien conclure, voici ce qui saute aux yeux et demande un arbitrage :
 | *N. gonorrhoeae* · ampicilline, amoxicilline | 1/1 et 2/2 | deux lignes **mortes** — absentes du panel — **retirées le 2026-11-02.** |
 | streptocoques viridans · linézolide | 2 / 2 | « but not as susceptible to linezolid » — **vérifié et corrigé le 2026-11-02, voir ci-dessous.** |
 | *Moraxella* · ampicilline, amoxicilline | 1/1 et 2/2 | la cellule porte « **–** » — **vérifié et corrigé le 2026-11-01, voir ci-dessous.** |
-| *Haemophilus* · azithromycine | 0,25 / 0,5 | la note ne donne que l'**ECOFF**, 4 mg/L. D'où viennent 0,25 et 0,5 ? |
+| *Haemophilus* · azithromycine | 0,25 / 0,5 | l'**ECOFF**, 4 mg/L — **porté le 2026-11-02, voir ci-dessous.** |
 | streptocoques A/C/G et B · amoxicilline, céfotaxime | 0,5 / 2 | **aucune note ne nomme ces agents**. Ces valeurs sont celles du chapitre *S. pneumoniae* — **vérifié et corrigé le 2026-11-01, voir ci-dessous.** |
 | *Enterobacterales* · azithromycine | 16 / 16 | **confirmé** : « isolates with MICs above **16 mg/L** … are likely to have azithromycin resistance mechanisms ». |
 
@@ -700,6 +700,61 @@ le moteur qui avait raison.)
 
 Balayage : **1 764 CMI** sur toutes les espèces, aucune ne reçoit à la fois une
 catégorie et un « non catégorisé ».
+
+## L'azithromycine des bactéries exigeantes : trois fois le même chiffre inventé
+
+Porté le 2026-11-02, cinquième lot de `--notes`.
+
+PhénoBac appliquait **0,25 / 0,5** à *Haemophilus*, au **gonocoque** ET au
+**méningocoque**, les trois marqués « convention de laboratoire ». **Aucun des
+deux documents ne porte ces chiffres pour aucune des trois espèces.** Le même
+nombre recopié trois fois est la signature du défaut : une valeur qui voyage
+de chapitre en chapitre sans que personne ne la rattache à une source.
+
+### Ce que les documents disent
+
+***Haemophilus*** — EUCAST, feuille H.influenzae : les quatre macrolides
+portent « Note » dans les quatre colonnes, et la note 1/A dit pourquoi :
+
+> « Clinical evidence for the efficacy of macrolides in *H. influenzae*
+> respiratory infections is **conflicting** due to high spontaneous cure
+> rates. Should there be a need to test any macrolide against this species,
+> **the epidemiological cut-offs (ECOFFs) should be used to detect strains
+> with acquired resistance**. The ECOFFs for each agent are: **azithromycin
+> 4 mg/L**, clarithromycin 32 mg/L and erythromycin 16 mg/L. »
+
+Le CA-SFM ne donne **aucune ligne de macrolide** pour cette espèce : son bloc
+ne contient qu'une phrase, « La corrélation entre les CMI des macrolides et
+l'efficacité clinique est faible pour *H. influenzae* » (p107).
+
+**Gonocoque** — les deux comités disent la même chose, et **le même chiffre** :
+EUCAST, « For testing purposes with the aim of detecting acquired resistance
+mechanisms, the ECOFF is **1 mg/L** » ; CA-SFM p108 note 2, « l'ECOFF permet de
+distinguer les souches sauvages (**CMI ≤ 1 mg/L** pour l'azithromycine) de
+celles ayant acquis un mécanisme de résistance ».
+
+**Méningocoque** — EUCAST écrit « **–** », et **le panel du méningocoque, dans
+PhénoBac, n'offre pas l'azithromycine**. La ligne ne pouvait rien catégoriser :
+retirée, comme l'ampicilline du gonocoque la veille.
+
+| | avant | après |
+|---|---|---|
+| *Haemophilus*, CMI 4 | « R » (0,5) | **aucune catégorie** — l'ECOFF n'est pas franchi |
+| *Haemophilus*, CMI 8 | « R » | **R**, résistance acquise, et c'est maintenant fondé |
+| gonocoque, CMI 1 | « R » | **aucune catégorie** |
+| gonocoque, CMI 2 | « R » | **R**, résistance acquise |
+| méningocoque | ligne morte | retirée |
+
+Les deux premières passent dans `EXCLUSION_ACQUISE`, le mécanisme écrit la
+veille pour le linézolide des viridans. **Et les deux ECOFF ne sont pas le même
+chiffre** — 4 chez *Haemophilus*, 1 chez le gonocoque : c'est exactement ce que
+l'ancienne valeur unique effaçait.
+
+> **Le message attribuait la règle à l'EUCAST, en dur.** Sous CA-SFM, sur le
+> gonocoque, il prêtait donc à un comité la règle de l'autre — alors que la
+> citation, elle, nomme les deux. Il dit maintenant « le référentiel » et
+> laisse la citation faire l'attribution. C'est la troisième fois en deux
+> jours qu'une phrase écrite pour un chapitre se trouve servie dans un autre.
 
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
@@ -1006,7 +1061,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : d727afd98ab307122b96293926c6efad0b1e9872e11abe13958759b2c316c747
+- **empreinte** : b98f717b40e1278b168b33f940453694a47ab7ac63a3b20c045da77f62ab66ca
 - **date** : **2026-11-01, le classeur en main** — 409 règles attendues sur 22 tables, **0 manque, 0 excédent**
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et
