@@ -28,6 +28,27 @@ import sys
 ICI = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.dirname(ICI)
 PAGE = os.path.join(RACINE, "phenobac.html")
+LISEZMOI = os.path.join(RACINE, "README.md")
+
+# LE README DÉRIVAIT DEPUIS DES MOIS, ET CE CONTRÔLE PROMETTAIT DE LE
+# SURVEILLER.
+#
+# Son en-tête raconte que « 37 espèces » était écrit à la main « en huit
+# endroits de la page ET DEUX DU README ». La page a été corrigée et close :
+# aucun compte n'y est plus écrit à la main, ils se calculent sur les tables.
+# Le README, lui, n'a jamais été relu par personne — et le 2026-11-02 il
+# annonçait encore 578 règles (il y en a 1 220), 39 espèces (60), 27 groupes
+# (46) et 89 conventions (75).
+#
+# Un contrôle dont la PORTÉE ANNONCÉE dépasse la portée réelle est pire qu'un
+# contrôle absent : on le croit en poste.
+#
+# La règle ne peut pas être la même que pour la page. Le README est de la
+# prose : il DOIT écrire ses nombres. Ce qu'on exige, c'est qu'ils soient
+# VRAIS — chacun doit valoir l'un des comptes que le moteur sait calculer.
+# Deux comptes légitimes coexistent pour « espèces » : celles qu'on
+# interprète et celles qu'on identifie, et le texte a le droit des deux.
+MOTS_COMPTES = ("espèces", "règles", "groupes", "seuils")
 
 # Ce qu'on refuse : un nombre collé à l'un de ces noms, dans du texte DESTINÉ
 # À ÊTRE LU. Les commentaires du code racontent l'histoire du défaut et ont le
@@ -85,6 +106,28 @@ def nombres_du_moteur():
     return {"org": len(orgs)}
 
 
+def comptes_reels():
+    """Les comptes que le moteur sait calculer, pour confronter la prose."""
+    n = nombres_du_moteur()
+    page = open(PAGE, encoding="utf-8").read()
+    iddb = len(re.findall(r"\n  (\w+):\s*\{\s*gram:", page))
+    base = open(os.path.join(RACINE, "base-connaissances.js"), encoding="utf-8").read()
+    regles = len([l for l in base.splitlines()
+                  if l.startswith('["eucast"') or l.startswith('["casfm"')])
+    groupes = set(re.findall(r'^\["(?:eucast|casfm)","(\w+)"', base, re.M))
+    # Même précaution que nombres_du_moteur() : on passe par moteur_py, qui
+    # sait choisir node ou jsc. Un appel direct à jsc passerait au vert sur le
+    # poste et tomberait sous Linux.
+    sys.path.insert(0, ICI)
+    import moteur_py as MP                                   # noqa: E402
+    tables = MP.tables(["HORS_EUCAST"]).get("HORS_EUCAST") or {}
+    conventions = sum(len(v) for v in tables.values())
+    return {"espèces": {n["org"], iddb},
+            "règles":  {regles},
+            "groupes": {len(groupes)},
+            "seuils":  {conventions}}
+
+
 def main():
     with open(PAGE, encoding="utf-8") as f:
         page = f.read()
@@ -100,6 +143,26 @@ def main():
                       "(N_INTERP, N_ID, QUIZ_BANK.length)." % ", ".join("« %s »" % d for d in durs))
     else:
         dits.append("aucun compte n'est écrit à la main dans le texte de la page.")
+
+    # --- 1 bis. Les comptes écrits dans le README sont-ils VRAIS ? ---
+    vrais = comptes_reels()
+    lisezmoi = open(LISEZMOI, encoding="utf-8").read()
+    faux, relus = [], 0
+    for m in re.finditer(r"\b(\d[\d\u202f\u00a0 ]*)\s+(%s)\b" % "|".join(MOTS_COMPTES),
+                         lisezmoi):
+        n = int(re.sub(r"[^\d]", "", m.group(1)))
+        mot = m.group(2)
+        relus += 1
+        if n not in vrais.get(mot, set()):
+            faux.append("« %d %s » — le moteur en compte %s"
+                        % (n, mot, " ou ".join(str(x) for x in sorted(vrais.get(mot, ())))
+                           or "aucun de connu"))
+    if faux:
+        ecarts.append("le README annonce des comptes que le moteur dément : %s. "
+                      "Un texte ne tombe jamais au rouge tout seul." % " ; ".join(faux))
+    elif relus:
+        dits.append("les %d comptes écrits dans le README correspondent aux tables."
+                    % relus)
 
     # --- 2. Les deux comptes existent et sont calculés ---
     for nom, source in (("N_INTERP", r"const N_INTERP\s*=\s*Object\.keys\(ORG\)\.length"),

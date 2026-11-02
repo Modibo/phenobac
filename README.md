@@ -2,7 +2,7 @@
 
 Lecture interprétative de l'antibiogramme. Application web installable (PWA),
 utilisable hors-ligne pour les germes courants, avec un moteur d'interprétation
-expert couvrant 39 espèces réservé aux licences payantes.
+expert couvrant 60 espèces réservé aux licences payantes.
 
 Le raisonnement expert — détection des phénotypes de résistance, catégorisation
 des CMI, commentaire de compte-rendu — vit **côté serveur** et n'est rendu qu'à
@@ -92,7 +92,7 @@ restent réservés à `SITE_URL`.
 | | Gratuit | Premium |
 |---|---|---|
 | Identification biochimique, 37 espèces | oui, hors-ligne | oui |
-| Interprétation experte | E. coli, S. aureus | 37 espèces |
+| Interprétation experte | E. coli, S. aureus | 60 espèces |
 | Saisie par CMI et seuils paramétrables | non | oui |
 | Export PDF, banque d'entraînement extensible | non | oui |
 
@@ -160,18 +160,41 @@ node outils/essai-referentiel.js       # le choix du référentiel change le ren
 sont conformes : 0 écart, 0 cas en attente d'arbitrage, contrôlés par
 `outils/comparer-eucast.py` contre le classeur officiel.
 
-Les 89 seuils qu'EUCAST **ne définit pas** — *Burkholderia cepacia*, pour lequel
-la feuille indique explicitement qu'aucun seuil n'est fixé ; l'oxacilline et la
-céfoxitine sur staphylocoque, qui sont des tests de dépistage ; la gentamicine
-haut niveau chez l'entérocoque ; les aminopénicillines sur streptocoque A/B/C/G
-— sont des **conventions de laboratoire**. Ils restent utilisables, mais
-l'éditeur de seuils les marque « hors EUCAST » pour qu'on ne les confonde pas.
+### Là où le référentiel ne chiffre pas
+
+**75 seuils** sont marqués « convention de laboratoire » : le comité ne les
+fixe pas, et PhénoBac pose quand même une valeur. Le drapeau dit vrai — et il
+ne dit pas tout. Le 1er et le 2 novembre 2026, la lecture des **notes** du
+classeur a montré que, dans la moitié des cas, **le document ne se tait pas :
+il prescrit une conduite** que personne n'avait lue.
+
+Seize de ces valeurs ont été retirées, chacune remplacée par ce que le document
+dit réellement — déduire d'une autre molécule, exclure une résistance acquise,
+ou refuser de conclure. L'oxacilline de *S. aureus* y était : la table écrit
+« Note », le chiffre est dans la note 4 (**2 mg/L**), et PhénoBac appliquait
+0,25 — un staphylocoque doré sensible à la méticilline sortait **SARM**.
+
+`comparer-eucast.py --conventions` range les 75 selon ce que le document dit :
+
+| | |
+|---|---|
+| 38 | **absent de la feuille** — d'où vient le chiffre ? (14 contredisent une résistance naturelle que PhénoBac déclare lui-même) |
+| 16 | **note / IE** — le document dit quoi faire, à lire |
+| 10 | **dépistage** — écran, pas seuil thérapeutique |
+| 9 | **tiret « – »** — « report resistant without prior testing » |
+| 2 | autre |
+
+`comparer-eucast.py --notes` donne à lire, pour chacun, les phrases des notes
+qui nomment l'agent. Il n'extrait aucun chiffre et ne conclut rien : une note
+est une phrase, et c'est un biologiste qui la lit.
 
 Un groupe de seuils correspond à **une espèce ou un genre du tableau officiel**,
-jamais à plusieurs : 27 groupes, dont *Salmonella*, les Morganellaceae et
+jamais à plusieurs : 46 groupes, dont *Salmonella*, les Morganellaceae et
 *Serratia* séparés des autres entérobactéries, parce qu'EUCAST leur donne des
 seuils propres. Le comparateur refuse de comparer un groupe qui couvrirait
-plusieurs feuilles.
+plusieurs feuilles. Et depuis le 2026-11-01, un seuil peut être nommé **par
+espèce à l'intérieur d'un groupe** — l'oxacilline vaut 2 mg/L pour *S. aureus*,
+*S. lugdunensis* et *S. saprophyticus*, 0,25 pour les autres staphylocoques.
 
 Chaque janvier, EUCAST publie une nouvelle version. Pour la répercuter :
 
@@ -346,7 +369,7 @@ sans qu'on ait à s'en souvenir.
 
 ## Consulter les règles
 
-Un onglet **Référentiels** montre les 578 règles telles qu'elles sont écrites,
+Un onglet **Référentiels** montre les 1 220 règles telles qu'elles sont écrites,
 une par ligne : seuils de CMI et de diamètre, charge du disque, zone
 d'incertitude, site, et le **statut** — valeur officielle du comité, ou
 convention de laboratoire que le référentiel ne fixe pas. Filtrage par
@@ -395,7 +418,7 @@ git show <révision>:base-connaissances.js > base-connaissances.js
 
 ## Les règles sont des données
 
-`base-connaissances.js` **fait foi** : 578 règles, une par ligne, chacune
+`base-connaissances.js` **fait foi** : 1 220 règles, une par ligne, chacune
 identifiée par cinq coordonnées — référentiel, groupe bactérien, antibiotique,
 méthode, site — et portant ce qui en découle : seuils, charge du disque, zone
 d'incertitude, molécule témoin, seuil de dépistage, statut officiel ou
