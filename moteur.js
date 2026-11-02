@@ -2262,11 +2262,11 @@ function finalize(A, r) {
     _deduites.forEach(d => {
       A.rules.push({ k: "=", txt: tr(
         `${nomAbx(d.abx)} : catégorie reprise de ${nomAbx(d.source)} (${d.cat}). `
-        + `L'EUCAST ne chiffre pas ce couple et prescrit de déduire la sensibilité `
-        + `des pénicillines, céphalosporines et carbapénèmes de celle de la pénicilline G.`,
+        + `L'EUCAST ne chiffre pas ce couple : il prescrit d'en déduire la `
+        + `sensibilité de celle de ${nomAbx(d.source).toLowerCase()}.`,
         `${nomAbx(d.abx)}: category taken from ${nomAbx(d.source)} (${d.cat}). `
-        + `EUCAST gives no breakpoint for this pair and directs that susceptibility to `
-        + `penicillins, cephalosporins and carbapenems be inferred from benzylpenicillin.`) });
+        + `EUCAST gives no breakpoint for this pair: it directs that susceptibility be `
+        + `inferred from ${nomAbx(d.source).toLowerCase()}.`) });
     });
   }
 
@@ -3403,6 +3403,41 @@ function fastidInterpret(r, c, a) {
 
   else if (type === "gonorrhoeae") {
     const ppng = blac === "Positif" || isRI(r.PEN);
+
+    /* LA PÉNICILLINE G EST UN AGENT TÉMOIN, ET LE DOCUMENT DÉFEND DE LA
+       RENDRE. Feuille N.gonorrhoeae, v16.1 : la ligne s'intitule
+       « Benzylpenicillin (SURROGATE AGENT) », 0,06 / 1 — ce sont bien les
+       chiffres de PhénoBac —, et la note est un algorithme complet :
+
+         « Always test for beta-lactamase (tests based on a chromogenic
+           cephalosporin can be used). If beta-lactamase positive, report
+           resistant to ampicillin and amoxicillin. If beta-lactamase
+           negative, determine the MIC of benzylpenicillin. Infer the
+           susceptibility to ampicillin and amoxicillin from the
+           benzylpenicillin MIC (DO NOT REPORT BENZYLPENICILLIN
+           SUSCEPTIBILITY). »
+
+       PhénoBac catégorise la pénicilline G et l'affiche : c'est utile au
+       raisonnement — elle sert à nommer le phénotype PPNG — mais le compte
+       rendu ne doit pas la porter comme un résultat thérapeutique. On le
+       DIT, à défaut de masquer : le masquage est une politique de
+       laboratoire (§ rendu ciblé), et celle-ci est une règle du
+       référentiel. Les deux ne se confondent pas.
+
+       L'ampicilline et l'amoxicilline, que la note fait déduire, ne sont pas
+       au panel du gonocoque : il n'y a rien à déduire tant qu'elles n'y
+       sont pas, et les deux lignes de base qui les chiffraient — sans
+       source — ont été retirées le 2026-11-02. */
+    if (!estCasfm() && r.PEN) {
+      A.rules.push({ k: "⟨⟩", txt: tr(
+        "Pénicilline G : l'EUCAST la nomme « agent témoin » (surrogate agent) et demande "
+        + "de NE PAS rendre sa sensibilité sur le compte rendu. Elle sert à déduire celle "
+        + "de l'ampicilline et de l'amoxicilline — et un test à la β-lactamase positif "
+        + "les rend résistantes sans autre examen.",
+        "Benzylpenicillin: EUCAST calls it a surrogate agent and asks that its "
+        + "susceptibility NOT be reported. It serves to infer ampicillin and amoxicillin — "
+        + "and a positive beta-lactamase test makes those resistant without further testing.") });
+    }
     if (isRI(r.CTX)) {
       A.sev = "crit"; A.name = tr("Sensibilité diminuée à la ceftriaxone", "Reduced ceftriaxone susceptibility");
       A.mech = tr("Sensibilité diminuée aux C3G : menace majeure (échecs thérapeutiques).",
@@ -5206,7 +5241,18 @@ function raisonSansDisque(group, k, ctx) {
    ------------------------------------------------------------ */
 const CAT_DEDUITE = {
   strepacg: { AMX: "PEN", CTX: "PEN" },
-  strepb:   { AMX: "PEN", CTX: "PEN" }
+  strepb:   { AMX: "PEN", CTX: "PEN" },
+  /* Feuille C.jejuni_C.coli — Azithromycin et Doxycycline portent « Note »,
+     et les notes disent de quoi :
+
+       « Susceptibility to azithromycin and clarithromycin can be inferred
+         from erythromycin. »
+       « Susceptibility to doxycycline can be inferred from tetracycline. »
+
+     L'érythromycine (4/4 chez C. jejuni) et la tétracycline (2/2) sont, elles,
+     bien chiffrées : ce sont elles qui portent la réponse. PhénoBac appliquait
+     avant cela 0,5/0,5 et 4/8, deux chiffres absents du document. */
+  campylo:  { AZM: "E", DOX: "TET" }
 };
 // Les reprises effectivement faites, pour que le compte rendu les dise.
 let _deduites = [];

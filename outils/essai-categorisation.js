@@ -706,6 +706,83 @@ dire("\nLe rendu qui n'est ni S, ni I, ni R");
         + "ne déborde pas sur lui");
 })();
 
+/* ---------- 14. LES DÉRIVATIONS DE CAMPYLOBACTER ET DU GONOCOQUE ----------
+
+   Quatrième lot sorti par comparer-eucast.py --notes.
+
+   Feuille C.jejuni_C.coli : Azithromycin et Doxycycline portent « Note »
+   dans les quatre colonnes, et les notes disent de quoi —
+
+     « Susceptibility to azithromycin and clarithromycin can be inferred
+       from erythromycin. »
+     « Susceptibility to doxycycline can be inferred from tetracycline. »
+
+   PhénoBac appliquait 0,5/0,5 et 4/8, deux chiffres absents du document.
+   L'érythromycine (4/4 chez C. jejuni) et la tétracycline (2/2), elles, sont
+   bien chiffrées : ce sont elles qui portent la réponse.
+
+   Feuille N.gonorrhoeae : Ampicillin et Amoxicillin portent « Note », et la
+   note est un algorithme — test à la β-lactamase d'abord, CMI de pénicilline
+   G ensuite, « DO NOT REPORT BENZYLPENICILLIN SUSCEPTIBILITY ». PhénoBac
+   chiffrait les deux (1/1 et 2/2, sans source) alors que son panel du
+   gonocoque n'offre NI l'une NI l'autre : deux lignes qui ne pouvaient rien
+   catégoriser, portant des chiffres que rien ne confrontait. */
+dire("\nCampylobacter et gonocoque : ce que le document fait déduire");
+(function () {
+  function camp(mic) {
+    return E.runInterpretation({ organism: "campylobacter", ref: "eucast",
+                                 mode: "mic", mic: mic, ctx: {} });
+  }
+
+  /* 1. Les quatre lignes sans source ont disparu. */
+  verif(!(E.BP.campylo && E.BP.campylo.AZM) && !(E.BP.campylo && E.BP.campylo.DOX),
+        "Campylobacter : plus de seuil propre pour l'azithromycine ni la doxycycline");
+  verif(!(E.BP.ngono && E.BP.ngono.AMP) && !(E.BP.ngono && E.BP.ngono.AMX),
+        "gonocoque : plus de seuil pour l'ampicilline ni l'amoxicilline — deux "
+        + "lignes que le panel n'atteignait même pas");
+  /* Et les molécules SOURCES gardent les leurs, sinon il n'y aurait rien à
+     reprendre et le banc comparerait deux silences. */
+  verif(E.BP.campylo.E && E.BP.campylo.E.S === 4,
+        "… tandis que l'érythromycine garde le sien (4, ligne C. jejuni)");
+  verif(E.BP.campylo.TET && E.BP.campylo.TET.S === 2,
+        "… et la tétracycline le sien (2)");
+  verif(E.BP.ngono.PEN && E.BP.ngono.PEN.S === 0.06 && E.BP.ngono.PEN.R === 1,
+        "… et la pénicilline G du gonocoque les siens : 0,06 / 1, ceux de la "
+        + "ligne « Benzylpenicillin (surrogate agent) »");
+
+  /* 2. La reprise se fait, dans les deux sens. */
+  var s = camp({ E: "2", AZM: "8" }).categories;
+  verif(s.E === "S" && s.AZM === "S",
+        "érythromycine sensible → azithromycine sensible, même avec une CMI haute");
+  var r = camp({ E: "8", AZM: "0.12" }).categories;
+  verif(r.E === "R" && r.AZM === "R",
+        "érythromycine résistante → azithromycine résistante, même avec une CMI basse");
+  var d = camp({ TET: "1", DOX: "16" }).categories;
+  verif(d.TET === "S" && d.DOX === "S",
+        "tétracycline sensible → doxycycline sensible");
+  verif(camp({ AZM: "1" }).categories.AZM === undefined,
+        "azithromycine seule, sans érythromycine : aucune catégorie — rien à reprendre");
+
+  /* 3. CHAQUE REPRISE NOMME SA SOURCE. Le message était écrit pour les
+     streptocoques et citait la pénicilline G en dur : sur Campylobacter il
+     aurait annoncé une molécule qui n'est pas en cause. */
+  var t = (camp({ E: "2", AZM: "8" }).interpretation.rules || [])
+    .filter(function (x) { return /reprise de/.test(x.txt); })[0];
+  verif(!!t && /Érythromycine/.test(t.txt),
+        "la reprise nomme l'érythromycine, et non la pénicilline G d'un autre chapitre");
+
+  /* 4. LE GONOCOQUE : la pénicilline G est un AGENT TÉMOIN. */
+  function gono(ref, res) {
+    return (E.runInterpretation({ organism: "ngonorrhoeae", ref: ref, mode: "sir",
+      results: res, ctx: {} }).interpretation.rules || [])
+      .map(function (x) { return x.txt; }).join(" || ");
+  }
+  verif(/agent témoin|surrogate/.test(gono("eucast", { PEN: "S", CTX: "S" })),
+        "gonocoque : on dit que la pénicilline G est un agent témoin, à ne pas rendre");
+  verif(!/agent témoin/.test(gono("eucast", { CTX: "S" })),
+        "… et rien si elle n'a pas été testée");
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : une mesure ne devient une catégorie que"
                     + " lorsqu'elle la détermine."));

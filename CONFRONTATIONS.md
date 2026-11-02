@@ -27,13 +27,15 @@ pour obtenir la nouvelle empreinte.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN
-- **empreinte** : 5aee1cb6f77c2e93b4192cbfde151e5b8645dbcc5cce85a00659d4decbfbf87e
-- **date** : **2026-11-02, le classeur en main, cinquième passage** (sha256 `5de6f4a097f7f655…`)
+- **empreinte** : 23c0b40246f6ad4f6e6a21c978b91601bf4833f8074dd0d6488f675cfbf7c44d
+- **date** : **2026-11-02, le classeur en main, sixième passage** (sha256 `5de6f4a097f7f655…`)
 - **résultat** : **517 seuils confrontés — 517 identiques, 0 différent**,
-  0 drapeau incohérent, 0 à arbitrer, **83** non comparés. Le nombre descend
+  0 drapeau incohérent, 0 à arbitrer, **79** non comparés. Le nombre descend
   à chaque note lue : 91, puis 87 (quatre lignes empruntées au pneumocoque),
   puis 84 (les trois pénicillines de *Moraxella*), puis 83 (le linézolide des
-  viridans). Chacune portait un chiffre que rien ne confrontait. Diamètres :
+  viridans), puis 79 (les deux dérivations de *Campylobacter* et les deux
+  lignes mortes du gonocoque). Chacune portait un chiffre que rien ne
+  confrontait. Diamètres :
   **445 identiques, 0 différent, 0 à arbitrer, 0 non comparé** — la colonne
   « à arbitrer » est vide pour la première fois. Méningé : **24 identiques,
   0 différent**.
@@ -404,9 +406,9 @@ Sans rien conclure, voici ce qui saute aux yeux et demande un arbitrage :
 
 | couple | PhénoBac applique | ce que dit la note |
 |---|---|---|
-| *Campylobacter* · azithromycine | 0,5 / 0,5 | « Susceptibility to azithromycin and clarithromycin can be **inferred from erythromycin**. » |
-| *Campylobacter* · doxycycline | 4 / 8 | « Susceptibility to doxycycline can be **inferred from tetracycline**. » |
-| *N. gonorrhoeae* · ampicilline, amoxicilline | 1/1 et 2/2 | « **Infer** the susceptibility to ampicillin and amoxicillin **from the benzylpenicillin MIC** (do not report benzylpenicillin susceptibility). » |
+| *Campylobacter* · azithromycine | 0,5 / 0,5 | « inferred from erythromycin » — **porté le 2026-11-02.** |
+| *Campylobacter* · doxycycline | 4 / 8 | « inferred from tetracycline » — **porté le 2026-11-02.** |
+| *N. gonorrhoeae* · ampicilline, amoxicilline | 1/1 et 2/2 | deux lignes **mortes** — absentes du panel — **retirées le 2026-11-02.** |
 | streptocoques viridans · linézolide | 2 / 2 | « but not as susceptible to linezolid » — **vérifié et corrigé le 2026-11-02, voir ci-dessous.** |
 | *Moraxella* · ampicilline, amoxicilline | 1/1 et 2/2 | la cellule porte « **–** » — **vérifié et corrigé le 2026-11-01, voir ci-dessous.** |
 | *Haemophilus* · azithromycine | 0,25 / 0,5 | la note ne donne que l'**ECOFF**, 4 mg/L. D'où viennent 0,25 et 0,5 ? |
@@ -594,6 +596,64 @@ d'exclusion nomme la **moxifloxacine** (CMI > 0,5 ; diamètre < 21 mm), pas la
 lévofloxacine. L'écriture `null / 2` empêche au moins de rendre « sensible »,
 mais elle rend « I », et 2 n'est le chiffre d'aucune des deux notes. **À
 arbitrer.**
+
+## Les dérivations de *Campylobacter* et du gonocoque
+
+Quatrième lot sorti par `--notes`, porté le 2026-11-02.
+
+### *Campylobacter* : deux molécules qui se déduisent
+
+Feuille C.jejuni_C.coli — *Azithromycin* et *Doxycycline* portent « Note »
+dans les quatre colonnes, et les notes disent **de quoi** :
+
+> « Susceptibility to azithromycin and clarithromycin can be **inferred from
+> erythromycin**. »
+> « Susceptibility to doxycycline can be **inferred from tetracycline**. »
+
+PhénoBac appliquait azithromycine **0,5 / 0,5** et doxycycline **4 / 8**, deux
+chiffres absents du document. L'érythromycine (4/4, ligne *C. jejuni*) et la
+tétracycline (2/2), elles, sont bien chiffrées : ce sont elles qui portent la
+réponse. Les deux couples passent dans `CAT_DEDUITE`.
+
+| | avant | après |
+|---|---|---|
+| érythromycine S, azithromycine CMI 8 | « R » | **S**, reprise de l'érythromycine |
+| érythromycine R, azithromycine CMI 0,12 | « S » | **R**, reprise de l'érythromycine |
+| tétracycline S, doxycycline CMI 16 | « R » | **S**, reprise de la tétracycline |
+
+> **Et le message de la reprise citait la pénicilline G en dur.** Écrit pour
+> les streptocoques ce matin, il aurait annoncé sur *Campylobacter* une
+> molécule qui n'est pas en cause. Il nomme désormais sa source — c'est au
+> banc, et c'est exactement le défaut que ce dépôt appelle « un chiffre juste
+> au mauvais endroit », transposé à une phrase.
+
+### Gonocoque : deux lignes mortes, et un agent témoin
+
+Feuille N.gonorrhoeae — *Ampicillin* et *Amoxicillin* portent « Note », et la
+note est un **algorithme complet** :
+
+> « **Always test for beta-lactamase** (tests based on a chromogenic
+> cephalosporin can be used). **If beta-lactamase positive, report resistant
+> to ampicillin and amoxicillin.** If beta-lactamase negative, determine the
+> MIC of benzylpenicillin. **Infer** the susceptibility to ampicillin and
+> amoxicillin **from the benzylpenicillin MIC** (**do not report
+> benzylpenicillin susceptibility**). »
+
+PhénoBac chiffrait ampicilline 1/1 et amoxicilline 2/2 — sans source — alors
+que **le panel du gonocoque n'offre ni l'une ni l'autre**. Deux lignes qui ne
+pouvaient rien catégoriser, portant des chiffres que rien ne confrontait : le
+pire des deux mondes. Retirées.
+
+La pénicilline G **garde** les siens : le classeur écrit « Benzylpenicillin
+(**surrogate agent**) 0,06 / 1 », et ce sont exactement ceux de la base. Ce
+qui manquait est de **dire** qu'elle est un agent témoin et que le document
+défend de la rendre telle quelle. C'est maintenant écrit sur le compte rendu.
+
+> **Dit, et non masqué.** Masquer une molécule est une politique de
+> laboratoire — PhénoBac a le rendu ciblé pour cela (HAS 2023). Ici c'est une
+> règle du référentiel. Les deux ne se confondent pas, et mélanger les deux
+> mécanismes ferait disparaître du compte rendu une molécule pour la mauvaise
+> raison.
 
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
@@ -900,7 +960,7 @@ complètes ont été obtenues, et les trois ZIT sont confrontées ci-dessus.
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)
 - **tables** : BP, BP_URIN, DZ, DZ_URIN, DISQUE, DZ_TEMOIN, ECOFF
-- **empreinte** : 60555e1f5fb4b332515a464f353a4e06790b203bea4eedbf0626febbd2f57a60
+- **empreinte** : c36be5b4a7d20a8cd934e498cfa88a67c9fb8812249c62d39854fe34de9fae21
 - **date** : **2026-11-01, le classeur en main** — 409 règles attendues sur 22 tables, **0 manque, 0 excédent**
 - **pourquoi l'empreinte a bougé sans nouvelle confrontation** : même
   raison que ci-dessus — trois lignes retirées de BP, aucune ajoutée. Et

@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.38";
+const BASE_VERSION = "2026.39";
 
 const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
 
@@ -486,10 +486,25 @@ const REGLES = [
 ["eucast","burk","MIN","cmi","standard",null,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","burk","SXT","cmi","standard",null,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","burk","TZP","cmi","standard",16,16,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","campylo","AZM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,true,undefined,undefined],
+/* L'AZITHROMYCINE ET LA DOXYCYCLINE DE CAMPYLOBACTER SE DÉDUISENT.
+   Lignes retirées le 2026-11-02.
+
+   EUCAST v16.1, feuille C.jejuni_C.coli : Azithromycin et Doxycycline
+   portent « Note » dans les quatre colonnes. Les notes disent de quoi :
+
+     « Susceptibility to azithromycin and clarithromycin can be inferred
+       from erythromycin. »
+     « Susceptibility to doxycycline can be inferred from tetracycline. »
+
+   PhénoBac appliquait azithromycine 0,5/0,5 et doxycycline 4/8, deux
+   chiffres sans source dans le document, marqués « convention de
+   laboratoire ». L'érythromycine (4/4 pour C. jejuni) et la tétracycline
+   (2/2), elles, sont bien chiffrées : ce sont elles qui portent la réponse.
+
+   La reprise est dans le moteur, table CAT_DEDUITE — une déduction n'est pas
+   un seuil.  */
 ["eucast","campylo","CIP","cmi","standard",null,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","campylo","CIP","disque","standard",null,26,"5",undefined,undefined,undefined,undefined,undefined,undefined],
-["eucast","campylo","DOX","cmi","standard",4,8,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","campylo","E","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","campylo","E","disque","standard",20,20,"15",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","campylo","SXT","cmi","standard",2,4,undefined,undefined,undefined,undefined,true,undefined,undefined],
@@ -1538,9 +1553,30 @@ const REGLES = [
 ["eucast","morganella","TEM","disque","standard",null,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["eucast","morganella","TZP","cmi","standard",8,8,undefined,16,undefined,undefined,undefined,undefined,undefined],
 ["eucast","morganella","TZP","disque","standard",20,20,"30-6",[19,19],undefined,undefined,undefined,undefined,undefined],
+/* L'AMPICILLINE ET L'AMOXICILLINE DU GONOCOQUE : DEUX LIGNES MORTES, ET
+   SANS SOURCE. Retirées le 2026-11-02.
+
+   EUCAST v16.1, feuille N.gonorrhoeae : Ampicillin et Amoxicillin portent
+   « Note / Note ». La note est un algorithme complet :
+
+     « Always test for beta-lactamase (tests based on a chromogenic
+       cephalosporin can be used). If beta-lactamase positive, report
+       resistant to ampicillin and amoxicillin. If beta-lactamase negative,
+       determine the MIC of benzylpenicillin. Infer the susceptibility to
+       ampicillin and amoxicillin from the benzylpenicillin MIC (DO NOT
+       REPORT BENZYLPENICILLIN SUSCEPTIBILITY). »
+
+   PhénoBac appliquait ampicilline 1/1 et amoxicilline 2/2, sans source — et
+   le panel du gonocoque n'offre NI l'une NI l'autre. Deux lignes qui ne
+   pouvaient donc rien catégoriser, portant des chiffres que rien ne
+   confrontait : le pire des deux mondes.
+
+   La pénicilline G, elle, garde ses chiffres : le classeur écrit
+   « Benzylpenicillin (SURROGATE AGENT) 0,06 / 1 », et ce sont exactement
+   ceux de la base. Ce qui manquait est de DIRE qu'elle est un agent témoin
+   et que le document défend de la rendre telle quelle — c'est porté dans le
+   moteur.  */
 ["eucast","ngono","AMC","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","ngono","AMP","cmi","standard",1,1,undefined,undefined,undefined,undefined,true,undefined,undefined],
-["eucast","ngono","AMX","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","ngono","AZM","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","ngono","CAF","cmi","standard",2,2,undefined,undefined,undefined,undefined,true,undefined,undefined],
 ["eucast","ngono","CIP","cmi","standard",0.03,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
