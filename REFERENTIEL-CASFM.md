@@ -23,7 +23,11 @@ d'un patient au suivant.
 
 ## Où le code se trouve
 
-| Quoi | Client `phenobac.html` | Moteur `netlify/functions/premium-interpret.js` |
+Le moteur est **`moteur.js`**, un seul fichier.
+`netlify/functions/premium-interpret.js` ne fait que `require("../../moteur")` :
+il expose le même calcul en API, il n'en tient pas une seconde copie.
+
+| Quoi | Client `phenobac.html` | Moteur `moteur.js` |
 |---|---|---|
 | Registre des référentiels | `REFERENTIELS` | `REFERENTIELS` |
 | Seuils déplacés | `BP_CASFM` | idem |
@@ -34,6 +38,12 @@ d'un patient au suivant.
 | Zones d'incertitude technique | `ZIT`, `ZIT_CASFM` | idem, + `zitPour()` / `enZit()` |
 | Règles transversales | — | `reglesCasfm()` |
 | Lecture interprétative | — | `rendreR()`, moteurs `entero` / `enterobacter` |
+| Seuil propre à une espèce DANS un groupe | — | `SEUIL_ESPECE` *(2026-11-01)* |
+| Catégorie reprise d'un autre agent | — | `CAT_DEDUITE` *(2026-11-01)* |
+| Exclusion d'une résistance acquise (ECOFF) | — | `EXCLUSION_ACQUISE` *(2026-11-02)* |
+| Conduite sur les pénicillines de *Moraxella* | — | `penicillinesMoraxella()` *(2026-11-01)* |
+| Conduite sur la pénicillinase de *Pasteurella* | — | moteur `autresbgn` *(2026-11-01)* |
+| Notes de lecture du disque | — | `LECTURE_DISQUE` *(2026-11-01)* |
 
 Le moteur **fait foi** : c'est lui qui catégorise. Le client n'en tient une
 copie que pour l'affichage et l'éditeur de seuils.
@@ -49,8 +59,16 @@ Et, à la main, quand un nouveau millésime paraît :
 
 ```bash
 python3 outils/comparer-eucast.py v_16.1_Breakpoint_Tables.xlsx   # les seuils
+python3 outils/comparer-eucast.py v_16.1_Breakpoint_Tables.xlsx --notes
+python3 outils/comparer-eucast.py v_16.1_Breakpoint_Tables.xlsx --conventions
 python3 outils/comparer-zit.py    v_16.1_Breakpoint_Tables.xlsx CASFM2026_V1.0-SEPTEMBRE-2026.pdf
 ```
+
+`--notes` donne à lire ce que le classeur met **en note** là où sa table ne
+chiffre pas, et `--conventions` range les seuils que PhénoBac pose seul selon
+ce que le document en dit. Les deux ont été écrits les 1er et 2 novembre 2026,
+après qu'une valeur sans source eut rendu SARM un staphylocoque doré sensible à
+la méticilline.
 
 Sans Node sur la machine, le second tourne aussi sous JavaScriptCore :
 
@@ -98,6 +116,30 @@ qui leur donne des valeurs.
 | *Corynebacterium* | cotrimoxazole | 18 | CLSI M45 |
 | *N. gonorrhoeae* | gentamicine | 14 | ECOFF |
 | *E. coli* seulement | céfoxitine | 7 | L'EUCAST la réserve au dépistage des AmpC ; la molécule sert en France d'alternative aux carbapénèmes contre les souches BLSE |
+
+### Des conduites, et non des seuils (2026-11-01)
+
+Deux différences du CA-SFM ne se logent dans aucune table de valeurs : le
+comité ne déplace pas un chiffre, il **prescrit un examen et ce qu'on en
+fait**. Elles sont portées dans le moteur, et c'est leur place — écrire une
+conduite comme un seuil reviendrait à inventer un chiffre.
+
+| Espèce | Page | Ce que le CA-SFM demande, et que l'EUCAST ne demande pas |
+|---|---|---|
+| *Pasteurella* | 113, note 1 | Rechercher la β-lactamase par **test chromogénique** avant de rendre sensible la pénicilline G ou une aminopénicilline. « Les souches productrices de β-lactamase doivent être catégorisées "résistantes" à la pénicilline G et aux aminopénicillines (sans inhibiteurs de β-lactamase). » L'EUCAST chiffre ces trois molécules et « n'indique pas la nécessité » du test. L'amoxicilline-acide clavulanique est épargnée : le comité écrit « sans inhibiteurs ». |
+| *Moraxella* | 110, note 1/A | **Deux** conditions pour rendre les pénicillines sensibles : un test chromogénique **négatif** ET une amoxicilline-acide clavulanique **sensible**. La seconde est écrite pour une raison que le comité donne lui-même — « sa production à bas niveau peut entraîner des résultats faiblement positifs ». Ici le CA-SFM est plus **permissif** que l'EUCAST, qui écrit « – » : molécule inadaptée, à rendre résistante sans test. |
+
+Les deux posent la même question à l'écran (`blac`, « test à la β-lactamase
+(nitrocéfine) ? »), et la catégorie en dépend. Sous EUCAST, la conduite est
+celle de l'EUCAST : chez *Pasteurella*, un test positif ne change rien — le
+document est muet, et lui prêter la règle du CA-SFM serait pire qu'un silence.
+
+> ***Pasteurella* n'avait pas la question du tout.** Le moteur lisait déjà
+> `c.blac` pour *Haemophilus*, le gonocoque et *Moraxella* ; la page
+> déclarait `ctx:[]` pour *Pasteurella*. La règle aurait été inatteignable
+> pour toujours, tous bancs verts. `outils/essai-contexte.js` mesure
+> désormais, par différentiel, que toute question à laquelle le moteur répond
+> est posée par la page — et réciproquement.
 
 ### Diamètres critiques (`DZ_CASFM`, `DZ_CASFM_URIN`, `DISQUE_CASFM`)
 
@@ -290,7 +332,7 @@ exige en plus.
 | Rifampicine | 5 | Toujours assortie de la mention « à utiliser en association » (hors prophylaxie du méningocoque et d'*Haemophilus*). |
 | Masquage du méropénème | 2 | Chez *Pseudomonas*, ne pas rendre le méropénème tant qu'une β-lactamine de spectre plus étroit reste active. |
 | Lévofloxacine / *Pseudomonas* | 9 | Forte posologie au minimum ; activité à considérer comme inférieure à celle de la ciprofloxacine. |
-| β-lactamase chromogénique | 14, 15 | *N. meningitidis* et *M. catarrhalis* : rechercher la β-lactamase avant de rendre une pénicilline sensible. |
+| β-lactamase chromogénique | 14, 15 | *N. meningitidis* : rechercher la β-lactamase avant de rendre une pénicilline sensible. Pour *M. catarrhalis*, la règle a quitté ce tableau le 2026-11-01 : elle ne se contente plus de le dire, elle **décide la catégorie** — voir « Des conduites, et non des seuils ». Il ne reste ici que les deux cas qu'elle ne tranche pas, et ils ne se disent pas pareil : test non fait, ou test négatif avec une association résistante. |
 | *S. saprophyticus* | 11 | Un dépistage négatif à l'ampicilline ne suffit pas — vérifier aussi la sensibilité à la méticilline. |
 | Anaérobies | 16, 17 | Gélose Brucella (BBA) et non FAA ; amoxicilline testée directement plutôt que déduite de la pénicilline G. Pas de seuils propres à *C. difficile*, dont l'antibiogramme sur selles n'est pas recommandé en France. |
 | Céfidérocol | 5 | Chez les entérobactéries, à tester uniquement par microdilution en milieu liquide : la corrélation diamètre/CMI fait défaut sur les souches multirésistantes, celles où le test est utile. Chez *Acinetobacter* et *S. maltophilia*, le rendu est à deux niveaux plutôt qu'une catégorisation clinique. |
