@@ -43,9 +43,42 @@
    complet de seuils : c'est l'EUCAST assorti des différences françaises que
    son comité publie et justifie (« Différences principales entre le CA-SFM
    et l'EUCAST », version CA-SFM 2026). Voir REFERENTIEL-CASFM.md. */
+/* ------------------------------------------------------------
+   LE REGISTRE DES RÉFÉRENTIELS
+
+   « base » dit de qui un référentiel HÉRITE quand il ne chiffre pas un
+   couple lui-même. Le CA-SFM hérite de l'EUCAST : c'est le modèle du delta,
+   et c'est ce qui permet à PhénoBac de ne porter que les différences
+   françaises au lieu d'un second jeu complet.
+
+   UN RÉFÉRENTIEL SANS « base » N'HÉRITE DE RIEN. Le CLSI n'est pas l'EUCAST
+   assorti d'écarts : c'est un autre système, avec ses propres valeurs, ses
+   propres charges de disque, son propre contrôle de qualité et jusqu'à ses
+   propres catégories — il écrit « SDD » là où l'EUCAST écrit « I ». Le
+   mélanger au nôtre produirait des rendus qui n'appartiennent à personne.
+
+   C'est aussi le danger immédiat : « cadrer » accepte n'importe quelle clé
+   présente ici, et getBP() retombait sur les tables EUCAST dès que le
+   référentiel actif n'était pas le CA-SFM. Ajouter « clsi » au registre
+   aurait suffi, à lui seul, pour qu'un laboratoire croie lire du CLSI en
+   lisant de l'EUCAST. L'héritage est donc déclaré, et son absence respectée.
+   ------------------------------------------------------------ */
 const REFERENTIELS = {
-  eucast: { cle: "eucast", nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "aligne" },
-  casfm:  { cle: "casfm",  nom: "CA-SFM", version: "2026", publie: "2026-09-01", etat: "delta", base: "eucast" }
+  eucast: { cle: "eucast", nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "aligne", base: null },
+  casfm:  { cle: "casfm",  nom: "CA-SFM", version: "2026", publie: "2026-09-01", etat: "delta", base: "eucast" },
+  /* CLSI — l'ossature est posée, les valeurs ne le sont pas.
+
+     Le document (CLSI M100) n'est pas librement disponible : il se vend, et
+     ce dépôt n'écrit aucun seuil qu'il ne peut pas citer page en main. Tant
+     que les tables sont vides, le référentiel reste inerte — « etat: vide »
+     — et l'interface ne le propose pas : un laboratoire qui le choisirait
+     n'obtiendrait aucune catégorie sur aucun antibiotique, et conclurait à
+     juste titre que l'application est cassée.
+
+     Le jour où le document est en main, remplir BP_CLSI et DZ_CLSI suffit :
+     le bouton paraît de lui-même, parce qu'il est conditionné aux données
+     et non à une ligne de code à retrouver. */
+  clsi:   { cle: "clsi",   nom: "CLSI",   version: null,   publie: null,        etat: "vide",  base: null }
 };
 const REFERENTIEL = REFERENTIELS.eucast;   // défaut, conservé pour compatibilité
 
@@ -284,6 +317,13 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
       BP_MENINGE_CASFM = {},
       DZ = {}, DZ_MENINGE = {}, DZ_URIN = {}, DZ_CASFM = {}, DZ_CASFM_URIN = {},
       DZ_TEMOIN = {}, ECOFF = {},
+      /* Les tables du CLSI, vides tant que le document n'est pas en main.
+         Elles existent pour que le chargeur ait où ranger une ligne
+         « clsi » le jour venu : sans elles il LÈVE — « aucune table pour
+         clsi:cmi:standard » —, ce qui est le bon comportement, mais obligerait
+         à toucher au moteur pour ajouter une donnée. */
+      BP_CLSI = {}, BP_CLSI_URIN = {}, BP_CLSI_MENINGE = {},
+      DZ_CLSI = {}, DZ_CLSI_URIN = {}, DISQUE_CLSI = {},
       /* DEUX TABLES DE RESTRICTION D'ESPÈCE, ET IL EN FALLAIT DEUX.
          Jusqu'au 2026-11-01 il n'y en avait qu'une, partagée par les deux
          référentiels sous deux noms. Elle marchait tant que les restrictions
@@ -365,7 +405,10 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
     "casfm:cmi:meninge":   BP_MENINGE_CASFM,
     "eucast:disque:standard": DZ,       "eucast:disque:meninge":  DZ_MENINGE,
     "eucast:disque:urinaire": DZ_URIN,
-    "casfm:disque:standard":  DZ_CASFM, "casfm:disque:urinaire":  DZ_CASFM_URIN
+    "casfm:disque:standard":  DZ_CASFM, "casfm:disque:urinaire":  DZ_CASFM_URIN,
+    "clsi:cmi:standard":  BP_CLSI,  "clsi:cmi:urinaire":  BP_CLSI_URIN,
+    "clsi:cmi:meninge":   BP_CLSI_MENINGE,
+    "clsi:disque:standard": DZ_CLSI, "clsi:disque:urinaire": DZ_CLSI_URIN
   };
 
   /* Quels couples possèdent une ligne SANS restriction d'espèce ? C'est
@@ -413,7 +456,8 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
       }
     }
     if (r.charge !== undefined)
-      met(r.ref === "casfm" ? DISQUE_CASFM : DISQUE, r.groupe, r.abx, r.charge);
+      met(r.ref === "casfm" ? DISQUE_CASFM
+        : r.ref === "clsi"  ? DISQUE_CLSI : DISQUE, r.groupe, r.abx, r.charge);
     if (r.zit !== undefined)
       met(r.meth === "cmi" ? (r.ref === "casfm" ? ZIT_CASFM : ZIT)
                            : (r.ref === "casfm" ? ZIT_ZONE_CASFM : ZIT_ZONE),
@@ -1079,7 +1123,9 @@ function moleculesDuSite(table, groupe, r) {
    colistine ou un aminoside « sensible » sur un seuil qui ne le promet pas.
    Il ne CHANGE pas la catégorie — le document ne le demande pas — il joint le
    commentaire que le document réclame. */
-function seuilEcoff(group, k) { return !!ECOFF[group + ":" + k]; }
+// La réserve « valeur entre parenthèses » est une convention d'écriture de
+// l'EUCAST : elle n'a pas cours sous un référentiel qui n'en hérite pas.
+function seuilEcoff(group, k) { return heriteEucast() && !!ECOFF[group + ":" + k]; }
 
 function coherence(A, r, org, c) {
   const ajoute = (lvl, txt) => A.alerts.push({ lvl: lvl, txt: txt });
@@ -1138,7 +1184,7 @@ function coherence(A, r, org, c) {
      La parenthèse est celle de l'EUCAST. Sous CA-SFM, c'est le seuil français
      qui s'applique, et le comité y a ses propres choix : joindre la réserve de
      l'autre référentiel la rendrait fausse. */
-  if (org && org.bpGroup && !estCasfm()) {
+  if (org && org.bpGroup && estEucast()) {
     const vises = Object.keys(r).filter(function (k) {
       return (r[k] === "S" || r[k] === "I") && seuilEcoff(org.bpGroup, k);
     });
@@ -3450,7 +3496,7 @@ function fastidInterpret(r, c, a) {
        au panel du gonocoque : il n'y a rien à déduire tant qu'elles n'y
        sont pas, et les deux lignes de base qui les chiffraient — sans
        source — ont été retirées le 2026-11-02. */
-    if (!estCasfm() && r.PEN) {
+    if (estEucast() && r.PEN) {
       A.rules.push({ k: "⟨⟩", txt: tr(
         "Pénicilline G : l'EUCAST la nomme « agent témoin » (surrogate agent) et demande "
         + "de NE PAS rendre sa sensibilité sur le compte rendu. Elle sert à déduire celle "
@@ -4474,7 +4520,11 @@ function catFromMic(str, bp) {
 
 
 // Ce seuil est-il une convention de laboratoire plutôt qu'un seuil EUCAST ?
+/* « Convention de laboratoire » veut dire : l'EUCAST ne chiffre pas ce
+   couple, et PhénoBac pose une valeur quand même. La phrase n'a de sens que
+   sous un référentiel qui se réfère à l'EUCAST. */
 function horsEucast(groupe, code){
+  if (!heriteEucast()) return false;
   const l = HORS_EUCAST[groupe];
   return !!l && l.indexOf(code) !== -1;
 }
@@ -4547,6 +4597,43 @@ function tr(fr, en) { return _lang === "en" && en ? en : fr; }
 
 let _ref = "eucast";
 const estCasfm = () => _ref === "casfm";
+
+/* « EUCAST », et non « pas le CA-SFM ».
+   Tant qu'il n'y avait que deux référentiels, « !estCasfm() » voulait dire
+   l'un comme l'autre, et quatre règles proprement EUCAST s'écrivaient ainsi :
+   la réserve des valeurs entre parenthèses, l'agent témoin du gonocoque, le
+   disque d'ampicilline dont se lit l'amoxicilline, et la conduite « – » des
+   pénicillines de Moraxella. Un troisième référentiel les a toutes réveillées
+   d'un coup — le banc a signalé la troisième, qui renvoyait la lecture d'une
+   amoxicilline CLSI vers un disque d'ampicilline que le CLSI ne chiffre pas.
+   Une négation qui dépend du nombre de cas est une négation qui ment dès
+   qu'on en ajoute un. */
+const estEucast = () => _ref === "eucast";
+
+/* Le référentiel actif hérite-t-il des tables de l'EUCAST ?
+
+   OUI pour l'EUCAST lui-même, et pour le CA-SFM, qui est l'EUCAST assorti de
+   ses différences — c'est tout le modèle du delta.
+   NON pour un référentiel déclaré sans « base » : le CLSI est un autre
+   système, et lui prêter les valeurs de l'EUCAST produirait un rendu qui
+   n'appartient à aucun comité. Mieux vaut ne rien rendre et le dire.
+
+   La règle est lue dans le registre et non écrite en dur : ajouter un
+   référentiel, c'est déclarer de qui il hérite, pas retrouver les branches
+   à modifier. */
+function heriteEucast() {
+  if (_ref === "eucast") return true;
+  const r = REFERENTIELS[_ref];
+  return !!(r && r.base === "eucast");
+}
+
+/* Le référentiel actif porte-t-il la moindre valeur ? Un référentiel inerte
+   ne doit pas se proposer à l'écran : un laboratoire qui le choisirait
+   n'obtiendrait aucune catégorie sur aucun antibiotique. */
+function referentielPeuple(cle) {
+  const t = { eucast: BP, casfm: BP_CASFM, clsi: BP_CLSI }[cle];
+  return !!(t && Object.keys(t).length);
+}
 
 /* LE CADRE D'UNE LECTURE : le référentiel actif et l'espèce.
 
@@ -4702,6 +4789,28 @@ function getBP(bpOverride, group, k, ctx) {
     if (BP_CASFM[group] && BP_CASFM[group][k]
         && especeAutorisee(group, k, "casfm", "cmi")) return BP_CASFM[group][k];
   }
+  /* LES TABLES DU RÉFÉRENTIEL QUI N'HÉRITE DE RIEN SE LISENT ICI, ET ELLES
+     SE LISENT AVANT LE REFUS.
+
+     Première version : le refus était posé AVANT toute lecture des tables
+     CLSI. Le référentiel ne pouvait donc rien rendre, même une valeur qu'on
+     venait d'y écrire — une table déclarée d'un côté et jamais lue de
+     l'autre, le défaut que ce dépôt rencontre le plus souvent. Le banc ne
+     l'a pas vu : les tables étant vides, « aucune valeur » était la réponse
+     attendue des deux façons. Il éprouvait l'absence de fuite, pas
+     l'existence du chemin. */
+  if (_ref === "clsi") {
+    if (c.mening === "Oui" && BP_CLSI_MENINGE[group] && BP_CLSI_MENINGE[group][k])
+      return BP_CLSI_MENINGE[group][k];
+    if (c.urin === "Oui" && BP_CLSI_URIN[group] && BP_CLSI_URIN[group][k])
+      return BP_CLSI_URIN[group][k];
+    if (BP_CLSI[group] && BP_CLSI[group][k]) return BP_CLSI[group][k];
+  }
+
+  /* UN RÉFÉRENTIEL QUI N'HÉRITE PAS DE L'EUCAST S'ARRÊTE ICI. Tout ce qui
+     suit lit les tables EUCAST ; les lui prêter rendrait sous son nom des
+     valeurs qui ne sont pas les siennes. */
+  if (!heriteEucast()) return null;
   // L'EUCAST a lui aussi des seuils propres à la cystite simple : le
   // pivmécillinam, le céfixime, la nitrofurantoïne et le triméthoprime n'y
   // sont chiffrés QUE pour cette indication. Hors contexte urinaire ils
@@ -4988,7 +5097,7 @@ function getDZ(dzOverride, group, k, ctx) {
   const c = ctx || {};
   // Le témoin ampicilline est une règle de l'EUCAST. Le CA-SFM donnant à
   // l'amoxicilline son propre disque, l'emprunt n'a plus lieu d'être.
-  const temoin = !estCasfm() && DZ_TEMOIN[group] && DZ_TEMOIN[group][k];
+  const temoin = estEucast() && DZ_TEMOIN[group] && DZ_TEMOIN[group][k];
   if (temoin) return getDZ(dzOverride, group, temoin, c);
   if (estCasfm()) {
     // Restriction d'espèce : le CA-SFM ne chiffre la céfoxitine que pour
@@ -5026,6 +5135,14 @@ function getDZ(dzOverride, group, k, ctx) {
     if (BP_MENINGE[group] && BP_MENINGE[group][k]) return null;
     if (estCasfm() && BP_MENINGE_CASFM[group] && BP_MENINGE_CASFM[group][k]) return null;
   }
+  // Mêmes deux temps qu'en CMI : ses tables d'abord, le refus ensuite.
+  if (_ref === "clsi") {
+    if (c.urin === "Oui" && DZ_CLSI_URIN[group] && DZ_CLSI_URIN[group][k])
+      return DZ_CLSI_URIN[group][k];
+    if (DZ_CLSI[group] && DZ_CLSI[group][k]) return DZ_CLSI[group][k];
+  }
+  // Un référentiel sans héritage ne lit pas les tables de l'EUCAST.
+  if (!heriteEucast()) return null;
   // Cystite simple : l'EUCAST chiffre quelques molécules POUR CETTE
   // INDICATION SEULEMENT, et parfois pour quelques espèces seulement — la
   // nitrofurantoïne chez E. coli, le triméthoprime chez E. coli et
@@ -5065,6 +5182,8 @@ function seuilEspece(ref, meth, site, group, k) {
 }
 
 function especeAutorisee(group, k, ref, meth) {
+  // Les restrictions d'espèce sont celles de l'EUCAST et du CA-SFM.
+  if (!heriteEucast()) return true;
   /* « meth » EST OBLIGATOIRE, ET L'OUBLI LÈVE. Une méthode absente donnerait
      une clé qui ne trouve rien, donc « aucune restriction », donc un seuil
      rendu à une espèce que le document exclut — et le moteur se tairait.
@@ -5087,6 +5206,13 @@ function especeAutorisee(group, k, ref, meth) {
 // La charge du disque, en tenant compte du témoin (l'amoxicilline se lit
 // sur le disque d'ampicilline).
 function disquePour(group, k) {
+  // Le CLSI a ses propres charges de disque : 10 µg là où l'EUCAST en met 30,
+  // par exemple. Mesurer sur l'une en lisant un seuil établi pour l'autre
+  // serait une faute silencieuse.
+  if (_ref === "clsi") {
+    const d = DISQUE_CLSI[group] && DISQUE_CLSI[group][k];
+    return d ? { charge: d, temoin: null } : null;
+  }
   // En CA-SFM, l'amoxicilline a son propre disque : la charge annoncée doit
   // changer avec le référentiel, sans quoi on mesurerait sur 20 µg en
   // lisant un seuil établi pour 10.
@@ -5150,6 +5276,19 @@ function especesDites(group, k, meth) {
    de ces cas est une décision du référentiel. */
 function raisonSansCmi(group, k, ctx) {
   const c = ctx || {};
+  /* UN RÉFÉRENTIEL VIDE SE NOMME. Dire « le référentiel ne chiffre pas ce
+     couple » serait vrai et trompeur : il n'en chiffre AUCUN. Le laboratoire
+     doit comprendre que ce n'est pas cette molécule qui manque, c'est le
+     référentiel entier qui n'est pas encore porté. */
+  if (!referentielPeuple(_ref)) {
+    const nom = (REFERENTIELS[_ref] && REFERENTIELS[_ref].nom) || _ref;
+    return tr("les valeurs du " + nom + " ne sont pas encore portées dans PhénoBac — "
+            + "l'ossature est en place, le document ne l'est pas. Aucun couple ne se "
+            + "catégorise sous ce référentiel ; choisissez l'EUCAST ou le CA-SFM.",
+              "the " + nom + " breakpoints are not yet carried in PhénoBac — the "
+            + "scaffolding is in place, the document is not. No pair can be categorised "
+            + "under this standard; choose EUCAST or CA-SFM.");
+  }
   if (c.mening === "Oui" && !(BP_MENINGE[group] && BP_MENINGE[group][k])
       && BP[group] && BP[group][k])
     return tr("le référentiel ne donne pas de seuil méningé pour ce couple — et le seuil "
@@ -5176,6 +5315,19 @@ function raisonSansCmi(group, k, ctx) {
 
 function raisonSansDisque(group, k, ctx) {
   const c = ctx || {};
+  /* UN RÉFÉRENTIEL VIDE SE NOMME. Dire « le référentiel ne chiffre pas ce
+     couple » serait vrai et trompeur : il n'en chiffre AUCUN. Le laboratoire
+     doit comprendre que ce n'est pas cette molécule qui manque, c'est le
+     référentiel entier qui n'est pas encore porté. */
+  if (!referentielPeuple(_ref)) {
+    const nom = (REFERENTIELS[_ref] && REFERENTIELS[_ref].nom) || _ref;
+    return tr("les valeurs du " + nom + " ne sont pas encore portées dans PhénoBac — "
+            + "l'ossature est en place, le document ne l'est pas. Aucun couple ne se "
+            + "catégorise sous ce référentiel ; choisissez l'EUCAST ou le CA-SFM.",
+              "the " + nom + " breakpoints are not yet carried in PhénoBac — the "
+            + "scaffolding is in place, the document is not. No pair can be categorised "
+            + "under this standard; choose EUCAST or CA-SFM.");
+  }
   if (estCasfm() && dzCasfmDivergent(group, k, c))
     return tr("le CA-SFM retient un seuil différent de l'EUCAST pour ce couple, et PhénoBac ne reprend que ses seuils de CMI — saisir une CMI, ou repasser en EUCAST",
               "the CA-SFM sets a different breakpoint from EUCAST for this pair, and PhénoBac carries only its MIC values — enter an MIC, or switch back to EUCAST");
@@ -5425,7 +5577,7 @@ const BETALACT_PNEUMO = ["PEN", "AMX", "CTX"];
    une conclusion, et le biologiste doit pouvoir la refaire. */
 function penicillinesMoraxella(group, results, ctx, posee) {
   _moraxella = [];
-  if (group !== "moraxella") return;
+  if (group !== "moraxella" || !heriteEucast()) return;
   const blac = (ctx && ctx.blac) || null;
   const amc = results.AMC;
 
@@ -5434,7 +5586,7 @@ function penicillinesMoraxella(group, results, ctx, posee) {
     const brut = results[k];
     let cat = null, motif = null;
 
-    if (!estCasfm()) {
+    if (estEucast()) {
       /* L'EUCAST ne laisse pas le choix : « report resistant without prior
          testing ». Il n'y a pas de condition à vérifier, et c'est tout
          l'intérêt du tiret. */
@@ -5506,6 +5658,8 @@ function depistagePneumo(group, dia, results) {
    pénicilline G chez les streptocoques A, C et G. Le principe est le même :
    une grande zone conclut, une petite ne conclut pas et renvoie à la CMI. */
 function depistageSeuil(group, k) {
+  // Un dépistage est une règle de référentiel comme une autre.
+  if (!heriteEucast()) return null;
   const t = estCasfm() ? DEPISTAGE_CASFM : DEPISTAGE;
   if (t[group] && t[group][k]) return t[group][k];
   return null;
@@ -5558,7 +5712,7 @@ function runInterpretation(input) {
       /* La molécule dont le document exclut la résistance acquise au lieu de
          la catégoriser : elle ne passe PAS par getBP, qui n'a rien pour elle,
          et ne reçoit jamais « S » ni « I ». */
-      const exc = (EXCLUSION_ACQUISE[org.bpGroup] || {})[k];
+      const exc = heriteEucast() ? (EXCLUSION_ACQUISE[org.bpGroup] || {})[k] : null;
       if (exc && exc.cmi !== undefined) {
         const p = parseMic(mic[k]);
         if (p) {
@@ -5621,7 +5775,7 @@ function runInterpretation(input) {
          Elle ne vaut que si une catégorie EST sortie et qu'elle n'est pas
          déjà « R » : la note sert à empêcher un « sensible » rendu trop
          vite, et n'a rien à dire à une souche déjà résistante. */
-      if ((cat === "S" || cat === "I") && LECTURE_DISQUE[org.bpGroup]
+      if ((cat === "S" || cat === "I") && heriteEucast() && LECTURE_DISQUE[org.bpGroup]
           && LECTURE_DISQUE[org.bpGroup][k])
         _lectureDisque.push({ abx: k, mm: String(dia[k]).slice(0, 12),
                               note: LECTURE_DISQUE[org.bpGroup][k] });
@@ -5673,8 +5827,12 @@ function runInterpretation(input) {
   // des deux ne chiffre. Avant la reprise de catégorie et avant le moteur.
   penicillinesMoraxella(org.bpGroup, results, input.ctx || {}, posee);
 
+  /* Les cinq mécanismes qui suivent portent des règles LUES DANS l'EUCAST ou
+     le CA-SFM — une reprise de catégorie, une exclusion de résistance
+     acquise, une conduite, une note de lecture. Sous un référentiel qui n'en
+     hérite pas, ils n'ont pas cours : le CLSI a les siennes. */
   _deduites = [];
-  const deduit = CAT_DEDUITE[org.bpGroup];
+  const deduit = heriteEucast() ? CAT_DEDUITE[org.bpGroup] : null;
   if (deduit) {
     Object.keys(deduit).forEach(k => {
       const source = deduit[k];
@@ -5715,6 +5873,13 @@ const MOTEUR = {
   catFromMic, catFromDiam, parseMic, parseDiam,
   getBP, getDZ, disquePour, zitPour, zitZonePour, enZit, enZitZone,
   horsEucast, depistageSeuil, estCasfm, seuilEcoff, ECOFF, cadrer,
+  // La page s'en sert pour n'afficher que les référentiels qui portent
+  // quelque chose, et le banc pour exiger qu'un référentiel sans valeur
+  // n'hérite de personne.
+  heriteEucast, referentielPeuple, estEucast,
+  /* Exportées POUR ÊTRE ÉPROUVÉES : tant qu'elles sont vides, seul un
+     banc qui y écrit peut vérifier que le chemin de lecture existe. */
+  BP_CLSI, BP_CLSI_URIN, BP_CLSI_MENINGE, DZ_CLSI, DZ_CLSI_URIN, DISQUE_CLSI,
   zitBorne, zitTexte,
   fixerLangue, langueCourante,
   // exporté POUR ÊTRE VÉRIFIÉ : le banc s'en sert pour exiger que chaque

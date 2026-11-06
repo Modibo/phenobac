@@ -1467,6 +1467,11 @@
           <div class="refseg" id="refSeg">
             <button data-r="eucast">EUCAST</button>
             <button data-r="casfm">CA-SFM</button>
+            <!-- Le CLSI n'apparaît que si ses tables portent quelque chose.
+                 Un bouton qui mène à un référentiel vide ferait conclure à
+                 juste titre que l'application est cassée : aucune catégorie
+                 sur aucun antibiotique. Voir renderRefToggle(). -->
+            <button data-r="clsi" hidden>CLSI</button>
           </div>
           <span class="hint" id="refHint"></span>
         </div>
@@ -8651,11 +8656,13 @@ modeSeg.querySelectorAll("button").forEach(b=>{
 const refSeg = $("#refSeg"), refHintEl = $("#refHint");
 const REF_HINT_FR = {
   eucast: "Seuils et règles de lecture de l'EUCAST, tels que publiés.",
-  casfm:  "EUCAST plus les différences françaises du CA-SFM 2026 : seuils déplacés et lecture interprétative des BLSE et carbapénémases."
+  casfm:  "EUCAST plus les différences françaises du CA-SFM 2026 : seuils déplacés et lecture interprétative des BLSE et carbapénémases.",
+  clsi:   "CLSI M100 — un système à part, qui n'hérite de rien : ses propres seuils, ses propres charges de disque, ses propres catégories."
 };
 const REF_HINT_EN = {
   eucast: "EUCAST breakpoints and reading rules, exactly as published.",
-  casfm:  "EUCAST plus the French differences of CA-SFM 2026: breakpoints moved, and interpretive reading of ESBLs and carbapenemases."
+  casfm:  "EUCAST plus the French differences of CA-SFM 2026: breakpoints moved, and interpretive reading of ESBLs and carbapenemases.",
+  clsi:   "CLSI M100 — a separate system, inheriting nothing: its own breakpoints, its own disc contents, its own categories."
 };
 const REF_HINT = new Proxy({}, {
   get: function (_, k) {
@@ -8665,6 +8672,14 @@ const REF_HINT = new Proxy({}, {
 });
 function renderRefToggle(){
   if(!refSeg) return;
+  /* UN RÉFÉRENTIEL VIDE NE SE PROPOSE PAS. La condition porte sur les
+     DONNÉES, pas sur une ligne de code à retrouver : le jour où les tables
+     du CLSI sont remplies, le bouton paraît de lui-même. */
+  refSeg.querySelectorAll("button").forEach(b=>{
+    const peuple = !_M.referentielPeuple || _M.referentielPeuple(b.dataset.r);
+    b.hidden = !peuple;
+    if(!peuple && REF_ACTIF===b.dataset.r) REF_ACTIF = "eucast";
+  });
   refSeg.querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.r===REF_ACTIF));
   if(refHintEl) refHintEl.textContent = REF_HINT[REF_ACTIF] || "";
 }

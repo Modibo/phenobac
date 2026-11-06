@@ -266,6 +266,119 @@ dire("\nCe qui sort du moteur ne doit pas pouvoir devenir du balisage");
   dire((repli ? "  ok   " : "  ÉCHEC") + "  « toString » comme référentiel retombe sur l'EUCAST");
 })();
 
+/* ---------- UN TROISIÈME RÉFÉRENTIEL, QUI N'HÉRITE DE RIEN ----------
+
+   Le CA-SFM est l'EUCAST assorti de ses différences : PhénoBac ne porte que
+   le delta, et tout couple absent des tables françaises garde sa valeur
+   européenne. C'est le modèle, et il est juste — pour le CA-SFM.
+
+   LE CLSI N'EST PAS UN DELTA. C'est un autre système : ses propres seuils,
+   ses propres charges de disque, son propre contrôle de qualité, et jusqu'à
+   ses propres catégories — il écrit « SDD » là où l'EUCAST écrit « I ». Lui
+   prêter les valeurs de l'EUCAST produirait un rendu qui n'appartient à
+   aucun comité.
+
+   ET C'ÉTAIT À UNE LIGNE D'ARRIVER. « cadrer » accepte n'importe quelle clé
+   présente dans REFERENTIELS, et getBP() retombait sur les tables EUCAST dès
+   que le référentiel actif n'était pas le CA-SFM. Ajouter « clsi » au
+   registre aurait suffi pour qu'un laboratoire croie lire du CLSI en lisant
+   de l'EUCAST — éprouvé le 2026-11-06, avant la correction : l'amoxicilline
+   d'E. coli rendait 8/8, la valeur européenne, sous l'étiquette CLSI.
+
+   L'héritage se déclare donc dans le registre, par le champ « base », et son
+   absence se respecte. Ce banc l'exige. */
+dire("\nLe CLSI n'hérite de rien, et ne se propose pas tant qu'il est vide");
+(function () {
+  // Ce banc n'avait pas d'assertion simple : ses contrôles passent tous par
+  // un couple et une catégorie attendue. On en pose une ici.
+  function verif(ok, txt) {
+    ok ? OK++ : KO++;
+    dire((ok ? "  ok   " : "  ÉCHEC") + "  " + txt);
+  }
+  verif(!!E.REFERENTIELS.clsi, "le CLSI est déclaré au registre");
+  verif(E.REFERENTIELS.clsi.base === null,
+        "… sans « base » : il n'hérite d'aucun autre référentiel");
+  verif(E.REFERENTIELS.casfm.base === "eucast",
+        "… tandis que le CA-SFM déclare hériter de l'EUCAST — c'est le modèle du delta");
+
+  /* AUCUNE TABLE NE FUIT. On balaie les couples que l'EUCAST chiffre et l'on
+     exige que le CLSI n'en rende aucun : c'est un balayage, pas trois
+     exemples choisis. */
+  var fuites = 0, visites = 0;
+  Object.keys(E.ORG).forEach(function (id) {
+    var g = E.ORG[id].bpGroup;
+    if (!g) return;
+    E.cadrer("clsi", id);
+    ["AMX", "CTX", "MEM", "CIP", "GEN", "VA", "OXA", "SXT"].forEach(function (k) {
+      visites++;
+      if (E.getBP({}, g, k, {}) || E.getDZ({}, g, k, {})) fuites++;
+    });
+  });
+  verif(visites > 300, visites + " couples visités sous CLSI");
+  verif(fuites === 0,
+        fuites === 0 ? "aucun ne reçoit de valeur : rien ne fuit de l'EUCAST"
+          : fuites + " couples reçoivent une valeur EUCAST sous l'étiquette CLSI");
+
+  /* Et les mécanismes de lecture, qui portent eux aussi des règles lues dans
+     l'EUCAST ou le CA-SFM. */
+  E.cadrer("clsi", "saureus");
+  verif(E.seuilEcoff("staph", "GEN") === false,
+        "la réserve « valeur entre parenthèses » est une convention de l'EUCAST : "
+        + "elle n'a pas cours sous le CLSI");
+  verif(E.horsEucast("steno", "MEM") === false,
+        "« convention de laboratoire » veut dire « l'EUCAST ne chiffre pas » : "
+        + "la phrase n'a pas de sens sous un autre référentiel");
+  E.cadrer("clsi", "pasteurella");
+  verif(E.depistageSeuil("pasteurella", "TET") === null,
+        "un dépistage est une règle de référentiel comme une autre");
+
+  /* LE LABORATOIRE DOIT COMPRENDRE POURQUOI. Une mesure sans catégorie et
+     sans raison se lit comme une panne. */
+  var o = E.runInterpretation({ organism: "ecoli", ref: "clsi", mode: "mic",
+                                mic: { AMX: "2" }, ctx: {} });
+  var dit = (o.interpretation.alerts || []).map(function (x) { return x.txt; }).join(" ");
+  verif(/CLSI/.test(dit) && /pas encore port/.test(dit),
+        "… et l'on dit que c'est le référentiel entier qui manque, non cette molécule");
+
+  /* LE CHEMIN DE LECTURE EXISTE-T-IL ? C'est la question que la première
+     version de ce banc ne posait pas, et le défaut qu'elle a laissé passer :
+     le refus était écrit AVANT toute lecture des tables du CLSI, qui ne
+     pouvait donc rien rendre, même une valeur qu'on venait d'y écrire. Les
+     tables étant vides, « aucune valeur » était la réponse attendue des deux
+     façons — le banc éprouvait l'absence de fuite, pas l'existence du
+     chemin.
+
+     On y écrit donc, le temps de la vérification, comme essai-voies vide la
+     sienne pour éprouver son différentiel. */
+  (function () {
+    E.BP_CLSI.entero = { AMX: { S: 8, R: 32 } };
+    E.DZ_CLSI.entero = { AMX: { S: 17, R: 13 } };
+    E.DISQUE_CLSI.entero = { AMX: "10" };
+    E.cadrer("clsi", "ecoli");
+    var bp = E.getBP({}, "entero", "AMX", {});
+    verif(!!bp && bp.S === 8 && bp.R === 32,
+          "une valeur écrite dans la table du CLSI est RENDUE : le chemin existe");
+    var dz = E.getDZ({}, "entero", "AMX", {});
+    verif(!!dz && dz.S === 17, "… au disque aussi");
+    var ch = E.disquePour("entero", "AMX");
+    verif(!!ch && ch.charge === "10",
+          "… et c'est la charge du CLSI qui est annoncée, non celle de l'EUCAST");
+    verif(E.getBP({}, "entero", "CTX", {}) === null,
+          "… tandis qu'un couple que le CLSI ne chiffre pas reste sans valeur, "
+          + "sans retomber sur l'EUCAST");
+    delete E.BP_CLSI.entero; delete E.DZ_CLSI.entero; delete E.DISQUE_CLSI.entero;
+    E.cadrer("eucast", null);
+  })();
+
+  /* IL NE SE PROPOSE PAS TANT QU'IL EST VIDE. */
+  verif(E.referentielPeuple("eucast") && E.referentielPeuple("casfm"),
+        "l'EUCAST et le CA-SFM portent des valeurs");
+  verif(E.referentielPeuple("clsi") === false,
+        "… le CLSI n'en porte aucune, et la page ne l'affiche donc pas");
+
+  E.cadrer("eucast", null);
+})();
+
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " vérifications."
                 : OK + " vérifications, aucune divergence inattendue."));
 if (KO && typeof process === "object" && process.exit) process.exit(1);

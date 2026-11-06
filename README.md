@@ -114,13 +114,53 @@ Deux avertissements :
 ## Référentiels
 
 Deux référentiels sont proposés dans l'application, encadré « Antibiogramme ».
-Le choix est mémorisé d'une session à l'autre.
+Le choix est mémorisé d'une session à l'autre. **Un troisième — le CLSI — est
+prévu par le moteur mais ne porte encore aucune valeur** : voir plus bas.
 
 **EUCAST v16.1** — le socle. **CA-SFM 2026** — l'EUCAST assorti des différences
 françaises. PhénoBac ne recopie que ces différences : tout couple absent des
 tables `BP_CASFM*` garde sa valeur EUCAST. C'est la règle du document source, et
 c'est ce qui rend l'écart vérifiable plutôt que d'avoir deux référentiels
 entiers à tenir en parallèle.
+
+### Le CLSI : l'ossature, pas les valeurs
+
+Le moteur sait porter un **troisième référentiel**, et le CLSI y est déclaré
+depuis le 2026-11-06. **Ses tables sont vides**, et c'est délibéré : le
+document — CLSI M100 — se vend, et ce dépôt n'écrit aucun seuil qu'il ne peut
+pas citer page en main. Les deux jours précédents ont coûté seize valeurs sans
+source ; en inventer trois cents serait pire.
+
+Ce qui est en place, et qui ne dépend pas du document :
+
+- **le CLSI n'hérite de rien.** Le CA-SFM est l'EUCAST assorti de ses
+  différences ; le CLSI est un autre système — ses propres seuils, ses propres
+  charges de disque, son propre contrôle de qualité, et jusqu'à ses propres
+  catégories, puisqu'il écrit « SDD » là où l'EUCAST écrit « I ». Le registre
+  déclare cet héritage par un champ `base`, et son absence est respectée dans
+  chaque lecture ;
+- **le danger était à une ligne.** `cadrer()` accepte toute clé présente au
+  registre, et `getBP()` retombait sur les tables EUCAST dès que le
+  référentiel n'était pas le CA-SFM : ajouter « clsi » aurait suffi pour qu'un
+  laboratoire croie lire du CLSI en lisant de l'EUCAST. Éprouvé avant
+  correction — l'amoxicilline d'*E. coli* rendait bien 8/8, la valeur
+  européenne, sous l'étiquette CLSI ;
+- **le référentiel vide ne se propose pas.** Le bouton est conditionné aux
+  données, pas à une ligne de code : le jour où `BP_CLSI` porte quelque chose,
+  il paraît de lui-même. Un laboratoire qui pourrait choisir un référentiel
+  inerte n'obtiendrait aucune catégorie sur aucun antibiotique et conclurait,
+  à juste titre, que l'application est cassée ;
+- **et si une mesure tombe sous un référentiel vide**, l'application dit que
+  c'est le référentiel entier qui manque, non cette molécule-là.
+
+`outils/essai-referentiel.js` balaie 480 couples sous CLSI et exige qu'aucun ne
+reçoive de valeur, puis écrit dans les tables le temps de vérifier que le
+chemin de lecture existe — un refus posé trop tôt rendrait le référentiel
+inerte même une fois rempli, et c'est l'erreur que ce banc a attrapée.
+
+**Pour le remplir, il faut le document.** Avec M100 en main, la marche est
+celle du CA-SFM : un extracteur, un comparateur, et chaque valeur citant sa
+page.
 
 Le choix n'est pas cosmétique : il déplace des seuils (vancomycine sur
 *S. aureus*, pénicilline G sur les streptocoques A/C/G, cotrimoxazole selon le
