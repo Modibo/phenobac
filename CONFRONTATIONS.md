@@ -851,6 +851,49 @@ pas de catégorie du référentiel, et la phrase qui dit pourquoi.
 > ce qu'on ne savait pas lire, et qui a grossi jusqu'à contenir un quart des
 > seuils du dépôt.
 
+## verifier-posologie.py — la table des posologies
+
+- **document** : EUCAST, Clinical Breakpoint Tables v16.1, feuille « Dosages »
+  (le même texte que les pages 9 à 13 du PDF dont `posologie.js` est engendré)
+- **tables** : `POSOLOGIE`
+- **empreinte** : 3cc28b32a37d8efe0d4292f67688cd92314aecd1b6618d27b718106f6116d12f
+- **date** : **2026-11-06, le classeur en main**
+- **résultat** : **140 champs confrontés — 140 identiques**, 0 divergence de
+  fond ; les **32** molécules de la table se retrouvent toutes dans le
+  document, libellé pour libellé. **3 écarts de pure typographie**, marques du
+  lecteur de PDF, nommés et plafonnés.
+
+### Le cahier promettait ce contrôle, et le fichier n'existait pas
+
+`CAHIER-RENDU-ET-POSOLOGIE.md`, § A.7, dernière ligne : « `outils/verifier-posologie.py` :
+la table bâtie correspond exactement au PDF extrait, molécule par molécule,
+dans les deux sens. » **Le fichier n'a jamais été écrit.**
+
+C'est le même défaut que `verifier-comptes.py` quatre jours plus tôt, dont
+l'en-tête annonçait surveiller le README qu'il ne lisait pas : **une portée
+annoncée qui dépasse la portée réelle**. Elle est pire ici, parce que ce qui
+n'était pas vérifié est ce qui donne son sens à la catégorie « I » — « sensible
+à forte exposition » ne veut rien dire si l'on ne sait pas quelle exposition, et
+un schéma faux est plausible par construction.
+
+### Les écarts de typographie se comptent à part
+
+Lire un PDF laisse des marques que le xlsx n'a pas :
+
+| molécule | table (depuis le PDF) | document (xlsx) |
+|---|---|---|
+| chloramphénicol | « Meningitis **:** 2 g x 4 iv » (espace avant) | « Meningitis: 2 g x 4 iv » |
+| cotrimoxazole | idem | idem |
+| pipéracilline-tazobactam | « third**- **generation » (césure restée) | « third-generation » |
+
+Les confondre avec une divergence ferait crier l'outil sur trois lignes justes,
+et **un outil qui accuse à tort finit désarmé**. Elles sont donc normalisées
+pour la comparaison — par deux règles nommées, pas par une normalisation large
+qui masquerait du fond — puis comptées, affichées, et plafonnées à trois.
+
+Éprouvé en falsifiant la posologie forte de la céfotaxime (4 g au lieu de 2) :
+l'outil la nomme.
+
 ## comparer-eucast.py --meninge — concentrations critiques des méningites
 
 - **document** : EUCAST, Clinical Breakpoint Tables v16.1, 24 juin 2026 (classeur xlsx)

@@ -139,8 +139,19 @@ limite n'est pas négociable et doit être éprouvée par un banc.
 6. aucune chaîne de l'application ne contient de verbe de prescription
    (« prescrire », « administrer », « donner ») dans les textes de posologie.
 
-`outils/verifier-posologie.py` : la table bâtie correspond exactement au PDF
-extrait, molécule par molécule, dans les deux sens.
+`outils/verifier-posologie.py` **— écrit le 2026-11-06, et il n'existait pas
+jusque-là.** Ce cahier l'annonçait depuis le premier jour ; personne ne
+fournissait la garantie, et on la croyait acquise. Il confronte la table à la
+feuille « Dosages » du classeur — le même texte que les pages 9 à 13 du PDF
+dont `posologie.js` est engendré, dans l'autre rendu du même document :
+**140 champs, 140 identiques**, les 32 molécules retrouvées libellé pour
+libellé, et 3 écarts de pure typographie (une espace avant un deux-points, une
+césure restée au milieu d'un mot) comptés à part et plafonnés.
+
+Il n'est pas dans la chaîne d'intégration continue — il lui faut le classeur
+officiel, qui n'est pas dans le dépôt — et le registre des confrontations
+surveille l'empreinte de `POSOLOGIE` : la modifier réclame une nouvelle
+confrontation.
 
 ---
 

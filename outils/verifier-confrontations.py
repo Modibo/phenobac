@@ -63,7 +63,15 @@ def entrees():
                 % (titre, ", ".join(manquants)))
         champs["titre"] = titre
         champs["outil"] = titre.split()[0]
-        champs["tables"] = [t.strip() for t in champs["tables"].split(",") if t.strip()]
+        # LES ACCENTS GRAVES SE RETIRENT. Le registre est écrit pour être lu
+        # par un humain d'abord, et « `POSOLOGIE` » est la façon normale
+        # d'écrire un nom de table en Markdown. Sans ce strip, le nom partait
+        # tel quel dans le JavaScript engendré — « M.`POSOLOGIE` » —, qui ne
+        # compile pas : le sous-processus rendait zéro ligne et zéro message,
+        # et l'outil annonçait « le moteur n'a pas pu être évalué » suivi du
+        # vide. Une demi-heure pour trouver deux caractères.
+        champs["tables"] = [t.strip().strip("`")
+                            for t in champs["tables"].split(",") if t.strip().strip("`")]
         out.append(champs)
     return out
 
