@@ -131,6 +131,15 @@ n'écrit aucun seuil qu'il ne peut pas citer page en main. Les deux jours
 précédents ont coûté seize valeurs sans source ; en inventer trois cents serait
 pire.
 
+**Pourquoi il n'y a pas de bouton CLSI dans l'application.** Il existe, mais
+il est masqué : `renderRefToggle()` cache tout référentiel dont les tables
+sont vides. Un laboratoire qui choisirait le CLSI aujourd'hui n'obtiendrait
+aucune catégorie sur aucun antibiotique, et conclurait à juste titre que
+l'application est cassée. La condition porte sur **les données**, pas sur une
+ligne de code à retrouver : le jour où `BP_CLSI` et `DZ_CLSI` portent des
+lignes, le bouton paraît de lui-même. Ce qui manque est la transcription, et
+elle seule.
+
 Le document, lui, est désormais en main. Le CLSI donne un **accès gratuit et en
 lecture seule** au M100 — <https://em100.edaptivedocs.net/>, « CLSI Micro
 Free », accès invité sans compte ni paiement — et le portail porte l'édition

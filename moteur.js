@@ -66,18 +66,27 @@
 const REFERENTIELS = {
   eucast: { cle: "eucast", nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "aligne", base: null },
   casfm:  { cle: "casfm",  nom: "CA-SFM", version: "2026", publie: "2026-09-01", etat: "delta", base: "eucast" },
-  /* CLSI — l'ossature est posée, les valeurs ne le sont pas.
+  /* CLSI — l'ossature est posée, les valeurs ne le sont pas encore.
 
-     Le document (CLSI M100) n'est pas librement disponible : il se vend, et
-     ce dépôt n'écrit aucun seuil qu'il ne peut pas citer page en main. Tant
-     que les tables sont vides, le référentiel reste inerte — « etat: vide »
-     — et l'interface ne le propose pas : un laboratoire qui le choisirait
+     CE COMMENTAIRE A DIT LE CONTRAIRE, ET C'ÉTAIT FAUX. Il affirmait que le
+     M100 « se vend » et n'était pas librement disponible. Le CLSI en donne
+     un accès GRATUIT et en lecture seule — em100.edaptivedocs.net, « CLSI
+     Micro Free » —, et le M45 avec. Les deux ont été lus intégralement le
+     2026-11-07 : 727 lignes de seuils, 235 pour le M45, 240 entrées de
+     panels, 27 colonnes de tests. Voir REFERENTIEL-CLSI.md.
+
+     Une raison fausse d'attendre survit à la disparition de l'obstacle :
+     celle-ci a tenu deux semaines après que l'accès eut été obtenu.
+
+     Ce qui manque maintenant est la TRANSCRIPTION, et elle seule. Tant que
+     les tables sont vides, le référentiel reste inerte — « etat: vide » —
+     et l'interface ne le propose pas : un laboratoire qui le choisirait
      n'obtiendrait aucune catégorie sur aucun antibiotique, et conclurait à
      juste titre que l'application est cassée.
 
-     Le jour où le document est en main, remplir BP_CLSI et DZ_CLSI suffit :
-     le bouton paraît de lui-même, parce qu'il est conditionné aux données
-     et non à une ligne de code à retrouver. */
+     Remplir BP_CLSI et DZ_CLSI suffira : le bouton paraît de lui-même,
+     parce qu'il est conditionné aux données et non à une ligne de code à
+     retrouver. Voir renderRefToggle() dans phenobac.html. */
   clsi:   { cle: "clsi",   nom: "CLSI",   version: null,   publie: null,        etat: "vide",  base: null }
 };
 const REFERENTIEL = REFERENTIELS.eucast;   // défaut, conservé pour compatibilité
