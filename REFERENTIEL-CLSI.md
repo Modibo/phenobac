@@ -91,13 +91,27 @@ copie de travail, elle reste hors du dépôt.
 ### 4. L'extraction ne devine jamais
 
 `outils/extraire-clsi.js` rend préfixée de ⚠ et porte dans `anomalies` toute
-cellule qu'il ne sait pas répartir. Au dernier passage : **674 lignes,
-15 anomalies**, toutes dans les tables 2C et 2D, c'est-à-dire le bloc
-oxacilline/céfoxitine des staphylocoques et le couple pénicilline/ampicilline
-des entérocoques. Celles-là se lisent à la main.
+cellule qu'il ne sait pas répartir. **Au dernier passage : 661 lignes,
+0 anomalie.**
 
-Trois défauts de lecture ont été trouvés et corrigés en chemin, tous du même
-genre — une forme supposée unique qui ne l'était pas :
+Les quinze anomalies du premier jet ont été lues à la main, et elles ne
+cachaient pas quinze cas particuliers mais **deux défauts de principe de plus**,
+tous deux corrigés dans l'outil :
+
+- *le nombre d'agents se comptait sur les mauvaises colonnes.* Il se prenait
+  sur toutes les colonnes sauf le nom ; or la 2C porte une colonne
+  « Indications » dont le texte se replie. « S. aureus, ⏎ including MRSA »
+  faisait deux antibiotiques de la tédizolide. Le compte ne se lit que sur les
+  colonnes de valeurs, dont l'en-tête du document donne lui-même le nombre ;
+- *les noms liés par « or » se replient aussi.* « Ciprofloxacin or levofloxacin
+  ⏎ Moxifloxacin » fait trois agents à trois valeurs distinctes : il faut
+  découper sur les deux séparateurs imbriqués, et nettoyer le « or » traînant
+  **en sortie**, puisque le repli donne souvent déjà le bon compte et
+  court-circuite tout traitement placé plus bas. Sans quoi la céfotaxime
+  s'appelle « Cefotaxime or » et reste introuvable.
+
+Six défauts au total, donc, tous du même genre — une forme supposée unique qui
+ne l'était pas :
 
 1. La table des seuils choisie « la plus longue » : faux en 2B-3, où le
    tableau *Testing Conditions* est plus long. Elle se choisit sur son en-tête.
@@ -107,10 +121,18 @@ genre — une forme supposée unique qui ne l'était pas :
    chaque ligne de titre héritait des valeurs de la ligne de données
    précédente. Deux marques distinctes (`⇑`, `⇐`) l'ont réglé.
 
-Un quatrième reste à surveiller : les valeurs séparées par une **espace** et
-non par un `<br>` (`22-25^ 17-20^` pour ciprofloxacine et lévofloxacine).
-Elles sont réparties quand chaque morceau ressemble à une valeur, signalées
-sinon.
+4. Les valeurs séparées par une **espace** et non par un `<br>` :
+   `22-25^ 17-20^` pour ciprofloxacine et lévofloxacine. Lu naïvement, la
+   lévofloxacine perdait sa zone intermédiaire. Réparties quand chaque morceau
+   ressemble à une valeur, signalées sinon.
+5. Les charges de disque empilées : `10 units 10 μg` pour pénicilline et
+   ampicilline. On coupe après l'unité, jamais sur les espaces — « 10 units »
+   en compterait deux.
+6. Les lignes d'espacement du tableau, vides partout sauf la colonne
+   « Comments » qu'elles héritent par `rowspan`, ce qui suffisait à les faire
+   passer pour des données. On distingue désormais la cellule **absente** du
+   tiret : « – » dit que le CLSI ne donne pas de seuil, ce qui est une
+   information ; la chaîne vide ne dit rien.
 
 ## Faits établis sur le document source
 
@@ -139,7 +161,8 @@ Quatre autres commandent la transcription :
 
 ## Ce qui reste à faire
 
-1. Lire à la main les 15 lignes signalées (2C, 2D).
+1. ~~Lire à la main les 15 lignes signalées (2C, 2D).~~ **Fait** : elles ont
+   livré deux défauts de principe de plus, et l'extraction est à zéro anomalie.
 2. Établir la correspondance entre les 41 codes d'antibiotiques de PhénoBac et
    les noms du CLSI.
 3. Porter SDD dans le moteur, l'interface et les deux catalogues de langue.
@@ -147,5 +170,30 @@ Quatre autres commandent la transcription :
    base au JSON extrait — comme `comparer-eucast.py` le fait pour le classeur.
 5. Lire le M45 pour les 12 groupes restants.
 
-Rien de tout cela n'est entamé. La première ligne de seuil CLSI ne sera écrite
-qu'une fois les points 1 et 2 clos.
+La première ligne de seuil CLSI ne sera écrite qu'une fois le point 2 clos.
+
+## Ce que la lecture à la main a appris sur les staphylocoques
+
+Le CLSI découpe l'oxacilline par espèce, et ce découpage **ne recouvre pas**
+celui de PhénoBac. Là où PhénoBac a un groupe `scn` unique, le CLSI en a trois,
+et *S. lugdunensis* n'est pas là où on l'attendrait :
+
+| portée CLSI | disque | diamètre | CMI |
+|---|---|---|---|
+| *S. aureus* **et *S. lugdunensis*** | céfoxitine 30 µg | S ≥ 22 / R ≤ 21 | oxacilline S ≤ 2 / R ≥ 4 |
+| *S. epidermidis* | oxacilline 1 µg | S ≥ 18 / R ≤ 17 | oxacilline S ≤ 0,5 / R ≥ 1 |
+| *S. epidermidis* | céfoxitine 30 µg | S ≥ 25 / R ≤ 24 | — |
+| autres *Staphylococcus* spp. | céfoxitine 30 µg | S ≥ 25 / R ≤ 24 | oxacilline S ≤ 0,5 / R ≥ 1 |
+
+*S. lugdunensis* est donc traité comme *S. aureus*, et *S. saprophyticus* tombe
+dans « autres ». PhénoBac porte déjà une exception EUCAST sur `scn` visant
+`ssaprophyticus` et `slugdunensis` ensemble : sous le CLSI, **ces deux espèces
+se séparent**. Le mécanisme `SEUIL_ESPECE` existe et sait le représenter.
+
+La vancomycine se partage de même, en deux portées seulement : *S. aureus*
+(S ≤ 2 / I 4-8 / R ≥ 16) et **SOSA**, *Staphylococcus species other than
+S. aureus* (S ≤ 4 / I 8-16 / R ≥ 32).
+
+Et le premier SDD concret est là : la **ceftaroline** sur *S. aureus*, S ≤ 1,
+**SDD 2-4**, R ≥ 8 — avec son équivalent en diamètre, S ≥ 25, SDD 20-24,
+R ≤ 19.

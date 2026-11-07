@@ -101,21 +101,45 @@
   }
 
   // Répartit une cellule entre n agents. Rend ⚠ plutôt que de deviner.
-  function repartir(cel, n, anomalies, ou, estAgent) {
+  // `role` vaut "agent", "disque" ou "" : le découpage légitime n'est pas le
+  // même pour un nom, une charge de disque et une valeur.
+  // « Cefotaxime or ⏎ ceftriaxone » : le « or » appartient à la liste, pas au
+  // nom. Nettoyé en SORTIE, car le repli donne souvent déjà le bon compte et
+  // court-circuite tout traitement placé plus bas.
+  function nomPropre(x) { return x.replace(/\s+or$/i, "").trim(); }
+
+  function repartir(cel, n, anomalies, ou, role) {
     var p = cel.split(RETOUR).map(function (s) { return s.trim(); });
+    if (role === "agent") p = p.map(nomPropre);
     if (n === 1) return [p.join(" ")];
     if (p.length === n) return p;
+    if (role === "agent") {
+      // Deux séparateurs imbriqués : « Cefotaxime or ⏎ ceftriaxone » et
+      // « Ciprofloxacin or levofloxacin ⏎ Moxifloxacin ». Découper sur un
+      // seul laissait des noms tronqués en « Cefotaxime or ».
+      var nn = [];
+      p.forEach(function (x) {
+        x.split(/\s+or\s+/i).forEach(function (y) {
+          y = nomPropre(y);
+          if (y) nn.push(y);
+        });
+      });
+      if (nn.length === n) return nn;
+    }
     if (p.length === 1) {
       var s = p[0], mots;
       if (estVide(s)) return new Array(n).fill(s);
       if (VAL.test(s)) return new Array(n).fill(s);      // une valeur pour tous
-      if (estAgent) {
-        var parOu = s.split(/\s+or\s+/i).map(function (x) { return x.trim(); })
-                     .filter(function (x) { return x; });
-        if (parOu.length === n) return parOu;            // « A or B or C »
+      if (role === "agent") {
         mots = s.split(/\s+/).filter(function (x) { return x; });
         if (mots.length === n && mots.every(function (x) {
               return /^[A-Za-zβ][A-Za-z\-]+\*?$/.test(x); })) return mots;
+      }
+      if (role === "disque") {
+        // « 10 units 10 μg » : deux charges dans une cellule. On coupe après
+        // l'unité, jamais sur les espaces — « 10 units » en compterait deux.
+        var ch = s.match(/\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?\s*(?:units?|U|µg|μg|mg)/gi);
+        if (ch && ch.length === n) return ch.map(function (x) { return x.trim(); });
       }
       if (!/\d/.test(s)) return new Array(n).fill(s);    // portée ou libellé
       mots = s.split(/\s+/).filter(function (x) { return x; });
@@ -150,19 +174,32 @@
       var utiles = c.filter(function (x) { return x !== ""; });
       if (utiles.length <= 1) { lignes.push(["§", utiles[0] || ""]); continue; }
       precedent = c.slice();
-      // Le nombre d'agents se lit sur les colonnes de valeurs, jamais sur le
-      // nom : « Cefuroxime ⏎ (parenteral) » est un seul agent au nom replié.
-      var vals = c.slice(1, larg - 1);
+      // Le nombre d'agents se lit sur les SEULES colonnes de valeurs, dont
+      // l'en-tête du document donne lui-même le nombre (S/SDD/I/R, une ou
+      // deux fois). Le prendre sur toutes les colonnes sauf le nom était
+      // faux : la 2C porte une colonne « Indications » dont le texte se
+      // replie, et « S. aureus, ⏎ including MRSA » faisait deux agents de
+      // la tédizolide. Le nom se replie aussi : « Cefuroxime ⏎ (parenteral) »
+      // est un seul agent.
+      var dCat = larg - 1 - sous.length;               // 1ʳᵉ colonne de valeur
+      var vals = c.slice(dCat, larg - 1);
       var n = Math.max.apply(null, [1].concat(vals.map(function (x) {
         return x.split(RETOUR).length; })));
       var ou = cle + " L" + i + " « " + c[0].split(RETOUR)[0].slice(0, 30) + " »";
       var cols = [];
       for (j = 0; j < larg - 1; j++)
-        cols.push(repartir(c[j], n, anomalies, ou + " [c" + j + "]", j === 0));
+        cols.push(repartir(c[j], n, anomalies, ou + " [c" + j + "]",
+                           j === 0 ? "agent" : (j === dCat - 1 ? "disque" : "")));
       var com = c[larg - 1];
       for (var k = 0; k < n; k++) {
-        lignes.push(cols.map(function (co) { return co[k]; })
-          .concat([(com.match(/\(\d+\)/g) || []).join("")]));
+        var l = cols.map(function (co) { return co[k]; });
+        // Une ligne d'espacement du tableau est vide partout sauf la colonne
+        // « Comments », qu'elle hérite par rowspan : cela suffisait à la faire
+        // passer pour une ligne de données. On distingue la cellule ABSENTE
+        // du tiret : « – » dit que le CLSI ne donne pas de seuil, ce qui est
+        // une information ; la chaîne vide ne dit rien.
+        if (l.slice(dCat).every(function (x) { return x === ""; })) continue;
+        lignes.push(l.concat([(com.match(/\(\d+\)/g) || []).join("")]));
       }
     }
     return {cle: cle, sous: sous, larg: larg, n: lignes.length,
