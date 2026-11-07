@@ -354,9 +354,21 @@ dire("\nLe CLSI n'hérite de rien, et ne se propose pas tant qu'il est vide");
 
   /* LE LABORATOIRE DOIT COMPRENDRE POURQUOI. Une mesure sans catégorie et
      sans raison se lit comme une panne. */
-  var o = E.runInterpretation({ organism: "ecoli", ref: "clsi", mode: "mic",
-                                mic: { AMX: "2" }, ctx: {} });
-  var dit = (o.interpretation.alerts || []).map(function (x) { return x.txt; }).join(" ");
+  /* ON CHERCHE UN GERME NON TRANSCRIT, ON N'EN NOMME PAS UN. La première
+     version prenait E. coli en exemple ; le jour où les entérobactéries ont
+     été transcrites, le banc est tombé en désignant un progrès. Un banc qui
+     nomme l'état transitoire qu'il observe se périme avec lui. */
+  var nonTranscrit = null;
+  Object.keys(E.ORG).some(function (id) {
+    var g = E.ORG[id].bpGroup;
+    if (g && !E.groupePeuple("clsi", g)) { nonTranscrit = id; return true; }
+    return false;
+  });
+  var o = nonTranscrit
+        ? E.runInterpretation({ organism: nonTranscrit, ref: "clsi", mode: "mic",
+                                mic: { AMX: "2", PEN: "2", VA: "2", GEN: "2" }, ctx: {} })
+        : null;
+  var dit = o ? (o.interpretation.alerts || []).map(function (x) { return x.txt; }).join(" ") : "";
   /* TROIS ÉTATS, TROIS PHRASES. Tant que le CLSI était vide, on disait « le
      référentiel entier n'est pas porté ». Depuis la transcription de
      Stenotrophomonas il ne l'est plus, et E. coli serait passé en silence à
@@ -364,10 +376,12 @@ dire("\nLe CLSI n'hérite de rien, et ne se propose pas tant qu'il est vide");
      chiffre soixante-huit couples pour les entérobactéries, c'est la
      transcription qui manque. Un laboratoire qui lit « le référentiel ne
      donne pas de seuil » doit pouvoir le croire. */
-  verif(/pas encore transcrit/.test(dit),
-        "un germe non transcrit le dit, et ne se fait pas passer pour un "
-        + "silence du document");
-  verif(!/ne donne pas de seuil pour ce couple/.test(dit),
+  verif(!nonTranscrit || /pas encore transcrit/.test(dit),
+        nonTranscrit
+          ? "un germe non transcrit le dit (" + nonTranscrit + "), et ne se "
+            + "fait pas passer pour un silence du document"
+          : "tous les groupes sont transcrits : la question ne se pose plus");
+  verif(!nonTranscrit || !/ne donne pas de seuil pour ce couple/.test(dit),
         "… surtout, il ne fait pas dire au CLSI qu'il se tait alors qu'il parle");
 
   /* LE CHEMIN DE LECTURE EXISTE-T-IL ? C'est la question que la première
@@ -410,7 +424,8 @@ dire("\nLe CLSI n'hérite de rien, et ne se propose pas tant qu'il est vide");
         "… le CLSI aussi désormais, et la page l'affiche");
   verif(E.groupePeuple("clsi", "steno") === true,
         "le groupe transcrit est reconnu comme tel");
-  verif(E.groupePeuple("clsi", "entero") === false,
+  verif(!nonTranscrit
+          || E.groupePeuple("clsi", E.ORG[nonTranscrit].bpGroup) === false,
         "… et un groupe non transcrit ne se fait pas passer pour couvert — "
         + "c'est ce qui distingue « non transcrit » de « non chiffré »");
 

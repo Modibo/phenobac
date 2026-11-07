@@ -95,8 +95,13 @@ class Refus(Exception):
     pass
 
 
-def borne_cmi(cS, cI, cR):
-    """(S, R) au sens de PhénoBac, depuis les trois cellules du CLSI."""
+def borne_cmi(cS, cI, cR, cSDD=None):
+    """(S, R, sdd) au sens de PhénoBac, depuis les cellules du CLSI.
+
+    La colonne SDD tient la MÊME PLACE que I — le CLSI ne donne jamais les
+    deux pour un même agent, mesuré sur les seize tables. Quand c'est elle
+    qui est remplie, la bande intermédiaire s'appelle SDD, et c'est tout ce
+    qui change : la borne se lit au même endroit."""
     if vide(cR):
         raise Refus("aucun seuil de RÉSISTANCE — le CLSI fixe la sensibilité "
                     "seule ; transcrit tel quel, tout ce qui dépasse sortirait "
@@ -113,15 +118,29 @@ def borne_cmi(cS, cI, cR):
             raise Refus("seuil de sensibilité illisible : « %s »" % cS)
         S = nb(mS.group(1))
 
+    # SDD occupe la place de I. Si les deux sont remplies, le document dit
+    # une chose que la mesure des seize tables disait impossible : on
+    # s'arrête plutôt que de choisir.
+    sdd = False
+    if not vide(cSDD):
+        if not vide(cI):
+            raise Refus("SDD ET I remplis pour le même agent — les seize "
+                        "tables disaient cela impossible ; à relire")
+        cI, sdd = cSDD, True
+
+    # « I ≤ 2 » : le CLSI n'accorde AUCUNE catégorie sensible et borne
+    # l'intermédiaire par le haut. C'est la forme que la base écrit déjà
+    # S = null, et la colistine des entérobactéries l'emploie.
+    if vide(cS) and not vide(cI) and RE_INF.match(str(cI).strip()):
+        return None, nb(RE_INF.match(str(cI).strip()).group(1)), sdd
+
     if not vide(cI):
         t = str(cI).strip()
         mi = RE_INT.match(t) or RE_UN.match(t)
         if not mi:
             raise Refus("bande intermédiaire illisible : « %s »" % cI)
-        R = nb(mi.group(2) if RE_INT.match(t) else mi.group(1))
-        if RE_INT.match(t):
-            R = nb(RE_INT.match(t).group(2))
-        return S, R
+        R = nb(RE_INT.match(t).group(2)) if RE_INT.match(t) else nb(mi.group(1))
+        return S, R, sdd
 
     # Pas de bande intermédiaire : il ne doit RIEN y avoir entre S et R.
     if S is None:
@@ -130,10 +149,10 @@ def borne_cmi(cS, cI, cR):
         raise Refus("pas de bande intermédiaire, et R (%s) n'est pas le double "
                     "de S (%s) : une valeur du document tomberait entre les "
                     "deux sans qu'on sache comment la rendre" % (vR, S))
-    return S, S
+    return S, S, sdd
 
 
-def borne_disque(cS, cI, cR):
+def borne_disque(cS, cI, cR, cSDD=None):
     if vide(cR):
         raise Refus("aucun seuil de RÉSISTANCE au disque (arbitrage 1)")
     mR = RE_INF.match(str(cR).strip())
@@ -148,6 +167,12 @@ def borne_disque(cS, cI, cR):
             raise Refus("seuil de sensibilité illisible : « %s »" % cS)
         S = nb(mS.group(1))
 
+    sdd = False
+    if not vide(cSDD):
+        if not vide(cI):
+            raise Refus("SDD ET I remplis au disque pour le même agent")
+        cI, sdd = cSDD, True
+
     # La bande intermédiaire doit coller aux deux bornes, sinon on a mal lu.
     if not vide(cI):
         mi = RE_INT.match(str(cI).strip())
@@ -160,7 +185,41 @@ def borne_disque(cS, cI, cR):
         if S is not None and haut != S - 1:
             raise Refus("la bande intermédiaire finit à %s, mais la "
                         "sensibilité commence à %s" % (haut, S))
-    return S, R
+    return S, R, sdd
+
+
+# Un qualificatif du CLSI dit soit un SITE, que la base sait représenter,
+# soit une distinction qu'elle ne porte pas — et qui demande un arbitrage.
+# Les confondre ferait entrer un seuil urinaire comme seuil général : le plus
+# permissif des deux, appliqué à une bactériémie.
+SITES = {"urinaire": "urinaire", "méningé": "meninge"}
+REFUSES = {
+    "non méningé":        "le CLSI sépare méningé et non méningé ; décider "
+                          "lequel est le seuil « standard » de PhénoBac",
+    "oral":               "seuil propre à la voie orale — PhénoBac ne scinde "
+                          "pas ses seuils par voie",
+    "parentéral":         "seuil propre à la voie parentérale — même question",
+    "test de substitution": "c'est un test de SUBSTITUTION, pas un seuil de la "
+                          "molécule : le rendre tel quel la ferait catégoriser "
+                          "pour elle-même",
+    "investigationnel":   "marqué « (Inv.) » par le CLSI : à ne pas rendre "
+                          "comme un seuil de routine",
+    "haut niveau":        "dépistage de haut niveau, pas une concentration "
+                          "critique ordinaire",
+}
+
+
+def site_de(qual):
+    """Rend le site, ou lève si un qualificatif demande un arbitrage."""
+    site = "standard"
+    for q in qual:
+        if q in SITES:
+            site = SITES[q]
+        elif q in REFUSES:
+            raise Refus(REFUSES[q])
+        else:
+            raise Refus("qualificatif inconnu : « %s »" % q)
+    return site
 
 
 def js(v):
@@ -171,11 +230,15 @@ def js(v):
     return repr(v)
 
 
-def ligne(groupe, code, meth, S, R, charge):
-    return ('["clsi","%s","%s","%s","standard",%s,%s,%s,'
-            'undefined,undefined,undefined,undefined,undefined,undefined]'
-            % (groupe, code, meth, js(S), js(R),
+def ligne(groupe, code, meth, site, S, R, charge, sdd):
+    # COLONNES : ref groupe abx meth site S R charge zit temoin dep conv couv
+    #            espece ecoff sdd  — « sdd » est en queue, et n'est écrit que
+    #            s'il est vrai : une colonne de undefined partout n'apprend rien.
+    base = ('["clsi","%s","%s","%s","%s",%s,%s,%s,'
+            'undefined,undefined,undefined,undefined,undefined,undefined'
+            % (groupe, code, meth, site, js(S), js(R),
                js(charge) if charge else "undefined"))
+    return base + (",undefined,true]" if sdd else "]")
 
 
 # --------------------------------------------------------------------------
@@ -213,7 +276,10 @@ print(JSON.stringify(sorties));
 """
 
 
-def temoins_cmi(cS, cI, cR):
+def temoins_cmi(cS, cI, cR, cSDD=None):
+    if vide(cI) and not vide(cSDD):
+        cI = cSDD
+
     """Une valeur de chaque bande du CLSI, et la catégorie qu'il lui donne."""
     t = []
     if not vide(cS):
@@ -236,7 +302,10 @@ def temoins_cmi(cS, cI, cR):
     return t
 
 
-def temoins_disque(cS, cI, cR):
+def temoins_disque(cS, cI, cR, cSDD=None):
+    if vide(cI) and not vide(cSDD):
+        cI = cSDD
+
     t = []
     if not vide(cS):
         m = RE_SUP.match(str(cS).strip())
@@ -331,20 +400,25 @@ def main():
             if any("⚠" in str(v) for v in ld.values() if v):
                 refus.append((code, nom, "ligne marquée douteuse par le lecteur"))
                 continue
-            if qual:
-                refus.append((code, nom, "qualificatif à arbitrer : " + ", ".join(qual)))
+            try:
+                site = site_de(qual)
+            except Refus as e:
+                refus.append((code, nom, str(e)))
                 continue
             for meth, prefixe in (("cmi", "cmi"), ("disque", "disque")):
                 cS, cI, cR = (ld.get(prefixe + ":S"), ld.get(prefixe + ":I"),
                               ld.get(prefixe + ":R"))
-                if vide(cS) and vide(cI) and vide(cR):
+                cSDD = ld.get(prefixe + ":SDD")
+                if vide(cS) and vide(cI) and vide(cR) and vide(cSDD):
                     continue
                 try:
-                    S, R = (borne_cmi if meth == "cmi" else borne_disque)(cS, cI, cR)
+                    S, R, sdd = (borne_cmi if meth == "cmi"
+                                 else borne_disque)(cS, cI, cR, cSDD)
                 except Refus as e:
                     refus.append((code, nom + " / " + meth, str(e)))
                     continue
-                tem = (temoins_cmi if meth == "cmi" else temoins_disque)(cS, cI, cR)
+                tem = (temoins_cmi if meth == "cmi"
+                       else temoins_disque)(cS, cI, cR, cSDD)
                 for v2, att in tem:
                     cas_boucle.append({"meth": meth, "S": S, "R": R, "v": v2,
                                        "attendu": att,
@@ -356,7 +430,7 @@ def main():
                     charge = re.sub(r"\s*(?:µg|μg|units?|U)\s*", "", str(charge)).strip()
                     charge = charge.replace("/", "-")
                 for g in groupes:
-                    sorties.append(ligne(g, code, meth, S, R, charge))
+                    sorties.append(ligne(g, code, meth, site, S, R, charge, sdd))
 
         total += len(sorties); refuses += len(refus)
         if not REFUS_SEULS and sorties:

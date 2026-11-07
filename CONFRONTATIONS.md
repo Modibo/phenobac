@@ -3011,15 +3011,16 @@ l'espèce manquait.
 
 ## comparer-clsi.py — première confrontation au M100, le 2026-11-07
 
-- **document** : CLSI M100 Ed36:2026, table 2B-4, lue sur le portail gratuit
-  em100.edaptivedocs.net par `outils/extraire-clsi.js`
+- **document** : CLSI M100 Ed36:2026, tables 2B-4 et 2A-1, lues sur le
+  portail gratuit em100.edaptivedocs.net par `outils/extraire-clsi.js`
 - **tables** : BP_CLSI, DZ_CLSI
-- **empreinte** : 1d72195dbf755dcf98e03608faca72c5461d7f152f3ecb2d6a90357b772dcf90
-  — **le garde-fou a fonctionné dès son premier usage.** L'entrée portait
-  d'abord l'empreinte de tables *vides* (`3e3aa844…`), armée avant qu'il y
-  ait quoi que ce soit à garder. Les sept lignes de *S. maltophilia*
-  transcrites une heure plus tard, la chaîne s'est arrêtée et a exigé que
-  cette entrée soit reprise. Elle l'est.
+- **empreinte** : 2fe8db34bf3e75d9b940420c05657c524e38082b3bcfad4d8498dec8869103dc
+  — **le garde-fou a fonctionné dès son premier usage, puis au second.**
+  L'entrée portait d'abord l'empreinte de tables *vides* (`3e3aa844…`),
+  armée avant qu'il y ait quoi que ce soit à garder ; les sept lignes de
+  *S. maltophilia* l'ont fait tomber (`1d72195d…`), puis les 183 des
+  entérobactéries. Chaque fois la chaîne s'est arrêtée et a exigé que cette
+  entrée soit reprise.
 - **date** : 2026-11-07, le document ouvert dans le volet
 - **résultat** : voir ci-dessous.
 
@@ -3084,7 +3085,32 @@ Recopier le 4 aurait rendu sensible une souche à 4 mg/L.
   séparément : trancher une question européenne au prétexte d'une
   transcription américaine serait une confusion de plus.
 
-### Ce que cette première transcription a révélé
+### Entérobactéries — table 2A-1, transcrite le 2026-11-07
+
+**183 lignes** : 61 couples × 3 groupes. Le CLSI ne sépare ni *Morganella*
+ni *Serratia* des autres entérobactéries — elles en sont —, et leurs seuils
+sont donc les mêmes. Ce que PhénoBac en distingue tient à leurs résistances
+naturelles, qui relèvent d'un autre mécanisme et ne sont pas touchées.
+
+Produites par `outils/transcrire-clsi.py` et vérifiées **en boucle
+fermée** : 210 valeurs témoins tirées dans les bandes du document, passées
+au moteur, **zéro divergence**. La conversion n'est pas seulement conforme
+à une règle écrite ; elle rend les catégories que le document annonce.
+
+Aucun refus sur cette table. Deux formes nouvelles y sont apparues, et
+toutes deux entraient dans ce que la base sait déjà représenter :
+
+- **quatre seuils urinaires** — mécillinam, triméthoprime, fosfomycine,
+  nitrofurantoïne, que le CLSI marque « (U) ». Entrés comme seuils généraux,
+  ils auraient appliqué à une bactériémie le plus permissif des deux ;
+- **deux SDD** — pipéracilline-tazobactam et céfépime. Premier emploi réel
+  de la quatrième catégorie, trois heures après l'avoir portée.
+
+L'outil écarte en revanche, et le dit, ce qui demanderait un arbitrage :
+seuils propres à une voie (céfuroxime orale contre parentérale), tests de
+substitution, molécules marquées « (Inv.) ».
+
+### Ce que la première transcription a révélé
 
 **Un référentiel à moitié transcrit est plus dangereux qu'un référentiel
 vide.** `referentielPeuple()` répond « oui » dès qu'un seul groupe porte des
