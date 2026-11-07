@@ -231,6 +231,50 @@ REFUSES = {
 }
 
 
+# --------------------------------------------------------------------------
+# LES PORTÉES D'ESPÈCE DE LA TABLE 2C
+#
+# Le CLSI découpe les staphylocoques autrement que PhénoBac : il nomme des
+# espèces là où PhénoBac a deux groupes, `staph` (S. aureus) et `scn`. Chaque
+# portée du document trouve pourtant sa place, parce que la base porte une
+# colonne `espece` que SEUIL_ESPECE sait appliquer à l'intérieur d'un groupe.
+#
+# Le cas qui compte : S. LUGDUNENSIS. Le CLSI le traite comme S. aureus —
+# même seuil d'oxacilline —, alors que PhénoBac le range parmi les SCN. Sans
+# cette table, il recevrait les seuils des staphylocoques à coagulase
+# négative ordinaires, et une souche résistante passerait pour sensible.
+#
+# Rend une liste de (groupe, espèces ou None). None veut dire « tout le
+# groupe ». Lève Refus quand la portée ne se rattache à rien.
+# --------------------------------------------------------------------------
+PORTEES_2C = [
+    (r"^all staphylococci$",            [("staph", None), ("scn", None)]),
+    (r"^s\. aureus, including mrsa$",   [("staph", None)]),
+    (r"^s\. aureus$",                   [("staph", None)]),
+    (r"^sosa$",                         [("scn", None)]),
+    (r"^s\. aureus and s\. lugdunensis$",
+     [("staph", None), ("scn", ["slugdunensis"])]),
+    (r"^s\. epidermidis$",              [("scn", ["sepidermidis"])]),
+    # « Staphylococcus spp., except: S. aureus, S. lugdunensis,
+    #   S. epidermidis, S. pseudintermedius, S. coagulans, S. schleiferi »
+    # Des quatre SCN que PhénoBac porte, il reste saprophyticus et
+    # haemolyticus — les deux autres sont nommément exclus.
+    (r"^staphylococcus spp\., except",  [("scn", ["ssaprophyticus", "shaemolyticus"])]),
+    # Espèces vétérinaires que PhénoBac ne porte pas : rien à transcrire,
+    # et ce n'est pas une anomalie.
+    (r"^s\. pseudintermedius", []),
+]
+
+
+def portee_2c(texte):
+    t = re.sub(r"\s+", " ", (texte or "")).strip().lower()
+    t = t.split(" •")[0].strip()
+    for motif, cibles in PORTEES_2C:
+        if re.match(motif, t):
+            return cibles
+    raise Refus("portée d'espèce inconnue : « %s »" % (texte or "")[:60])
+
+
 def site_de(qual):
     """Rend le site, ou lève si un qualificatif demande un arbitrage."""
     site = "standard"
@@ -244,6 +288,22 @@ def site_de(qual):
     return site
 
 
+def cle_couple(l):
+    """L'IDENTITÉ d'une ligne : groupe, abx, méthode, site, et portée
+    d'espèce. Deux lignes de même identité sont une distinction perdue.
+
+    CETTE CLÉ SE CALCULE ICI, ET NULLE PART AILLEURS. Elle l'était à deux
+    endroits — pour détecter les doublons, puis pour les retirer —, et
+    l'ajout de la portée d'espèce n'a touché que le premier : l'outil
+    annonçait « écarté » et émettait la ligne quand même. Quatre
+    ciprofloxacines de Salmonella sont sorties sous une ligne de refus.
+    Un outil qui dit refuser et émet est pire qu'un outil qui ne vérifie
+    rien : il donne une assurance fausse."""
+    m = re.match(r'\["clsi","([^"]+)","([^"]+)","([^"]+)","([^"]+)"', l)
+    esp = re.search(r',(\[[^\]]*\]|undefined)\]?$', l.rstrip(","))
+    return m.groups() + ((esp.group(1) if esp else ""),)
+
+
 def js(v):
     if v is None:
         return "null"
@@ -252,14 +312,15 @@ def js(v):
     return repr(v)
 
 
-def ligne(groupe, code, meth, site, S, R, charge, sdd, ns):
+def ligne(groupe, code, meth, site, S, R, charge, sdd, ns, espece=None):
     # COLONNES : ref groupe abx meth site S R charge zit temoin dep conv couv
     #            espece ecoff sdd  — « sdd » est en queue, et n'est écrit que
     #            s'il est vrai : une colonne de undefined partout n'apprend rien.
+    esp = ("[" + ",".join('"%s"' % e for e in espece) + "]") if espece else "undefined"
     base = ('["clsi","%s","%s","%s","%s",%s,%s,%s,'
-            'undefined,undefined,undefined,undefined,undefined,undefined'
+            'undefined,undefined,undefined,undefined,undefined,%s'
             % (groupe, code, meth, site, js(S), js(R),
-               js(charge) if charge else "undefined"))
+               js(charge) if charge else "undefined", esp))
     if ns:
         return base + ",undefined,undefined,true]"
     return base + (",undefined,true]" if sdd else "]")
@@ -427,6 +488,8 @@ def main():
         # serait entrée pour les deux groupes sans un mot. On refuse donc la
         # table ENTIÈRE, parce qu'on ne sait pas ce qu'on ne lit pas.
         inconnues = [c for c in (t.get("colonnes") or []) if c.startswith("col")]
+        if inconnues and cle == "2C":
+            inconnues = []        # c'est la portée d'espèce, et on sait la lire
         if inconnues:
             print("\n/* %s — TABLE ENTIÈREMENT ÉCARTÉE : elle porte une colonne"
                   "\n * que le lecteur n'a pas su nommer (%s), et en 2C c'est la"
@@ -519,8 +582,19 @@ def main():
                                       "ce n'est probablement pas un disque de "
                                       "cette molécule" % ld.get("charge")))
                         continue
-                for g in groupes:
-                    sorties.append(ligne(g, code, meth, site, S, R, charge, sdd, ns))
+                # En 2C, la colonne « col1 » porte la portée d'espèce, et
+                # c'est elle qui décide des groupes — pas la table.
+                if cle == "2C":
+                    try:
+                        cibles = portee_2c(ld.get("col1"))
+                    except Refus as e:
+                        refus.append((code, nom, str(e)))
+                        continue
+                else:
+                    cibles = [(g, None) for g in groupes]
+                for g, esp in cibles:
+                    sorties.append(ligne(g, code, meth, site, S, R, charge,
+                                         sdd, ns, esp))
 
         # DEUX LIGNES POUR LE MÊME COUPLE SONT UNE DISTINCTION PERDUE.
         # La table 2A-2 porte DEUX ciprofloxacines : l'une pour Salmonella
@@ -529,16 +603,16 @@ def main():
         # garder qu'une appliquerait en silence le seuil d'un germe à
         # l'autre, et le seuil de Shigella est dix fois plus permissif.
         # On refuse les deux et on le dit.
+        # Deux lignes du même couple mais de PORTÉES D'ESPÈCE différentes ne
+        # sont pas des doublons : c'est tout l'objet de la colonne `espece`.
         vus = {}
         for l in sorties:
-            m = re.match(r'\["clsi","([^"]+)","([^"]+)","([^"]+)","([^"]+)"', l)
-            vus.setdefault(m.groups(), []).append(l)
+            vus.setdefault(cle_couple(l), []).append(l)
         doubles = {k: v for k, v in vus.items() if len(v) > 1}
         if doubles:
-            sorties = [l for l in sorties
-                       if re.match(r'\["clsi","([^"]+)","([^"]+)","([^"]+)","([^"]+)"',
-                                   l).groups() not in doubles]
-            for (g, c, me, si) in sorted(doubles):
+            sorties = [l for l in sorties if cle_couple(l) not in doubles]
+            for cle_d in sorted(doubles):
+                g, c, me, si = cle_d[0], cle_d[1], cle_d[2], cle_d[3]
                 refus.append((c, g + " / " + me + " / " + si,
                               "DEUX seuils pour ce couple dans la même table — "
                               "une ligne de section les distingue, et le lecteur "

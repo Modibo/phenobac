@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.46";
+const BASE_VERSION = "2026.47";
 
 /* La colonne « sdd » est en QUEUE de liste, et c'est délibéré : les lignes
    de la base sont des tableaux positionnels, et une colonne ajoutée au bout
@@ -2124,7 +2124,7 @@ const REGLES = [
 ["eucast","entero","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,["ecoli","kpneu","koxytoca"]],
 
 /* ====================================================================
-   CLSI M100 Ed36:2026 — série 2 complète, sauf la table 2C
+   CLSI M100 Ed36:2026 — série 2 complète
    ====================================================================
 
    Le CLSI n'hérite de RIEN. À la différence du CA-SFM, qui est l'EUCAST
@@ -2135,7 +2135,7 @@ const REGLES = [
    Ces lignes sont PRODUITES par outils/transcrire-clsi.py depuis le JSON
    de outils/extraire-clsi.js, et vérifiées EN BOUCLE FERMÉE : pour chaque
    couple, une valeur témoin est tirée dans chacune des bandes du document
-   et passée au moteur. 1119 valeurs témoins, ZÉRO divergence. Les modifier
+   et passée au moteur. 1250 valeurs témoins, ZÉRO divergence. Les modifier
    à la main romprait ce lien — relancer l'outil.
 
    LA CONVERSION, ET POURQUOI ELLE N'EST PAS UNE RECOPIE
@@ -2166,8 +2166,31 @@ const REGLES = [
    que seule une ligne de section distingue, et le dépistage à l'oxacilline
    1 µg du pneumocoque — qui n'est pas un diamètre de pénicilline.
 
-   LA TABLE 2C, celle des staphylocoques, n'est pas ici : elle porte une
-   colonne de portée d'espèce, et sa transcription est en cours. */
+   LA TABLE 2C, celle des staphylocoques, découpe par ESPÈCE là où PhénoBac
+   a deux groupes. Chaque portée du document trouve sa place, parce que la
+   base porte une colonne `espece` que SEUIL_ESPECE applique à l'intérieur
+   d'un groupe :
+
+       All staphylococci              → staph ET scn
+       S. aureus (incl. MRSA)         → staph
+       SOSA                           → scn
+       S. aureus and S. lugdunensis   → staph, et scn pour la seule
+                                        S. lugdunensis — que le CLSI traite
+                                        comme S. aureus et que PhénoBac
+                                        range parmi les SCN
+       S. epidermidis                 → scn, pour elle seule
+       Staphylococcus spp., except…   → scn, moins les espèces nommées
+
+   L'écart que cela rattrape : la vancomycine passe de S ≤ 2 chez S. aureus
+   à S ≤ 4 chez les autres. Appliquer l'un à l'autre aurait rendu sensible
+   une souche que le document ne dit pas telle.
+
+   LES LIGNES D'OXACILLINE ET DE CÉFOXITINE de la 2C ne sont pas ici : leurs
+   valeurs portent « (oxacillin) » ou « (cefoxitin) » collé au nombre, et
+   c'est la partie la plus délicate du document — la détection du SARM.
+   REFERENTIEL-CLSI.md la transcrit à la main, et c'est là qu'elle doit
+   rester tant qu'un biologiste ne l'a pas portée lui-même. */
+
 ["clsi","steno","FDC","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","steno","FDC","disque","standard",17,17,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","steno","MIN","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -2468,6 +2491,80 @@ const REGLES = [
 ["clsi","enteroc","CAF","disque","standard",18,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","enteroc","LZD","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","enteroc","LZD","disque","standard",23,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","PEN","disque","standard",29,29,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","PEN","disque","standard",29,29,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","VA","cmi","standard",2,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","VA","cmi","standard",4,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","scn","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","staph","GEN","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","GEN","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","GEN","disque","standard",15,13,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","GEN","disque","standard",15,13,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","AZM","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","AZM","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","AZM","disque","standard",18,14,"15",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","AZM","disque","standard",18,14,"15",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","E","cmi","standard",0.5,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","E","cmi","standard",0.5,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","E","disque","standard",23,14,"15",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","E","disque","standard",23,14,"15",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","TET","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","TET","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","TET","disque","standard",19,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","TET","disque","standard",19,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","DOX","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","DOX","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","DOX","disque","standard",16,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","DOX","disque","standard",16,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","MIN","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","MIN","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","MIN","disque","standard",19,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","MIN","disque","standard",19,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","CIP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","CIP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","CIP","disque","standard",21,16,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","CIP","disque","standard",21,16,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","LVX","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","LVX","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","LVX","disque","standard",19,16,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","LVX","disque","standard",19,16,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","MXF","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","MXF","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","MXF","disque","standard",24,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","MXF","disque","standard",24,21,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","OFX","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","OFX","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","OFX","disque","standard",18,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","OFX","disque","standard",18,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","NIT","cmi","urinaire",32,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","NIT","cmi","urinaire",32,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","DA","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","DA","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","DA","disque","standard",21,15,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","DA","disque","standard",21,15,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","SXT","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","SXT","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","TMP","cmi","urinaire",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","TMP","cmi","urinaire",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","TMP","disque","urinaire",16,11,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","TMP","disque","urinaire",16,11,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","CAF","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","CAF","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","CAF","disque","standard",18,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","CAF","disque","standard",18,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","RD","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","RD","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","RD","disque","standard",20,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","RD","disque","standard",20,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","LZD","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","LZD","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","staph","LZD","disque","standard",26,23,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","scn","LZD","disque","standard",26,23,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","AMP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","AMP","disque","standard",22,19,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","AMC","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

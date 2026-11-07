@@ -3011,12 +3011,12 @@ l'espèce manquait.
 
 ## comparer-clsi.py — première confrontation au M100, le 2026-11-07
 
-- **document** : CLSI M100 Ed36:2026, **toute la série 2 sauf la 2C** —
+- **document** : CLSI M100 Ed36:2026, **toute la série 2** —
   2A-1, 2A-2, 2B-1, 2B-2, 2B-4, 2B-5, 2D, 2E, 2F, 2G, 2H-1, 2H-2, 2I, 2J —
   lues sur le portail gratuit em100.edaptivedocs.net par
   `outils/extraire-clsi.js`, converties par `outils/transcrire-clsi.py`
 - **tables** : BP_CLSI, DZ_CLSI
-- **empreinte** : 6b6773093ea2aacd0b8b2e0a1c04e5424b148b69943e099b32a26c8a5c2a470e
+- **empreinte** : 51ed255430911c574fd875613a67df52e3a1d94f4f58c33ca32da4dae22405aa
   — **le garde-fou a fonctionné dès son premier usage, puis au second.**
   L'entrée portait d'abord l'empreinte de tables *vides* (`3e3aa844…`),
   armée avant qu'il y ait quoi que ce soit à garder ; les sept lignes de
@@ -3145,6 +3145,44 @@ sensible* », catégorie que le CLSI emploie et qu'elle ne connaît pas.
 pour *Salmonella* Typhi, un pour *Shigella* —, séparés par une ligne de
 section que le lecteur ne garde pas. La ciprofloxacine y passe de S ≤ 0,06
 à S ≤ 0,25 : quatre fois plus permissif. Les deux sont refusés.
+
+### La table 2C transcrite — le découpage par espèce, le 2026-11-07
+
+**822 lignes au total, 1 250 valeurs témoins au moteur, zéro divergence.**
+33 groupes sur 46. La série 2 du M100 est transcrite en entier.
+
+Le CLSI découpe les staphylocoques par espèce là où PhénoBac a deux
+groupes. Chaque portée trouve sa place, parce que la base porte une colonne
+`espece` que `SEUIL_ESPECE` applique à l'intérieur d'un groupe :
+
+| portée du CLSI | → PhénoBac |
+|---|---|
+| All staphylococci | `staph` et `scn` |
+| S. aureus (incl. MRSA) | `staph` |
+| SOSA | `scn` |
+| S. aureus **and S. lugdunensis** | `staph`, et `scn` pour la seule *S. lugdunensis* |
+| S. epidermidis | `scn`, pour elle seule |
+| Staphylococcus spp., **except**… | `scn`, moins les espèces nommées |
+
+**L'écart que cela rattrape**, vérifié au moteur : vancomycine à 4 mg/L
+rend **I** chez *S. aureus* (S ≤ 2) et **S** chez *S. epidermidis*
+(S ≤ 4). Sans la portée, l'un aurait reçu le seuil de l'autre.
+
+**Les lignes d'oxacilline et de céfoxitine restent dehors.** Leurs valeurs
+portent « (oxacillin) » ou « (cefoxitin) » collé au nombre, et c'est la
+partie la plus délicate du document : la détection du SARM.
+REFERENTIEL-CLSI.md la transcrit à la main, et c'est là qu'elle doit rester
+tant qu'un biologiste ne l'a pas portée lui-même.
+
+**Un défaut du convertisseur trouvé en chemin, et il était grave.** La clé
+qui identifie une ligne — groupe, molécule, méthode, site, portée — se
+calculait à DEUX endroits : pour détecter les doublons, puis pour les
+retirer. L'ajout de la portée d'espèce n'a touché que le premier. L'outil
+annonçait « écarté » et émettait la ligne quand même : quatre
+ciprofloxacines de *Salmonella* sont sorties sous une ligne de refus.
+**Un outil qui dit refuser et émet est pire qu'un outil qui ne vérifie
+rien : il donne une assurance fausse.** La clé se calcule désormais dans
+une seule fonction.
 
 ### Les trois décisions, rendues le 2026-11-07 — et la série 2 régénérée
 
