@@ -102,10 +102,21 @@ def borne_cmi(cS, cI, cR, cSDD=None):
     deux pour un même agent, mesuré sur les seize tables. Quand c'est elle
     qui est remplie, la bande intermédiaire s'appelle SDD, et c'est tout ce
     qui change : la borne se lit au même endroit."""
+    # AUCUN SEUIL DE RÉSISTANCE : c'est la catégorie « non sensible » du
+    # CLSI, et non un trou dans la table. Décision du 2026-11-07, qui
+    # renverse l'arbitrage 1 : la ligne porte S = R, le moteur retient « R »
+    # au-dessus du seuil — direction prudente — et le rendu dit « NS ».
     if vide(cR):
-        raise Refus("aucun seuil de RÉSISTANCE — le CLSI fixe la sensibilité "
-                    "seule ; transcrit tel quel, tout ce qui dépasse sortirait "
-                    "« I » (arbitrage 1 du 2026-11-07)")
+        if vide(cS):
+            raise Refus("ni sensibilité ni résistance : rien à convertir")
+        if not vide(cI) or not vide(cSDD):
+            raise Refus("une bande intermédiaire SANS seuil de résistance : "
+                        "forme inattendue, à lire à la main")
+        mS0 = RE_INF.match(str(cS).strip())
+        if not mS0:
+            raise Refus("seuil de sensibilité illisible : « %s »" % cS)
+        v0 = nb(mS0.group(1))
+        return v0, v0, False, True
     mR = RE_SUP.match(str(cR).strip())
     if not mR:
         raise Refus("seuil de résistance illisible : « %s »" % cR)
@@ -132,7 +143,7 @@ def borne_cmi(cS, cI, cR, cSDD=None):
     # l'intermédiaire par le haut. C'est la forme que la base écrit déjà
     # S = null, et la colistine des entérobactéries l'emploie.
     if vide(cS) and not vide(cI) and RE_INF.match(str(cI).strip()):
-        return None, nb(RE_INF.match(str(cI).strip()).group(1)), sdd
+        return None, nb(RE_INF.match(str(cI).strip()).group(1)), sdd, False
 
     if not vide(cI):
         t = str(cI).strip()
@@ -140,7 +151,7 @@ def borne_cmi(cS, cI, cR, cSDD=None):
         if not mi:
             raise Refus("bande intermédiaire illisible : « %s »" % cI)
         R = nb(RE_INT.match(t).group(2)) if RE_INT.match(t) else nb(mi.group(1))
-        return S, R, sdd
+        return S, R, sdd, False
 
     # Pas de bande intermédiaire : il ne doit RIEN y avoir entre S et R.
     if S is None:
@@ -149,12 +160,21 @@ def borne_cmi(cS, cI, cR, cSDD=None):
         raise Refus("pas de bande intermédiaire, et R (%s) n'est pas le double "
                     "de S (%s) : une valeur du document tomberait entre les "
                     "deux sans qu'on sache comment la rendre" % (vR, S))
-    return S, S, sdd
+    return S, S, sdd, False
 
 
 def borne_disque(cS, cI, cR, cSDD=None):
+    # Même règle au disque : S = R, « R » en deçà, rendu « NS ».
     if vide(cR):
-        raise Refus("aucun seuil de RÉSISTANCE au disque (arbitrage 1)")
+        if vide(cS):
+            raise Refus("ni sensibilité ni résistance au disque")
+        if not vide(cI) or not vide(cSDD):
+            raise Refus("bande intermédiaire sans seuil de résistance au disque")
+        mS0 = RE_SUP.match(str(cS).strip())
+        if not mS0:
+            raise Refus("seuil de sensibilité illisible : « %s »" % cS)
+        v0 = nb(mS0.group(1))
+        return v0, v0, False, True
     mR = RE_INF.match(str(cR).strip())
     if not mR:
         raise Refus("seuil de résistance illisible : « %s »" % cR)
@@ -185,17 +205,19 @@ def borne_disque(cS, cI, cR, cSDD=None):
         if S is not None and haut != S - 1:
             raise Refus("la bande intermédiaire finit à %s, mais la "
                         "sensibilité commence à %s" % (haut, S))
-    return S, R, sdd
+    return S, R, sdd, False
 
 
 # Un qualificatif du CLSI dit soit un SITE, que la base sait représenter,
 # soit une distinction qu'elle ne porte pas — et qui demande un arbitrage.
 # Les confondre ferait entrer un seuil urinaire comme seuil général : le plus
 # permissif des deux, appliqué à une bactériémie.
-SITES = {"urinaire": "urinaire", "méningé": "meninge"}
+SITES = {"urinaire": "urinaire", "méningé": "meninge", "non méningé": "standard"}
+# Décision du 2026-11-07 : le seuil NON MÉNINGÉ du pneumocoque est celui
+# qu'on applique hors liquide céphalo-rachidien, donc le site « standard »
+# de PhénoBac. Le méningé a son site propre, que la base porte déjà.
+SITES_AUSSI = {"non méningé": "standard"}
 REFUSES = {
-    "non méningé":        "le CLSI sépare méningé et non méningé ; décider "
-                          "lequel est le seuil « standard » de PhénoBac",
     "oral":               "seuil propre à la voie orale — PhénoBac ne scinde "
                           "pas ses seuils par voie",
     "parentéral":         "seuil propre à la voie parentérale — même question",
@@ -230,7 +252,7 @@ def js(v):
     return repr(v)
 
 
-def ligne(groupe, code, meth, site, S, R, charge, sdd):
+def ligne(groupe, code, meth, site, S, R, charge, sdd, ns):
     # COLONNES : ref groupe abx meth site S R charge zit temoin dep conv couv
     #            espece ecoff sdd  — « sdd » est en queue, et n'est écrit que
     #            s'il est vrai : une colonne de undefined partout n'apprend rien.
@@ -238,6 +260,8 @@ def ligne(groupe, code, meth, site, S, R, charge, sdd):
             'undefined,undefined,undefined,undefined,undefined,undefined'
             % (groupe, code, meth, site, js(S), js(R),
                js(charge) if charge else "undefined"))
+    if ns:
+        return base + ",undefined,undefined,true]"
     return base + (",undefined,true]" if sdd else "]")
 
 
@@ -464,8 +488,8 @@ def main():
                 if vide(cS) and vide(cI) and vide(cR) and vide(cSDD):
                     continue
                 try:
-                    S, R, sdd = (borne_cmi if meth == "cmi"
-                                 else borne_disque)(cS, cI, cR, cSDD)
+                    S, R, sdd, ns = (borne_cmi if meth == "cmi"
+                                     else borne_disque)(cS, cI, cR, cSDD)
                 except Refus as e:
                     refus.append((code, nom + " / " + meth, str(e)))
                     continue
@@ -481,8 +505,22 @@ def main():
                 if charge:
                     charge = re.sub(r"\s*(?:µg|μg|units?|U)\s*", "", str(charge)).strip()
                     charge = charge.replace("/", "-")
+                    # UNE CHARGE QUI NE RESSEMBLE PAS À UNE CHARGE ARRÊTE LA
+                    # LIGNE. « 1 μg oxacillin », en table 2G, donnait
+                    # « 1oxacillin » : ce n'est pas un disque de pénicilline
+                    # mais le DÉPISTAGE à l'oxacilline 1 µg, que PhénoBac
+                    # porte déjà sous OXA_PNEUMO. Transcrit tel quel, le
+                    # pneumocoque aurait reçu un diamètre de pénicilline qui
+                    # n'existe pas — et la charge affichée à l'écran aurait
+                    # été un mot collé à un chiffre.
+                    if not re.match(r"^\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?$", charge):
+                        refus.append((code, nom + " / " + meth,
+                                      "charge de disque illisible : « %s » — "
+                                      "ce n'est probablement pas un disque de "
+                                      "cette molécule" % ld.get("charge")))
+                        continue
                 for g in groupes:
-                    sorties.append(ligne(g, code, meth, site, S, R, charge, sdd))
+                    sorties.append(ligne(g, code, meth, site, S, R, charge, sdd, ns))
 
         # DEUX LIGNES POUR LE MÊME COUPLE SONT UNE DISTINCTION PERDUE.
         # La table 2A-2 porte DEUX ciprofloxacines : l'une pour Salmonella

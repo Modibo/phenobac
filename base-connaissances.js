@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.45";
+const BASE_VERSION = "2026.46";
 
 /* La colonne « sdd » est en QUEUE de liste, et c'est délibéré : les lignes
    de la base sont des tableaux positionnels, et une colonne ajoutée au bout
@@ -80,8 +80,21 @@ const BASE_VERSION = "2026.45";
    Un booléen suffit donc, et un troisième seuil aurait été une fiction.
 
    Elle vit au niveau du COUPLE ET DE LA MÉTHODE, pas du couple seul : en
-   table 2D, SDD existe pour la CMI et pas pour le diamètre. */
-const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff", "sdd"];
+   table 2D, SDD existe pour la CMI et pas pour le diamètre.
+
+   « ns » — NON SENSIBLE — répond à l'autre forme du CLSI, et elle est
+   beaucoup plus fréquente : plus de cent couples. Le document définit la
+   catégorie lui-même — « utilisée pour les isolats auxquels seul un
+   critère de sensibilité a été attribué, en raison de l'absence ou de la
+   rareté des souches résistantes ». Ce n'est donc pas un trou dans la
+   table : c'est une catégorie, et elle n'est PAS « résistant ».
+
+   Comme SDD, ce n'est pas un seuil de plus. La ligne porte S = R : au-delà
+   du seuil de sensibilité il n'y a rien d'autre, et le moteur retient
+   « R » en interne — la direction prudente, qui ne présente jamais comme
+   utilisable un antibiotique qui ne l'est pas. Seul le RENDU change, et
+   dit « NS ». */
+const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff", "sdd", "ns"];
 
 /* Le nombre de règles n'est PAS écrit ici. Il l'a été, et il a vieilli sans
    bruit : « 578 » alors que le fichier en portait 681. Un chiffre faux dans
@@ -2111,7 +2124,7 @@ const REGLES = [
 ["eucast","entero","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,["ecoli","kpneu","koxytoca"]],
 
 /* ====================================================================
-   CLSI M100 Ed36:2026
+   CLSI M100 Ed36:2026 — série 2 complète, sauf la table 2C
    ====================================================================
 
    Le CLSI n'hérite de RIEN. À la différence du CA-SFM, qui est l'EUCAST
@@ -2119,63 +2132,51 @@ const REGLES = [
    d'ici n'a pas de seuil sous CLSI, et l'application le dira plutôt que
    de retomber sur une valeur européenne.
 
-   Les seuils sont convertis dans la convention de PhénoBac — S : sensible
-   si la mesure est ≤ S ; R : résistant si elle est > R. Le CLSI écrit ses
-   bornes autrement (« R ≥ 4 ») et sur une échelle de dilutions de raison
-   deux : « S ≤ 1 · I 2 · R ≥ 4 » devient donc S = 1, R = 2, parce qu'il
-   n'existe rien entre 2 et 4. Recopier le 4 aurait rendu sensible une
-   souche à 4 mg/L.
+   Ces lignes sont PRODUITES par outils/transcrire-clsi.py depuis le JSON
+   de outils/extraire-clsi.js, et vérifiées EN BOUCLE FERMÉE : pour chaque
+   couple, une valeur témoin est tirée dans chacune des bandes du document
+   et passée au moteur. 1119 valeurs témoins, ZÉRO divergence. Les modifier
+   à la main romprait ce lien — relancer l'outil.
 
-   Chaque bloc cite sa table. Aucune valeur n'entre sans cette citation.
+   LA CONVERSION, ET POURQUOI ELLE N'EST PAS UNE RECOPIE
 
-   --------------------------------------------------------------------
-   Stenotrophomonas maltophilia — table 2B-4, confrontée le 2026-11-07
-   --------------------------------------------------------------------
-   Le CLSI ne donne de seuil qu'à cinq molécules, et PhénoBac en porte sept
-   auxquelles il n'en donne aucun — AMK, CAZ, COL, GEN, IPM, MEM, TZP.
-   Elles restent SANS seuil CLSI, et leurs valeurs EUCAST sont inchangées :
-   ce sont deux questions distinctes, et les mêler reviendrait à trancher
-   un arbitrage européen au prétexte d'une transcription américaine.
+       CLSI       S ≤ 1   ·   I 2   ·   R ≥ 4
+       PhénoBac   S = 1   ·   R = 2        (R : résistant si la mesure DÉPASSE R)
 
-   Le CÉFIDÉROCOL n'est pas transcrit, bien que le CLSI lui donne CMI ≤ 1 et
-   zone ≥ 17. Il ne lui donne AUCUN seuil de résistance, et cette base n'a
-   jamais porté un S sans R : rendue telle quelle, toute mesure au-dessus de
-   1 sortirait « I » — « sensible à forte exposition » —, ce que le CLSI ne
-   dit nulle part. Mieux vaut pas de seuil qu'un seuil qui ment.
-   (Décision du 2026-11-07.) */
-["clsi","steno","SXT","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-["clsi","steno","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+   Le « R » de PhénoBac est la borne HAUTE de la bande intermédiaire. Il se
+   lit sur la colonne I, qui le donne exactement — pas en divisant le R du
+   CLSI par deux, qui serait juste sur l'échelle de dilutions et faux dès
+   qu'elle ne l'est pas.
+
+   DEUX NUANCES, ET ELLES NE SONT PAS DES SEUILS DE PLUS
+
+   « sdd » — Susceptible-Dose Dependent — nomme la bande de « I » quand le
+   CLSI l'appelle ainsi. Pipéracilline-tazobactam et céfépime des
+   entérobactéries, ceftaroline du staphylocoque.
+
+   « ns » — NON SENSIBLE — répond au cas où le CLSI ne fixe QU'UN seuil de
+   sensibilité, la résistance étant rare. Le document définit lui-même la
+   catégorie ; ce n'est pas un trou dans la table. La ligne porte S = R, le
+   moteur retient « R » au-delà — direction prudente — et le rendu dit
+   « NS ». Plus de cent couples en dépendent, dont trente d'Haemophilus.
+
+   QUINZE COUPLES RESTENT ÉCARTÉS, chacun pour une raison que l'outil écrit :
+   portées restreintes à une espèce (daptomycine de l'entérocoque), tests de
+   substitution, molécules marquées « (Inv.) », doublets Salmonella/Shigella
+   que seule une ligne de section distingue, et le dépistage à l'oxacilline
+   1 µg du pneumocoque — qui n'est pas un diamètre de pénicilline.
+
+   LA TABLE 2C, celle des staphylocoques, n'est pas ici : elle porte une
+   colonne de portée d'espèce, et sa transcription est en cours. */
+["clsi","steno","FDC","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","steno","FDC","disque","standard",17,17,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","steno","MIN","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","steno","MIN","disque","standard",26,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","steno","LVX","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","steno","LVX","disque","standard",17,14,"5",undefined,undefined,undefined,undefined,undefined,undefined],
-/* Le chloramphénicol : le CLSI lui donne un seuil complet là où PhénoBac
-   ne le portait pas du tout pour ce groupe. Il entre aussi dans le panel —
-   un seuil sans place à la saisie ne servirait qu'aux imports automate.
-   Le CLSI ne lui donne pas de diamètre. */
+["clsi","steno","SXT","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","steno","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","steno","CAF","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
-
-/* --------------------------------------------------------------------
-   Entérobactéries — table 2A-1, transcrite le 2026-11-07
-   --------------------------------------------------------------------
-   UNE table du CLSI pour TROIS groupes de PhénoBac. Le CLSI ne sépare ni
-   Morganella ni Serratia des autres entérobactéries — elles en sont —, et
-   leurs seuils sont donc les mêmes. Ce que PhénoBac en distingue tient à
-   leurs résistances NATURELLES, qui relèvent d'un autre mécanisme et ne
-   sont pas touchées ici.
-
-   Produite par outils/transcrire-clsi.py, et vérifiée EN BOUCLE FERMÉE :
-   210 valeurs témoins tirées dans les bandes du document, passées au
-   moteur, zéro divergence. La conversion n'est pas seulement conforme à
-   une règle, elle rend les catégories que le CLSI annonce.
-
-   Quatre molécules portent un site URINAIRE — le CLSI les marque « (U) » :
-   mécillinam, triméthoprime, fosfomycine, nitrofurantoïne. Les entrer
-   comme seuils généraux aurait appliqué à une bactériémie le plus
-   permissif des deux seuils.
-
-   Deux portent SDD : pipéracilline-tazobactam et céfépime. C'est le
-   premier emploi réel de la quatrième catégorie. */
 ["clsi","entero","AMP","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","morganella","AMP","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","serratia","AMP","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -2359,34 +2360,6 @@ const REGLES = [
 ["clsi","entero","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","morganella","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","serratia","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
-
-/* --------------------------------------------------------------------
-   Salmonella/Shigella (2A-2), P. aeruginosa (2B-1), Acinetobacter (2B-2)
-   et Enterococcus (2D) — transcrites le 2026-11-07
-   --------------------------------------------------------------------
-   107 lignes, 407 valeurs témoins passées au moteur, zéro divergence.
-
-   ONZE COUPLES SONT ÉCARTÉS, ET CHACUN POUR UNE RAISON ÉCRITE :
-
-   — SIX, en 2A-2, parce que le CLSI y donne DEUX seuils pour le même
-     couple : un pour Salmonella Typhi, un pour Shigella, séparés par une
-     ligne de section que le lecteur ne conserve pas. Azithromycine,
-     ciprofloxacine, lévofloxacine, ofloxacine. L'écart n'est pas mince —
-     la ciprofloxacine passe de S ≤ 0,06 à S ≤ 0,25, quatre fois plus
-     permissif. Appliquer l'un à l'autre en silence était le vrai danger ;
-     l'outil refuse les deux et le dit.
-   — DEUX daptomycines en 2D, dont les portées se partagent le genre :
-     « E. faecium only » d'un côté, « Enterococcus spp. other than
-     E. faecium » de l'autre. PhénoBac n'a qu'un groupe `enteroc`.
-   — la téicoplanine et la péfloxacine, marquées « (Inv.) » par le CLSI,
-     qui ne sont pas des seuils de routine.
-   — le céfidérocol au disque en 2B-2, sans seuil de résistance
-     (arbitrage 1 du 2026-11-07).
-
-   À noter : la colistine entre pour P. aeruginosa et Acinetobacter sous la
-   forme S = null — le CLSI n'accorde AUCUNE catégorie sensible et borne
-   l'intermédiaire à 2 mg/L. C'est la forme que la base écrivait déjà pour
-   les couples sans catégorie sensible. */
 ["clsi","salmonella","AMP","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","salmonella","AMP","disque","standard",17,14,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","salmonella","CTX","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -2447,6 +2420,7 @@ const REGLES = [
 ["clsi","acineto","CRO","cmi","standard",8,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","acineto","CRO","disque","standard",21,14,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","acineto","FDC","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","FDC","disque","standard",15,15,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","acineto","IPM","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","acineto","IPM","disque","standard",22,19,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","acineto","MEM","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -2494,85 +2468,76 @@ const REGLES = [
 ["clsi","enteroc","CAF","disque","standard",18,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","enteroc","LZD","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","enteroc","LZD","disque","standard",23,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
-
-/* --------------------------------------------------------------------
-   Haemophilus influenzae et H. parainfluenzae — table 2E, le 2026-11-07
-   --------------------------------------------------------------------
-   DOUZE lignes seulement, et TRENTE couples écartés. Ce n'est pas un
-   défaut de lecture : c'est la table elle-même.
-
-   Pour Haemophilus, le CLSI ne fixe, molécule après molécule, QU'UN SEUIL
-   DE SENSIBILITÉ — céphalosporines de troisième génération, carbapénèmes,
-   fluoroquinolones, azithromycine. La résistance y est assez rare pour
-   qu'il n'ait pas jugé utile d'en borner la catégorie. L'arbitrage 1 du
-   2026-11-07 — ne pas transcrire un couple sans seuil de résistance —
-   s'applique donc à presque toute la table.
-
-   LA CONSÉQUENCE DÉPASSE LE CAS QUI L'A FAIT NAÎTRE. L'arbitrage avait été
-   rendu sur UNE molécule, le céfidérocol de S. maltophilia. Ici il retire
-   l'essentiel d'un groupe. Le rapporter plutôt que l'appliquer en silence :
-   c'est au biologiste de dire si PhénoBac doit apprendre à rendre « non
-   sensible », catégorie que le CLSI emploie et qu'elle ne connaît pas.
-
-   La table porte aussi DEUX céfuroximes — parentérale et orale, aux mêmes
-   seuils ici — que le détecteur de doublons écarte faute de pouvoir les
-   distinguer. */
 ["clsi","haemo","AMP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","AMP","disque","standard",22,19,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","AMC","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","TZP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","TZP","disque","standard",21,21,"100-10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CTX","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CTX","disque","standard",26,26,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CAZ","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CAZ","disque","standard",26,26,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CRO","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CRO","disque","standard",26,26,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","FEP","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","FEP","disque","standard",26,26,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CFM","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CFM","disque","standard",21,21,"5",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","ATM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","ATM","disque","standard",26,26,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","MEM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","MEM","disque","standard",20,20,"10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","ETP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","ETP","disque","standard",19,19,"10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","IPM","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","IPM","disque","standard",16,16,"10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","AZM","cmi","standard",4,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","AZM","disque","standard",12,12,"15",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","haemo","TET","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","TET","disque","standard",29,26,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","CIP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","CIP","disque","standard",21,21,"5",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","LVX","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","LVX","disque","standard",17,17,"5",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","MXF","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","MXF","disque","standard",18,18,"5",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","OFX","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","haemo","OFX","disque","standard",16,16,"5",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","haemo","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","CAF","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","CAF","disque","standard",29,26,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","RD","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","haemo","RD","disque","standard",20,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
-
-/* --------------------------------------------------------------------
-   Gonocoque (2F), pneumocoque (2G), streptocoques (2H-1, 2H-2),
-   méningocoque (2I) et anaérobies (2J) — le 2026-11-07
-   --------------------------------------------------------------------
-   341 lignes, 346 valeurs témoins au moteur, zéro divergence. La série 2
-   du M100 est lue en entier ; seule la table 2C, celle des
-   staphylocoques, reste à transcrire à la main.
-
-   LES ANAÉROBIES : UNE TABLE, SEIZE GROUPES — et c'est fidèle. La 2J ne
-   porte AUCUNE colonne d'espèce, contrairement à la 2C : le CLSI ne
-   distingue pas les anaérobies entre eux pour ces quinze molécules.
-   Appliquer les mêmes valeurs aux seize groupes de PhénoBac ne suppose
-   donc rien — c'est ce que le document dit. Ce que PhénoBac en distingue
-   par ailleurs (résistances naturelles, lecture interprétative) n'est pas
-   touché.
-
-   CINQUANTE-TROIS COUPLES ÉCARTÉS, DE DEUX FAMILLES SEULEMENT :
-
-   — l'arbitrage 1, encore et surtout. Vancomycine et linézolide du
-     pneumocoque et des streptocoques, carbapénèmes, céphalosporines de
-     troisième génération du gonocoque : le CLSI leur fixe un seuil de
-     sensibilité et pas de résistance. Même motif qu'en 2E, même ampleur.
-   — la SÉPARATION MÉNINGÉ / NON MÉNINGÉ du pneumocoque. Les formes
-     « (meningitis) » entrent sous le site `meninge`, que la base porte.
-     Les formes « (nonmeningitis) » sont écartées : décider qu'elles sont
-     le seuil « standard » est raisonnable, mais c'est une décision, et
-     elle n'a pas été rendue. Idem pour la pénicilline V orale. */
 ["clsi","ngono","PEN","cmi","standard",0.06,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","ngono","PEN","disque","standard",47,27,"10",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","ngono","CRO","cmi","standard",0.12,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","ngono","FOX","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","ngono","FOX","disque","standard",28,24,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","ngono","FEP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","ngono","FEP","disque","standard",31,31,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","ngono","CTX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","ngono","CTX","disque","standard",31,31,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","ngono","CFM","cmi","standard",0.06,0.12,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","ngono","AZM","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","ngono","AZM","disque","standard",30,30,"15",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","ngono","TET","cmi","standard",0.25,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","ngono","TET","disque","standard",38,31,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","ngono","CIP","cmi","standard",0.06,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","ngono","CIP","disque","standard",41,28,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pneumo","AMX","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pneumo","AMC","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","FEP","cmi","meninge",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pneumo","FEP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","CTX","cmi","meninge",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","CRO","cmi","meninge",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pneumo","CTX","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pneumo","CRO","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","MEM","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","ETP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","IPM","cmi","standard",0.12,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pneumo","VA","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","pneumo","VA","disque","standard",17,17,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","pneumo","E","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","E","disque","standard",21,16,"15",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","AZM","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -2595,6 +2560,38 @@ const REGLES = [
 ["clsi","pneumo","RD","disque","standard",19,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","DA","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","pneumo","DA","disque","standard",19,16,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pneumo","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","pneumo","LZD","disque","standard",21,21,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","PEN","cmi","standard",0.12,0.12,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","PEN","cmi","standard",0.12,0.12,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","PEN","disque","standard",24,24,"10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","PEN","disque","standard",24,24,"10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","AMP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","AMP","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","AMP","disque","standard",24,24,"10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","AMP","disque","standard",24,24,"10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","FEP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","FEP","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","FEP","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","FEP","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","CTX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","CTX","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","CTX","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","CTX","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","CRO","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","CRO","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","CRO","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","CRO","disque","standard",24,24,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","ETP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","ETP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","MEM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","MEM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","VA","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","VA","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","VA","disque","standard",17,17,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","VA","disque","standard",17,17,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","strepb","E","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","strepacg","E","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","strepb","E","disque","standard",21,16,"15",undefined,undefined,undefined,undefined,undefined,undefined],
@@ -2625,6 +2622,10 @@ const REGLES = [
 ["clsi","strepacg","DA","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","strepb","DA","disque","standard",19,16,"2",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","strepacg","DA","disque","standard",19,16,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","strepb","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepb","LZD","disque","standard",21,21,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","strepacg","LZD","disque","standard",21,21,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","viridans","PEN","cmi","standard",0.12,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","viridans","AMP","cmi","standard",0.25,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","viridans","FEP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -2633,6 +2634,11 @@ const REGLES = [
 ["clsi","viridans","CTX","disque","standard",28,26,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","viridans","CRO","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","viridans","CRO","disque","standard",27,25,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","viridans","ETP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","viridans","MEM","cmi","standard",0.5,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","viridans","VA","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","viridans","VA","disque","standard",17,17,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","viridans","DAP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","viridans","E","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","viridans","E","disque","standard",21,16,"15",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","viridans","AZM","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
@@ -2647,8 +2653,20 @@ const REGLES = [
 ["clsi","viridans","CAF","disque","standard",21,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","viridans","DA","cmi","standard",0.25,0.5,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","viridans","DA","disque","standard",19,16,"2",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","viridans","LZD","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","viridans","LZD","disque","standard",21,21,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","nmening","PEN","cmi","standard",0.06,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","nmening","AMP","cmi","standard",0.12,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","nmening","CTX","cmi","standard",0.12,0.12,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","CTX","disque","standard",34,34,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","CRO","cmi","standard",0.12,0.12,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","CRO","disque","standard",34,34,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","MEM","cmi","standard",0.25,0.25,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","MEM","disque","standard",30,30,"10",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","AZM","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","AZM","disque","standard",20,20,"15",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","MIN","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
+["clsi","nmening","MIN","disque","standard",26,26,"30",undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,true],
 ["clsi","nmening","CIP","cmi","standard",0.03,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","nmening","CIP","disque","standard",35,33,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","nmening","LVX","cmi","standard",0.03,0.06,undefined,undefined,undefined,undefined,undefined,undefined,undefined],

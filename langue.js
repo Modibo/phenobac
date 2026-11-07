@@ -119,6 +119,13 @@ const C = {
      méconnaissable. Seule la glose change de langue. */
   "cat.I.clsi":            { fr: "Sensible à forte posologie (SDD)", en: "Susceptible-dose dependent" },
   "cat.I.clsi.sigle":      { fr: "SDD", en: "SDD", meme: true },
+  /* « Non sensible » est une catégorie du CLSI, et non l'absence d'une
+     catégorie. Le document la définit : elle vaut pour les isolats auxquels
+     seul un critère de SENSIBILITÉ a été attribué, la résistance étant rare.
+     La glose dit qu'il faut confirmer — ne pas la réduire à « résistant ». */
+  "cat.R.clsi.ns":         { fr: "Non sensible — à confirmer (le CLSI ne fixe pas de seuil de résistance)",
+                             en: "Nonsusceptible — needs confirmation (CLSI sets no resistance breakpoint)" },
+  "cat.R.clsi.ns.sigle":   { fr: "NS", en: "NS", meme: true },
   "cat.nonteste":          { fr: "Non testé", en: "Not tested" },
   "cat.noncategorise":     { fr: "Non catégorisé", en: "Not categorised" },
   "zit.nom":               { fr: "Zone d'incertitude technique", en: "Area of Technical Uncertainty" },

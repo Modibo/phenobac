@@ -1,14 +1,22 @@
 /* ============================================================
-   essai-sdd.js — SDD, la quatrième catégorie du CLSI
+   essai-nuances.js — SDD et NS, les catégories que le CLSI nomme
+   autrement qu'il ne les calcule
 
    CE QUE CE BANC PROTÈGE
 
-   SDD n'est pas une catégorie de plus dans le moteur : c'est un NOM donné
-   à la bande qui s'appelle « I » partout ailleurs. Le choix tient à une
-   mesure — sur les seize tables de seuils du M100, les colonnes SDD et I
-   coexistent dans quatre tables, mais jamais pour un même agent — et il
-   évite de relire les cinquante endroits où le moteur et la page comparent
-   une catégorie à « I ».
+   NI SDD NI NS ne sont des catégories de plus dans le moteur : ce sont des
+   NOMS donnés à des bandes qui s'appellent autrement partout ailleurs.
+
+     SDD  occupe la bande de « I ». Mesuré : sur les seize tables de seuils
+          du M100, les colonnes SDD et I coexistent dans quatre tables, mais
+          jamais pour un même agent.
+     NS   occupe celle de « R », qui est la direction prudente — on ne
+          présente jamais comme utilisable un antibiotique que le document
+          ne dit pas tel. Le CLSI emploie cette catégorie quand il n'a fixé
+          QU'UN seuil de sensibilité : plus de cent couples.
+
+   Le choix évite de relire les cinquante endroits où le moteur et la page
+   comparent une catégorie à « I » ou à « R ».
 
    Ce choix a un coût, et c'est lui que ce banc surveille : le nom se décide
    AILLEURS que la catégorie. Si les deux se désaccordent, une molécule
@@ -21,16 +29,18 @@
         existe pour la CMI et pas pour le diamètre ;
      2. il ne se déclenche QUE sur la bande intermédiaire — jamais sur un
         « S » ni sur un « R » ;
-     3. CHAQUE appel de lettreCat() et libelleCat() dans phenobac.html passe
+     3. NS ne se confond pas avec R, ni dans la lettre ni dans la glose :
+        « non sensible » veut dire « à confirmer », pas « inactif ».
+     4. CHAQUE appel de lettreCat() et libelleCat() dans phenobac.html passe
         le code de l'antibiotique. C'est un contrôle de SOURCE, et il est ici
         parce que le défaut qu'il attrape est muet : un appel qui l'oublie
         rend « I » là où ses voisins rendent « SDD », et le compte rendu se
         contredit lui-même d'une ligne à l'autre. Onze appels existaient ;
         trois seulement avaient le code sous la main au premier jet.
 
-   Avec Node :             node outils/essai-sdd.js
+   Avec Node :             node outils/essai-nuances.js
    Sans Node, sur macOS :  /System/Library/Frameworks/JavaScriptCore.framework/\
-                             Versions/A/Helpers/jsc outils/essai-sdd.js
+                             Versions/A/Helpers/jsc outils/essai-nuances.js
 
    À lancer depuis la racine du dépôt.
    ============================================================ */
@@ -75,9 +85,9 @@ function verif(cond, titre) {
 /* ---------- 1. la colonne existe, et elle est en queue ---------- */
 (function () {
   var C = B.COLONNES;
-  verif(C.indexOf("sdd") === C.length - 1,
-        "« sdd » est la DERNIÈRE colonne — l'insérer ailleurs décalerait "
-        + "chaque valeur des lignes existantes, en silence");
+  verif(C.indexOf("ns") === C.length - 1 && C.indexOf("sdd") === C.length - 2,
+        "« sdd » puis « ns » ferment la liste des colonnes — les insérer "
+        + "ailleurs décalerait chaque valeur des lignes existantes, en silence");
 })();
 
 /* ---------- 2. le drapeau, la bande, et la méthode ---------- */
@@ -96,37 +106,56 @@ function verif(cond, titre) {
     return E.runInterpretation(e);
   }
 
+  // NS : le CLSI ne fixe qu'un seuil de sensibilité. La ligne porte S = R,
+  // et tout ce qui dépasse est « R » en interne, « NS » au rendu.
+  E.BP_CLSI.entero.CRO = { S: 1, R: 1, ns: true };
+
   var r = lire("mic", { AMP: "16", GEN: "4" });
   verif(r.categories.AMP === "I",
         "la bande intermédiaire reste « I » dans categories — le moteur garde "
         + "son alphabet S / I / R");
-  verif((r.sdd || []).indexOf("AMP") >= 0,
-        "… et le couple est nommé dans sdd : c'est lui qui porte le nom");
-  verif((r.sdd || []).indexOf("GEN") < 0,
+  verif((r.nuances || {}).AMP === "SDD",
+        "… et la nuance le nomme : c'est elle qui porte le nom, pas la catégorie");
+  verif(!(r.nuances || {}).GEN,
         "un couple SANS drapeau n'y figure pas, à bande intermédiaire égale");
 
   var s = lire("mic", { AMP: "2" });
-  verif(s.categories.AMP === "S" && (s.sdd || []).indexOf("AMP") < 0,
+  verif(s.categories.AMP === "S" && !(s.nuances || {}).AMP,
         "sur la bande sensible, aucun SDD — le drapeau ne qualifie que "
         + "l'intermédiaire");
 
   var t = lire("mic", { AMP: "64" });
-  verif(t.categories.AMP === "R" && (t.sdd || []).indexOf("AMP") < 0,
+  verif(t.categories.AMP === "R" && !(t.nuances || {}).AMP,
         "sur la bande résistante non plus");
 
   // LE POINT QUI COMPTE : le drapeau est porté par la méthode.
   var d = lire("diam", { AMP: "16" });
   verif(d.categories.AMP === "I",
         "par disque, le même couple tombe bien dans la bande intermédiaire");
-  verif((d.sdd || []).indexOf("AMP") < 0,
+  verif(!(d.nuances || {}).AMP,
         "… et n'est PAS SDD : le seuil de diamètre ne porte pas le drapeau. "
         + "En table 2D du M100, SDD existe pour la CMI et pas pour le disque");
 
   // Pas de reliquat d'une lecture à l'autre.
   var u = lire("mic", { GEN: "4" });
-  verif((u.sdd || []).indexOf("AMP") < 0,
-        "sdd est vidé entre deux lectures — un reliquat rendrait « SDD » "
-        + "une molécule de la lecture précédente");
+  verif(!(u.nuances || {}).AMP,
+        "la table des nuances est remplacée entre deux lectures — un "
+        + "reliquat rendrait « SDD » une molécule de la lecture précédente");
+
+  // ---- NS ----
+  var ns1 = lire("mic", { CRO: "0.5" });
+  verif(ns1.categories.CRO === "S" && !(ns1.nuances || {}).CRO,
+        "sous le seuil de sensibilité, un couple NS est simplement « S »");
+  var ns2 = lire("mic", { CRO: "8" });
+  verif(ns2.categories.CRO === "R",
+        "au-dessus, le moteur retient « R » — la direction prudente : on ne "
+        + "présente jamais comme utilisable ce que le document ne dit pas tel");
+  verif((ns2.nuances || {}).CRO === "NS",
+        "… et la nuance dit « NS », parce que le CLSI ne dit pas « résistant »");
+  var ns3 = lire("mic", { GEN: "16" });
+  verif(ns3.categories.GEN === "R" && !(ns3.nuances || {}).GEN,
+        "un vrai « R », lui, n'est pas nuancé : NS ne déteint pas sur ses voisins");
+  delete E.BP_CLSI.entero.CRO;
 
   delete E.BP_CLSI.entero; delete E.DZ_CLSI.entero; delete E.DISQUE_CLSI.entero;
   E.cadrer("eucast", null);
@@ -178,16 +207,16 @@ function verif(cond, titre) {
   var m, total = 0, sans = [];
   while ((m = re.exec(src)) !== null) {
     total++;
-    if (!/\bsdd\s*:/.test(m[0])) sans.push(m[0].replace(/\s+/g, " ").slice(0, 70));
+    if (!/\bnuances\s*:/.test(m[0])) sans.push(m[0].replace(/\s+/g, " ").slice(0, 70));
   }
   verif(total >= 2, "les deux chemins d'interprétation sont vus (" + total + ")");
   verif(sans.length === 0,
-        "chaque objet de résultat transporte sdd avec ses catégories"
+        "chaque objet de résultat transporte les nuances avec ses catégories"
         + (sans.length ? " — sans : " + sans.join(" | ") : ""));
 
-  var aff = src.match(/SDD_ACTIF\s*=/g) || [];
+  var aff = src.match(/\bNUANCES\s*=/g) || [];
   verif(aff.length === 2,
-        "SDD_ACTIF n'est affecté qu'une fois, après les deux branches "
+        "NUANCES n'est affectée qu'une fois, après les deux branches "
         + "(plus sa déclaration) — trouvé " + aff.length);
 })();
 
@@ -212,6 +241,9 @@ function verif(cond, titre) {
 (function () {
   var src = lireFichier("langue.js");
   verif(/"cat\.I\.clsi"/.test(src), "« cat.I.clsi » existe dans le catalogue");
+  verif(/"cat\.R\.clsi\.ns"/.test(src), "« cat.R.clsi.ns » aussi");
+  verif(/Nonsusceptible/.test(src),
+        "et le terme anglais de NS est celui du CLSI");
   var m = src.match(/"cat\.I\.clsi":\s*\{([^}]*)\}/);
   verif(!!m && /fr:/.test(m[1]) && /en:/.test(m[1]),
         "… et il porte le français ET l'anglais");
@@ -220,6 +252,7 @@ function verif(cond, titre) {
 })();
 
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " vérifications."
-                : OK + " vérifications, SDD se nomme où il faut et nulle part ailleurs."));
+                : OK + " vérifications, les nuances se nomment où il faut et "
+                  + "nulle part ailleurs."));
 if (KO && typeof process === "object" && process.exit) process.exit(1);
 if (KO) throw new Error(KO + " échec(s)");

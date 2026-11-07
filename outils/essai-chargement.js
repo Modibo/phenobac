@@ -47,7 +47,7 @@ if (typeof readFile !== "function") {
   var BANCS = ["anaerobies", "banque", "categorisation", "coherence",
                "commentaire", "conditions", "contexte", "debit", "diametres",
                "especes-aerobies", "glass", "langue", "posologie",
-               "referentiel", "regles", "rendu-cible", "sdd",
+               "referentiel", "regles", "nuances", "rendu-cible",
                "service-worker", "voies"];
   var vraiLire = readFile, KO = 0, OK = 0, modules = {};
 

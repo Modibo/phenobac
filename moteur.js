@@ -444,6 +444,7 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
   function seuilDe(r) {
     const o = { S: r.S, R: r.R };
     if (r.sdd) o.sdd = true;
+    if (r.ns) o.ns = true;
     return o;
   }
 
@@ -813,18 +814,29 @@ let _activeOrg = null;
 let _activeId = null;
 // Couples tombant dans la zone d'incertitude technique pour la requête en cours.
 let _zit = [];
-/* Les couples dont la bande intermédiaire s'appelle SDD pour CETTE lecture.
-   Le moteur garde son alphabet S / I / R : SDD occupe la même bande que « I »
-   et n'entraîne aucun raisonnement différent, puisque c'est la même bande.
+/* LES NUANCES : ce que la catégorie s'appelle, quand elle ne s'appelle pas
+   comme elle se calcule. Une table { AMX: "SDD", CRO: "NS" } pour la lecture
+   en cours.
+
+   Le moteur garde son alphabet S / I / R. SDD occupe la même bande que « I »
+   et n'entraîne aucun raisonnement différent, puisque c'est la même bande ;
+   NS occupe celle de « R », qui est la direction prudente — on ne présente
+   jamais comme utilisable un antibiotique que le document ne dit pas tel.
    Seul le NOM change, et il change au rendu.
 
    Ce choix n'est pas une facilité. Les cinquante endroits où le moteur et la
-   page comparent une catégorie à « I » auraient dû être revus un à un, et
-   celui qu'on aurait oublié aurait rendu une molécule inactive sans que rien
-   ne le dise. Le dépôt porte déjà le même mécanisme pour le CA-SFM, qui rend
-   « I » sous le sigle « SFP » : la lettre reste « I » en interne, seul le
-   rendu change. SDD suit le chemin déjà éprouvé. */
-let _sdd = [];
+   page comparent une catégorie à « I » ou à « R » auraient dû être revus un
+   à un, et celui qu'on aurait oublié aurait rendu une molécule inactive sans
+   que rien ne le dise. Le dépôt porte déjà le même mécanisme pour le CA-SFM,
+   qui rend « I » sous le sigle « SFP » : la lettre reste « I » en interne,
+   seul le rendu change.
+
+   UNE SEULE TABLE, ET NON UNE PAR NUANCE. SDD est arrivé seul ; NS trois
+   heures plus tard. Deux tableaux parallèles auraient été la même chose
+   écrite à deux endroits — et la troisième nuance aurait fait un troisième
+   tableau, avec un endroit de plus à oublier dans le transport jusqu'à la
+   page. */
+let _nuances = {};
 let _sansDisque = [];
 /* ET SON JUMEAU POUR LES CMI, qui manquait.
    _sansDisque existe depuis longtemps : un diamètre mesuré que le moteur ne
@@ -4673,6 +4685,14 @@ function heriteEucast() {
 /* Le référentiel actif porte-t-il la moindre valeur ? Un référentiel inerte
    ne doit pas se proposer à l'écran : un laboratoire qui le choisirait
    n'obtiendrait aucune catégorie sur aucun antibiotique. */
+/* Le nom que porte CETTE catégorie pour CE couple. Un seul endroit décide,
+   et il décide pour les deux nuances : ajouter la troisième ne demandera ni
+   un tableau de plus, ni un transport de plus jusqu'à la page. */
+function nuancer(k, cat, seuil) {
+  if (cat === "I" && seuil.sdd) _nuances[k] = "SDD";
+  else if (cat === "R" && seuil.ns) _nuances[k] = "NS";
+}
+
 function referentielPeuple(cle) {
   const t = { eucast: BP, casfm: BP_CASFM, clsi: BP_CLSI }[cle];
   return !!(t && Object.keys(t).length);
@@ -5797,7 +5817,7 @@ function runInterpretation(input) {
   // diamètres CA-SFM en dépend.
   let results = {};
   _zit = [];
-  _sdd = [];
+  _nuances = {};
   _sansDisque = [];
   _sansCmi = [];
   _lectureDisque = [];
@@ -5823,7 +5843,7 @@ function runInterpretation(input) {
       }
       const bpK = getBP(input.bpOverride || {}, org.bpGroup, k, input.ctx || {});
       const cat = catFromMic(mic[k], bpK);
-      if (cat === "I" && bpK && bpK.sdd) _sdd.push(k);
+      if (bpK) nuancer(k, cat, bpK);
       if (cat) results[k] = cat;
       /* Une CMI saisie que le moteur ne peut pas traduire ne doit PAS
          disparaître : le biologiste croirait l'antibiotique non testé alors
@@ -5852,7 +5872,7 @@ function runInterpretation(input) {
       // Le drapeau est porté par le seuil de CETTE méthode : en table 2D du
       // M100, SDD existe pour la CMI et pas pour le diamètre. Le lire sur le
       // couple seul inventerait un SDD par disque là où le CLSI n'en donne pas.
-      if (cat === "I" && dz && dz.sdd) _sdd.push(k);
+      if (dz) nuancer(k, cat, dz);
       if (seuilDep) {
         const p = parseDiam(dia[k]);
         // Au-dessus du seuil, le dépistage conclut « sensible ». En dessous,
@@ -5964,11 +5984,11 @@ function runInterpretation(input) {
   // place de l'autre — sans quoi on masquerait au biologiste ce qu'il a lu.
   const rendues = Object.assign({}, results);
   (A.rendu || []).forEach(x => { rendues[x.abx] = x.rendu; });
-  /* `sdd` ne double PAS `categories` : il la qualifie. Un code qui y figure
-     porte « I » dans `categories`, et doit être RENDU « SDD ». Les deux
-     ensembles se lisent donc ensemble, jamais l'un sans l'autre. */
+  /* `nuances` ne double PAS `categories` : elle la qualifie. Un code qui y
+     figure porte « I » ou « R » dans `categories`, et doit être RENDU « SDD »
+     ou « NS ». Les deux se lisent ensemble, jamais l'une sans l'autre. */
   return { interpretation: A, categories: results, rendues: rendues,
-           sdd: _sdd.slice(), referentiel: REFERENTIELS[_ref] };
+           nuances: Object.assign({}, _nuances), referentiel: REFERENTIELS[_ref] };
 }
 
 /* ======================= Ce que le fichier expose =======================

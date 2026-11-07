@@ -32,9 +32,9 @@
 //   valid, plan,
 //   interpretation: { sev, name, mech, alerts, rules, comment, rendu, ... },
 //   categories,                     // catégorie retenue par antibiotique
-//   sdd,                            // ceux dont la bande intermédiaire se
-//                                   // nomme SDD — ils portent « I » dans
-//                                   // categories, et se RENDENT « SDD »
+//   nuances,                        // { code: "SDD" | "NS" } — ce que la
+//                                   // catégorie s'appelle quand elle ne
+//                                   // s'appelle pas comme elle se calcule
 //   rendues,                        // catégories modifiées par la lecture interprétative
 //   referentiel                     // référentiel réellement appliqué
 // }
@@ -118,7 +118,7 @@ exports.handler = async (event) => {
   return {
     statusCode: 200,
     headers: CORS,
-    body: JSON.stringify({ valid: true, plan: (lic.valid && !revoked) ? lic.plan : "free", interpretation: out.interpretation, categories: out.categories, sdd: out.sdd, rendues: out.rendues, referentiel: out.referentiel || REFERENTIEL })
+    body: JSON.stringify({ valid: true, plan: (lic.valid && !revoked) ? lic.plan : "free", interpretation: out.interpretation, categories: out.categories, nuances: out.nuances, rendues: out.rendues, referentiel: out.referentiel || REFERENTIEL })
   };
 };
 

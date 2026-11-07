@@ -2802,22 +2802,40 @@ function refLibelle(){
    moteur garde donc son alphabet S / I / R, et nomme à part les couples
    concernés ; seul le rendu change, comme pour « SFP ».
 
-   SDD_ACTIF est renseigné à chaque interprétation, depuis le champ `sdd` du
-   moteur. Il est vidé entre deux lectures : un reliquat ferait rendre « SDD »
-   une molécule d'un autre référentiel. */
-let SDD_ACTIF = new Set();
-function estSDD(abx){ return abx !== undefined && SDD_ACTIF.has(abx); }
+   NUANCES est renseignée à chaque interprétation, depuis le champ `nuances`
+   du moteur. Elle est remplacée entre deux lectures : un reliquat ferait
+   rendre « SDD » ou « NS » une molécule d'un autre référentiel.
+
+   « NS » — non sensible — suit le même chemin, mais sur l'autre bande : le
+   CLSI l'emploie quand il n'a fixé QU'UN seuil de sensibilité. Le moteur
+   retient « R », direction prudente ; l'écran dit « NS », parce que le
+   document ne dit pas « résistant ». */
+let NUANCES = {};
+function nuanceDe(abx){ return abx === undefined ? null : (NUANCES[abx] || null); }
 
 function lettreCat(cat, abx){
-  if(cat!=="I") return cat;
-  if(estSDD(abx)) return "SDD";
-  return estCasfm() ? "SFP" : cat;
+  const n = nuanceDe(abx);
+  if(cat==="I") return n === "SDD" ? "SDD" : (estCasfm() ? "SFP" : cat);
+  if(cat==="R") return n === "NS" ? "NS" : cat;
+  return cat;
 }
 function libelleCat(cat, abx){
+  const n = nuanceDe(abx);
   if(cat==="S") return T("Sensible","Susceptible");
-  if(cat==="R") return T("Résistant","Resistant");
+  if(cat==="R"){
+    /* « NON SENSIBLE » N'EST PAS « RÉSISTANT », et la glose doit le dire.
+       Le CLSI emploie cette catégorie quand il n'a fixé QU'UN seuil de
+       sensibilité, la résistance étant rare : au-dessus, on ne sait pas si
+       la souche est intermédiaire ou résistante, et il faut confirmer.
+       Le moteur retient « R » parce que c'est la direction prudente ;
+       l'écran, lui, ne doit pas faire dire au document plus qu'il ne dit. */
+    if(n === "NS")
+      return T("Non sensible — à confirmer (le CLSI ne fixe pas de seuil de résistance)",
+               "Nonsusceptible — needs confirmation (CLSI sets no resistance breakpoint)");
+    return T("Résistant","Resistant");
+  }
   if(cat==="I"){
-    if(estSDD(abx))
+    if(n === "SDD")
       return T("Sensible à forte posologie (SDD)","Susceptible-dose dependent");
     return estCasfm()
       ? T("Sensible à forte posologie","Susceptible, increased dosage")
@@ -5462,7 +5480,7 @@ async function interpretRemote(payload){
   // et seulement là, ce qui est la pire des pannes : elle ne se montre pas
   // sur le poste du développeur, qui a toujours le moteur local.
   return { interpretation:data.interpretation, categories:data.categories,
-           sdd:data.sdd };
+           nuances:data.nuances };
 }
 
 /* L'interprétation a lieu ICI, sur le poste.
@@ -5502,7 +5520,7 @@ async function renderInterpretRemote(){
       const out = moteur.runInterpretation(envoi);
       if(out.error) throw new Error("espèce inconnue du moteur : " + envoi.organism);
       res = { interpretation: out.interpretation, categories: out.categories,
-              sdd: out.sdd };
+              nuances: out.nuances };
     } else {
       // moteur.js absent du cache ou bloqué : on interroge le serveur, qui
       // exécute le même fichier. Le résultat est le même, le délai non.
@@ -5530,12 +5548,12 @@ async function renderInterpretRemote(){
     // Catégories faisant foi : dès qu'une mesure est saisie, c'est le serveur
     // qui traduit, et l'affichage s'aligne sur lui. La traduction locale n'est
     // qu'un aperçu immédiat, jamais l'autorité.
-    /* SDD_ACTIF se pose ICI, après les DEUX branches, et nulle part ailleurs.
-       Posé dans la branche locale, il manquait au chemin serveur — une panne
-       invisible sur le poste du développeur, qui a toujours le moteur local.
-       Vidé puis rempli, jamais complété : un reliquat ferait rendre « SDD »
-       une molécule de la lecture précédente. */
-    SDD_ACTIF = new Set(res.sdd || []);
+    /* NUANCES se pose ICI, après les DEUX branches, et nulle part ailleurs.
+       Posée dans la branche locale, elle manquait au chemin serveur — une
+       panne invisible sur le poste du développeur, qui a toujours le moteur
+       local. Remplacée, jamais complétée : un reliquat ferait rendre « SDD »
+       ou « NS » une molécule de la lecture précédente. */
+    NUANCES = res.nuances || {};
     if(mesure && res.categories){ state.results = res.categories; renderAbx(); }
     const A = res.interpretation;
     setLive(A); state.lastA=A;

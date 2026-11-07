@@ -3016,7 +3016,7 @@ l'espèce manquait.
   lues sur le portail gratuit em100.edaptivedocs.net par
   `outils/extraire-clsi.js`, converties par `outils/transcrire-clsi.py`
 - **tables** : BP_CLSI, DZ_CLSI
-- **empreinte** : 4c6d50fa52846d03299f7b2580dad5d629b6ddb8ff70799ee418ac1f97befd95
+- **empreinte** : 6b6773093ea2aacd0b8b2e0a1c04e5424b148b69943e099b32a26c8a5c2a470e
   — **le garde-fou a fonctionné dès son premier usage, puis au second.**
   L'entrée portait d'abord l'empreinte de tables *vides* (`3e3aa844…`),
   armée avant qu'il y ait quoi que ce soit à garder ; les sept lignes de
@@ -3145,6 +3145,47 @@ sensible* », catégorie que le CLSI emploie et qu'elle ne connaît pas.
 pour *Salmonella* Typhi, un pour *Shigella* —, séparés par une ligne de
 section que le lecteur ne garde pas. La ciprofloxacine y passe de S ≤ 0,06
 à S ≤ 0,25 : quatre fois plus permissif. Les deux sont refusés.
+
+### Les trois décisions, rendues le 2026-11-07 — et la série 2 régénérée
+
+Le biologiste a tranché, et deux des trois réponses changent ce qui était
+déjà transcrit. Le bloc CLSI de la base a donc été **régénéré en entier**
+plutôt que rapiécé : 748 lignes, 1 119 valeurs témoins au moteur, zéro
+divergence.
+
+**1. « Non sensible » entre dans PhénoBac.** Le CLSI définit lui-même la
+catégorie — *« pour les isolats auxquels seul un critère de sensibilité a
+été attribué, en raison de l'absence ou de la rareté des souches
+résistantes »*. Ce n'est pas un trou dans la table. **93 lignes** la
+portent désormais, dont presque tout *Haemophilus*.
+
+Le mécanisme est celui de SDD : la ligne porte S = R, le moteur retient
+« R » au-delà du seuil — la direction prudente, qui ne présente jamais
+comme utilisable un antibiotique que le document ne dit pas tel — et le
+rendu dit « NS », avec sa glose : *à confirmer*. Car « non sensible » n'est
+pas « résistant », et l'écran ne doit pas faire dire au document plus qu'il
+ne dit.
+
+Cette décision **lève le refus du céfidérocol** de *S. maltophilia*, qui
+avait été écarté le matin même : il l'était parce que PhénoBac ne savait
+pas l'exprimer.
+
+**2. Les deux nuances n'ont qu'une table.** SDD est arrivé seul, NS trois
+heures plus tard. Deux tableaux parallèles dans le moteur auraient été la
+même chose écrite à deux endroits, et la troisième nuance en aurait fait un
+troisième — avec un endroit de plus à oublier dans le transport jusqu'à la
+page. Une seule table `nuances`, `{ TZP: "SDD", CTX: "NS" }`.
+
+**3. Le pneumocoque : « nonmeningitis » est le site standard.** Vérifié au
+moteur : céfotaxime à 2 mg/L rend « I » hors LCR et « R » dans le LCR. La
+pénicilline V orale reste écartée — PhénoBac ne scinde pas ses seuils par
+voie, et l'ajouter serait une autre décision.
+
+**Un défaut trouvé en régénérant.** La pénicilline du pneumocoque recevait
+un diamètre dont la charge était « 1 μg oxacillin » : ce n'est pas un
+disque de pénicilline, c'est le **dépistage à l'oxacilline 1 µg**, que
+PhénoBac porte déjà sous `OXA_PNEUMO`. Une charge qui ne ressemble pas à
+une charge arrête désormais la ligne — un seul cas sur 748.
 
 ### Troisième passe — 2F, 2G, 2H-1, 2H-2, 2I, 2J, le 2026-11-07
 
