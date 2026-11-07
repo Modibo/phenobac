@@ -3011,11 +3011,12 @@ l'espèce manquait.
 
 ## comparer-clsi.py — première confrontation au M100, le 2026-11-07
 
-- **document** : CLSI M100 Ed36:2026, tables 2A-1, 2A-2, 2B-1, 2B-2, 2B-4,
-  2D et 2E, lues sur le portail gratuit em100.edaptivedocs.net par
+- **document** : CLSI M100 Ed36:2026, **toute la série 2 sauf la 2C** —
+  2A-1, 2A-2, 2B-1, 2B-2, 2B-4, 2B-5, 2D, 2E, 2F, 2G, 2H-1, 2H-2, 2I, 2J —
+  lues sur le portail gratuit em100.edaptivedocs.net par
   `outils/extraire-clsi.js`, converties par `outils/transcrire-clsi.py`
 - **tables** : BP_CLSI, DZ_CLSI
-- **empreinte** : 976b1adda0c7cc3335cb5f38ce7d6f691d274aa7771b21b7902b89bb9fe2e310
+- **empreinte** : 4c6d50fa52846d03299f7b2580dad5d629b6ddb8ff70799ee418ac1f97befd95
   — **le garde-fou a fonctionné dès son premier usage, puis au second.**
   L'entrée portait d'abord l'empreinte de tables *vides* (`3e3aa844…`),
   armée avant qu'il y ait quoi que ce soit à garder ; les sept lignes de
@@ -3144,6 +3145,30 @@ sensible* », catégorie que le CLSI emploie et qu'elle ne connaît pas.
 pour *Salmonella* Typhi, un pour *Shigella* —, séparés par une ligne de
 section que le lecteur ne garde pas. La ciprofloxacine y passe de S ≤ 0,06
 à S ≤ 0,25 : quatre fois plus permissif. Les deux sont refusés.
+
+### Troisième passe — 2F, 2G, 2H-1, 2H-2, 2I, 2J, le 2026-11-07
+
+**341 lignes**, 346 valeurs témoins au moteur, zéro divergence. La série 2
+du M100 est lue en entier ; seule la **2C**, celle des staphylocoques,
+reste à transcrire à la main.
+
+**Les anaérobies : une table, seize groupes — et c'est fidèle.** La 2J ne
+porte AUCUNE colonne d'espèce, contrairement à la 2C. Le CLSI ne distingue
+pas les anaérobies entre eux pour ces quinze molécules ; appliquer les
+mêmes valeurs aux seize groupes de PhénoBac ne suppose donc rien.
+
+**Cinquante-trois couples écartés, de deux familles seulement :**
+
+- **l'arbitrage 1, encore** — vancomycine et linézolide du pneumocoque et
+  des streptocoques, carbapénèmes, C3G du gonocoque. Même motif qu'en 2E,
+  même ampleur. Cela fait maintenant **plus de cent couples** que cet
+  arbitrage retire, sur quatre groupes. La question « PhénoBac doit-il
+  apprendre à rendre *non sensible* » n'est plus marginale ;
+- **la séparation méningé / non méningé du pneumocoque.** Les formes
+  « (meningitis) » entrent sous le site `meninge`, que la base porte. Les
+  « (nonmeningitis) » sont écartées : les tenir pour le seuil « standard »
+  est raisonnable, mais c'est une décision, et elle n'a pas été rendue.
+  Idem pour la pénicilline V orale.
 
 ### Ce que la première transcription a révélé
 
