@@ -28,6 +28,11 @@ n'est qu'une fois la chaîne verte qu'il regarde ce que le site sert.
 
 L'API de GitHub est interrogée SANS JETON : le dépôt est public, et les
 exécutions de la chaîne y sont lisibles. Aucun secret n'est employé ni requis.
+
+HORS INTÉGRATION CONTINUE : ce contrôle vérifie ce qui se passe APRÈS la
+chaîne. L'y brancher serait circulaire — il interrogerait sa propre exécution,
+encore en cours, et jugerait d'un déploiement que l'étape suivante n'a pas
+encore fait. Il se lance à la main après un push, ou en tâche de fond.
 """
 
 import hashlib
