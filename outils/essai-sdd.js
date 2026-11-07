@@ -191,6 +191,23 @@ function verif(cond, titre) {
         + "(plus sa déclaration) — trouvé " + aff.length);
 })();
 
+/* ---------- 3 ter. le germe non transcrit se dit AVANT la saisie --------
+   Le moteur distingue « non transcrit » de « non chiffré », mais seulement
+   quand une mesure lui est soumise. Devant un panel vierge, l'aide de
+   chaque ligne disait « pas de seuil défini » — et c'est l'écran que le
+   laboratoire regarde en premier. Les deux aides doivent donc consulter la
+   couverture du groupe avant tout le reste. */
+(function () {
+  var src = lireFichier("phenobac.html");
+  verif(/function indiceNonTranscrit\s*\(/.test(src),
+        "l'aide de saisie sait dire qu'un germe n'est pas transcrit");
+  ["bpHint", "dzHint"].forEach(function (f) {
+    var m = src.match(new RegExp("function " + f + "\\s*\\([^)]*\\)\\s*\\{([\\s\\S]{0,160})"));
+    verif(!!m && /indiceNonTranscrit/.test(m[1]),
+          f + "() la consulte, et dès sa première ligne");
+  });
+})();
+
 /* ---------- 4. le catalogue de langue porte les deux langues ---------- */
 (function () {
   var src = lireFichier("langue.js");

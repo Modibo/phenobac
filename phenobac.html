@@ -3795,7 +3795,21 @@ function renderAbx(){
 }
 
 /* libellé de seuil pour l'aide sous chaque antibiotique */
+/* UN GERME NON TRANSCRIT LE DIT AVANT LA SAISIE, ET NON APRÈS.
+   Le moteur sait déjà distinguer « ce germe n'est pas encore transcrit » de
+   « le document ne chiffre pas ce couple » — mais seulement quand une mesure
+   lui est soumise. Devant un panel vierge, chaque ligne disait « pas de
+   seuil défini », et un laboratoire en concluait que le CLSI ne donne rien
+   pour son germe. C'est l'écran qu'il regarde en premier, et c'est là que la
+   phrase manquait. */
+function indiceNonTranscrit(group){
+  if(!_M.groupePeuple || _M.groupePeuple(REF_ACTIF, group)) return null;
+  const nom = referentiel().nom;
+  return T(`${nom} : ce germe n'est pas encore transcrit · choisir un autre référentiel`,
+           `${nom}: this organism is not yet transcribed · choose another standard`);
+}
 function bpHint(group,k){
+  const nt=indiceNonTranscrit(group); if(nt) return nt;
   const bp=getBP(group,k);
   if(!bp) return T("pas de seuil défini · saisir en S/I/R", "no breakpoint set · enter S/I/R");
   // « S ≤ 0 » ÉTAIT UN MENSONGE QUI SE LISAIT COMME UN SEUIL. Quand le
@@ -3822,6 +3836,7 @@ function fmt(x){ return (Math.round(x*1000)/1000).toString(); }
    rapport aux CMI (S ≥, R <) et la charge du disque en fait partie : sans
    elle, « 23 mm » ne veut rien dire. */
 function dzHint(group,k){
+  const nt=indiceNonTranscrit(group); if(nt) return nt;
   const seuil=depistageSeuil(group,k);
   // Même conduite, deux référentiels, deux consignes : le CA-SFM refuse de
   // conclure « résistant » au disque et demande une CMI ; l'EUCAST autorise
