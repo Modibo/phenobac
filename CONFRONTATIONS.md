@@ -3011,10 +3011,11 @@ l'espèce manquait.
 
 ## comparer-clsi.py — première confrontation au M100, le 2026-11-07
 
-- **document** : CLSI M100 Ed36:2026, tables 2B-4 et 2A-1, lues sur le
-  portail gratuit em100.edaptivedocs.net par `outils/extraire-clsi.js`
+- **document** : CLSI M100 Ed36:2026, tables 2A-1, 2A-2, 2B-1, 2B-2, 2B-4,
+  2D et 2E, lues sur le portail gratuit em100.edaptivedocs.net par
+  `outils/extraire-clsi.js`, converties par `outils/transcrire-clsi.py`
 - **tables** : BP_CLSI, DZ_CLSI
-- **empreinte** : 2fe8db34bf3e75d9b940420c05657c524e38082b3bcfad4d8498dec8869103dc
+- **empreinte** : 976b1adda0c7cc3335cb5f38ce7d6f691d274aa7771b21b7902b89bb9fe2e310
   — **le garde-fou a fonctionné dès son premier usage, puis au second.**
   L'entrée portait d'abord l'empreinte de tables *vides* (`3e3aa844…`),
   armée avant qu'il y ait quoi que ce soit à garder ; les sept lignes de
@@ -3109,6 +3110,40 @@ toutes deux entraient dans ce que la base sait déjà représenter :
 L'outil écarte en revanche, et le dit, ce qui demanderait un arbitrage :
 seuils propres à une voie (céfuroxime orale contre parentérale), tests de
 substitution, molécules marquées « (Inv.) ».
+
+### Deuxième passe — 2A-2, 2B-1, 2B-2, 2D et 2E, le 2026-11-07
+
+**119 lignes de plus**, 448 valeurs témoins au moteur, zéro divergence.
+Huit groupes sur quarante-six sont couverts : `entero`, `morganella`,
+`serratia`, `salmonella`, `pseudo`, `acineto`, `enteroc`, `steno` — et
+maintenant `haemo`.
+
+**Trois refus de nature différente, et ils appellent une décision.**
+
+**1. La table 2C des staphylocoques est écartée ENTIÈRE.** Elle porte une
+colonne de portée d'espèce — « All staphylococci », « S. aureus, including
+MRSA », « SOSA », « S. epidermidis » — que le lecteur n'a pas su nommer.
+L'ignorer aurait appliqué aux staphylocoques à coagulase négative des
+seuils écrits pour *S. aureus* : la vancomycine seule y passe de S ≤ 2 à
+S ≤ 4. Le détecteur de doublons en aurait attrapé une partie, pas toutes —
+une molécule restreinte à *S. aureus* mais n'ayant qu'une ligne serait
+entrée pour les deux groupes sans un mot. On refuse ce qu'on ne lit pas.
+
+**2. *Haemophilus* perd trente couples sur trente-six.** Le CLSI ne lui
+fixe, molécule après molécule, QU'UN SEUIL DE SENSIBILITÉ : céphalosporines
+de troisième génération, carbapénèmes, fluoroquinolones, azithromycine. La
+résistance y est assez rare pour qu'il n'ait pas borné la catégorie.
+
+L'arbitrage 1 s'applique donc à presque toute la table — et **sa
+conséquence dépasse le cas qui l'a fait naître**, qui était une molécule
+unique sur *S. maltophilia*. La question à trancher n'est plus « que faire
+du céfidérocol » mais « PhénoBac doit-il apprendre à rendre *non
+sensible* », catégorie que le CLSI emploie et qu'elle ne connaît pas.
+
+**3. Six couples de *Salmonella* ont DEUX seuils dans la même table** — un
+pour *Salmonella* Typhi, un pour *Shigella* —, séparés par une ligne de
+section que le lecteur ne garde pas. La ciprofloxacine y passe de S ≤ 0,06
+à S ≤ 0,25 : quatre fois plus permissif. Les deux sont refusés.
 
 ### Ce que la première transcription a révélé
 

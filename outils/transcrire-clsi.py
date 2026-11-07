@@ -389,6 +389,29 @@ def main():
         if lignes is None:
             print("/* %s : JSON antérieur au nommage des colonnes */" % cle); continue
 
+        # UNE COLONNE QUE LE LECTEUR N'A PAS SU NOMMER ARRÊTE TOUT.
+        #
+        # Le lecteur appelle « colN » ce qu'il ne reconnaît pas. En table 2C
+        # cette colonne tient la PORTÉE D'ESPÈCE — « All staphylococci »,
+        # « S. aureus, including MRSA », « SOSA », « S. epidermidis » —, et
+        # l'ignorer appliquerait aux staphylocoques à coagulase négative des
+        # seuils écrits pour S. aureus. La vancomycine seule y passe de
+        # S ≤ 2 à S ≤ 4 selon l'espèce.
+        #
+        # Le détecteur de doublons en aurait attrapé une partie, pas toutes :
+        # une molécule qui n'a qu'une ligne, mais restreinte à S. aureus,
+        # serait entrée pour les deux groupes sans un mot. On refuse donc la
+        # table ENTIÈRE, parce qu'on ne sait pas ce qu'on ne lit pas.
+        inconnues = [c for c in (t.get("colonnes") or []) if c.startswith("col")]
+        if inconnues:
+            print("\n/* %s — TABLE ENTIÈREMENT ÉCARTÉE : elle porte une colonne"
+                  "\n * que le lecteur n'a pas su nommer (%s), et en 2C c'est la"
+                  "\n * PORTÉE D'ESPÈCE. L'ignorer appliquerait à tout le groupe un"
+                  "\n * seuil écrit pour une espèce. À transcrire à la main. */"
+                  % (cle, ", ".join(inconnues)))
+            refuses += 1
+            continue
+
         sorties, refus = [], []
         for ld in lignes:
             nom = ld.get("agent") or ""
@@ -396,7 +419,36 @@ def main():
                 continue
             code, base, qual = _C.code_phenobac(nom)
             if code is None:
-                continue                      # molécule que PhénoBac ne porte pas
+                # UN NOM PRESQUE RECONNU N'EST PAS UNE MOLÉCULE INCONNUE.
+                # « Daptomycin E. faecium only » et « Quinupristin-
+                # dalfopristin » (avec une espace après le tiret) ne sont pas
+                # dans la correspondance, et seraient perdus sans un mot —
+                # alors que PhénoBac porte DAP et QDA. Une molécule que
+                # l'application ne porte pas se tait ; une qu'elle porte sous
+                # un nom voisin se signale.
+                # Un nom voisin se reconnaît étroitement, SINON LE CONTRÔLE
+                # CRIE SUR LE CAS NORMAL. Un premier jet cherchait un nom
+                # connu « contenu dans » le nom lu : « Ceftazidime-avibactam »
+                # devenait alors un « Ceftazidime » mal orthographié, et
+                # « Imipenem-relebactam » un « Imipenem ». Ce sont d'autres
+                # molécules, pas des fautes de frappe. Deux formes seulement
+                # comptent :
+                #   — la ponctuation du document : « Quinupristin- dalfopristin »
+                #   — une portée restreinte accolée : « Daptomycin E. faecium only »
+                serre = base.replace("- ", "-").replace(" -", "-")
+                if serre != base and serre in _N.CORRESPONDANCE:
+                    refus.append((_N.CORRESPONDANCE[serre], nom,
+                                  "ponctuation du document : « %s » est « %s » "
+                                  "mal espacé" % (base, serre)))
+                    continue
+                for ref_nom, ref_code in _N.CORRESPONDANCE.items():
+                    if base.startswith(ref_nom + " "):
+                        refus.append((ref_code, nom,
+                                      "« %s » suivi d'une PORTÉE RESTREINTE — "
+                                      "le seuil ne vaut que pour une partie du "
+                                      "groupe ; à trancher" % ref_nom))
+                        break
+                continue
             if any("⚠" in str(v) for v in ld.values() if v):
                 refus.append((code, nom, "ligne marquée douteuse par le lecteur"))
                 continue
@@ -431,6 +483,28 @@ def main():
                     charge = charge.replace("/", "-")
                 for g in groupes:
                     sorties.append(ligne(g, code, meth, site, S, R, charge, sdd))
+
+        # DEUX LIGNES POUR LE MÊME COUPLE SONT UNE DISTINCTION PERDUE.
+        # La table 2A-2 porte DEUX ciprofloxacines : l'une pour Salmonella
+        # Typhi, l'autre pour Shigella, et c'est une ligne de SECTION qui
+        # les sépare. Émettre les deux ferait lever le chargeur ; n'en
+        # garder qu'une appliquerait en silence le seuil d'un germe à
+        # l'autre, et le seuil de Shigella est dix fois plus permissif.
+        # On refuse les deux et on le dit.
+        vus = {}
+        for l in sorties:
+            m = re.match(r'\["clsi","([^"]+)","([^"]+)","([^"]+)","([^"]+)"', l)
+            vus.setdefault(m.groups(), []).append(l)
+        doubles = {k: v for k, v in vus.items() if len(v) > 1}
+        if doubles:
+            sorties = [l for l in sorties
+                       if re.match(r'\["clsi","([^"]+)","([^"]+)","([^"]+)","([^"]+)"',
+                                   l).groups() not in doubles]
+            for (g, c, me, si) in sorted(doubles):
+                refus.append((c, g + " / " + me + " / " + si,
+                              "DEUX seuils pour ce couple dans la même table — "
+                              "une ligne de section les distingue, et le lecteur "
+                              "ne la garde pas. À trancher à la main"))
 
         total += len(sorties); refuses += len(refus)
         if not REFUS_SEULS and sorties:

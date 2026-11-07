@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.43";
+const BASE_VERSION = "2026.44";
 
 /* La colonne « sdd » est en QUEUE de liste, et c'est délibéré : les lignes
    de la base sont des tableaux positionnels, et une colonne ajoutée au bout
@@ -2359,6 +2359,176 @@ const REGLES = [
 ["clsi","entero","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","morganella","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
 ["clsi","serratia","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
+
+/* --------------------------------------------------------------------
+   Salmonella/Shigella (2A-2), P. aeruginosa (2B-1), Acinetobacter (2B-2)
+   et Enterococcus (2D) — transcrites le 2026-11-07
+   --------------------------------------------------------------------
+   107 lignes, 407 valeurs témoins passées au moteur, zéro divergence.
+
+   ONZE COUPLES SONT ÉCARTÉS, ET CHACUN POUR UNE RAISON ÉCRITE :
+
+   — SIX, en 2A-2, parce que le CLSI y donne DEUX seuils pour le même
+     couple : un pour Salmonella Typhi, un pour Shigella, séparés par une
+     ligne de section que le lecteur ne conserve pas. Azithromycine,
+     ciprofloxacine, lévofloxacine, ofloxacine. L'écart n'est pas mince —
+     la ciprofloxacine passe de S ≤ 0,06 à S ≤ 0,25, quatre fois plus
+     permissif. Appliquer l'un à l'autre en silence était le vrai danger ;
+     l'outil refuse les deux et le dit.
+   — DEUX daptomycines en 2D, dont les portées se partagent le genre :
+     « E. faecium only » d'un côté, « Enterococcus spp. other than
+     E. faecium » de l'autre. PhénoBac n'a qu'un groupe `enteroc`.
+   — la téicoplanine et la péfloxacine, marquées « (Inv.) » par le CLSI,
+     qui ne sont pas des seuils de routine.
+   — le céfidérocol au disque en 2B-2, sans seuil de résistance
+     (arbitrage 1 du 2026-11-07).
+
+   À noter : la colistine entre pour P. aeruginosa et Acinetobacter sous la
+   forme S = null — le CLSI n'accorde AUCUNE catégorie sensible et borne
+   l'intermédiaire à 2 mg/L. C'est la forme que la base écrivait déjà pour
+   les couples sans catégorie sensible. */
+["clsi","salmonella","AMP","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","AMP","disque","standard",17,14,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","CTX","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","CTX","disque","standard",26,23,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","CRO","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","CRO","disque","standard",23,20,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","ETP","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","ETP","disque","standard",22,19,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","IPM","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","IPM","disque","standard",23,20,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","MEM","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","MEM","disque","standard",23,20,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","TET","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","TET","disque","standard",15,12,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","DOX","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","DOX","disque","standard",14,11,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","MIN","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","MIN","disque","standard",16,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","LVX","disque","standard",21,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","OFX","disque","standard",16,13,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","SXT","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","CAF","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","salmonella","CAF","disque","standard",18,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","TZP","cmi","standard",16,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","TZP","disque","standard",22,18,"100-10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","CAZ","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","CAZ","disque","standard",18,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","FEP","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","FEP","disque","standard",18,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","FDC","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","FDC","disque","standard",18,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","ATM","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","ATM","disque","standard",22,16,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","IPM","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","IPM","disque","standard",19,16,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","MEM","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","MEM","disque","standard",19,16,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","COL","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","TOB","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","TOB","disque","standard",19,13,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","AMK","cmi","urinaire",16,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","AMK","disque","urinaire",17,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","CIP","cmi","standard",0.5,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","CIP","disque","standard",25,19,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","LVX","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","LVX","disque","standard",22,15,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","OFX","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","pseudo","OFX","disque","standard",16,13,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","TZP","cmi","standard",16,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","TZP","disque","standard",21,18,"100-10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","CAZ","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","CAZ","disque","standard",18,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","FEP","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","FEP","disque","standard",18,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","CTX","cmi","standard",8,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","CTX","disque","standard",23,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","CRO","cmi","standard",8,32,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","CRO","disque","standard",21,14,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","FDC","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","IPM","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","IPM","disque","standard",22,19,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","MEM","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","MEM","disque","standard",18,15,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","COL","cmi","standard",null,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","GEN","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","GEN","disque","standard",19,14,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","TOB","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","TOB","disque","standard",17,13,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","AMK","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","AMK","disque","standard",20,17,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","MIN","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","MIN","disque","standard",22,18,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","CIP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","CIP","disque","standard",21,16,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","LVX","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","LVX","disque","standard",17,14,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","SXT","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","acineto","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","PEN","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","PEN","disque","standard",15,15,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","AMP","cmi","standard",8,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","AMP","disque","standard",17,17,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","VA","cmi","standard",4,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","VA","disque","standard",17,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","E","cmi","standard",0.5,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","E","disque","standard",23,14,"15",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","TET","cmi","urinaire",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","TET","disque","urinaire",19,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","DOX","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","DOX","disque","standard",16,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","MIN","cmi","standard",4,8,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","MIN","disque","standard",19,15,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","CIP","cmi","urinaire",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","CIP","disque","urinaire",21,16,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","LVX","cmi","urinaire",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","LVX","disque","urinaire",17,14,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","NIT","cmi","urinaire",32,64,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","NIT","disque","urinaire",17,15,"300",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","RD","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","RD","disque","standard",20,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","FOS","cmi","urinaire",64,128,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","FOS","disque","urinaire",16,13,"200",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","CAF","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","CAF","disque","standard",18,13,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","LZD","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","enteroc","LZD","disque","standard",23,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+
+/* --------------------------------------------------------------------
+   Haemophilus influenzae et H. parainfluenzae — table 2E, le 2026-11-07
+   --------------------------------------------------------------------
+   DOUZE lignes seulement, et TRENTE couples écartés. Ce n'est pas un
+   défaut de lecture : c'est la table elle-même.
+
+   Pour Haemophilus, le CLSI ne fixe, molécule après molécule, QU'UN SEUIL
+   DE SENSIBILITÉ — céphalosporines de troisième génération, carbapénèmes,
+   fluoroquinolones, azithromycine. La résistance y est assez rare pour
+   qu'il n'ait pas jugé utile d'en borner la catégorie. L'arbitrage 1 du
+   2026-11-07 — ne pas transcrire un couple sans seuil de résistance —
+   s'applique donc à presque toute la table.
+
+   LA CONSÉQUENCE DÉPASSE LE CAS QUI L'A FAIT NAÎTRE. L'arbitrage avait été
+   rendu sur UNE molécule, le céfidérocol de S. maltophilia. Ici il retire
+   l'essentiel d'un groupe. Le rapporter plutôt que l'appliquer en silence :
+   c'est au biologiste de dire si PhénoBac doit apprendre à rendre « non
+   sensible », catégorie que le CLSI emploie et qu'elle ne connaît pas.
+
+   La table porte aussi DEUX céfuroximes — parentérale et orale, aux mêmes
+   seuils ici — que le détecteur de doublons écarte faute de pouvoir les
+   distinguer. */
+["clsi","haemo","AMP","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","AMP","disque","standard",22,19,"10",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","AMC","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","TZP","cmi","standard",1,1,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","TET","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","TET","disque","standard",29,26,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","SXT","cmi","standard",0.5,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","CAF","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","CAF","disque","standard",29,26,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","RD","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","haemo","RD","disque","standard",20,17,"5",undefined,undefined,undefined,undefined,undefined,undefined],
 
 ];
 
