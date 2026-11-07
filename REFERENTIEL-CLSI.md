@@ -49,13 +49,27 @@ PhénoBac porte 46 groupes avec au moins un seuil. Leur répartition :
 
 | document | groupes | état |
 |---|---|---|
-| M100, tables 2A-1 à 2I | 18 | accessible |
-| M100, table 2J (anaérobies) | 16 | accessible |
-| M45 Ed3:2016 | 12 | accessible, non encore lu |
+| M100, tables 2A-1 à 2I | 18 | lu — 661 lignes |
+| M100, table 2J (anaérobies) | 16 | lu |
+| M45 Ed3:2016 | 11 | lu — 235 lignes |
+| **aucun** | **1** | ***Achromobacter*** |
 
-Soit, en principe, une couverture complète — ce qui n'était pas acquis : le
-M45 est un document séparé, et sa présence dans le portail gratuit n'allait
-pas de soi.
+**La couverture n'est PAS complète, contrairement à ce que ce document a
+d'abord affirmé.** Le compte annoncé — 18 / 16 / 12 — portait *Achromobacter*
+au crédit du M45, par soustraction et sans vérification. Les titres des
+tables ont été relus un à un : le M45 ne lui consacre aucune table, et le nom
+*Achromobacter* n'apparaît **dans aucune des cinquante-huit sections** des
+deux documents — séries 1, 2 et 3 du M100, et les vingt-deux tables du M45,
+toutes interrogées.
+
+Reste la table **2B-5, « Other Non-Enterobacterales »**, dont la portée est
+fixée par un commentaire général et non par une liste de genres. Qu'un
+*Achromobacter* y tombe est une **lecture de biologiste**, pas une chose que
+le document dise. En l'état, PhénoBac n'a pas de source CLSI pour ce groupe,
+et c'est à écrire plutôt qu'à combler.
+
+Une addition qui tombe juste n'est pas une vérification : 18 + 16 + 12 fait
+bien 46, et c'est exactement ce qui a permis à l'erreur de passer.
 
 ## Quatre décisions prises
 
@@ -200,9 +214,12 @@ Quatre autres commandent la transcription :
 5. Porter SDD dans le moteur, l'interface et les deux catalogues de langue.
 6. Transcrire, table par table, avec un `comparer-clsi.py` qui confronte la
    base au JSON extrait — comme `comparer-eucast.py` le fait pour le classeur.
-7. Lire le M45 pour les 12 groupes restants. Sondé : une grille de seuils
-   précédée d'une colonne « Antimicrobial Class ». Troisième forme, troisième
-   lecteur.
+7. ~~Lire le M45 pour les 12 groupes restants.~~ **Fait** :
+   `outils/extraire-clsi-m45.js`, 21 tables, 235 lignes, zéro anomalie. Et
+   ils étaient **11**, pas 12 : *Achromobacter* n'a de source CLSI nulle part.
+8. Trancher le sort d'*Achromobacter* : la table 2B-5 « Other
+   Non-Enterobacterales » du M100 le couvre-t-elle ? Le document ne le dit
+   pas ; c'est une lecture de biologiste.
 
 ## Les seuils ne sont pas tout le M100
 
@@ -294,13 +311,75 @@ biologiste : ajouter `HLS`, ouvrir une méthode par disque pour `HLG`, décider
 du sort du « non concluant ». Le présent document les expose, il ne les prend
 pas.
 
-### Série 1 et M45 : joignables, non lus
+### Série 1 : joignable, non lue
 
-Sondés pendant la même session : la série 1 est faite de tables à quatre
-colonnes par rangs de prescription (« Tier 1… »), et le **M45 Ed3:2016** est
-une **troisième** forme — une grille de seuils, mais précédée d'une colonne
-« Antimicrobial Class » qui décalerait d'un cran le calcul de `dCat` dans
-`extraire-clsi.js`. Les lire demande, chacun, son lecteur.
+La série 1 est faite de tables à quatre colonnes par rangs de prescription
+(« Tier 1… ») : les molécules à tester et à rendre par groupe, l'équivalent
+du panel de PhénoBac. Elle demande son propre lecteur.
+
+## Le M45 est lu — `extraire-clsi-tests.js` ne suffisait pas non plus
+
+**21 tables d'espèces, 235 lignes, zéro anomalie** — `outils/extraire-clsi-m45.js`.
+
+C'est une grille de seuils, comme la série 2 du M100, mais pas la même, et la
+différence est du genre qui fait lire une colonne pour une autre :
+
+```
+M100   Antimicrobial Agent | Disk Content | [S I R] | [S I R] | Comments
+M45    Antimicrobial CLASS | Antimicrobial Agent | Disk Content
+                           | [S I R] | [S I R] | Comments
+```
+
+Une colonne de plus, **en tête**. `extraire-clsi.js` prend la colonne 0 pour
+le nom de l'agent et calcule la première colonne de valeurs par
+`larg - 1 - sous.length` : sur le M45 il aurait lu les classes comme des
+antibiotiques et décalé tout d'un cran.
+
+### Le défaut qui a coûté trois tables sur vingt et une
+
+Les en-têtes du M45 portent des `<br>` : « Antimicrobial**⏎**Class ».
+`/Antimicrobial\s*Class/` n'y reconnaît rien — `⏎` n'est pas un blanc — et la
+colonne passait pour absente. Trois tables tombaient, dont la **9**, celle du
+groupe HACEK où vit le `kingella` de PhénoBac.
+
+C'est le **même défaut** que « QC⏎recommendations » dans la série 3, rencontré
+une heure plus tôt. Un marqueur introduit pour ne pas perdre les retours à la
+ligne devient un piège dès qu'on compare du texte : **tout libellé doit être
+replié avant d'être reconnu**, et nulle part ailleurs.
+
+### La première colonne ne dit pas toujours la même chose
+
+« Antimicrobial Class » dans dix-neuf tables, « Test/Report Group » en 10
+(*H. pylori*), « Organism Group » en 21 (agents du bioterrorisme). Et en 21
+elle porte **deux choses à la fois** : les lignes de titre pleine largeur
+donnent la classe (« PENICILLINS »), la même colonne sur les lignes de
+données donne l'espèce (« *B. anthracis* », reportée par `rowspan`). Chaque
+ligne extraite porte donc `section` et `groupe` séparément — les confondre
+aurait rendu « PENICILLINS » comme nom d'espèce.
+
+Dernier piège : la ligne des sous-en-têtes S/I/R **n'est pas toujours la
+ligne 1**. En table 10 une ligne de fusion s'intercale et la repousse en 2.
+Elle est cherchée, non supposée.
+
+### Deux arbitrages EUCAST en attente reçoivent une corroboration
+
+**`moraxella RD`** — PhénoBac porte un « – » sans source. Le M45 **donne un
+seuil** : rifampicine, CMI S ≤ 1 / I 2 / R ≥ 4 (table 16). L'absence de seuil
+EUCAST n'est donc pas une absence universelle.
+
+**`listeria CTX`** — PhénoBac porte une valeur de céfotaxime qui contredit une
+résistance naturelle déclarée. La table 14 du M45 ne donne que **quatre**
+molécules — pénicilline, ampicilline, triméthoprime-sulfaméthoxazole,
+méropénème — et **aucune céphalosporine, d'aucune génération**. Le silence du
+CLSI appuie la résistance naturelle.
+
+Ces deux constats sont versés au dossier ; ils ne modifient rien dans la base.
+
+### Ce que le M45 ne porte pas
+
+Les tables 22 à 24B — conditions d'essai et gammes de contrôle de qualité.
+Elles ne portent pas de seuils cliniques, et la 22 double l'encadré « Testing
+Conditions » que chaque table d'espèce porte déjà. Déclarées, non lues.
 
 ## La correspondance des noms
 

@@ -30,6 +30,7 @@
   var C = {};
 
   C.EDITION = "CLSI M100 ED36:2026";
+  C.M45     = "CLSI M45 ED3:2016";       // bactéries rares ou exigeantes
 
   C.RETOUR = "⏎";        // marque d'un <br> à l'intérieur d'une cellule
   C.HAUT   = "⇑";        // continuation verticale   (rowspan)
@@ -111,13 +112,16 @@
     return g;
   };
 
-  /* lireDoc(cle) — une section du M100, par sa clé de table (« 2A-1 », « 3L »).
+  /* lireDoc(cle[, edition]) — une section d'un document, par sa clé de table
+   * (« 2A-1 », « 3L » pour le M100 ; « 1 », « 23A » pour le M45). L'édition
+   * par défaut est le M100 ; passer C.M45 pour l'autre document.
    * Rend le Document, ou {erreur}. Le portail répond 200 avec la page de
    * connexion quand la session a expiré : on le détecte plutôt que de rendre
    * une table « vide », qui serait un mensonge tranquille. */
-  C.lireDoc = async function (cle) {
-    var url = "GetDoc.aspx?doc=" + encodeURIComponent(C.EDITION) +
-              "&sbssok=" + encodeURIComponent(C.EDITION + " TABLE " + cle) +
+  C.lireDoc = async function (cle, edition) {
+    var ed = edition || C.EDITION;
+    var url = "GetDoc.aspx?doc=" + encodeURIComponent(ed) +
+              "&sbssok=" + encodeURIComponent(ed + " TABLE " + cle) +
               "&format=HTML";
     var r = await fetch(url, {credentials: "same-origin"});
     if (!r.ok) return {erreur: "HTTP " + r.status};

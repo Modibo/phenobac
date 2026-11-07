@@ -135,14 +135,25 @@ Le document, lui, est désormais en main. Le CLSI donne un **accès gratuit et e
 lecture seule** au M100 — <https://em100.edaptivedocs.net/>, « CLSI Micro
 Free », accès invité sans compte ni paiement — et le portail porte l'édition
 courante, **M100 Ed36:2026**, ainsi que le **M45 Ed3:2016** pour les bactéries
-rares ou exigeantes. Les seize tables de seuils en ont été lues par
-`outils/extraire-clsi.js` : **661 lignes, zéro anomalie**. Les huit tables de
-**tests** — dépistages et lectures indirectes, dont le haut niveau
-d'aminosides et le test D — l'ont été par `outils/extraire-clsi-tests.js` :
-**23 colonnes de test, zéro anomalie**. Les deux lecteurs partagent leurs
-primitives dans `outils/clsi-commun.js`, pour qu'une correction du dépliage
-des cellules fusionnées les atteigne tous les deux. La transcription n'est
-pas commencée. Tout est consigné dans
+rares ou exigeantes. **Les deux documents sont lus**, par trois lecteurs —
+une forme de table chacun, et aucun ne sait lire celle des autres :
+
+| lecteur | ce qu'il lit | résultat |
+|---|---|---|
+| `extraire-clsi.js` | M100, 16 tables de seuils | 661 lignes, zéro anomalie |
+| `extraire-clsi-tests.js` | M100, 8 tables de tests (dépistages, test D, HLAR) | 23 colonnes, zéro anomalie |
+| `extraire-clsi-m45.js` | M45, 21 tables d'espèces | 235 lignes, zéro anomalie |
+
+Ils partagent leurs primitives dans `outils/clsi-commun.js`, pour qu'une
+correction du dépliage des cellules fusionnées les atteigne tous les trois.
+
+La lecture a aussi corrigé une erreur de ce dépôt : la couverture CLSI
+**n'est pas complète**. *Achromobacter* n'a de table ni dans le M100 ni dans
+le M45, et son nom n'apparaît dans aucune de leurs sections. Le compte
+annoncé plus tôt le portait au crédit du M45 par soustraction — l'addition
+tombait juste, et c'est ce qui a laissé passer l'erreur.
+
+La transcription n'est pas commencée. Tout est consigné dans
 **[REFERENTIEL-CLSI.md](REFERENTIEL-CLSI.md)** : d'où vient le document,
 pourquoi l'extraction passe par la console du navigateur, les quatre décisions
 prises avant d'écrire la première ligne, et les défauts de lecture trouvés en
