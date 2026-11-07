@@ -75,7 +75,19 @@
     throw new Error("extraire-clsi-tests.js : coller d'abord outils/clsi-commun.js");
   var K = window.CLSI_COMMUN;
 
-  var TABLES = ["3A", "3E", "3G", "3H", "3I", "3J", "3K", "3L"];
+  // Les ONZE fiches de critères de la série 3. Les quatre autres tables de
+  // la série — 3F-2, 3F-3, 3F-4 — sont des GRILLES DE SEUILS et reviennent
+  // à extraire-clsi.js ; voir SERIE_3_AILLEURS plus bas.
+  //
+  // Un premier jet n'en déclarait que huit, et ne disait rien des sept
+  // autres : ni lues, ni déclarées non lues. C'est le défaut même que la
+  // liste TABLES_NON_LUES existe pour empêcher, commis sur la liste
+  // elle-même. Une portée annoncée plus large que la portée réelle vaut
+  // mieux que rien dit, mais pas de beaucoup : elle clôt la question.
+  var TABLES = ["3A", "3B", "3C", "3D", "3E", "3F-1",
+                "3G", "3H", "3I", "3J", "3K", "3L"];
+
+  var SERIE_3_AILLEURS = ["3F-2", "3F-3", "3F-4"];
 
   /* CE QUE CE LECTEUR NE LIT PAS, ET QUI EXISTE.
    * La série 1 donne, par groupe d'espèces, les molécules à tester et à
@@ -83,8 +95,9 @@
    * ni grille de seuils, ni fiche de critères, mais des listes groupées par
    * rang de prescription. Elle est déclarée ici pour que son absence soit
    * écrite plutôt que supposée. */
-  var TABLES_NON_LUES = ["1A-1", "1A-2", "1B-1", "1B-2", "1B-3", "1B-4",
-                         "1B-5", "1C", "1D", "1E", "1F", "1G"];
+  var TABLES_NON_LUES = ["1A-1", "1A-2", "1B-1", "1B-2", "1B-3", "1B-4", "1B-5",
+                         "1C", "1D", "1E", "1F", "1G", "1H-1", "1H-2",
+                         "1I", "1J"];
 
   var EST_METHODE  = /^test method$/i;
   var EST_ORGANISME = /^organism group/i;
@@ -103,17 +116,28 @@
     [/^medium$/i,                             true],
     [/^antimicrobial concentration$/i,        true],
     [/^inoculum$/i,                           true],
-    [/^test procedure$/i,                     true],
+    [/^test reagents and materials$/i,        true],
+    [/^test procedure/i,                      true],
     [/^incubation conditions$/i,              true],
     [/^incubation length$/i,                  true],
+    [/^supplemental early reading/i,          true],
     [/^results?$/i,                           true],
+    [/^test interpretation$/i,                true],
     [/^qc recommendations/i,                  true],
     [/^additional testing and reporting$/i,  false],
     [/^reporting$/i,                         false],
     [/^strengths$/i,                         false],
     [/^limitations$/i,                       false],
-    [/^when to perform this test$/i,         false]
+    [/^when to perform this test$/i,         false],
+    [/^notes$/i,                             false]
   ];
+
+  // « Test procedure: mCIM » et « When to perform this test: » : le CLSI
+  // ponctue ses libellés de façon inégale d'une table à l'autre. Les motifs
+  // ancrés par $ y échouent, et un critère connu passe alors pour inconnu —
+  // neuf fois, à l'ajout des tables 3B, 3C, 3D et 3F-1. Le deux-points
+  // final est donc retiré avant la comparaison, et deux motifs sont devenus
+  // des préfixes plutôt que des égalités.
 
   function classer(lib) {
     for (var i = 0; i < CRITERES.length; i++)
@@ -124,7 +148,8 @@
   // Un libellé peut porter un <br> : « QC⏎recommendations – routine ». Le
   // replier avant de comparer, sinon le critère passe pour inconnu.
   function aplatir(s) {
-    return s.split(K.RETOUR).join(" ").replace(/\s+/g, " ").trim();
+    return s.split(K.RETOUR).join(" ").replace(/\s+/g, " ").trim()
+            .replace(/\s*:$/, "");
   }
 
   async function lire(cle) {
@@ -266,6 +291,8 @@
     res.nonLues = TABLES_NON_LUES;
     console.log("tables de tests lues : " + TABLES.length);
     console.log("tables NON lues      : " + TABLES_NON_LUES.length + " (série 1 : panels)");
+    console.log("série 3 ailleurs     : " + SERIE_3_AILLEURS.join(", ") +
+      " — grilles de seuils, lues par extraire-clsi.js");
     console.log("colonnes de test     : " + TABLES.reduce(function (s, k) {
       return s + ((res.tables[k].colonnes || []).length); }, 0));
     console.log("anomalies à relire   : " + anomalies.length);

@@ -140,9 +140,13 @@ une forme de table chacun, et aucun ne sait lire celle des autres :
 
 | lecteur | ce qu'il lit | résultat |
 |---|---|---|
-| `extraire-clsi.js` | M100, 16 tables de seuils | 661 lignes, zéro anomalie |
-| `extraire-clsi-tests.js` | M100, 8 tables de tests (dépistages, test D, HLAR) | 23 colonnes, zéro anomalie |
+| `extraire-clsi.js` | M100, 16 grilles de seuils + les 3 lectures directes sur hémoculture | 727 lignes, zéro anomalie |
+| `extraire-clsi-tests.js` | M100, 12 fiches de tests (dépistages, test D, HLAR, carbapénémases) | 27 colonnes, zéro anomalie |
 | `extraire-clsi-m45.js` | M45, 21 tables d'espèces | 235 lignes, zéro anomalie |
+
+Les tables sont réparties **par leur forme, pas par leur numéro** : les 3F-2,
+3F-3 et 3F-4 portent un « 3 » mais sont des grilles de seuils, et reviennent
+au premier lecteur.
 
 Ils partagent leurs primitives dans `outils/clsi-commun.js`, pour qu'une
 correction du dépliage des cellules fusionnées les atteigne tous les trois.

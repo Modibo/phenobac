@@ -51,8 +51,22 @@
   // les seuils de B. cepacia ont été retirés, les deux méthodes de référence
   // ne concordant pas. Elle est listée pour que son absence soit constatée,
   // et non devinée.
+  // Seize tables de seuils en série 2 — et TROIS en série 3, les lectures
+  // directes sur hémoculture, qui sont des grilles de seuils malgré leur
+  // numéro. Les ranger par leur forme et non par leur numéro est le seul
+  // classement qui tienne : c'est la forme que le lecteur sait lire.
+  //
+  // Les 3F-* portent une DIMENSION DE PLUS : deux temps de lecture, 8-10 h
+  // et 16-18 h, et chaque cellule de valeur en contient donc deux, séparées
+  // par une espace. « – ≥ 18 » pour la céfépime en 3F-3 ne veut pas dire
+  // « pas de seuil puis ≥ 18 » : il n'y a PAS de seuil à la lecture précoce,
+  // et il y en a un à 16-18 h. Rendue telle quelle, la cellule est un seuil
+  // illisible que rien ne signalerait — ni anomalie, ni valeur juste. Le
+  // lecteur émet donc UNE LIGNE PAR TEMPS DE LECTURE, le temps occupant sa
+  // propre colonne.
   var TABLES = ["2A-1", "2A-2", "2B-1", "2B-2", "2B-3", "2B-4", "2B-5",
-                "2C", "2D", "2E", "2F", "2G", "2H-1", "2H-2", "2I", "2J"];
+                "2C", "2D", "2E", "2F", "2G", "2H-1", "2H-2", "2I", "2J",
+                "3F-2", "3F-3", "3F-4"];
 
   /* CE QUE CE SCRIPT NE LIT PAS ENCORE, ET QUI EXISTE.
    *
@@ -77,13 +91,25 @@
    *
    * De même, la série des tables 1 donne, par groupe, les molécules à tester
    * et à rendre — l'équivalent du panel de PhénoBac. */
-  var TABLES_NON_LUES = ["1A-1", "1A-2", "1B-1", "1B-2", "1B-3", "1B-4",
-                         "1B-5", "1C", "1D", "1E", "1F", "1G",
-                         "3A", "3E", "3G", "3H", "3I", "3J", "3K", "3L"];
+  var TABLES_NON_LUES = ["1A-1", "1A-2", "1B-1", "1B-2", "1B-3", "1B-4", "1B-5",
+                         "1C", "1D", "1E", "1F", "1G", "1H-1", "1H-2",
+                         "1I", "1J"];
+
+  // La série 3 — dépistages et lectures indirectes — est lue par
+  // outils/extraire-clsi-tests.js, sauf les trois grilles ci-dessus.
+  var SERIE_3_AILLEURS = ["3A", "3B", "3C", "3D", "3E", "3F-1",
+                          "3G", "3H", "3I", "3J", "3K", "3L"];
 
   var RETOUR = K.RETOUR, HAUT = K.HAUT, GAUCHE = K.GAUCHE, DOUTE = K.DOUTE;
 
   var VAL = /^(?:[≤≥<>]\s*)?\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?(?:\s*[-–]\s*(?:[≤≥]\s*)?\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?)?\^?$/;
+
+  // Les valeurs d'une cellule, reconnues UNE À UNE par leur forme.
+  // Découper sur les espaces ne marche pas : « ≥ 16 ≥ 17 » en donne quatre
+  // morceaux, le signe étant séparé de son nombre. C'est la même erreur que
+  // de couper « 10 units 10 μg » sur les espaces — deux charges de disque,
+  // quatre morceaux. Une valeur se reconnaît, elle ne se délimite pas.
+  var JETONS = /(?:[≤≥<>]\s*)?\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?(?:\s*[-–]\s*(?:[≤≥]\s*)?\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?)?\^?|[–—-]/g;
 
   var estVide = K.estVide, grille = K.grille;
 
@@ -159,6 +185,31 @@
     var larg = Math.max.apply(null, g.map(function (r) { return r.length; }));
     var sous = (g[1] || []).filter(function (x) {
       return x && x !== HAUT && x !== GAUCHE; });
+    // La colonne de charge du disque se REPÈRE à son en-tête, elle ne se
+    // déduit pas d'une position. En série 2 elle précède toujours la
+    // première colonne de valeurs ; en 3F-2 une colonne « Read Times, h »
+    // s'intercale, et la déduire aurait fait découper des heures comme des
+    // charges de disque. Les tables sans disque (2B-3, 2J, à CMI seule)
+    // rendent -1, et aucune colonne ne prend ce rôle.
+    var iDisque = -1;
+    for (var jj = 0; jj < larg; jj++) {
+      var h = (g[0][jj] === undefined ? "" : String(g[0][jj]));
+      var kk = jj;
+      while (h === GAUCHE && kk > 0) { kk--; h = String(g[0][kk]); }
+      if (h !== HAUT && h !== GAUCHE &&
+          /Disk\s*(Content|Diffusion)/i.test(h.split(RETOUR).join(" "))) {
+        iDisque = jj; break;
+      }
+    }
+
+    // La colonne des temps de lecture, quand elle existe (3F-2, 3F-3, 3F-4).
+    var iTemps = -1;
+    for (var jt = 0; jt < larg; jt++) {
+      var ht = (g[0][jt] === undefined ? "" : String(g[0][jt]));
+      if (ht !== HAUT && ht !== GAUCHE &&
+          /Read\s*Times/i.test(ht.split(RETOUR).join(" "))) { iTemps = jt; break; }
+    }
+
     var anomalies = [], lignes = [], precedent = null;
     for (var i = 2; i < g.length; i++) {
       var brut = [], j;
@@ -184,8 +235,17 @@
       var cols = [];
       for (j = 0; j < larg - 1; j++)
         cols.push(repartir(c[j], n, anomalies, ou + " [c" + j + "]",
-                           j === 0 ? "agent" : (j === dCat - 1 ? "disque" : "")));
+                           j === 0 ? "agent" : (j === iDisque ? "disque" : "")));
       var com = c[larg - 1];
+      // Les temps de lecture de CETTE ligne. Un seul le plus souvent ; deux
+      // dans les tables 3F-*, et alors chaque cellule de valeur en porte
+      // deux, dans le même ordre.
+      var temps = [null];
+      if (iTemps >= 0) {
+        var tt = (c[iTemps].split(RETOUR).join(" ").match(JETONS) || [])
+                 .map(function (x) { return x.trim(); });
+        if (tt.length > 1) temps = tt;
+      }
       for (var k = 0; k < n; k++) {
         var l = cols.map(function (co) { return co[k]; });
         // Une ligne d'espacement du tableau est vide partout sauf la colonne
@@ -194,7 +254,31 @@
         // du tiret : « – » dit que le CLSI ne donne pas de seuil, ce qui est
         // une information ; la chaîne vide ne dit rien.
         if (l.slice(dCat).every(function (x) { return x === ""; })) continue;
-        lignes.push(l.concat([(com.match(/\(\d+\)/g) || []).join("")]));
+        for (var q = 0; q < temps.length; q++) {
+          var lq = l.slice();
+          if (temps.length > 1) {
+            lq[iTemps] = temps[q];
+            var bon = true;
+            for (var jv = dCat; jv < larg - 1; jv++) {
+              var pv = String(l[jv]).match(JETONS) || [];
+              pv = pv.map(function (x) { return x.trim(); });
+              if (pv.length === temps.length) lq[jv] = pv[q];
+              else if (pv.length === 1) lq[jv] = pv[0];
+              else bon = false;
+            }
+            if (!bon) {
+              // Une seule fois par ligne, pas une par temps de lecture : une
+              // anomalie comptée deux fois fausse le total autant qu'une
+              // anomalie manquée.
+              if (q === 0)
+                anomalies.push(ou + " : " + temps.length + " temps de lecture, " +
+                               "mais une cellule de valeur ne s'y partage pas");
+              lq = l.slice();
+              lq[iTemps] = DOUTE + temps.join(" ");
+            }
+          }
+          lignes.push(lq.concat([(com.match(/\(\d+\)/g) || []).join("")]));
+        }
       }
     }
     return {cle: cle, sous: sous, larg: larg, n: lignes.length,
@@ -214,7 +298,9 @@
     res.nonLues = TABLES_NON_LUES;
     console.log("tables lues        : " + TABLES.length);
     console.log("tables NON lues    : " + TABLES_NON_LUES.length
-      + " (séries 1 et 3 : panels, dépistages, lectures indirectes)");
+      + " (série 1 : panels)");
+    console.log("série 3 ailleurs   : " + SERIE_3_AILLEURS.length
+      + " fiches de critères, lues par extraire-clsi-tests.js");
     console.log("tables sans seuils : " + (vides.join(", ") || "aucune"));
     console.log("lignes             : " + Object.keys(res.tables).reduce(
       function (s, k) { return s + (res.tables[k].n || 0); }, 0));

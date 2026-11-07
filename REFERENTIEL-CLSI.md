@@ -208,9 +208,11 @@ Quatre autres commandent la transcription :
    **Fait** : `outils/extraire-clsi-tests.js`, 8 tables, 23 colonnes de test,
    zéro anomalie. Ce qu'elle apporte et ce qui manque à PhénoBac est en bas
    de ce document.
-4. Lire la **série des tables 1**, qui donne les panels à tester et à rendre
-   par groupe. Sondée : des tables à quatre colonnes par rangs de
-   prescription. Demande son propre lecteur.
+4. Lire la **série des tables 1** — **seize** tables, 1A-1 à 1J, et non douze
+   comme ce document l'a d'abord écrit. Elle donne les panels à tester et à
+   rendre par groupe, en quatre colonnes de rangs de prescription
+   (« Tier 1 » à « Tier 4 »), avec une ligne pleine largeur « Urine Only »
+   qui ouvre une section. Demande son propre lecteur.
 5. Porter SDD dans le moteur, l'interface et les deux catalogues de langue.
 6. Transcrire, table par table, avec un `comparer-clsi.py` qui confronte la
    base au JSON extrait — comme `comparer-eucast.py` le fait pour le classeur.
@@ -247,9 +249,75 @@ et c'est pourquoi il les **déclare** dans `TABLES_NON_LUES` : laissées hors de
 toute liste, elles auraient été une omission silencieuse ; passées à `lire()`,
 elles seraient rendues « vides », ce qui serait un mensonge.
 
-## La série 3 est lue — `extraire-clsi-tests.js`
+## La série 3 est lue — et elle comptait quinze tables, pas huit
 
-Les huit tables sont lues, **zéro anomalie**, 23 colonnes de test.
+**Ce document a d'abord annoncé « les huit tables sont lues ». Il y en a
+quinze.** Les sept autres — 3B, 3C, 3D et 3F-1 à 3F-4 — n'étaient ni lues,
+ni déclarées non lues : elles n'étaient **nulle part**. C'est exactement le
+défaut que la liste `TABLES_NON_LUES` existe pour empêcher, commis sur la
+liste elle-même.
+
+Ce qui l'a laissé passer : la liste des tables avait été écrite à la main,
+de mémoire, au lieu d'être tirée du sommaire du document. Le sommaire était
+à une requête de distance. **Une portée annoncée se vérifie contre la source,
+jamais contre le souvenir qu'on en a.**
+
+Les quinze se répartissent en **deux formes**, et donc entre deux lecteurs :
+
+| forme | tables | lecteur |
+|---|---|---|
+| fiche de critères (grille transposée) | 3A, 3B, 3C, 3D, 3E, 3F-1, 3G, 3H, 3I, 3J, 3K, 3L | `extraire-clsi-tests.js` — 12 tables, 27 colonnes |
+| grille de seuils | 3F-2, 3F-3, 3F-4 | `extraire-clsi.js` — avec les 16 de la série 2 |
+
+Les trois dernières donnent les seuils de **lecture directe sur hémoculture**
+pour les entérobactéries, *P. aeruginosa* et *Acinetobacter*. Les ranger par
+leur numéro les aurait envoyées au mauvais lecteur ; **c'est la forme qui
+décide, pas la numérotation**.
+
+Les quatre fiches ajoutées (Carba NP, mCIM/eCIM, aztréonam +
+ceftazidime-avibactam, disque direct sur hémoculture) ont apporté six
+libellés de critères inédits, dont « Test procedure**:** mCIM » et « When to
+perform this test**:** » — le CLSI ponctue ses libellés de façon inégale, et
+des motifs ancrés par `$` y échouaient. Le deux-points final est désormais
+retiré avant comparaison.
+
+### Les 3F-* portent une dimension de plus : le temps de lecture
+
+Deux temps, 8-10 h et 16-18 h, et **chaque cellule de valeur en contient
+deux**. « – ≥ 18 » pour la céfépime en 3F-3 ne veut pas dire « pas de seuil
+puis ≥ 18 » : il n'y a **pas** de seuil à la lecture précoce, et il y en a un
+à 16-18 h. Rendue telle quelle, la cellule est un seuil illisible que rien ne
+signalerait — ni anomalie, ni valeur juste. Le lecteur émet donc **une ligne
+par temps de lecture**.
+
+Le découpage a d'abord échoué, et pour une raison qui vaut d'être retenue :
+`"≥ 16 ≥ 17".split(/\s+/)` rend **quatre** morceaux, le signe étant séparé de
+son nombre. C'est la même erreur que de couper « 10 units 10 μg » sur les
+espaces. **Une valeur se reconnaît par sa forme, elle ne se délimite pas par
+ses blancs.**
+
+### La colonne du disque se lit, elle ne se déduit plus
+
+`extraire-clsi.js` situait la charge du disque à `dCat - 1`, juste avant la
+première colonne de valeurs. En 3F-2 une colonne « Read Times, h » s'intercale,
+et des heures auraient été découpées comme des charges de disque. Elle se
+repère maintenant à son en-tête.
+
+Le changement a été éprouvé avant d'être retenu : sur les seize tables de la
+série 2, la position **déduite** et la position **lue** coïncident partout, et
+les 661 lignes sont identiques au caractère près. Les seules tables dont le
+comportement change sont les trois nouvelles — celles pour lesquelles la
+correction a été faite.
+
+### Total
+
+| lecteur | tables | résultat |
+|---|---|---|
+| `extraire-clsi.js` | 16 (série 2) + 3 (3F-*) | **727 lignes**, zéro anomalie |
+| `extraire-clsi-tests.js` | 12 fiches de critères | **27 colonnes**, zéro anomalie |
+| `extraire-clsi-m45.js` | 21 tables d'espèces | **235 lignes**, zéro anomalie |
+
+### Les huit premières fiches, et ce qu'elles couvrent
 
 Leur grille est **transposée** : une ligne par critère (milieu, concentration,
 inoculum, incubation, lecture, contrôle de qualité), une colonne par variante
@@ -311,11 +379,16 @@ biologiste : ajouter `HLS`, ouvrir une méthode par disque pour `HLG`, décider
 du sort du « non concluant ». Le présent document les expose, il ne les prend
 pas.
 
-### Série 1 : joignable, non lue
+### Série 1 : joignable, non lue — et elle compte seize tables
 
-La série 1 est faite de tables à quatre colonnes par rangs de prescription
-(« Tier 1… ») : les molécules à tester et à rendre par groupe, l'équivalent
-du panel de PhénoBac. Elle demande son propre lecteur.
+Elle suit exactement la série 2 : 1A-1, 1A-2, 1B-1 à 1B-5, 1C à 1G, 1H-1,
+1H-2, 1I, 1J. Les listes de ce dépôt n'en déclaraient que **douze** : 1H-1,
+1H-2, 1I et 1J manquaient. Corrigé, et tiré du sommaire cette fois.
+
+Quatre colonnes de rangs de prescription (« Tier 1 » à « Tier 4 ») : les
+molécules à tester et à rendre par groupe, l'équivalent du panel de
+PhénoBac. Une ligne pleine largeur « Urine Only » ouvre une section en fin
+de table. Demande son propre lecteur.
 
 ## Le M45 est lu — `extraire-clsi-tests.js` ne suffisait pas non plus
 
