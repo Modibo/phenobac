@@ -479,15 +479,30 @@ dire("\nLes phrases de résistance naturelle se traduisent-elles toutes ?");
    interroge le moteur, et non les tables. */
 dire("\nTout antibiotique portant un seuil a-t-il un nom dans les deux langues ?");
 (function () {
-  var base = E.BASE || (typeof mb !== "undefined" ? mb : null);
-  var regles = base && (base.regles || base.REGLES);
-  if (!regles) { verif(false, "la base de connaissances est introuvable depuis le banc"); return; }
-  var codes = {}, cols = base.COLONNES || [];
-  var iAbx = cols.indexOf("abx");
-  regles.forEach(function (r) {
-    var k = Array.isArray(r) ? r[iAbx] : r.abx;
-    if (k) codes[k] = true;
+  /* LA PREMIÈRE VERSION DE CE CONTRÔLE NE TENAIT QUE SOUS JSC. Elle lisait
+     `mb`, la variable locale par laquelle le chemin jsc charge la base. Sous
+     node, le banc prend `require("../moteur")` et `mb` n'existe pas : le
+     contrôle échouait sur « base introuvable », et la CI tombait — alors
+     qu'elle passait au vert sur le poste. Exactement l'angle mort que
+     essai-chargement.js surveille, rouvert ici par distraction.
+
+     On lit donc les TABLES EXPORTÉES par le moteur, qui existent sur les deux
+     chemins — et qui valent mieux que la base brute : ce sont celles que le
+     moteur sert réellement. */
+  var tables = ["BP", "BP_MENINGE", "BP_URIN", "BP_CASFM", "BP_CASFM_URIN",
+                "BP_MENINGE_CASFM", "DZ", "DZ_MENINGE", "DZ_URIN", "DZ_CASFM",
+                "DZ_CASFM_URIN"];
+  var codes = {}, vues = 0;
+  tables.forEach(function (nom) {
+    var t = E[nom];
+    if (!t) return;
+    vues++;
+    Object.keys(t).forEach(function (groupe) {
+      Object.keys(t[groupe] || {}).forEach(function (k) { codes[k] = true; });
+    });
   });
+  verif(vues >= 6, "le banc a bien atteint " + vues + " tables de seuils du moteur : "
+        + "aucune, et le contrôle passerait au vert sans rien avoir regardé");
   var liste = Object.keys(codes).sort(), muets = [], flottants = [];
   liste.forEach(function (k) {
     E.fixerLangue("fr"); var fr = E.nomAbx(k);
