@@ -302,22 +302,42 @@ dire("\nLe CLSI n'hérite de rien, et ne se propose pas tant qu'il est vide");
         "… tandis que le CA-SFM déclare hériter de l'EUCAST — c'est le modèle du delta");
 
   /* AUCUNE TABLE NE FUIT. On balaie les couples que l'EUCAST chiffre et l'on
-     exige que le CLSI n'en rende aucun : c'est un balayage, pas trois
-     exemples choisis. */
-  var fuites = 0, visites = 0;
+     exige que toute valeur rendue sous CLSI vienne d'une TABLE CLSI.
+
+     CET INVARIANT A CHANGÉ DE FORME LE 2026-11-07, et la façon dont il l'a
+     fait mérite d'être écrite. Tant que les tables du CLSI étaient vides,
+     « aucune valeur sous CLSI » était la bonne exigence, et elle était
+     simple. À la première transcription — sept lignes pour Stenotrophomonas
+     — elle est devenue fausse, et le banc est tombé en désignant ma propre
+     transcription comme une fuite.
+
+     Supprimer l'assertion aurait été le geste facile et le mauvais : ce
+     qu'elle protège — qu'un laboratoire ne lise JAMAIS une valeur
+     européenne sous l'étiquette CLSI — n'a pas cessé d'importer. On exige
+     donc désormais la PROVENANCE, qui est l'invariant réel et qui tiendra
+     jusqu'à la dernière table transcrite. */
+  var fuites = [], visites = 0, rendus = 0;
   Object.keys(E.ORG).forEach(function (id) {
     var g = E.ORG[id].bpGroup;
     if (!g) return;
     E.cadrer("clsi", id);
     ["AMX", "CTX", "MEM", "CIP", "GEN", "VA", "OXA", "SXT"].forEach(function (k) {
       visites++;
-      if (E.getBP({}, g, k, {}) || E.getDZ({}, g, k, {})) fuites++;
+      var bp = E.getBP({}, g, k, {}), dz = E.getDZ({}, g, k, {});
+      if (!bp && !dz) return;
+      rendus++;
+      var dansCLSI = !!(E.BP_CLSI[g] && E.BP_CLSI[g][k])
+                  || !!(E.DZ_CLSI[g] && E.DZ_CLSI[g][k]);
+      if (!dansCLSI) fuites.push(g + "/" + k);
     });
   });
   verif(visites > 300, visites + " couples visités sous CLSI");
-  verif(fuites === 0,
-        fuites === 0 ? "aucun ne reçoit de valeur : rien ne fuit de l'EUCAST"
-          : fuites + " couples reçoivent une valeur EUCAST sous l'étiquette CLSI");
+  verif(fuites.length === 0,
+        fuites.length === 0
+          ? "les " + rendus + " valeurs rendues viennent toutes d'une table CLSI : "
+            + "rien ne fuit de l'EUCAST"
+          : fuites.length + " couples reçoivent une valeur qui n'est PAS dans une "
+            + "table CLSI : " + fuites.join(", "));
 
   /* Et les mécanismes de lecture, qui portent eux aussi des règles lues dans
      l'EUCAST ou le CA-SFM. */
@@ -337,8 +357,18 @@ dire("\nLe CLSI n'hérite de rien, et ne se propose pas tant qu'il est vide");
   var o = E.runInterpretation({ organism: "ecoli", ref: "clsi", mode: "mic",
                                 mic: { AMX: "2" }, ctx: {} });
   var dit = (o.interpretation.alerts || []).map(function (x) { return x.txt; }).join(" ");
-  verif(/CLSI/.test(dit) && /pas encore port/.test(dit),
-        "… et l'on dit que c'est le référentiel entier qui manque, non cette molécule");
+  /* TROIS ÉTATS, TROIS PHRASES. Tant que le CLSI était vide, on disait « le
+     référentiel entier n'est pas porté ». Depuis la transcription de
+     Stenotrophomonas il ne l'est plus, et E. coli serait passé en silence à
+     « le référentiel ne chiffre pas ce couple » — ce qui est FAUX : le CLSI
+     chiffre soixante-huit couples pour les entérobactéries, c'est la
+     transcription qui manque. Un laboratoire qui lit « le référentiel ne
+     donne pas de seuil » doit pouvoir le croire. */
+  verif(/pas encore transcrit/.test(dit),
+        "un germe non transcrit le dit, et ne se fait pas passer pour un "
+        + "silence du document");
+  verif(!/ne donne pas de seuil pour ce couple/.test(dit),
+        "… surtout, il ne fait pas dire au CLSI qu'il se tait alors qu'il parle");
 
   /* LE CHEMIN DE LECTURE EXISTE-T-IL ? C'est la question que la première
      version de ce banc ne posait pas, et le défaut qu'elle a laissé passer :
@@ -370,11 +400,19 @@ dire("\nLe CLSI n'hérite de rien, et ne se propose pas tant qu'il est vide");
     E.cadrer("eucast", null);
   })();
 
-  /* IL NE SE PROPOSE PAS TANT QU'IL EST VIDE. */
+  /* IL NE SE PROPOSE QUE S'IL PORTE QUELQUE CHOSE — et depuis le 2026-11-07
+     il porte Stenotrophomonas, donc le bouton paraît. L'assertion inverse a
+     tenu tant que les tables étaient vides ; la garder aurait figé le dépôt
+     dans l'état qu'il cherchait justement à quitter. */
   verif(E.referentielPeuple("eucast") && E.referentielPeuple("casfm"),
         "l'EUCAST et le CA-SFM portent des valeurs");
-  verif(E.referentielPeuple("clsi") === false,
-        "… le CLSI n'en porte aucune, et la page ne l'affiche donc pas");
+  verif(E.referentielPeuple("clsi") === true,
+        "… le CLSI aussi désormais, et la page l'affiche");
+  verif(E.groupePeuple("clsi", "steno") === true,
+        "le groupe transcrit est reconnu comme tel");
+  verif(E.groupePeuple("clsi", "entero") === false,
+        "… et un groupe non transcrit ne se fait pas passer pour couvert — "
+        + "c'est ce qui distingue « non transcrit » de « non chiffré »");
 
   E.cadrer("eucast", null);
 })();

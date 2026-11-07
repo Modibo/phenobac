@@ -63,7 +63,7 @@ const SOURCES = {
 
 // Version de la base elle-même, distincte de celle de l'application : elle
 // change dès qu'une règle change, et accompagne chaque compte rendu.
-const BASE_VERSION = "2026.41";
+const BASE_VERSION = "2026.42";
 
 /* La colonne « sdd » est en QUEUE de liste, et c'est délibéré : les lignes
    de la base sont des tableaux positionnels, et une colonne ajoutée au bout
@@ -2109,6 +2109,51 @@ const REGLES = [
 ["eucast","entero","NIT","disque","urinaire",11,11,"100",undefined,undefined,undefined,undefined,undefined,["ecoli"]],
 ["eucast","entero","TMP","cmi","urinaire",2,2,undefined,undefined,undefined,undefined,undefined,undefined,["ecoli","kpneu","koxytoca"]],
 ["eucast","entero","TMP","disque","urinaire",15,15,"5",undefined,undefined,undefined,undefined,undefined,["ecoli","kpneu","koxytoca"]],
+
+/* ====================================================================
+   CLSI M100 Ed36:2026
+   ====================================================================
+
+   Le CLSI n'hérite de RIEN. À la différence du CA-SFM, qui est l'EUCAST
+   assorti de ses différences, c'est un système entier : un couple absent
+   d'ici n'a pas de seuil sous CLSI, et l'application le dira plutôt que
+   de retomber sur une valeur européenne.
+
+   Les seuils sont convertis dans la convention de PhénoBac — S : sensible
+   si la mesure est ≤ S ; R : résistant si elle est > R. Le CLSI écrit ses
+   bornes autrement (« R ≥ 4 ») et sur une échelle de dilutions de raison
+   deux : « S ≤ 1 · I 2 · R ≥ 4 » devient donc S = 1, R = 2, parce qu'il
+   n'existe rien entre 2 et 4. Recopier le 4 aurait rendu sensible une
+   souche à 4 mg/L.
+
+   Chaque bloc cite sa table. Aucune valeur n'entre sans cette citation.
+
+   --------------------------------------------------------------------
+   Stenotrophomonas maltophilia — table 2B-4, confrontée le 2026-11-07
+   --------------------------------------------------------------------
+   Le CLSI ne donne de seuil qu'à cinq molécules, et PhénoBac en porte sept
+   auxquelles il n'en donne aucun — AMK, CAZ, COL, GEN, IPM, MEM, TZP.
+   Elles restent SANS seuil CLSI, et leurs valeurs EUCAST sont inchangées :
+   ce sont deux questions distinctes, et les mêler reviendrait à trancher
+   un arbitrage européen au prétexte d'une transcription américaine.
+
+   Le CÉFIDÉROCOL n'est pas transcrit, bien que le CLSI lui donne CMI ≤ 1 et
+   zone ≥ 17. Il ne lui donne AUCUN seuil de résistance, et cette base n'a
+   jamais porté un S sans R : rendue telle quelle, toute mesure au-dessus de
+   1 sortirait « I » — « sensible à forte exposition » —, ce que le CLSI ne
+   dit nulle part. Mieux vaut pas de seuil qu'un seuil qui ment.
+   (Décision du 2026-11-07.) */
+["clsi","steno","SXT","cmi","standard",2,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","steno","SXT","disque","standard",16,11,"1.25-23.75",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","steno","MIN","cmi","standard",1,2,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","steno","MIN","disque","standard",26,21,"30",undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","steno","LVX","cmi","standard",2,4,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
+["clsi","steno","LVX","disque","standard",17,14,"5",undefined,undefined,undefined,undefined,undefined,undefined],
+/* Le chloramphénicol : le CLSI lui donne un seuil complet là où PhénoBac
+   ne le portait pas du tout pour ce groupe. Il entre aussi dans le panel —
+   un seuil sans place à la saisie ne servirait qu'aux imports automate.
+   Le CLSI ne lui donne pas de diamètre. */
+["clsi","steno","CAF","cmi","standard",8,16,undefined,undefined,undefined,undefined,undefined,undefined,undefined],
 
 ];
 

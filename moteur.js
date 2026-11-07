@@ -66,7 +66,7 @@
 const REFERENTIELS = {
   eucast: { cle: "eucast", nom: "EUCAST", version: "16.1", publie: "2026-06-24", etat: "aligne", base: null },
   casfm:  { cle: "casfm",  nom: "CA-SFM", version: "2026", publie: "2026-09-01", etat: "delta", base: "eucast" },
-  /* CLSI — l'ossature est posée, les valeurs ne le sont pas encore.
+  /* CLSI — l'ossature est posée, et la TRANSCRIPTION A COMMENCÉ.
 
      CE COMMENTAIRE A DIT LE CONTRAIRE, ET C'ÉTAIT FAUX. Il affirmait que le
      M100 « se vend » et n'était pas librement disponible. Le CLSI en donne
@@ -78,16 +78,18 @@ const REFERENTIELS = {
      Une raison fausse d'attendre survit à la disparition de l'obstacle :
      celle-ci a tenu deux semaines après que l'accès eut été obtenu.
 
-     Ce qui manque maintenant est la TRANSCRIPTION, et elle seule. Tant que
-     les tables sont vides, le référentiel reste inerte — « etat: vide » —
-     et l'interface ne le propose pas : un laboratoire qui le choisirait
-     n'obtiendrait aucune catégorie sur aucun antibiotique, et conclurait à
-     juste titre que l'application est cassée.
+     Premier groupe transcrit le 2026-11-07 : Stenotrophomonas maltophilia,
+     table 2B-4. Le bouton a paru de lui-même — il est conditionné aux
+     données, pas à une ligne de code à retrouver.
 
-     Remplir BP_CLSI et DZ_CLSI suffira : le bouton paraît de lui-même,
-     parce qu'il est conditionné aux données et non à une ligne de code à
-     retrouver. Voir renderRefToggle() dans phenobac.html. */
-  clsi:   { cle: "clsi",   nom: "CLSI",   version: null,   publie: null,        etat: "vide",  base: null }
+     « etat: partiel » DIT CE QUI EST VRAI : certains germes sont transcrits,
+     les autres non. C'est l'état le plus délicat des trois, et celui qui
+     demande le plus de soin : un référentiel vide s'annonce, un référentiel
+     à moitié transcrit se tait. Voir groupePeuple(), qui distingue « ce
+     germe n'est pas encore transcrit » de « le document ne chiffre pas ce
+     couple » — deux phrases que rien ne séparait, et dont la confusion
+     ferait croire à un laboratoire que le CLSI est muet là où il parle. */
+  clsi:   { cle: "clsi",   nom: "CLSI",   version: "M100 Ed36:2026", publie: null, etat: "partiel", base: null }
 };
 const REFERENTIEL = REFERENTIELS.eucast;   // défaut, conservé pour compatibilité
 
@@ -4676,6 +4678,32 @@ function referentielPeuple(cle) {
   return !!(t && Object.keys(t).length);
 }
 
+/* LA COUVERTURE SE LIT AUSSI PAR GROUPE, ET C'EST LA PLUS DANGEREUSE DES
+   TROIS SITUATIONS QU'ELLE DISTINGUE.
+
+   referentielPeuple() répond « oui » dès qu'UN SEUL groupe porte des
+   valeurs. Le jour où la transcription du CLSI a commencé — sept lignes,
+   pour Stenotrophomonas —, tous les autres groupes sont passés en silence
+   de « le référentiel entier n'est pas porté », qui est honnête, à « le
+   référentiel ne chiffre pas ce couple », qui est FAUX : le CLSI chiffre
+   soixante-huit couples pour les entérobactéries, c'est PhénoBac qui ne les
+   a pas encore transcrits.
+
+   Un référentiel à moitié transcrit est plus dangereux qu'un référentiel
+   vide : le vide s'annonce, le partiel se tait. Trois états, trois
+   phrases — et un laboratoire qui lit « le référentiel ne donne pas de
+   seuil » doit pouvoir le croire. */
+function groupePeuple(cle, groupe) {
+  const tables = {
+    eucast: [BP, BP_URIN, BP_MENINGE, DZ, DZ_URIN],
+    casfm:  [BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM, DZ_CASFM, DZ_CASFM_URIN],
+    clsi:   [BP_CLSI, BP_CLSI_URIN, BP_CLSI_MENINGE, DZ_CLSI, DZ_CLSI_URIN]
+  }[cle] || [];
+  return tables.some(function (t) {
+    return t && t[groupe] && Object.keys(t[groupe]).length;
+  });
+}
+
 /* LE CADRE D'UNE LECTURE : le référentiel actif et l'espèce.
 
    Ces deux variables commandent TOUTE consultation de seuil — quelle table
@@ -5330,6 +5358,20 @@ function raisonSansCmi(group, k, ctx) {
             + "scaffolding is in place, the document is not. No pair can be categorised "
             + "under this standard; choose EUCAST or CA-SFM.");
   }
+  /* LE GROUPE N'EST PAS ENCORE TRANSCRIT — ce n'est pas le document qui se
+     tait, c'est PhénoBac. Confondre les deux ferait croire à un laboratoire
+     que le CLSI ne donne rien pour son germe, alors qu'il donne. */
+  if (!groupePeuple(_ref, group)) {
+    const nom2 = (REFERENTIELS[_ref] && REFERENTIELS[_ref].nom) || _ref;
+    return tr("ce germe n'est pas encore transcrit du " + nom2 + " dans PhénoBac. "
+            + "D'autres groupes le sont. Ce n'est pas le " + nom2 + " qui se tait : "
+            + "c'est la transcription qui n'est pas faite — choisissez l'EUCAST ou "
+            + "le CA-SFM pour ce germe.",
+              "this organism has not yet been transcribed from " + nom2 + " into "
+            + "PhénoBac. Other groups have been. " + nom2 + " is not silent here: the "
+            + "transcription simply has not been done — choose EUCAST or CA-SFM for "
+            + "this organism.");
+  }
   if (c.mening === "Oui" && !(BP_MENINGE[group] && BP_MENINGE[group][k])
       && BP[group] && BP[group][k])
     return tr("le référentiel ne donne pas de seuil méningé pour ce couple — et le seuil "
@@ -5368,6 +5410,20 @@ function raisonSansDisque(group, k, ctx) {
               "the " + nom + " breakpoints are not yet carried in PhénoBac — the "
             + "scaffolding is in place, the document is not. No pair can be categorised "
             + "under this standard; choose EUCAST or CA-SFM.");
+  }
+  /* LE GROUPE N'EST PAS ENCORE TRANSCRIT — ce n'est pas le document qui se
+     tait, c'est PhénoBac. Confondre les deux ferait croire à un laboratoire
+     que le CLSI ne donne rien pour son germe, alors qu'il donne. */
+  if (!groupePeuple(_ref, group)) {
+    const nom2 = (REFERENTIELS[_ref] && REFERENTIELS[_ref].nom) || _ref;
+    return tr("ce germe n'est pas encore transcrit du " + nom2 + " dans PhénoBac. "
+            + "D'autres groupes le sont. Ce n'est pas le " + nom2 + " qui se tait : "
+            + "c'est la transcription qui n'est pas faite — choisissez l'EUCAST ou "
+            + "le CA-SFM pour ce germe.",
+              "this organism has not yet been transcribed from " + nom2 + " into "
+            + "PhénoBac. Other groups have been. " + nom2 + " is not silent here: the "
+            + "transcription simply has not been done — choose EUCAST or CA-SFM for "
+            + "this organism.");
   }
   if (estCasfm() && dzCasfmDivergent(group, k, c))
     return tr("le CA-SFM retient un seuil différent de l'EUCAST pour ce couple, et PhénoBac ne reprend que ses seuils de CMI — saisir une CMI, ou repasser en EUCAST",
@@ -5953,7 +6009,7 @@ const MOTEUR = {
   // § 15 : le commentaire en cinq moments
   COMMENT_MOMENTS, commentaireStructure, commentaireCopiable,
   // tables, pour l'affichage des seuils et des aides de saisie
-  REFERENTIELS, ORG, ABXNAME, ABXNAME_EN, nomAbx,
+  REFERENTIELS, ORG, ABXNAME, ABXNAME_EN, nomAbx, groupePeuple,
   BP, BP_MENINGE, BP_URIN, BP_CASFM, BP_CASFM_URIN, BP_MENINGE_CASFM,
   DZ, DZ_MENINGE, DZ_URIN, DZ_CASFM, DZ_CASFM_URIN, DZ_TEMOIN,
   ESPECE_EUCAST, ESPECE_CASFM,

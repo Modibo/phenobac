@@ -2214,7 +2214,12 @@ const PRESENTATION = {
     label:"Stenotrophomonas maltophilia", italic:true, group:"Bacilles à Gram négatif non fermentants",
     panel:[
       {t:"Référence thérapeutique",abx:["SXT"]},
-      {t:"Alternatives",abx:["LVX","MIN","CAZ","FDC"]},
+      // Le chloramphénicol n'est proposé que depuis la transcription du CLSI,
+      // qui lui donne un seuil complet pour ce germe (table 2B-4) là où
+      // l'EUCAST n'en donne aucun. Il n'apparaîtra donc avec une catégorie
+      // que sous CLSI ; sous EUCAST et CA-SFM l'application dira « pas de
+      // seuil », ce qui est exact.
+      {t:"Alternatives",abx:["LVX","MIN","CAZ","FDC","CAF"]},
       {t:"Naturellement inactifs (rappel)",abx:["IPM","MEM","GEN","AMK"]}
     ],
     
@@ -2764,15 +2769,21 @@ function refDate(r){
 }
 function refLibelle(){
   const R = referentiel();
-  // Le CA-SFM se numérote par millésime, l'EUCAST par version.
-  const base = R.cle === "casfm" ? (R.nom + " " + R.version) : (R.nom + " v" + R.version);
+  // Le CA-SFM se numérote par millésime, l'EUCAST par version, et le CLSI
+  // par ÉDITION DE DOCUMENT — « CLSI vM100 Ed36:2026 » n'aurait aucun sens.
+  const base = (R.cle === "casfm" || R.cle === "clsi")
+             ? (R.nom + " " + R.version) : (R.nom + " v" + R.version);
   if (R.etat === "valide") return base;
   // « aligné » : tous les seuils qu'EUCAST définit sont conformes ; ceux qu'il
   // ne définit pas sont marqués « hors référentiel » dans l'éditeur.
   if (R.etat === "aligne")  return base;
   // « delta » : le CA-SFM, énoncé comme l'EUCAST plus ses différences.
   if (R.etat === "delta")   return base + " (sur base EUCAST v" + REFERENTIELS.eucast.version + ")";
-  if (R.etat === "partiel") return base + " (alignement partiel)";
+  // « partiel » : la transcription est commencée et inachevée. Le dire, et
+  // le dire à l'écran, parce qu'un germe non transcrit se lit autrement
+  // qu'un germe que le document ne chiffre pas.
+  if (R.etat === "partiel") return base + T(" (transcription en cours — tous les germes ne sont pas couverts)",
+                                            " (transcription under way — not all organisms are covered)");
   return base + " (seuils par défaut, à vérifier)";
 }
 

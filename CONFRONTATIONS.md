@@ -3014,11 +3014,12 @@ l'espèce manquait.
 - **document** : CLSI M100 Ed36:2026, table 2B-4, lue sur le portail gratuit
   em100.edaptivedocs.net par `outils/extraire-clsi.js`
 - **tables** : BP_CLSI, DZ_CLSI
-- **empreinte** : 3e3aa844e03ea14ecfd01c2556fb9b78df6b9969d6f68e7bda2bc67bc9f7b388
-  — c'est l'empreinte de tables **vides**, et c'est voulu : à la première
-  ligne transcrite elle changera, et la chaîne s'arrêtera jusqu'à ce que
-  cette entrée soit reprise. Le garde-fou est armé avant qu'il y ait quoi
-  que ce soit à garder.
+- **empreinte** : 1d72195dbf755dcf98e03608faca72c5461d7f152f3ecb2d6a90357b772dcf90
+  — **le garde-fou a fonctionné dès son premier usage.** L'entrée portait
+  d'abord l'empreinte de tables *vides* (`3e3aa844…`), armée avant qu'il y
+  ait quoi que ce soit à garder. Les sept lignes de *S. maltophilia*
+  transcrites une heure plus tard, la chaîne s'est arrêtée et a exigé que
+  cette entrée soit reprise. Elle l'est.
 - **date** : 2026-11-07, le document ouvert dans le volet
 - **résultat** : voir ci-dessous.
 
@@ -3059,4 +3060,40 @@ valeur, est un signal qui vaut d'être lu.
 
 Le septième, la colistine, n'était pas dans la liste d'arbitrage : il y entre.
 
-Rien n'a été modifié. C'est une décision de biologiste.
+### Transcrit le 2026-11-07, après arbitrage
+
+Sept lignes entrent dans `BP_CLSI` et `DZ_CLSI` : SXT, MIN et LVX en CMI et
+au disque, CAF en CMI seulement — le CLSI ne lui donne pas de diamètre. Les
+seuils sont convertis dans la convention de PhénoBac, qui dit « R si la
+mesure dépasse R » là où le CLSI écrit « R ≥ 4 » : sur une échelle de
+dilutions de raison deux, « S ≤ 1 · I 2 · R ≥ 4 » devient S = 1, R = 2.
+Recopier le 4 aurait rendu sensible une souche à 4 mg/L.
+
+**Trois décisions prises, et elles sont de vous :**
+
+- **Le céfidérocol n'est pas transcrit.** Le CLSI lui donne CMI ≤ 1 et
+  zone ≥ 17 sans aucun seuil de résistance. Cette base n'a jamais porté un
+  S sans R, et rendue telle quelle toute mesure au-dessus de 1 sortirait
+  « I » — *sensible à forte exposition* —, ce que le CLSI ne dit nulle part.
+  Mieux vaut pas de seuil qu'un seuil qui ment.
+- **Le chloramphénicol est transcrit ET entre au panel.** Le CLSI lui donne
+  un seuil complet là où PhénoBac ne le portait pas du tout pour ce germe.
+  Un seuil sans place à la saisie n'aurait servi qu'aux imports automate.
+- **Les sept muets restent muets sous CLSI, et l'EUCAST ne bouge pas.**
+  L'arbitrage européen sur AMK, CAZ, COL, GEN, IPM, MEM et TZP reste ouvert,
+  séparément : trancher une question européenne au prétexte d'une
+  transcription américaine serait une confusion de plus.
+
+### Ce que cette première transcription a révélé
+
+**Un référentiel à moitié transcrit est plus dangereux qu'un référentiel
+vide.** `referentielPeuple()` répond « oui » dès qu'un seul groupe porte des
+valeurs : dès ces sept lignes écrites, tous les autres germes sont passés en
+silence de « le référentiel entier n'est pas porté », qui est honnête, à
+« le référentiel ne chiffre pas ce couple », qui est **faux** — le CLSI
+chiffre soixante-huit couples pour les entérobactéries.
+
+`groupePeuple()` distingue désormais trois états, et l'étiquette de
+l'application dit « transcription en cours — tous les germes ne sont pas
+couverts ». Un laboratoire qui lit « le document ne donne pas de seuil »
+doit pouvoir le croire.

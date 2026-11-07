@@ -43,7 +43,8 @@ MP = _mod("moteur_py", "moteur_py.py")
 # Tables que la page emprunte au moteur et ne doit donc plus déclarer.
 EMPRUNTEES = ["BP", "BP_MENINGE", "BP_CASFM", "BP_CASFM_URIN", "BP_MENINGE_CASFM",
               "DZ", "DZ_MENINGE", "DZ_CASFM", "DZ_CASFM_URIN", "DZ_TEMOIN", "DZ_CASFM_ESPECE",
-              "DISQUE", "DISQUE_CASFM", "ZIT", "ZIT_CASFM", "ZIT_ZONE", "ZIT_ZONE_CASFM",
+              "DISQUE", "DISQUE_CASFM", "DISQUE_CLSI",
+              "ZIT", "ZIT_CASFM", "ZIT_ZONE", "ZIT_ZONE_CASFM",
               "HORS_EUCAST", "CASFM_COUVRE", "CASFM_COUVRE_ESPECE", "DEPISTAGE_CASFM",
               "REFERENTIELS", "OXA_PNEUMO"]
 
@@ -185,7 +186,8 @@ def main():
 
     # ---- 2. le moteur bâtit exactement ce que la base contient ----
     regles = base_lue()
-    bati = MP.tables(sorted(set(SEUILS.values())) + ["DISQUE", "DISQUE_CASFM", "ZIT",
+    bati = MP.tables(sorted(set(SEUILS.values())) + ["DISQUE", "DISQUE_CASFM",
+                                                     "DISQUE_CLSI", "ZIT",
                                                     "ZIT_CASFM", "ZIT_ZONE", "ZIT_ZONE_CASFM",
                                                     "DZ_TEMOIN", "DEPISTAGE",
                                                     "DEPISTAGE_CASFM"])
@@ -213,7 +215,15 @@ def main():
             elif cle in SEUILS:
                 met(SEUILS[cle], r["groupe"], r["abx"], {"S": r.get("S"), "R": r.get("R")})
         if "charge" in r:
-            met("DISQUE_CASFM" if r["ref"] == "casfm" else "DISQUE", r["groupe"], r["abx"], r["charge"])
+            # L'aiguillage des charges de disque suit celui du moteur, et il
+            # a TROIS branches depuis que le CLSI porte des valeurs. Écrit en
+            # deux branches — « casfm, ou tout le reste » —, il envoyait les
+            # charges du CLSI dans la table de l'EUCAST, et ce contrôle, qui
+            # existe pour attraper une divergence base/moteur, signalait sa
+            # propre cécité. Un aiguillage binaire sur une réalité ternaire
+            # ne se voit qu'au jour où la troisième branche existe.
+            met({"casfm": "DISQUE_CASFM", "clsi": "DISQUE_CLSI"}.get(r["ref"], "DISQUE"),
+                r["groupe"], r["abx"], r["charge"])
         if "zit" in r:
             n = ("ZIT_CASFM" if r["ref"] == "casfm" else "ZIT") if r["meth"] == "cmi" \
                 else ("ZIT_ZONE_CASFM" if r["ref"] == "casfm" else "ZIT_ZONE")
