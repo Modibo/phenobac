@@ -114,6 +114,52 @@ TABLES = {
     "3F-4":  ([], "lecture directe sur hémoculture (Acinetobacter)"),
 }
 
+# --------------------------------------------------------------------------
+# LE M45 — bactéries rares ou exigeantes. Ses tables sont numérotées
+# simplement 1 à 21, et pour éviter toute confusion avec les tables « 1 » du
+# M100 (les panels), on les préfixe « M45- ».
+#
+# Onze groupes de PhénoBac n'ont de seuils CLSI QUE là. Un douzième,
+# Achromobacter, n'en a nulle part — ni M100 ni M45 — et n'apparaît donc
+# dans aucune des deux tables de correspondance.
+# --------------------------------------------------------------------------
+TABLES_M45 = {
+    "1":  ([], "Abiotrophia et Granulicatella — PhénoBac ne les porte pas"),
+    "2":  (["aerococcus"], None),
+    "3":  (["aeromonas"], None),
+    "4":  ([], "Bacillus — non porté"),
+    "5":  (["campylo"], None),
+    "6":  (["coryne", "cdiphtheriae", "culcerans"],
+           "le CLSI réunit sous « Corynebacterium spp. (including "
+           "C. diphtheriae) and related coryneform genera » ce que PhénoBac "
+           "sépare en trois groupes"),
+    "7":  ([], "Erysipelothrix — non porté"),
+    "8":  ([], "Gemella — non porté"),
+    "9":  (["kingella"],
+           "le groupe HACEK du CLSI réunit Aggregatibacter, "
+           "Cardiobacterium, Eikenella et Kingella ; PhénoBac ne porte que "
+           "le dernier"),
+    "10": ([], "Helicobacter pylori — non porté"),
+    "11": ([], "Lactobacillus — non porté"),
+    "12": ([], "Lactococcus — non porté"),
+    "13": ([], "Leuconostoc — non porté"),
+    "14": (["listeria"], None),
+    "15": ([], "Micrococcus — non porté"),
+    "16": (["moraxella"], None),
+    "17": (["pasteurella"], None),
+    "18": ([], "Pediococcus — non porté"),
+    "19": ([], "Rothia mucilaginosa — non porté"),
+    "20": (["vibrio"], None),
+    "21": ([], "agents du bioterrorisme — non portés, et leur table porte "
+               "une colonne d'espèce"),
+}
+
+# Le convertisseur et le comparateur interrogent UNE seule table de
+# correspondance : les clés du M45 y entrent préfixées, pour qu'un « 2 » du
+# M45 ne se confonde jamais avec le « 2A-1 » du M100.
+for _k, _v in TABLES_M45.items():
+    TABLES["M45-" + _k] = _v
+
 
 def vide(v):
     return v is None or str(v).strip() in ("", "-", "–", "—")

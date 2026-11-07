@@ -250,9 +250,30 @@
       anomalies.push(cle + " : exposant non bibliographique « " + s + " »");
     });
 
+    /* LA MÊME FORME QUE LA SÉRIE 2, pour que le convertisseur n'ait pas à
+       apprendre un second format. outils/transcrire-clsi.py lit `colonnes`
+       et `lignes` ; un second lecteur de JSON à écrire serait un second
+       endroit où la conversion peut diverger. On traduit donc ici, à la
+       source, plutôt que là-bas, en double.
+
+       Les noms de colonnes sont ceux de la série 2 — « agent », « charge »,
+       « cmi:S », « disque:R » — et les valeurs sont rendues telles que le
+       document les écrit, « ≤ 1 », « ≥ 4 ». La conversion vers la
+       convention de PhénoBac reste le travail du convertisseur, en un seul
+       endroit. */
+    var colonnes = ["agent", "charge",
+                    "disque:S", "disque:I", "disque:R",
+                    "cmi:S", "cmi:I", "cmi:R"];
+    var plates = lignes.map(function (l) {
+      return [l.agent, l.disque,
+              l.zone.S, l.zone.I, l.zone.R,
+              l.cmi.S, l.cmi.I, l.cmi.R, l.renvois];
+    });
+
     return {cle: cle, titre: titre(rep.doc, cle), colonneGroupe: nomGroupe,
             blocs: {zone: Object.keys(cat.zone), cmi: Object.keys(cat.cmi)},
-            n: lignes.length, lignes: lignes,
+            colonnes: colonnes, n: lignes.length,
+            lignes: plates, detail: lignes,
             notes: Array.from(new Set(opt.notes)).sort(),
             anomalies: anomalies};
   }
