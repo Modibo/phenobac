@@ -47,6 +47,33 @@
   var TABLES = ["2A-1", "2A-2", "2B-1", "2B-2", "2B-3", "2B-4", "2B-5",
                 "2C", "2D", "2E", "2F", "2G", "2H-1", "2H-2", "2I", "2J"];
 
+  /* CE QUE CE SCRIPT NE LIT PAS ENCORE, ET QUI EXISTE.
+   *
+   * Les seuils ne sont pas tout le M100. La série des tables 3 décrit des
+   * TESTS — dépistages et lectures indirectes — et elle recouvre exactement
+   * les conventions `dep` et `temoin` de PhénoBac :
+   *
+   *   3A  BLSE chez K. pneumoniae, K. oxytoca, E. coli, P. mirabilis
+   *   3E  résistance à la colistine, entérobactéries et P. aeruginosa
+   *   3G  production de β-lactamase chez Staphylococcus spp.
+   *   3H  gélose salée à l'oxacilline, S. aureus
+   *   3I  gélose vancomycine, S. aureus et Enterococcus spp.
+   *   3J  clindamycine inductible (test D), staphylocoques et streptocoques
+   *   3K  haut niveau de mupirocine, S. aureus
+   *   3L  haut niveau d'aminosides, Enterococcus spp. — c'est là que vit le
+   *       code HLG de PhénoBac, et nulle part dans les tables de seuils
+   *
+   * Leur forme n'est pas une grille de seuils : choisir() ne les
+   * reconnaîtrait pas et lire() les rendrait « vides », ce qui serait un
+   * mensonge. Elles sont donc déclarées ici, HORS de TABLES, pour que leur
+   * absence soit écrite. Les lire demande un autre lecteur.
+   *
+   * De même, la série des tables 1 donne, par groupe, les molécules à tester
+   * et à rendre — l'équivalent du panel de PhénoBac. */
+  var TABLES_NON_LUES = ["1A-1", "1A-2", "1B-1", "1B-2", "1B-3", "1B-4",
+                         "1B-5", "1C", "1D", "1E", "1F", "1G",
+                         "3A", "3E", "3G", "3H", "3I", "3J", "3K", "3L"];
+
   var RETOUR = "⏎";        // marque d'un <br> à l'intérieur d'une cellule
   var HAUT   = "⇑";        // continuation verticale   (rowspan)
   var GAUCHE = "⇐";        // continuation horizontale (colspan)
@@ -216,7 +243,10 @@
       if (r.vide) vides.push(TABLES[i]);
     }
     res.anomalies = anomalies;
+    res.nonLues = TABLES_NON_LUES;
     console.log("tables lues        : " + TABLES.length);
+    console.log("tables NON lues    : " + TABLES_NON_LUES.length
+      + " (séries 1 et 3 : panels, dépistages, lectures indirectes)");
     console.log("tables sans seuils : " + (vides.join(", ") || "aucune"));
     console.log("lignes             : " + Object.keys(res.tables).reduce(
       function (s, k) { return s + (res.tables[k].n || 0); }, 0));

@@ -38,6 +38,10 @@ Deux pièges constatés :
   `requests`, et aucun script hors navigateur ne peut atteindre les pages.
   C'est la raison d'être de `outils/extraire-clsi.js`, script de console
   plutôt qu'outil en ligne de commande.
+- **Cette session ne survit pas à la fermeture du navigateur.** Le cookie
+  `GUIDM`, lui, persiste — ce qui donne l'illusion d'être encore connecté
+  alors que toute requête repart vers `Login.aspx`. L'accès invité est donc
+  à refaire à chaque reprise de travail, à la main.
 
 ## Ce que couvre le M100, et ce qu'il ne couvre pas
 
@@ -163,14 +167,58 @@ Quatre autres commandent la transcription :
 
 1. ~~Lire à la main les 15 lignes signalées (2C, 2D).~~ **Fait** : elles ont
    livré deux défauts de principe de plus, et l'extraction est à zéro anomalie.
-2. Établir la correspondance entre les 41 codes d'antibiotiques de PhénoBac et
-   les noms du CLSI.
-3. Porter SDD dans le moteur, l'interface et les deux catalogues de langue.
-4. Transcrire, table par table, avec un `comparer-clsi.py` qui confronte la
+2. ~~Établir la correspondance entre les codes d'antibiotiques de PhénoBac et
+   les noms du CLSI.~~ **Fait** : `outils/noms-clsi.py`. Les 47 codes ont un
+   sort décidé et écrit, et l'outil sort en erreur s'il en reste un sans.
+3. Lire la **série des tables 3** — dépistages et lectures indirectes — dont
+   la forme n'est pas une grille de seuils, et la **série des tables 1**, qui
+   donne les panels à tester et à rendre par groupe.
+4. Porter SDD dans le moteur, l'interface et les deux catalogues de langue.
+5. Transcrire, table par table, avec un `comparer-clsi.py` qui confronte la
    base au JSON extrait — comme `comparer-eucast.py` le fait pour le classeur.
-5. Lire le M45 pour les 12 groupes restants.
+6. Lire le M45 pour les 12 groupes restants.
 
-La première ligne de seuil CLSI ne sera écrite qu'une fois le point 2 clos.
+## Les seuils ne sont pas tout le M100
+
+En cherchant où le CLSI loge le **haut niveau de gentamicine** — code `HLG` de
+PhénoBac, introuvable dans les seize tables de seuils — une série entière est
+apparue. Les tables 3 décrivent des **tests**, et elles recouvrent exactement
+les conventions `dep` et `temoin` de la base :
+
+| table | ce qu'elle décrit | ce qu'elle touche dans PhénoBac |
+|---|---|---|
+| 3A | BLSE chez *K. pneumoniae*, *K. oxytoca*, *E. coli*, *P. mirabilis* | lecture interprétative des entérobactéries |
+| 3E | résistance à la colistine | `COL` |
+| 3G | production de β-lactamase chez *Staphylococcus* | la pénicillinase du staphylocoque |
+| 3H | gélose salée à l'oxacilline | `dep` |
+| 3I | gélose vancomycine | `dep` |
+| 3J | **clindamycine inductible** (test D) | `temoin` |
+| 3K | haut niveau de mupirocine | — |
+| 3L | **haut niveau d'aminosides** chez l'entérocoque | `HLG` |
+
+Et la **série des tables 1** donne, groupe par groupe, les molécules à tester
+et à rendre : l'équivalent du panel de PhénoBac.
+
+Leur forme n'est pas une grille de seuils. `extraire-clsi.js` ne les lit pas,
+et c'est pourquoi il les **déclare** dans `TABLES_NON_LUES` : laissées hors de
+toute liste, elles auraient été une omission silencieuse ; passées à `lire()`,
+elles seraient rendues « vides », ce qui serait un mensonge.
+
+## La correspondance des noms
+
+`outils/noms-clsi.py` la tient, et sort en erreur s'il reste un code sans
+sort décidé. Les 156 lignes nommées par les seize tables ne sont pas
+156 molécules : ce sont les mêmes, avec la casse, l'astérisque, `(U)a`,
+`(Inv.)`, et les qualificatifs de site et de voie — lesquels portent
+exactement ce que les colonnes `site`, `conv` et `temoin` de PhénoBac portent
+déjà. Les écraser au nettoyage reviendrait à transcrire la céfuroxime orale à
+la place de la parentérale.
+
+Deux codes n'ont pas de ligne dans les tables de seuils, et chacun porte sa
+raison : **`HLG`** vit en table 3L, et **`TEM`**, la témocilline, n'apparaît
+nulle part dans le M100.
+
+La première ligne de seuil CLSI ne sera écrite qu'une fois le point 3 clos.
 
 ## Ce que la lecture à la main a appris sur les staphylocoques
 
