@@ -79,6 +79,26 @@ tampon technique. Les confondre reviendrait à ranger sous une même étiquette
 une conduite thérapeutique et une incertitude de mesure. Et un SDD rendu « S »
 sans la forte posologie qui le conditionne est un échec thérapeutique annoncé.
 
+**Deux faits mesurés sur les seize tables, qui commandent l'implémentation.**
+
+*SDD et « I » ne se rencontrent jamais sur un même agent.* Les deux colonnes
+coexistent dans quatre tables (2A-1, 2A-2, 2C, 2D), mais pour un agent donné
+l'une des deux porte toujours `–`. Le moteur peut donc traiter la catégorie
+comme une valeur unique par couple, sans arbitrage entre un SDD et un I
+concurrents.
+
+Cette mesure a d'abord dit l'inverse, et la façon dont elle s'est trompée
+mérite d'être retenue : le premier test cherchait une cellule « non vide », et
+`estVide()` reconnaît `–` mais pas `–⏎–`, la forme que prend ce même tiret sur
+une ligne à deux agents. Il rendait dix fausses coexistences, toutes sur des
+lignes multi-agents. **Un test qui ne connaît pas toutes les écritures du vide
+voit du plein partout.**
+
+*SDD peut exister pour la CMI et pas pour le disque.* En 2D, le bloc des
+diamètres porte S/I/R quand celui des CMI porte S/SDD/I/R. Une implémentation
+qui déclarerait SDD au niveau du couple, et non au niveau de la méthode,
+inventerait un SDD par disque là où le CLSI n'en donne pas.
+
 ### 3. Les valeurs, pas les commentaires
 
 L'EUCAST et le CA-SFM autorisent la reproduction de leurs tableaux avec
