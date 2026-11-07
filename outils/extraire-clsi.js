@@ -223,6 +223,27 @@
           /Read\s*Times/i.test(ht.split(RETOUR).join(" "))) { iTemps = jt; break; }
     }
 
+    /* À QUEL BLOC APPARTIENT CHAQUE COLONNE DE VALEUR.
+       `sous` donne les catégories dans l'ordre — S, SDD, I, R, puis S, I, R —
+       mais pas si elles chiffrent un DIAMÈTRE ou une CMI. Le comparateur
+       devrait alors deviner, et la règle « les premières sont les diamètres »
+       tombe en 2J et 2B-3, qui n'ont que des CMI. On le lit sur la ligne 0,
+       qui le dit. */
+    var blocs = [];
+    (function () {
+      var courant = null;
+      for (var jb = 0; jb < larg; jb++) {
+        var h = (g[0][jb] === undefined ? "" : String(g[0][jb]));
+        if (h !== HAUT && h !== GAUCHE) {
+          var plat = h.split(RETOUR).join(" ");
+          if (/Zone\s*Diameter/i.test(plat)) courant = "disque";
+          else if (/\bMIC\b/i.test(plat)) courant = "cmi";
+          else if (/Comments?/i.test(plat)) courant = null;
+        }
+        blocs[jb] = courant;
+      }
+    })();
+
     var anomalies = [], lignes = [], precedent = null;
     for (var i = 2; i < g.length; i++) {
       var brut = [], j;
@@ -294,8 +315,17 @@
         }
       }
     }
-    return {cle: cle, sous: sous, larg: larg, n: lignes.length,
-            anomalies: anomalies, lignes: lignes};
+    /* Les colonnes de valeur, nommées : « disque:S », « cmi:R »… C'est ce
+       que le comparateur lit, et il n'a plus rien à déduire d'une position. */
+    var dCat0 = larg - 1 - sous.length, colonnes = [];
+    for (var jc = 0; jc < larg - 1; jc++) {
+      if (jc < dCat0) colonnes.push(jc === 0 ? "agent"
+                                  : (jc === iDisque ? "charge"
+                                  : (jc === iTemps ? "lecture" : "col" + jc)));
+      else colonnes.push((blocs[jc] || "?") + ":" + (sous[jc - dCat0] || "?"));
+    }
+    return {cle: cle, sous: sous, larg: larg, colonnes: colonnes,
+            n: lignes.length, anomalies: anomalies, lignes: lignes};
   }
 
   window.extraireCLSI = async function (telecharger) {

@@ -3006,3 +3006,57 @@ Les streptocoques des groupes C et G, eux, ont été ajoutés le même jour **sa
 document nouveau** : la table de l'EUCAST s'intitule « Streptococcus groups A,
 B, C and G », et PhénoBac la portait déjà sous le nom « strepacg ». Seule
 l'espèce manquait.
+
+---
+
+## comparer-clsi.py — première confrontation au M100, le 2026-11-07
+
+- **document** : CLSI M100 Ed36:2026, table 2B-4, lue sur le portail gratuit
+  em100.edaptivedocs.net par `outils/extraire-clsi.js`
+- **tables** : BP_CLSI, DZ_CLSI
+- **empreinte** : 3e3aa844e03ea14ecfd01c2556fb9b78df6b9969d6f68e7bda2bc67bc9f7b388
+  — c'est l'empreinte de tables **vides**, et c'est voulu : à la première
+  ligne transcrite elle changera, et la chaîne s'arrêtera jusqu'à ce que
+  cette entrée soit reprise. Le garde-fou est armé avant qu'il y ait quoi
+  que ce soit à garder.
+- **date** : 2026-11-07, le document ouvert dans le volet
+- **résultat** : voir ci-dessous.
+
+Le troisième outil de confrontation du dépôt. Il ne lit ni classeur ni PDF
+mais le **JSON d'un lecteur de console** : la session du portail CLSI vit dans
+un cookie `HttpOnly` qu'aucun script hors navigateur ne peut porter. La source
+change, la discipline non.
+
+    python3 outils/comparer-clsi.py chemin/vers/clsi-m100.json --table 2B-4
+
+### *Stenotrophomonas maltophilia* — table 2B-4
+
+Le CLSI ne donne de seuil que pour **cinq** molécules, dont une que PhénoBac
+ne porte pas :
+
+| molécule | disque | CMI |
+|---|---|---|
+| ceftiderocol (FDC) | S ≥ 17 | S ≤ 1 |
+| minocycline (MIN) | S ≥ 26 / I 21-25 / R ≤ 20 | S ≤ 1 / I 2 / R ≥ 4 |
+| lévofloxacine (LVX) | S ≥ 17 / I 14-16 / R ≤ 13 | S ≤ 2 / I 4 / R ≥ 8 |
+| triméthoprime-sulfaméthoxazole (SXT) | S ≥ 16 / I 11-15 / R ≤ 10 | S ≤ 2/38 / R ≥ 4/76 |
+| chloramphénicol (CAF) | — | S ≤ 8 / I 16 / R ≥ 32 |
+
+La ticarcilline-clavulanate figure aussi dans la table ; PhénoBac ne la porte
+pas.
+
+**CE QUE CETTE TABLE CORROBORE, ET QUI ATTEND VOTRE ARBITRAGE.** PhénoBac
+porte sept couples pour `steno` auxquels le CLSI ne donne **aucun** seuil :
+
+    AMK   CAZ   COL   GEN   IPM   MEM   TZP
+
+Six d'entre eux sont déjà en attente d'arbitrage sous EUCAST — cinq comme
+*contradictions avec une résistance naturelle déclarée* (AMK, GEN, IPM, MEM,
+TZP) et un comme *« – » sans source* (CAZ). Le CLSI ne les chiffre pas
+davantage. Un référentiel peut taire ce qu'un autre chiffre ; que **les deux**
+se taisent sur les mêmes sept molécules, alors que PhénoBac leur donne une
+valeur, est un signal qui vaut d'être lu.
+
+Le septième, la colistine, n'était pas dans la liste d'arbitrage : il y entre.
+
+Rien n'a été modifié. C'est une décision de biologiste.
