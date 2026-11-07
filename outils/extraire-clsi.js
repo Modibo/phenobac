@@ -104,6 +104,19 @@
 
   var VAL = /^(?:[≤≥<>]\s*)?\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?(?:\s*[-–]\s*(?:[≤≥]\s*)?\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?)?\^?$/;
 
+  // POURQUOI CE LECTEUR N'EMPLOIE PAS LE MARQUEUR ¶ DE clsi-commun.js
+  //
+  // En 3F-2, les deux temps de lecture sont bien dans deux <p> distincts, et
+  // opt.paragraphes donnerait donc un découpage EXACT plutôt que reconnu.
+  // Mais l'option vaut pour toute la table, et en 2A-2 le <p> sépare un nom
+  // de son qualificatif — « Pefloxacin (Inv.) » puis « (surrogate test for
+  // ciprofloxacin) » — où il ne faut PAS couper. L'activer globalement
+  // mettrait un ¶ au milieu d'un nom d'antibiotique.
+  //
+  // Le découpage par la forme ci-dessous ne devine pas : il reconnaît, et
+  // signale quand il ne reconnaît pas. Il est donc gardé, et le ¶ reste pour
+  // les lecteurs dont toute la table parle la même langue — les panels.
+
   // Les valeurs d'une cellule, reconnues UNE À UNE par leur forme.
   // Découper sur les espaces ne marche pas : « ≥ 16 ≥ 17 » en donne quatre
   // morceaux, le signe étant séparé de son nombre. C'est la même erreur que

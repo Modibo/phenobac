@@ -33,12 +33,21 @@
   C.M45     = "CLSI M45 ED3:2016";       // bactéries rares ou exigeantes
 
   C.RETOUR = "⏎";        // marque d'un <br> à l'intérieur d'une cellule
+  C.PARA   = "¶";        // marque d'une frontière de <p> dans une cellule
   C.HAUT   = "⇑";        // continuation verticale   (rowspan)
   C.GAUCHE = "⇐";        // continuation horizontale (colspan)
   C.DOUTE  = "⚠";
 
   // Confondre HAUT et GAUCHE transforme toute ligne de titre en copie de la
   // ligne de données précédente — défaut constaté, puis corrigé.
+  //
+  // RETOUR et PARA se distinguent pour la même raison, et le CLSI est
+  // constant là-dessus : le <br> sépare les AGENTS d'une même cellule
+  // (« Cefotaxime or⏎ceftriaxone », et ses valeurs « ≥ 26⏎≥ 23 »), tandis
+  // que le <p> sépare les items d'une AUTRE dimension — les deux temps de
+  // lecture en 3F-2, les molécules d'un panel en série 1. Les écraser sur
+  // la même espace, comme texte() le faisait, rendait « Imipenem Meropenem »
+  // indiscernable d'un nom composé.
 
   C.estVide = function (s) {
     return s === "" || s === "–" || s === "-" || s === "—";
@@ -52,6 +61,11 @@
    * mais outils/noms-clsi.py lit justement ces suffixes pour distinguer
    * « Penicillin (U) » du pénicilline ordinaire. Les retirer ici casserait la
    * correspondance des noms sans qu'aucun contrôle ne s'en aperçoive.
+   *
+   * AVEC opt.paragraphes : les frontières de <p> deviennent des PARA.
+   * Sans l'option, elles disparaissent — ce qui est le comportement
+   * historique et reste juste partout où un <p> ne sépare qu'un nom de son
+   * qualificatif (« Pefloxacin (Inv.) » + « (surrogate test…) »).
    *
    * AVEC opt.notes : la partie BIBLIOGRAPHIQUE des <sup> (lettres, chiffres,
    * virgules, tirets) est retirée du texte et poussée dans opt.notes.
@@ -80,13 +94,22 @@
         }
       });
     }
+    if (opt && opt.paragraphes) {
+      var ps = c.querySelectorAll("p");
+      for (var i = 1; i < ps.length; i++)
+        ps[i].parentNode.insertBefore(document.createTextNode(C.PARA), ps[i]);
+    }
     c.querySelectorAll("br").forEach(function (b) {
       b.replaceWith(document.createTextNode(C.RETOUR));
     });
-    return (c.textContent || "").replace(/ /g, " ")
-      .split(C.RETOUR).map(function (s) { return s.trim().replace(/\s+/g, " "); })
-      .join(C.RETOUR)
-      .replace(new RegExp("^" + C.RETOUR + "+|" + C.RETOUR + "+$", "g"), "");
+    var t = (c.textContent || "").replace(/ /g, " ");
+    // Normaliser autour des deux marqueurs, puis rogner ceux des bords.
+    t = t.split(C.RETOUR).map(function (x) {
+      return x.split(C.PARA).map(function (y) {
+        return y.trim().replace(/\s+/g, " "); }).join(C.PARA);
+    }).join(C.RETOUR);
+    return t.replace(new RegExp("^[" + C.RETOUR + C.PARA + "]+|[" +
+                                C.RETOUR + C.PARA + "]+$", "g"), "");
   };
 
   /* grille(table[, opt]) — déplie rowspan et colspan en un tableau plein.
@@ -129,6 +152,55 @@
       return {erreur: "session expirée — refaire l'accès invité"};
     var t = await r.text();
     return {doc: new DOMParser().parseFromString(t, "text/html")};
+  };
+
+  /* sommaire(edition) — les clés de table que le document déclare lui-même,
+   * tirées de sa table des matières.
+   *
+   * POURQUOI CECI EXISTE
+   *
+   * Les listes de tables de ce dépôt ont d'abord été écrites de mémoire. Elles
+   * annonçaient huit tables en série 3 là où il y en a quinze, et douze en
+   * série 1 là où il y en a seize. Les manquantes n'étaient ni lues, ni
+   * déclarées non lues : elles n'étaient nulle part, et rien ne pouvait le
+   * dire. Une liste fausse est pire qu'une liste absente, parce qu'elle clôt
+   * la question.
+   *
+   * Le sommaire était à UNE REQUÊTE de distance. Il l'est toujours, et
+   * confronter() oblige maintenant chaque lecteur à s'y mesurer. */
+  C.sommaire = async function (edition) {
+    var ed = edition || C.EDITION;
+    var r = await fetch("GetDoc.aspx?doc=" + encodeURIComponent(ed) + "&format=HTML",
+                        {credentials: "same-origin"});
+    if (!r.ok) return {erreur: "HTTP " + r.status};
+    if (/Login\.aspx/i.test(r.url)) return {erreur: "session expirée"};
+    var d = new DOMParser().parseFromString(await r.text(), "text/html");
+    var cles = [], titres = {};
+    Array.prototype.forEach.call(d.querySelectorAll('a[href*="TABLE"]'), function (a) {
+      var t = (a.textContent || "").replace(/\s+/g, " ").trim();
+      var m = t.match(/^Table\s+([0-9]+[A-Z]?(?:-[0-9]+)?)\./i);
+      if (!m) return;
+      if (cles.indexOf(m[1]) < 0) { cles.push(m[1]); titres[m[1]] = t; }
+    });
+    return {cles: cles, titres: titres};
+  };
+
+  /* confronter(portee, nommees, sommaire) — ce que le lecteur prétend
+   * couvrir contre ce que le document contient. Échoue DANS LES DEUX SENS :
+   * une table du document absente de la liste est une omission silencieuse ;
+   * une table listée qui n'existe pas est une liste périmée. */
+  C.confronter = async function (portee, nommees, edition) {
+    var som = await C.sommaire(edition);
+    if (som.erreur) return ["sommaire illisible : " + som.erreur];
+    var dans = som.cles.filter(function (k) { return portee.test(k); });
+    var manque = dans.filter(function (k) { return nommees.indexOf(k) < 0; });
+    var fantome = nommees.filter(function (k) { return som.cles.indexOf(k) < 0; });
+    var a = [];
+    if (manque.length)
+      a.push("tables du document que ce lecteur ne nomme NULLE PART : " + manque.join(", "));
+    if (fantome.length)
+      a.push("tables nommées qui n'existent pas dans le document : " + fantome.join(", "));
+    return a;
   };
 
   C.exigerCommun = function (qui) {

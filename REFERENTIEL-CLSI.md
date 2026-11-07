@@ -379,16 +379,75 @@ biologiste : ajouter `HLS`, ouvrir une méthode par disque pour `HLG`, décider
 du sort du « non concluant ». Le présent document les expose, il ne les prend
 pas.
 
-### Série 1 : joignable, non lue — et elle compte seize tables
+## La série 1 est lue — `extraire-clsi-panels.js`
 
-Elle suit exactement la série 2 : 1A-1, 1A-2, 1B-1 à 1B-5, 1C à 1G, 1H-1,
-1H-2, 1I, 1J. Les listes de ce dépôt n'en déclaraient que **douze** : 1H-1,
-1H-2, 1I et 1J manquaient. Corrigé, et tiré du sommaire cette fois.
+**16 tables, 240 entrées, une anomalie** — et cette anomalie-là n'est pas
+réductible : elle est dans le document.
 
-Quatre colonnes de rangs de prescription (« Tier 1 » à « Tier 4 ») : les
-molécules à tester et à rendre par groupe, l'équivalent du panel de
+La série 1 ne donne aucun seuil. Elle dit, groupe par groupe, **quelles
+molécules tester et rendre**, en quatre rangs de prescription : Tier 1 en
+routine, Tier 2 rendu sélectivement, Tier 3 pour les établissements à forte
+prévalence de résistance, Tier 4 sur avis. C'est l'équivalent du panel de
 PhénoBac. Une ligne pleine largeur « Urine Only » ouvre une section en fin
-de table. Demande son propre lecteur.
+de table.
+
+Elle suit exactement la série 2 : 1A-1 à 1J. Les listes de ce dépôt n'en
+déclaraient que **douze** ; 1H-1, 1H-2, 1I et 1J manquaient.
+
+### Une section vide n'est pas une panne
+
+La **1B-3** ne contient aucune table, seulement une phrase renvoyant à la
+2B-3 : les seuils de *B. cepacia* ont été retirés, ses deux méthodes de
+référence ne concordant pas. Le lecteur distingue ce **renvoi** d'une erreur
+de lecture — sans quoi on chercherait une panne là où il n'y en a pas.
+
+### Le défaut qui comptait : deux séparateurs écrasés en un
+
+Une cellule de panel sépare ses molécules de deux façons, et le CLSI est
+constant là-dessus :
+
+- **`<br>`** sépare les agents d'une même cellule — c'est le `⏎` que
+  `texte()` connaissait déjà ;
+- **une frontière de `<p>`** sépare les items d'une autre dimension :
+  `<p>Imipenem</p> <p>Meropenem</p>` en 1B-2, et les deux temps de lecture
+  en 3F-2.
+
+`texte()` n'en voyait qu'une. Le `<p>` disparaissait dans une simple espace,
+et « Imipenem Meropenem » devenait indiscernable d'un nom composé. **Sept
+entrées sur deux cent quarante** étaient dans ce cas — et le contrôle de
+molécules soudées les signalait comme un défaut du portail, alors que le
+défaut était chez moi. Un contrôle peut accuser juste et se tromper de
+coupable.
+
+Les deux marques sont désormais distinctes, `⏎` et `¶`, pour la même raison
+que `⇑` et `⇐` le sont : **confondre deux séparateurs, c'est perdre la
+dimension que l'un des deux portait.**
+
+### Ce qui reste, et qui est dans le document
+
+Une seule cellule, en 1C rang 4 :
+
+    <p>Ciprofloxacin or levofloxacin Moxifloxacin</p>
+
+Un seul `<p>`, aucun `<br>`, une simple espace. Le tableau imprimé y porte
+deux entrées ; la conversion a perdu le saut de ligne. Aucune règle ne le
+rétablit sans deviner — « or » sépare des **équivalents**, l'espace ne sépare
+rien. La cellule part donc en anomalie, et c'est la bonne issue : un panel
+plausible et faux serait pire qu'un panel incomplet et signalé.
+
+À relever aussi : le CLSI écrit **« Gentamycin »** en 1B-2 et
+« Gentamicin » partout ailleurs. À prévoir dans `outils/noms-clsi.py`.
+
+### Chaque lecteur se mesure maintenant au sommaire
+
+`clsi-commun.js` expose `sommaire()` et `confronter()`. Avant toute lecture,
+un lecteur confronte sa liste de tables à la table des matières du document,
+**dans les deux sens** : une table du document qu'il ne nomme nulle part est
+une omission silencieuse ; une table nommée qui n'existe pas est une liste
+périmée.
+
+C'est la réponse directe aux deux listes fausses de ce dépôt. Le sommaire
+était à une requête de distance, et personne ne la faisait.
 
 ## Le M45 est lu — `extraire-clsi-tests.js` ne suffisait pas non plus
 

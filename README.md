@@ -143,6 +143,11 @@ une forme de table chacun, et aucun ne sait lire celle des autres :
 | `extraire-clsi.js` | M100, 16 grilles de seuils + les 3 lectures directes sur hémoculture | 727 lignes, zéro anomalie |
 | `extraire-clsi-tests.js` | M100, 12 fiches de tests (dépistages, test D, HLAR, carbapénémases) | 27 colonnes, zéro anomalie |
 | `extraire-clsi-m45.js` | M45, 21 tables d'espèces | 235 lignes, zéro anomalie |
+| `extraire-clsi-panels.js` | M100, 16 tables de panels (séries 1) | 240 entrées, une anomalie |
+
+L'unique anomalie restante est **dans le document** : une cellule de la
+table 1C où la conversion en HTML a perdu un saut de ligne, et qu'aucune
+règle ne rétablit sans deviner. Elle est signalée plutôt que comblée.
 
 Les tables sont réparties **par leur forme, pas par leur numéro** : les 3F-2,
 3F-3 et 3F-4 portent un « 3 » mais sont des grilles de seuils, et reviennent
