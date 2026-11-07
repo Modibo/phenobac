@@ -460,6 +460,55 @@ dire("\nLes phrases de résistance naturelle se traduisent-elles toutes ?");
           : restees.length + " traduction(s) gardent du français : " + restees.join(" | "));
 })();
 
+/* ---------- TOUT CODE QUI PORTE UN SEUIL A-T-IL UN NOM ?
+
+   LE 7 NOVEMBRE 2026, LE MÉTRONIDAZOLE N'EN AVAIT AUCUN, dans aucune des
+   deux langues. Il portait pourtant un seuil dans quatorze groupes
+   d'anaérobies, et le moteur le qualifie lui-même de « traitement de
+   référence des infections à anaérobies ». nomAbx() rendait « MTZ ».
+
+   Ce n'était pas la première fois : le commentaire au-dessus de ABXNAME
+   raconte le même incident sur les molécules de l'antibiogramme urinaire,
+   corrigé à la main et sans contrôle. D'où celui-ci.
+
+   LE PIÈGE EST DANS LE REPLI. La page connaît « Métronidazole » dans sa
+   propre table ABX, et son nomAbx s'écrit `_M.nomAbx(k) || ABX[k].n || k`.
+   Mais _M.nomAbx rend le CODE quand il ne sait pas, et « MTZ » est une
+   chaîne non vide : le repli ne s'exécutait jamais. Un bon nom caché
+   derrière un mauvais qui passe pour valide — et c'est pourquoi ce contrôle
+   interroge le moteur, et non les tables. */
+dire("\nTout antibiotique portant un seuil a-t-il un nom dans les deux langues ?");
+(function () {
+  var base = E.BASE || (typeof mb !== "undefined" ? mb : null);
+  var regles = base && (base.regles || base.REGLES);
+  if (!regles) { verif(false, "la base de connaissances est introuvable depuis le banc"); return; }
+  var codes = {}, cols = base.COLONNES || [];
+  var iAbx = cols.indexOf("abx");
+  regles.forEach(function (r) {
+    var k = Array.isArray(r) ? r[iAbx] : r.abx;
+    if (k) codes[k] = true;
+  });
+  var liste = Object.keys(codes).sort(), muets = [], flottants = [];
+  liste.forEach(function (k) {
+    E.fixerLangue("fr"); var fr = E.nomAbx(k);
+    E.fixerLangue("en"); var en = E.nomAbx(k);
+    if (fr === k || en === k) muets.push(k);
+    else if (E.ABXNAME[k] === undefined || E.ABXNAME_EN[k] === undefined) flottants.push(k);
+  });
+  verif(liste.length >= 35,
+        "le contrôle a bien ramassé les " + liste.length + " codes de la base : "
+        + "un ramassage vide passerait au vert sans rien avoir regardé");
+  verif(muets.length === 0,
+        muets.length === 0
+          ? "les " + liste.length + " codes portant un seuil ont un nom dans les deux langues"
+          : muets.length + " code(s) rendus PAR LEUR SIGLE, faute de nom : " + muets.join(", "));
+  verif(flottants.length === 0,
+        flottants.length === 0
+          ? "… et chacun le tient d'une des deux tables, non d'un repli"
+          : flottants.length + " code(s) absents d'une table et sauvés par un repli : "
+            + flottants.join(", "));
+})();
+
 E.fixerLangue("fr");
 dire("\n" + (KO ? KO + " échec(s) sur " + (OK + KO) + " contrôles."
                 : OK + " contrôles : le moteur rend dans les deux langues, les noms de "

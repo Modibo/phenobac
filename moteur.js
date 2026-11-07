@@ -112,7 +112,16 @@ const ABXNAME = {
   // Kingella et Corynebacterium diphtheriae, soit comme seuil clinique, soit
   // comme DÉPISTAGE dont se déduit la doxycycline. Sans ce code, le disque le
   // plus répandu des laboratoires à moyens comptés n'avait pas de place.
-  TET: "Tétracycline"
+  TET: "Tétracycline",
+  // MÉTRONIDAZOLE. Il portait un seuil dans quatorze groupes d'anaérobies —
+  // et le moteur le dit lui-même « traitement de référence des infections à
+  // anaérobies » — mais il n'était NI ICI NI DANS LA TABLE ANGLAISE. nomAbx()
+  // retombait donc sur le code, « MTZ », dans les deux langues. La page
+  // connaissait bien « Métronidazole » dans sa propre table ABX, mais son
+  // repli `_M.nomAbx(k) || ABX[k].n` ne s'y rendait jamais : « MTZ » est une
+  // chaîne non vide, donc vraie, et le repli était court-circuité. Un bon nom
+  // caché derrière un mauvais qui passe pour valide.
+  MTZ: "Métronidazole"
 };
 /* LES NOMS D'ANTIBIOTIQUES EN ANGLAIS.
 
@@ -141,7 +150,8 @@ const ABXNAME_EN = {
   HLG: "Gentamicin, high-level screen", CAF: "Chloramphenicol", DOX: "Doxycycline",
   OXA: "Oxacillin", LVX: "Levofloxacin", PEF: "Pefloxacin (fluoroquinolone screen)",
   AZM: "Azithromycin", TEM: "Temocillin", FDC: "Cefiderocol", DAP: "Daptomycin",
-  MXF: "Moxifloxacin", MIN: "Minocycline", TET: "Tetracycline"
+  MXF: "Moxifloxacin", MIN: "Minocycline", TET: "Tetracycline",
+  MTZ: "Metronidazole"
 };
 
 /* Le nom de la molécule dans la langue courante. Passer par cette fonction
