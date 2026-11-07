@@ -131,6 +131,13 @@ n'écrit aucun seuil qu'il ne peut pas citer page en main. Les deux jours
 précédents ont coûté seize valeurs sans source ; en inventer trois cents serait
 pire.
 
+**SDD, la quatrième catégorie du CLSI, est portée** depuis le 2026-11-07 :
+le moteur, l'interface et les deux catalogues de langue savent la rendre, et
+`outils/essai-sdd.js` la surveille sur la chaîne. Elle n'est pas un troisième
+seuil mais un NOM donné à la bande intermédiaire — le CLSI ne donne jamais
+SDD et « I » pour un même agent, mesuré sur ses seize tables de seuils. Sans
+elle, une table CLSI transcrite perdrait sa quatrième colonne en silence.
+
 **Pourquoi il n'y a pas de bouton CLSI dans l'application.** Il existe, mais
 il est masqué : `renderRefToggle()` cache tout référentiel dont les tables
 sont vides. Un laboratoire qui choisirait le CLSI aujourd'hui n'obtiendrait

@@ -80,7 +80,7 @@ Un couple sans seuil CLSI ne retombe **pas** en silence sur la valeur EUCAST
 sous l'étiquette « CLSI » : `getBP` rend `null`, et `_sansCmi` / `_sansDisque`
 disent à l'utilisateur qu'il n'y a pas de seuil dans ce référentiel.
 
-### 2. SDD devient une quatrième catégorie
+### 2. SDD devient une quatrième catégorie — **fait**
 
 Le CLSI distingue **quatre** catégories là où PhénoBac en connaît trois :
 S, **SDD** (*Susceptible-Dose Dependent*, sensible à forte posologie), I, R.
@@ -112,6 +112,35 @@ voit du plein partout.**
 diamètres porte S/I/R quand celui des CMI porte S/SDD/I/R. Une implémentation
 qui déclarerait SDD au niveau du couple, et non au niveau de la méthode,
 inventerait un SDD par disque là où le CLSI n'en donne pas.
+
+**COMMENT ELLE EST IMPLÉMENTÉE.** Pas comme un troisième seuil : comme un
+NOM donné à la bande intermédiaire. La base porte une colonne `sdd`, en
+queue de `COLONNES` — les lignes sont des tableaux positionnels, et une
+colonne insérée au milieu décalerait chaque valeur d'un cran. Le moteur
+garde son alphabet S / I / R et rend à part la liste des couples concernés ;
+l'interface les affiche « SDD ».
+
+Ce détour n'est pas une facilité. Les **cinquante** endroits où le moteur et
+la page comparent une catégorie à « I » auraient dû être revus un à un, et
+celui qu'on aurait oublié aurait rendu une molécule inactive sans que rien
+ne le dise. Le dépôt portait déjà ce mécanisme pour le CA-SFM, qui rend
+« I » sous le sigle « SFP ». SDD suit le chemin éprouvé.
+
+**Ce que ce choix coûte, et qui le surveille.** Le nom se décide AILLEURS
+que la catégorie. `outils/essai-sdd.js` — 17 vérifications, branché sur la
+chaîne — exige que le drapeau suive la méthode, qu'il ne se déclenche que
+sur la bande intermédiaire, que chaque appel de rendu porte le code de
+l'antibiotique, et que `sdd` voyage avec les catégories par les **deux**
+chemins (moteur local et serveur).
+
+**Trois défauts trouvés en chemin, deux par les contrôles du dépôt.** Onze
+appels de rendu existent dans la page ; trois seulement avaient le code sous
+la main au premier jet. L'affectation de `SDD_ACTIF` était posée dans la
+branche locale, et le chemin serveur la perdait — une panne invisible sur le
+poste du développeur, qui a toujours le moteur local ; c'est
+`verifier-raccord.py` qui l'a trouvée. Et `verifier-langues.py` a exigé que
+« SDD », qui s'écrit pareil dans les deux langues, soit **déclaré** invariant
+plutôt que supposé.
 
 ### 3. Les valeurs, pas les commentaires
 
@@ -213,7 +242,9 @@ Quatre autres commandent la transcription :
    rendre par groupe, en quatre colonnes de rangs de prescription
    (« Tier 1 » à « Tier 4 »), avec une ligne pleine largeur « Urine Only »
    qui ouvre une section. Demande son propre lecteur.
-5. Porter SDD dans le moteur, l'interface et les deux catalogues de langue.
+5. ~~Porter SDD dans le moteur, l'interface et les deux catalogues de
+   langue.~~ **Fait** : colonne `sdd` en base, `outils/essai-sdd.js` sur la
+   chaîne, rendu vérifié au navigateur dans les deux langues.
 6. Transcrire, table par table, avec un `comparer-clsi.py` qui confronte la
    base au JSON extrait — comme `comparer-eucast.py` le fait pour le classeur.
 7. ~~Lire le M45 pour les 12 groupes restants.~~ **Fait** :
