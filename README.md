@@ -136,8 +136,13 @@ lecture seule** au M100 — <https://em100.edaptivedocs.net/>, « CLSI Micro
 Free », accès invité sans compte ni paiement — et le portail porte l'édition
 courante, **M100 Ed36:2026**, ainsi que le **M45 Ed3:2016** pour les bactéries
 rares ou exigeantes. Les seize tables de seuils en ont été lues par
-`outils/extraire-clsi.js` : **661 lignes, zéro anomalie**. La transcription
-n'est pas commencée. Tout est consigné dans
+`outils/extraire-clsi.js` : **661 lignes, zéro anomalie**. Les huit tables de
+**tests** — dépistages et lectures indirectes, dont le haut niveau
+d'aminosides et le test D — l'ont été par `outils/extraire-clsi-tests.js` :
+**23 colonnes de test, zéro anomalie**. Les deux lecteurs partagent leurs
+primitives dans `outils/clsi-commun.js`, pour qu'une correction du dépliage
+des cellules fusionnées les atteigne tous les deux. La transcription n'est
+pas commencée. Tout est consigné dans
 **[REFERENTIEL-CLSI.md](REFERENTIEL-CLSI.md)** : d'où vient le document,
 pourquoi l'extraction passe par la console du navigateur, les quatre décisions
 prises avant d'écrire la première ligne, et les défauts de lecture trouvés en

@@ -170,13 +170,19 @@ Quatre autres commandent la transcription :
 2. ~~Établir la correspondance entre les codes d'antibiotiques de PhénoBac et
    les noms du CLSI.~~ **Fait** : `outils/noms-clsi.py`. Les 47 codes ont un
    sort décidé et écrit, et l'outil sort en erreur s'il en reste un sans.
-3. Lire la **série des tables 3** — dépistages et lectures indirectes — dont
-   la forme n'est pas une grille de seuils, et la **série des tables 1**, qui
-   donne les panels à tester et à rendre par groupe.
-4. Porter SDD dans le moteur, l'interface et les deux catalogues de langue.
-5. Transcrire, table par table, avec un `comparer-clsi.py` qui confronte la
+3. ~~Lire la **série des tables 3** — dépistages et lectures indirectes.~~
+   **Fait** : `outils/extraire-clsi-tests.js`, 8 tables, 23 colonnes de test,
+   zéro anomalie. Ce qu'elle apporte et ce qui manque à PhénoBac est en bas
+   de ce document.
+4. Lire la **série des tables 1**, qui donne les panels à tester et à rendre
+   par groupe. Sondée : des tables à quatre colonnes par rangs de
+   prescription. Demande son propre lecteur.
+5. Porter SDD dans le moteur, l'interface et les deux catalogues de langue.
+6. Transcrire, table par table, avec un `comparer-clsi.py` qui confronte la
    base au JSON extrait — comme `comparer-eucast.py` le fait pour le classeur.
-6. Lire le M45 pour les 12 groupes restants.
+7. Lire le M45 pour les 12 groupes restants. Sondé : une grille de seuils
+   précédée d'une colonne « Antimicrobial Class ». Troisième forme, troisième
+   lecteur.
 
 ## Les seuils ne sont pas tout le M100
 
@@ -203,6 +209,78 @@ Leur forme n'est pas une grille de seuils. `extraire-clsi.js` ne les lit pas,
 et c'est pourquoi il les **déclare** dans `TABLES_NON_LUES` : laissées hors de
 toute liste, elles auraient été une omission silencieuse ; passées à `lire()`,
 elles seraient rendues « vides », ce qui serait un mensonge.
+
+## La série 3 est lue — `extraire-clsi-tests.js`
+
+Les huit tables sont lues, **zéro anomalie**, 23 colonnes de test.
+
+Leur grille est **transposée** : une ligne par critère (milieu, concentration,
+inoculum, incubation, lecture, contrôle de qualité), une colonne par variante
+de test. C'est toute la raison d'un second lecteur ; `choisir()`, qui cherche
+un en-tête « Antimicrobial Agent », ne trouve rien ici.
+
+### Combien une table a-t-elle de colonnes ? La question n'est pas triviale
+
+Compter les colonnes physiques se trompe **dans les deux sens** :
+
+- en **3A**, une colonne de test en occupe deux, parce que sa cellule de
+  lecture est un couple « Cefpodoxime zone | ≤ 17 mm » — six colonnes
+  physiques, quatre tests ;
+- en **3J**, « Disk Diffusion (D-zone test) » couvre deux colonnes, que la
+  ligne « Organism group » sépare ensuite en staphylocoques et streptocoques
+  — deux méthodes, mais bien quatre tests.
+
+Les colonnes logiques sont donc la **partition la plus fine induite par les
+lignes d'en-tête** — ligne 0, « Test method », « Organism group ». Cette
+partition se lit dans le document : chaque début de cellule, à n'importe
+laquelle de ces lignes, est une frontière. Un premier jet prenait le compte
+de la seule ligne 0 et rendait « Criteria for Performance of ESBL Test » deux
+fois de suite comme s'il s'agissait de deux tests.
+
+### Deux défauts de lecture, et ce qu'ils enseignent
+
+**Un exposant ne porte pas une seule chose.** « ATCC®d » contient la marque
+déposée, qui appartient au nom de la souche, et la lettre d'appel de note,
+qui n'y appartient pas. Traiter l'exposant comme un bloc faisait refuser
+« ® » et produisait **soixante-dix fausses anomalies** — ce qui revient à
+n'en signaler aucune, puisque plus personne ne lit la liste. On sépare : la
+marque reste dans le texte, l'appel part dans les notes, et seul un reste
+inclassable est signalé.
+
+**Un critère peut s'étendre sur onze lignes.** En 3A, « Results » porte un
+`rowspan` de onze. En faire onze critères « Results » séparés aurait détruit
+la liste qu'ils forment — les cinq seuils de zone pour *K. pneumoniae*,
+*K. oxytoca* et *E. coli*, puis les trois pour *P. mirabilis*.
+
+### Ce que la série 3 apporte à PhénoBac, et qui lui manque
+
+| ce que dit le CLSI | ce que PhénoBac tient |
+|---|---|
+| HLG **par disque** : gentamicine 120 µg — 6 mm = R, 7-9 mm = **non concluant**, ≥ 10 mm = S | aucune méthode par disque pour `HLG` |
+| HLG **par CMI** : R > 500 µg/mL | une ligne EUCAST, CMI 128 mg/L |
+| **HLS** — streptomycine haut niveau : disque 300 µg (mêmes bornes de zone), CMI R > 1000 µg/mL en bouillon, > 2000 µg/mL en gélose | **rien** |
+| test D : disques érythromycine 15 µg et clindamycine 2 µg, écartés de **15-26 mm** (staphylocoques) ou **12 mm** (pneumocoque et streptocoques β-hémolytiques) | convention `temoin`, sans l'écartement |
+| gélose salée oxacilline : MHA + 4 % NaCl, oxacilline 6 µg/mL, 24 h, lecture en lumière transmise | convention `dep` |
+| gélose vancomycine : BHI + 6 µg/mL, 24 h — et la lecture **diffère selon l'espèce** : chez *S. aureus* « sensibilité diminuée présumée », chez l'entérocoque « résistance présumée » | convention `dep` |
+| haut niveau de mupirocine : disque 200 µg, **absence de zone** = résistance | — |
+
+La catégorie **« non concluant »** du HLG par disque (7-9 mm) n'a pas
+d'équivalent dans le moteur, qui ne connaît que S, I et R — et bientôt SDD.
+Elle n'est pas un SDD : elle ne dit pas qu'une dose plus forte marcherait,
+elle dit que **le test n'a pas tranché** et qu'il faut une CMI.
+
+**Aucune de ces lignes n'a été portée dans la base.** Ce sont des décisions de
+biologiste : ajouter `HLS`, ouvrir une méthode par disque pour `HLG`, décider
+du sort du « non concluant ». Le présent document les expose, il ne les prend
+pas.
+
+### Série 1 et M45 : joignables, non lus
+
+Sondés pendant la même session : la série 1 est faite de tables à quatre
+colonnes par rangs de prescription (« Tier 1… »), et le **M45 Ed3:2016** est
+une **troisième** forme — une grille de seuils, mais précédée d'une colonne
+« Antimicrobial Class » qui décalerait d'un cran le calcul de `dCat` dans
+`extraire-clsi.js`. Les lire demande, chacun, son lecteur.
 
 ## La correspondance des noms
 

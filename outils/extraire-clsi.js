@@ -17,9 +17,13 @@
  * USAGE
  *   1. Ouvrir em100.edaptivedocs.net, franchir l'accès invité (e-mail, pays,
  *      type d'utilisateur), ouvrir « CLSI M100 ED36:2026 ».
- *   2. Coller ce fichier entier dans la console.
+ *   2. Coller outils/clsi-commun.js, PUIS ce fichier.
  *   3. await extraireCLSI()        → le JSON, et le compte des anomalies.
  *      await extraireCLSI(true)    → en plus, télécharge clsi-m100.json.
+ *
+ *   Le dépliage des rowspan/colspan vit dans clsi-commun.js, partagé avec
+ *   extraire-clsi-tests.js : une correction du dépliage doit atteindre les
+ *   deux lecteurs, et une copie locale la retiendrait ici.
  *
  * CE QUE LE SCRIPT NE FAIT PAS
  *   Il ne devine jamais. Toute cellule qu'il ne sait pas répartir entre
@@ -38,7 +42,10 @@
 (function () {
   "use strict";
 
-  var EDITION = "CLSI M100 ED36:2026";
+  if (!window.CLSI_COMMUN)
+    throw new Error("extraire-clsi.js : coller d'abord outils/clsi-commun.js");
+  var K = window.CLSI_COMMUN;
+  var EDITION = K.EDITION;
 
   // Les seize tables de seuils. La 2B-3 est vide par décision du CLSI :
   // les seuils de B. cepacia ont été retirés, les deux méthodes de référence
@@ -74,47 +81,11 @@
                          "1B-5", "1C", "1D", "1E", "1F", "1G",
                          "3A", "3E", "3G", "3H", "3I", "3J", "3K", "3L"];
 
-  var RETOUR = "⏎";        // marque d'un <br> à l'intérieur d'une cellule
-  var HAUT   = "⇑";        // continuation verticale   (rowspan)
-  var GAUCHE = "⇐";        // continuation horizontale (colspan)
-  var DOUTE  = "⚠";
-
-  // Confondre HAUT et GAUCHE transforme toute ligne de titre en copie de la
-  // ligne de données précédente — défaut constaté, puis corrigé.
+  var RETOUR = K.RETOUR, HAUT = K.HAUT, GAUCHE = K.GAUCHE, DOUTE = K.DOUTE;
 
   var VAL = /^(?:[≤≥<>]\s*)?\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?(?:\s*[-–]\s*(?:[≤≥]\s*)?\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?)?\^?$/;
 
-  function estVide(s) { return s === "" || s === "–" || s === "-" || s === "—"; }
-
-  function texte(cell) {
-    var c = cell.cloneNode(true);
-    c.querySelectorAll("br").forEach(function (b) {
-      b.replaceWith(document.createTextNode(RETOUR));
-    });
-    return (c.textContent || "").replace(/ /g, " ")
-      .split(RETOUR).map(function (s) { return s.trim().replace(/\s+/g, " "); })
-      .join(RETOUR).replace(new RegExp("^" + RETOUR + "+|" + RETOUR + "+$", "g"), "");
-  }
-
-  function grille(t) {
-    var g = [], ri, ci, i, j, cell, rs, cs, v;
-    for (ri = 0; ri < t.rows.length; ri++) {
-      while (g.length <= ri) g.push([]);
-      ci = 0;
-      for (var k = 0; k < t.rows[ri].cells.length; k++) {
-        cell = t.rows[ri].cells[k];
-        while (g[ri][ci] !== undefined) ci++;
-        rs = cell.rowSpan || 1; cs = cell.colSpan || 1; v = texte(cell);
-        for (i = 0; i < rs; i++) {
-          while (g.length <= ri + i) g.push([]);
-          for (j = 0; j < cs; j++)
-            g[ri + i][ci + j] = (i === 0 && j === 0) ? v : (i > 0 ? HAUT : GAUCHE);
-        }
-        ci += cs;
-      }
-    }
-    return g;
-  }
+  var estVide = K.estVide, grille = K.grille;
 
   // La table des seuils se reconnaît à son en-tête, jamais à sa longueur :
   // en 2B-3 le tableau « Testing Conditions » est le plus long de la page.
@@ -179,12 +150,9 @@
   }
 
   async function lire(cle) {
-    var url = "GetDoc.aspx?doc=" + encodeURIComponent(EDITION) +
-              "&sbssok=" + encodeURIComponent(EDITION + " TABLE " + cle) + "&format=HTML";
-    var r = await fetch(url, {credentials: "same-origin"});
-    if (!r.ok) return {cle: cle, erreur: "HTTP " + r.status};
-    var d = new DOMParser().parseFromString(await r.text(), "text/html");
-    var t = choisir(d);
+    var rep = await K.lireDoc(cle);
+    if (rep.erreur) return {cle: cle, erreur: rep.erreur};
+    var t = choisir(rep.doc);
     if (!t) return {cle: cle, vide: true,
                     motif: "aucune table de seuils dans cette section"};
     var g = grille(t);
