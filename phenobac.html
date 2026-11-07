@@ -2785,14 +2785,33 @@ function refLibelle(){
    inappropriées de carbapénèmes. (CA-SFM 2026, p. 2 et annexe 7.)
    La lettre reste « I » à la saisie et en interne — seul le rendu change.
    ------------------------------------------------------------ */
-function lettreCat(cat){
-  if(cat==="I" && estCasfm()) return "SFP";
-  return cat;
+/* SDD — la quatrième catégorie du CLSI — emprunte exactement ce chemin.
+   Elle occupe la MÊME BANDE que « I » : le CLSI ne donne jamais les deux
+   pour un même agent, mesuré sur les seize tables de seuils du M100. Le
+   moteur garde donc son alphabet S / I / R, et nomme à part les couples
+   concernés ; seul le rendu change, comme pour « SFP ».
+
+   SDD_ACTIF est renseigné à chaque interprétation, depuis le champ `sdd` du
+   moteur. Il est vidé entre deux lectures : un reliquat ferait rendre « SDD »
+   une molécule d'un autre référentiel. */
+let SDD_ACTIF = new Set();
+function estSDD(abx){ return abx !== undefined && SDD_ACTIF.has(abx); }
+
+function lettreCat(cat, abx){
+  if(cat!=="I") return cat;
+  if(estSDD(abx)) return "SDD";
+  return estCasfm() ? "SFP" : cat;
 }
-function libelleCat(cat){
-  if(cat==="S") return "Sensible";
-  if(cat==="R") return "Résistant";
-  if(cat==="I") return estCasfm() ? "Sensible à forte posologie" : "Sensible à forte exposition";
+function libelleCat(cat, abx){
+  if(cat==="S") return T("Sensible","Susceptible");
+  if(cat==="R") return T("Résistant","Resistant");
+  if(cat==="I"){
+    if(estSDD(abx))
+      return T("Sensible à forte posologie (SDD)","Susceptible-dose dependent");
+    return estCasfm()
+      ? T("Sensible à forte posologie","Susceptible, increased dosage")
+      : T("Sensible à forte exposition","Susceptible, increased exposure");
+  }
   return "—";
 }
 
@@ -3702,8 +3721,8 @@ function renderAbx(){
       if(state.mode==="sir"){
         const seg=document.createElement("div"); seg.className="seg";
         ["S","I","R"].forEach(v=>{
-          const b=document.createElement("button"); b.dataset.v=v; b.textContent=lettreCat(v);
-          b.title=libelleCat(v);
+          const b=document.createElement("button"); b.dataset.v=v; b.textContent=lettreCat(v,k);
+          b.title=libelleCat(v,k);
           if(state.results[k]===v) b.classList.add("on");
           b.onclick=()=>{
             state.results[k] = (state.results[k]===v)? undefined : v;
@@ -3735,7 +3754,7 @@ function renderAbx(){
         zc.title=T("Zone d'incertitude technique : à cette valeur, la catégorisation est peu reproductible. Ni l'EUCAST ni le CA-SFM n'en font une catégorie ; PhénoBac ne modifie rien de lui-même.",
           "Area of technical uncertainty: at this value, categorisation is poorly reproducible. Neither EUCAST nor CA-SFM makes it a category; PhénoBac changes nothing on its own.");
         const majChips=(c)=>{
-          chip.className="cat-chip "+(c||"none"); chip.textContent=c?lettreCat(c):"—";
+          chip.className="cat-chip "+(c||"none"); chip.textContent=c?lettreCat(c,k):"—";
           zc.hidden = !douteux(valeurs[k]);
         };
         majChips(traduire(valeurs[k]));
@@ -4957,7 +4976,7 @@ function detSeuils(g){
     lignes.push(`<div class="det-ligne">
         <span class="dn">${esc(nomAbx(k))}</span>
         <span class="dm">${esc(String(v))} ${mm?"mm":"mg/L"} · ${esc(regle)}</span>
-        <span class="dc lc-${classeCat(cat)}">${cat?esc(lettreCat(cat)):"—"}</span>
+        <span class="dc lc-${classeCat(cat)}">${cat?esc(lettreCat(cat,k)):"—"}</span>
       </div>`);
   }));
   if(!lignes.length) return "";
@@ -4977,7 +4996,7 @@ function renderDetective(A){
   panelComplet(org).forEach(grp => grp.abx.forEach(k => {
     const c = state.results[k]; if(!c) return;
     mesures.push(`<div class="det-ligne"><span class="dn">${esc(nomAbx(k))}</span>`
-      + `<span class="dc lc-${classeCat(c)}">${esc(lettreCat(c))}</span></div>`);
+      + `<span class="dc lc-${classeCat(c)}">${esc(lettreCat(c,k))}</span></div>`);
   }));
   h += detEtape(0, mesures.length ? mesures.join("")
       : "", false);
@@ -5019,7 +5038,7 @@ function renderDetective(A){
   if((A.rendu||[]).length){
     concl += `<div style="margin-top:9px">${T("Catégories modifiées par la lecture interprétative :", "Categories changed by interpretive reading:")}</div>`
       + A.rendu.map(x => `<div class="det-ligne"><span class="dn">${esc(nomAbx(x.abx))}</span>`
-          + `<span class="dm">lu ${esc(lettreCat(x.brut))}, rendu R — ${esc(x.motif)}</span></div>`).join("");
+          + `<span class="dm">lu ${esc(lettreCat(x.brut,x.abx))}, rendu R — ${esc(x.motif)}</span></div>`).join("");
   }
   h += detEtape(6, concl, true);
 
@@ -5137,7 +5156,7 @@ function renderInterpretView(A){
       const nom = nomAbx(x.abx);
       html+=`<div class="lect">
         <span class="lect-a">${esc(nom)}</span>
-        <span class="lect-c"><b class="lc lc-${classeCat(x.brut)}">${esc(lettreCat(x.brut))}</b><span class="lect-fl">→</span><b class="lc lc-R">R</b></span>
+        <span class="lect-c"><b class="lc lc-${classeCat(x.brut)}">${esc(lettreCat(x.brut,x.abx))}</b><span class="lect-fl">→</span><b class="lc lc-R">R</b></span>
         <span class="lect-m">${esc(x.motif)}</span>
       </div>`;
     });
@@ -5170,7 +5189,7 @@ function renderInterpretView(A){
       html += `<div class="nat-l">
         <span class="nat-n">${esc(nomAbx(k))}<span class="nat-c">${esc(ABX[k].code)}</span></span>
         <span class="nat-e">${esc((_M.naturelleEn && _L.estAnglais() ? (_M.naturelleEn(natur[k]) || natur[k]) : natur[k]))}</span>
-        <span class="nat-s ${teste ? "cat-"+classeCat(teste) : "non"}">${teste ? esc(lettreCat(teste)) : T("non testé", "not tested")}</span>
+        <span class="nat-s ${teste ? "cat-"+classeCat(teste) : "non"}">${teste ? esc(lettreCat(teste,k)) : T("non testé", "not tested")}</span>
       </div>`;
     });
     html += `</div>`;
@@ -5247,7 +5266,7 @@ function renderInterpretView(A){
     if(rcib.masquees.length){
       html += `<div class="rc-masq">` + rcib.masquees.map(k=>
         `<span class="rc-m"><b>${esc(nomAbx(k))}</b>
-          <span class="lc lc-${classeCat(state.results[k])}">${esc(lettreCat(state.results[k])||"")}</span></span>`
+          <span class="lc lc-${classeCat(state.results[k])}">${esc(lettreCat(state.results[k],k)||"")}</span></span>`
       ).join("") + `</div>`;
     }
     /* POURQUOI chaque molécule est absente. Un masquage sans motif
@@ -5412,7 +5431,12 @@ async function interpretRemote(payload){
     err.reseau = true;
     throw err;
   }
-  return { interpretation:data.interpretation, categories:data.categories };
+  // `sdd` voyage AVEC les catégories, jamais séparément : il les qualifie.
+  // Omis ici, SDD disparaissait dès que la page interrogeait le serveur —
+  // et seulement là, ce qui est la pire des pannes : elle ne se montre pas
+  // sur le poste du développeur, qui a toujours le moteur local.
+  return { interpretation:data.interpretation, categories:data.categories,
+           sdd:data.sdd };
 }
 
 /* L'interprétation a lieu ICI, sur le poste.
@@ -5451,7 +5475,8 @@ async function renderInterpretRemote(){
     if(moteur && moteur.runInterpretation){
       const out = moteur.runInterpretation(envoi);
       if(out.error) throw new Error("espèce inconnue du moteur : " + envoi.organism);
-      res = { interpretation: out.interpretation, categories: out.categories };
+      res = { interpretation: out.interpretation, categories: out.categories,
+              sdd: out.sdd };
     } else {
       // moteur.js absent du cache ou bloqué : on interroge le serveur, qui
       // exécute le même fichier. Le résultat est le même, le délai non.
@@ -5479,6 +5504,12 @@ async function renderInterpretRemote(){
     // Catégories faisant foi : dès qu'une mesure est saisie, c'est le serveur
     // qui traduit, et l'affichage s'aligne sur lui. La traduction locale n'est
     // qu'un aperçu immédiat, jamais l'autorité.
+    /* SDD_ACTIF se pose ICI, après les DEUX branches, et nulle part ailleurs.
+       Posé dans la branche locale, il manquait au chemin serveur — une panne
+       invisible sur le poste du développeur, qui a toujours le moteur local.
+       Vidé puis rempli, jamais complété : un reliquat ferait rendre « SDD »
+       une molécule de la lecture précédente. */
+    SDD_ACTIF = new Set(res.sdd || []);
     if(mesure && res.categories){ state.results = res.categories; renderAbx(); }
     const A = res.interpretation;
     setLive(A); state.lastA=A;
@@ -6424,8 +6455,8 @@ function buildReport(A){
       const chg = (A.rendu||[]).find(x=>x.abx===k);
       const cle = chg ? chg.rendu : cat;
       const catFull = chg
-        ? libelleCat(chg.rendu) + " <i>(lu " + esc(lettreCat(chg.brut)) + ")</i>"
-        : libelleCat(cat);
+        ? libelleCat(chg.rendu, k) + " <i>(lu " + esc(lettreCat(chg.brut, k)) + ")</i>"
+        : libelleCat(cat, k);
       const prov = provenanceLigne(k, g, cat, chg);
       /* LA POSOLOGIE QUI FONDE LE SEUIL, au compte rendu et non plus seulement
          à l'écran. Le cahier l'exige depuis le premier jour : « pour une
@@ -6464,7 +6495,7 @@ function buildReport(A){
       rows+=`<tr>
         <td>${esc(nomAbx(k))} <span class="rc">${esc(ABX[k].code)}</span></td>
         <td class="mic">${mesure?esc(mesure)+unite:"—"}</td>
-        <td class="cat cat-${classeCat(cle)}">${cle?esc(lettreCat(cle)):"—"}</td>
+        <td class="cat cat-${classeCat(cle)}">${cle?esc(lettreCat(cle,k)):"—"}</td>
         <td class="catf">${catFull}${posoLigne}${voieLigne}</td>
         <td class="prov">${pastillesProv(prov)}</td>
       </tr>`;
@@ -6476,7 +6507,7 @@ function buildReport(A){
   // résultat brut. Un clinicien doit pouvoir voir que la catégorie a été
   // modifiée, et un biologiste refaire le raisonnement.
   const lect = (A.rendu && A.rendu.length)
-    ? A.rendu.map(x=>`<li><b>${esc(nomAbx(x.abx))}</b> : lu ${esc(libelleCat(x.brut).toLowerCase())} (${esc(lettreCat(x.brut))}), rendu résistant (R). ${esc(x.motif)}</li>`).join("")
+    ? A.rendu.map(x=>`<li><b>${esc(nomAbx(x.abx))}</b> : lu ${esc(libelleCat(x.brut, x.abx).toLowerCase())} (${esc(lettreCat(x.brut, x.abx))}), rendu résistant (R). ${esc(x.motif)}</li>`).join("")
     : "";
   const alerts = A.alerts.map(a=>`<li class="al-${a.lvl}">${esc(a.txt)}</li>`).join("");
   const rules  = A.rules.length? A.rules.map(r=>`<li><b>${esc(r.k)}</b> ${esc(r.txt)}</li>`).join("") : "";

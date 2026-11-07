@@ -65,7 +65,23 @@ const SOURCES = {
 // change dès qu'une règle change, et accompagne chaque compte rendu.
 const BASE_VERSION = "2026.41";
 
-const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff"];
+/* La colonne « sdd » est en QUEUE de liste, et c'est délibéré : les lignes
+   de la base sont des tableaux positionnels, et une colonne ajoutée au bout
+   laisse les quelque deux mille lignes existantes intactes — elles la
+   reçoivent simplement « undefined ». L'insérer au milieu aurait décalé
+   chaque valeur d'un cran, en silence.
+
+   CE QU'ELLE VEUT DIRE. « sdd: true » dit que la bande intermédiaire de ce
+   couple s'appelle SDD — Susceptible-Dose Dependent — et non « I ». Ce n'est
+   PAS un troisième seuil : SDD occupe exactement la bande entre S et R, et
+   le CLSI ne donne jamais les deux pour un même agent. Mesuré sur les seize
+   tables de seuils du M100 : les colonnes SDD et I coexistent en 2A-1, 2A-2,
+   2C et 2D, mais pour un agent donné l'une des deux porte toujours « – ».
+   Un booléen suffit donc, et un troisième seuil aurait été une fiction.
+
+   Elle vit au niveau du COUPLE ET DE LA MÉTHODE, pas du couple seul : en
+   table 2D, SDD existe pour la CMI et pas pour le diamètre. */
+const COLONNES = ["ref", "groupe", "abx", "meth", "site", "S", "R", "charge", "zit", "temoin", "dep", "conv", "couv", "espece", "ecoff", "sdd"];
 
 /* Le nombre de règles n'est PAS écrit ici. Il l'a été, et il a vieilli sans
    bruit : « 578 » alors que le fichier en portait 681. Un chiffre faux dans

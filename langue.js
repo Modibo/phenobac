@@ -113,6 +113,12 @@ const C = {
   // actif. On ne prête pas à l'un les mots de l'autre.
   "cat.I.eucast":          { fr: "Sensible à forte exposition", en: "Susceptible, increased exposure" },
   "cat.I.casfm":           { fr: "Sensible à forte posologie", en: "Susceptible, increased dosage (CA-SFM wording)" },
+  /* Le CLSI nomme SDD — Susceptible-Dose Dependent — ce que l'EUCAST appelle
+     « I ». Le sigle est celui du CLSI et NE SE TRADUIT PAS : il figure tel
+     quel sur les comptes rendus du monde entier, et le franciser le rendrait
+     méconnaissable. Seule la glose change de langue. */
+  "cat.I.clsi":            { fr: "Sensible à forte posologie (SDD)", en: "Susceptible-dose dependent" },
+  "cat.I.clsi.sigle":      { fr: "SDD", en: "SDD", meme: true },
   "cat.nonteste":          { fr: "Non testé", en: "Not tested" },
   "cat.noncategorise":     { fr: "Non catégorisé", en: "Not categorised" },
   "zit.nom":               { fr: "Zone d'incertitude technique", en: "Area of Technical Uncertainty" },

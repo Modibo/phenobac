@@ -435,6 +435,16 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
      calcul se fait AVANT la boucle : l'ordre des lignes dans le fichier ne
      doit rien décider. */
   const aUneLigneGenerale = {};
+  /* Le seuil d'une ligne. « sdd » n'est posé que s'il est VRAI : une clé
+     « sdd: undefined » partout alourdirait chaque objet de seuil et ferait
+     diverger toute comparaison structurelle, pour ne rien dire de plus que
+     son absence. */
+  function seuilDe(r) {
+    const o = { S: r.S, R: r.R };
+    if (r.sdd) o.sdd = true;
+    return o;
+  }
+
   BASE.regles.forEach(function (r) {
     if (r.S === undefined && r.R === undefined) return;
     if (r.espece !== undefined) return;
@@ -459,7 +469,7 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
           if (SEUIL_ESPECE[cle]) throw new Error(
             "base-connaissances : deux seuils pour « " + cle + " ». "
             + "Le second écraserait le premier sans rien dire.");
-          SEUIL_ESPECE[cle] = { S: r.S, R: r.R };
+          SEUIL_ESPECE[cle] = seuilDe(r);
         });
       } else {
         /* DEUX LIGNES GÉNÉRALES POUR LE MÊME COUPLE SONT UNE FAUTE, et
@@ -471,7 +481,7 @@ const BP = {}, BP_MENINGE = {}, BP_URIN = {}, BP_CASFM = {}, BP_CASFM_URIN = {},
             "base-connaissances : deux lignes générales pour « " + coord + " ». "
             + "La seconde écraserait la première sans rien dire ; si elles "
             + "diffèrent par l'espèce, nommez-la.");
-        met(t, r.groupe, r.abx, { S: r.S, R: r.R });
+        met(t, r.groupe, r.abx, seuilDe(r));
       }
     }
     if (r.charge !== undefined)
@@ -801,6 +811,18 @@ let _activeOrg = null;
 let _activeId = null;
 // Couples tombant dans la zone d'incertitude technique pour la requête en cours.
 let _zit = [];
+/* Les couples dont la bande intermédiaire s'appelle SDD pour CETTE lecture.
+   Le moteur garde son alphabet S / I / R : SDD occupe la même bande que « I »
+   et n'entraîne aucun raisonnement différent, puisque c'est la même bande.
+   Seul le NOM change, et il change au rendu.
+
+   Ce choix n'est pas une facilité. Les cinquante endroits où le moteur et la
+   page comparent une catégorie à « I » auraient dû être revus un à un, et
+   celui qu'on aurait oublié aurait rendu une molécule inactive sans que rien
+   ne le dise. Le dépôt porte déjà le même mécanisme pour le CA-SFM, qui rend
+   « I » sous le sigle « SFP » : la lettre reste « I » en interne, seul le
+   rendu change. SDD suit le chemin déjà éprouvé. */
+let _sdd = [];
 let _sansDisque = [];
 /* ET SON JUMEAU POUR LES CMI, qui manquait.
    _sansDisque existe depuis longtemps : un diamètre mesuré que le moteur ne
@@ -5719,6 +5741,7 @@ function runInterpretation(input) {
   // diamètres CA-SFM en dépend.
   let results = {};
   _zit = [];
+  _sdd = [];
   _sansDisque = [];
   _sansCmi = [];
   _lectureDisque = [];
@@ -5742,7 +5765,9 @@ function runInterpretation(input) {
         }
         return;
       }
-      const cat = catFromMic(mic[k], getBP(input.bpOverride || {}, org.bpGroup, k, input.ctx || {}));
+      const bpK = getBP(input.bpOverride || {}, org.bpGroup, k, input.ctx || {});
+      const cat = catFromMic(mic[k], bpK);
+      if (cat === "I" && bpK && bpK.sdd) _sdd.push(k);
       if (cat) results[k] = cat;
       /* Une CMI saisie que le moteur ne peut pas traduire ne doit PAS
          disparaître : le biologiste croirait l'antibiotique non testé alors
@@ -5768,6 +5793,10 @@ function runInterpretation(input) {
       const seuilDep = depistageSeuil(org.bpGroup, k);
       const dz = getDZ(input.bpOverride || {}, org.bpGroup, k, input.ctx || {});
       let cat = catFromDiam(dia[k], dz);
+      // Le drapeau est porté par le seuil de CETTE méthode : en table 2D du
+      // M100, SDD existe pour la CMI et pas pour le diamètre. Le lire sur le
+      // couple seul inventerait un SDD par disque là où le CLSI n'en donne pas.
+      if (cat === "I" && dz && dz.sdd) _sdd.push(k);
       if (seuilDep) {
         const p = parseDiam(dia[k]);
         // Au-dessus du seuil, le dépistage conclut « sensible ». En dessous,
@@ -5879,7 +5908,11 @@ function runInterpretation(input) {
   // place de l'autre — sans quoi on masquerait au biologiste ce qu'il a lu.
   const rendues = Object.assign({}, results);
   (A.rendu || []).forEach(x => { rendues[x.abx] = x.rendu; });
-  return { interpretation: A, categories: results, rendues: rendues, referentiel: REFERENTIELS[_ref] };
+  /* `sdd` ne double PAS `categories` : il la qualifie. Un code qui y figure
+     porte « I » dans `categories`, et doit être RENDU « SDD ». Les deux
+     ensembles se lisent donc ensemble, jamais l'un sans l'autre. */
+  return { interpretation: A, categories: results, rendues: rendues,
+           sdd: _sdd.slice(), referentiel: REFERENTIELS[_ref] };
 }
 
 /* ======================= Ce que le fichier expose =======================
