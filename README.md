@@ -126,10 +126,22 @@ entiers à tenir en parallèle.
 ### Le CLSI : l'ossature, pas les valeurs
 
 Le moteur sait porter un **troisième référentiel**, et le CLSI y est déclaré
-depuis le 2026-11-06. **Ses tables sont vides**, et c'est délibéré : le
-document — CLSI M100 — se vend, et ce dépôt n'écrit aucun seuil qu'il ne peut
-pas citer page en main. Les deux jours précédents ont coûté seize valeurs sans
-source ; en inventer trois cents serait pire.
+depuis le 2026-11-06. **Ses tables sont vides**, et c'est délibéré : ce dépôt
+n'écrit aucun seuil qu'il ne peut pas citer page en main. Les deux jours
+précédents ont coûté seize valeurs sans source ; en inventer trois cents serait
+pire.
+
+Le document, lui, est désormais en main. Le CLSI donne un **accès gratuit et en
+lecture seule** au M100 — <https://em100.edaptivedocs.net/>, « CLSI Micro
+Free », accès invité sans compte ni paiement — et le portail porte l'édition
+courante, **M100 Ed36:2026**, ainsi que le **M45 Ed3:2016** pour les bactéries
+rares ou exigeantes. Les seize tables de seuils en ont été lues par
+`outils/extraire-clsi.js` : 674 lignes, 15 à relire à la main. La transcription
+n'est pas commencée. Tout est consigné dans
+**[REFERENTIEL-CLSI.md](REFERENTIEL-CLSI.md)** : d'où vient le document,
+pourquoi l'extraction passe par la console du navigateur, les quatre décisions
+prises avant d'écrire la première ligne, et les défauts de lecture trouvés en
+chemin.
 
 Ce qui est en place, et qui ne dépend pas du document :
 
