@@ -330,3 +330,32 @@ Générez une clé dédiée : `ssh-keygen -t ed25519 -f deploy_key -N ""`, ajout
 ## Ce qui ne change pas
 
 Les pages `phenobac.html`, `success.html` et `admin.html` appellent l'API en **même origine** (`API_BASE` vide) : servies depuis votre domaine, elles fonctionnent sans modification. Tout le code des fonctions est réutilisé à l'identique — seul le stockage passe de Netlify Blobs au fichier local, via `lib/store.js`.
+
+## Vérifier qu'une livraison a bien eu lieu
+
+```
+python3 outils/verifier-deploiement.py              # verdict immédiat
+python3 outils/verifier-deploiement.py --attendre   # patiente jusqu'à 15 min
+```
+
+L'outil lit **d'abord la conclusion de la chaîne** pour le commit courant, et
+seulement ensuite ce que le site sert. L'ordre n'est pas un détail.
+
+Le 7 novembre 2026, deux livraisons de suite ont échoué en intégration
+continue sans que personne le sache. L'étape de déploiement est conditionnée à
+la réussite des contrôles : elle a été **sautée**, et le site a continué de
+servir la version précédente pendant que le correctif était annoncé comme
+livré.
+
+La vérification employée jusque-là comparait les empreintes en boucle pendant
+dix minutes. Elle disait donc « pas encore déployé » — ce qui était vrai, et
+parfaitement inutile : **elle ne distinguait pas une chaîne lente d'une chaîne
+rouge**. Attendre une livraison qui ne viendra jamais ressemble, minute après
+minute, à attendre une livraison lente.
+
+Quand la chaîne a échoué, l'outil nomme l'étape fautive et s'arrête au lieu
+d'attendre. Éprouvé dans les deux sens, sur une exécution verte et sur une
+rouge.
+
+L'API de GitHub est interrogée **sans jeton** : le dépôt est public et ses
+exécutions y sont lisibles. Aucun secret n'est employé ni requis.
